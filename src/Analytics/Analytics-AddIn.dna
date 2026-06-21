@@ -1,0 +1,8 @@
+<DnaLibrary Name="Analytics Add-In" RuntimeVersion="v8">
+  <ExternalLibrary Path="Analytics.dll" Pack="true" />
+  <ExternalLibrary Path="Foundation.dll" Pack="true" />
+  <ExternalLibrary Path="MathNet.Numerics.dll" Pack="true" />
+  <!-- Analytics.xll — Statistics, Regression, Linear Algebra, PhyChem.
+       Install: drag Analytics.xll into Excel. Category prefixes:
+       STATS.*, LINALG.*, REGRESS.*, PHYCHEM.* -->
+</DnaLibrary>

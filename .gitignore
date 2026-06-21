@@ -1,0 +1,9 @@
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.xll
+*.deps.json
+*.runtimeconfig.json
+TestResults/

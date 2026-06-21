@@ -1,0 +1,18 @@
+using ExcelDna.Integration;
+using ExcelVbaLibraries.Foundation;
+
+namespace ExcelVbaLibraries.DataToolkit
+{
+    public static class DictSetUdf
+    {
+        private static object[] A(object a)=>InputNormalizer.NormalizeTo1D(a);
+        [ExcelFunction(Name="DICT.FREQUENCY")] public static object UDF_DICT_FREQ(object k)=>OutputWrapper.WrapError(()=>DictSetCore.Frequency(A(k)));
+        [ExcelFunction(Name="DICT.INTERSECT")] public static object UDF_DICT_INTER(object a,object b)=>OutputWrapper.WrapError(()=>DictSetCore.Intersect(A(a),A(b)));
+        [ExcelFunction(Name="DICT.UNION")] public static object UDF_DICT_UNION(object a,object b)=>OutputWrapper.WrapError(()=>DictSetCore.Union(A(a),A(b)));
+        [ExcelFunction(Name="DICT.EXCEPT")] public static object UDF_DICT_EXCEPT(object a,object b)=>OutputWrapper.WrapError(()=>DictSetCore.Except(A(a),A(b)));
+        [ExcelFunction(Name="DICT.DICT")] public static object UDF_DICT_DICT(object k,object v)=>OutputWrapper.WrapError(()=>DictSetCore.Dict(A(k),A(v)));
+        [ExcelFunction(Name="DICT.COUNT")] public static object UDF_DICT_COUNT(object d)=>OutputWrapper.WrapError(()=>(long)DictSetCore.Count(InputNormalizer.NormalizeTo2D(d)!));
+        [ExcelFunction(Name="DICT.KEYS")] public static object UDF_DICT_KEYS(object d)=>OutputWrapper.WrapError(()=>{var m=InputNormalizer.NormalizeTo2D(d)!;var r=new object[m.GetLength(0)];for(int i=0;i<r.Length;i++)r[i]=m[i,0];return r;});
+        [ExcelFunction(Name="DICT.VALUES")] public static object UDF_DICT_VALS(object d)=>OutputWrapper.WrapError(()=>{var m=InputNormalizer.NormalizeTo2D(d)!;var r=new object[m.GetLength(0)];for(int i=0;i<r.Length;i++)r[i]=m[i,1];return r;});
+    }
+}

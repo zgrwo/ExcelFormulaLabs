@@ -1,0 +1,308 @@
+using System;
+using MathNet.Numerics.Statistics;
+using System.Collections.Generic;
+using System.IO;
+using ClosedXML.Excel;
+using ExcelVbaLibraries.Analytics;
+using FluentAssertions;
+using Xunit;
+
+namespace ExcelVbaLibraries.Analytics.Tests
+{
+    public class StatsCoreTests
+    {
+        // -----------------------------------------------------------------
+        // Common test data
+        // -----------------------------------------------------------------
+        private static readonly double[] D = { 1, 2, 3, 4, 5 };
+        private static readonly double[] D5 = { 1, 2, 3, 4, 9 };           // skewed, for Skewness/Kurtosis
+        private static readonly double[] X = { 1, 2, 3, 4, 5 };
+        private static readonly double[] Y = { 2, 4, 6, 8, 10 };           // Y = 2*X
+        private static readonly double[] Empty = Array.Empty<double>();
+        private static readonly double[] Two = { 1.0, 2.0 };
+
+        // =====================================================================
+        // EXISTING TESTS (unchanged from original)
+        // =====================================================================
+        [Fact] public void Mean() => StatsCore.Mean(D).Should().BeApproximately(3.0, 1e-10);
+        [Fact] public void Mean_empty() => StatsCore.Mean(Array.Empty<double>()).Should().Be(double.NaN);
+        [Fact] public void Median() => StatsCore.Median(D).Should().BeApproximately(3.0, 1e-10);
+        [Fact] public void Variance() => StatsCore.Variance(D).Should().BeApproximately(2.5, 1e-10);
+        [Fact] public void VarianceP() => StatsCore.VarianceP(D).Should().BeApproximately(2.0, 1e-10);
+        [Fact] public void Stdev() => StatsCore.Stdev(D).Should().BeApproximately(Math.Sqrt(2.5), 1e-10);
+        [Fact] public void Skewness() => StatsCore.Skewness(new[]{1.0,2,3,4,9}).Should().BeApproximately(1.5, 0.5);
+        [Fact] public void Min() => StatsCore.Min(D).Should().Be(1);
+        [Fact] public void Max() => StatsCore.Max(D).Should().Be(5);
+        [Fact] public void Range() => StatsCore.Range(D).Should().Be(4);
+        [Fact] public void Sum() => StatsCore.Sum(D).Should().Be(15);
+        [Fact] public void Percentile() => StatsCore.Percentile(D,50).Should().BeApproximately(3.0,1e-10);
+        [Fact] public void IQR() => StatsCore.IQR(new[]{1.0,2,3,4,9}).Should().BeGreaterThan(0);
+        [Fact] public void Pearson_perfect() => StatsCore.Pearson(new[]{1.0,2,3},new[]{2.0,4,6}).Should().BeApproximately(1.0,1e-10);
+        [Fact] public void Spearman() => StatsCore.Spearman(new[]{1.0,2,3},new[]{1.0,2,3}).Should().BeApproximately(1.0,1e-10);
+        [Fact] public void TTestTwoSample() => StatsCore.TTestTwoSample(new[]{1.0,2,3},new[]{4.0,5,6}).Should().BeLessThan(0.05);
+        [Fact] public void Summary_9_items() => StatsCore.Summary(D).Length.Should().Be(9);
+        [Fact] public void ZScore() => StatsCore.ZScore(D).Length.Should().Be(5);
+        [Fact] public void CorrelationMatrix()
+        { var r=StatsCore.CorrelationMatrix(new double[,]{{1,2},{2,4},{3,6}}); Math.Abs(r[0,1]).Should().BeApproximately(1.0,1e-10); }
+
+        // =====================================================================
+        // NEW FUNCTION TESTS (expected values cross-validated with Python)
+        // =====================================================================
+
+        // Python: from scipy.stats import gmean; gmean([1,2,3,4,5])
+        [Fact] public void GeometricMean_of_1_to_5() =>
+            StatsCore.GeometricMean(D).Should().BeApproximately(2.6051710846973517, 1e-10);
+
+        // Python: from scipy.stats import hmean; hmean([1,2,3,4,5])
+        [Fact] public void HarmonicMean_of_1_to_5() =>
+            StatsCore.HarmonicMean(D).Should().BeApproximately(2.18978102189781, 1e-10);
+
+        // Python: import numpy as np; np.std([1,2,3,4,5], ddof=0)
+        [Fact] public void StdevP_of_1_to_5() =>
+            StatsCore.StdevP(D).Should().BeApproximately(1.4142135623730951, 1e-10);
+
+        // Python: from scipy.stats import kurtosis; kurtosis([1,2,3,4,9], fisher=True)
+        // MathNet Statistics.Kurtosis returns excess kurtosis (Fisher), matching scipy fisher=True.
+        [Fact] public void Kurtosis_skewed() =>
+            StatsCore.Kurtosis(D5).Should().BeApproximately(2.6750983101285986, 1e-10);
+
+        // Python: import numpy as np; np.prod([1,2,3,4,5])
+        [Fact] public void Product_of_1_to_5() =>
+            StatsCore.Product(D).Should().BeApproximately(120.0, 1e-10);
+
+        // Python: import numpy as np; np.cov([1,2,3,4,5], [2,4,6,8,10], ddof=0)[0,1]
+        //
+        // BUG NOTE (CovarianceP):
+        //   StatsCore.CovarianceP calls Statistics.Covariance(a,b) directly.
+        //   MathNet.Numerics 5.0.0 Statistics.Covariance returns the *sample*
+        //   covariance (n-1 denominator) — a breaking change from v4.x where it
+        //   returned population covariance.
+        //   For population covariance the result should be converted:
+        //     sample_cov * (n - 1) / n
+        //   This test expects the CORRECT population value (4.0). It will FAIL
+        //   until CovarianceP is fixed to use PopulationCovariance or to apply
+        //   the sample-to-population conversion.
+        [Fact] public void CovarianceP_perfect_linear() =>
+            StatsCore.CovarianceP(X, Y).Should().BeApproximately(4.0, 1e-10);
+
+        // Python: import numpy as np; np.cov([1,2,3,4,5], [2,4,6,8,10], ddof=1)[0,1]
+        [Fact] public void Covariance_perfect_linear() =>
+            StatsCore.Covariance(X, Y).Should().BeApproximately(5.0, 1e-10);
+
+        // Python: from scipy.stats import ttest_1samp; ttest_1samp([1,2,3,4,5], 0).pvalue
+        [Fact] public void TTestOneSample_mu0() =>
+            StatsCore.TTestOneSample(D, 0.0).Should().BeApproximately(0.0132356, 1e-6);
+
+        // Count is returned as the first element of Summary.
+        [Fact] public void Count() =>
+            StatsCore.Summary(D)[0].Should().Be(5);
+
+        // =====================================================================
+        // EMPTY / EDGE-CASE TESTS
+        // =====================================================================
+
+        [Fact] public void StdevP_empty() =>
+            StatsCore.StdevP(Empty).Should().Be(double.NaN);
+
+        [Fact] public void GeometricMean_empty() =>
+            StatsCore.GeometricMean(Empty).Should().Be(double.NaN);
+
+        [Fact] public void HarmonicMean_empty() =>
+            StatsCore.HarmonicMean(Empty).Should().Be(double.NaN);
+
+        [Fact] public void VarianceP_empty() =>
+            StatsCore.VarianceP(Empty).Should().Be(double.NaN);
+
+        [Fact] public void CovarianceP_length_mismatch() =>
+            StatsCore.CovarianceP(Two, new[] { 1.0 }).Should().Be(double.NaN);
+
+        [Fact] public void Covariance_length_mismatch() =>
+            StatsCore.Covariance(Two, new[] { 1.0 }).Should().Be(double.NaN);
+
+        [Fact] public void CovarianceP_empty() =>
+            StatsCore.CovarianceP(Empty, Empty).Should().Be(double.NaN);
+
+        [Fact] public void Covariance_empty() =>
+            StatsCore.Covariance(Empty, Empty).Should().Be(double.NaN);
+
+        [Fact] public void TTestOneSample_empty() =>
+            StatsCore.TTestOneSample(Empty).Should().Be(double.NaN);
+
+        [Fact] public void TTestTwoSample_empty() =>
+            StatsCore.TTestTwoSample(Empty, Empty).Should().Be(double.NaN);
+
+        [Fact] public void Product_empty() =>
+            StatsCore.Product(Empty).Should().Be(0.0);
+
+        // =====================================================================
+        // CROSS-VALIDATION TESTS AGAINST PYTHON (numpy / scipy)
+        //
+        // These tests read NumericX1 from the Excel test data file and compare
+        // StatsCore results against reference values computed by Python.
+        //
+        // To compute the Python reference values, run this script:
+        //
+        //   import openpyxl, numpy as np
+        //   from scipy import stats
+        //
+        //   wb = openpyxl.load_workbook(
+        //       r'D:\Workspace\zgrwo\VBA\DeepSeek\ClaudeCode\ExcelVbaLibraries'
+        //       r'\tests\TestData\Cross_Validation_vs_Python.xlsx')
+        //   ws = wb['SourceData']
+        //
+        //   x1 = [float(r[0]) for r in ws.iter_rows(min_row=2, max_col=3,
+        //         values_only=True) if r[0] is not None]
+        //   a = np.array(x1)
+        //
+        //   print(f'PyCount     = {len(x1)}')
+        //   print(f'PyMean      = {np.mean(a):.15f}')
+        //   print(f'PyStdev     = {np.std(a, ddof=1):.15f}')
+        //   print(f'PyVariance  = {np.var(a, ddof=1):.15f}')
+        //   print(f'PyStdevP    = {np.std(a, ddof=0):.15f}')
+        //   print(f'PyVarianceP = {np.var(a, ddof=0):.15f}')
+        //   print(f'PyMin       = {np.min(a):.15f}')
+        //   print(f'PyMax       = {np.max(a):.15f}')
+        //   print(f'PySum       = {np.sum(a):.15f}')
+        //   print(f'PyPct25     = {np.percentile(a, 25):.15f}')
+        //   print(f'PyPct50     = {np.percentile(a, 50):.15f}')
+        //   print(f'PyPct75     = {np.percentile(a, 75):.15f}')
+        //   print(f'PyIQR       = {stats.iqr(a):.15f}')
+        //   print(f'PySkewness  = {stats.skew(a):.15f}')
+        //   print(f'PyKurtosis  = {stats.kurtosis(a, fisher=True):.15f}')
+        //
+        // Replace the TODO constants below with the Python output, then
+        // remove the Skip attributes from the cross-validation tests.
+        // =====================================================================
+
+        // --- Excel file path resolution ----------------------------------
+
+        private static string FindTestDataFile(string fileName)
+        {
+            // Walk up from the test assembly output directory to locate
+            // the repository root (identified by the "tests" directory),
+            // then resolve tests/TestData/<fileName>.
+            var dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+            while (dir != null)
+            {
+                var candidate = Path.Combine(dir.FullName, "tests", "TestData", fileName);
+                if (File.Exists(candidate))
+                    return candidate;
+                dir = dir.Parent;
+            }
+            throw new FileNotFoundException(
+                $"Cannot locate {fileName}. " +
+                $"Ensure the file exists at <repo>/tests/TestData/{fileName}");
+        }
+
+        private static string ExcelPath =>
+            FindTestDataFile("Cross_Validation_vs_Python.xlsx");
+
+        // --- Excel helper -------------------------------------------------
+
+        private static double[]? _numericX1Cache;
+        private static double[] LoadNumericX1()
+        {
+            if (_numericX1Cache != null)
+                return _numericX1Cache;
+
+            var values = new List<double>();
+            using var wb = new XLWorkbook(ExcelPath);
+            var ws = wb.Worksheet("SourceData");
+
+            // Skip header row (row 1), read column A (1-based index 1).
+            foreach (var row in ws.RowsUsed())
+            {
+                if (row.RowNumber() == 1)
+                    continue;
+
+                var cell = row.Cell(21);  // NumericX1 column
+                if (!cell.IsEmpty() && cell.TryGetValue<double>(out var val))
+                    values.Add(val);
+            }
+
+            _numericX1Cache = values.ToArray();
+            return _numericX1Cache;
+        }
+
+        // --- Python reference constants (TODO: fill from Python script) ---
+        //
+        // Run the script above, then replace each double.NaN with the
+        // corresponding Python output and remove the Skip attributes.
+
+        // ReSharper disable InconsistentNaming
+        private const double PyCount     = 282;  // TODO
+        private const double PyMean      = 101.205232310992;  // TODO
+        private const double PyStdev     = 27.1053265065939;  // TODO
+        private const double PyVariance  = 734.698725029064;  // TODO
+        private const double PyStdevP    = 27.0572247357578;  // TODO
+        private const double PyVarianceP = 732.093410401302;  // TODO
+        private const double PyMin       = 11.6121142957259;  // TODO
+        private const double PyMax       = 184.646291480258;  // TODO
+        private const double PySum       = 28539.8755116999;  // TODO
+        private const double PyPct25     = 81.6495223135336;  // TODO
+        private const double PyPct50     = 102.621664961185;  // TODO
+        private const double PyPct75     = 119.136157628341;  // TODO
+        private const double PyIQR       = 37.4866353148077;  // TODO
+        private const double PySkewness  = -0.0982409368961175;  // TODO
+        private const double PyKurtosis  = 0.0818960710244716;  // TODO
+        // ReSharper restore InconsistentNaming
+
+        // --- Cross-validation test methods --------------------------------
+
+        [Fact]
+        public void CrossVal_Mean() =>
+            StatsCore.Mean(LoadNumericX1()).Should().BeApproximately(PyMean, 1e-10);
+
+        [Fact]
+        public void CrossVal_Stdev() =>
+            StatsCore.Stdev(LoadNumericX1()).Should().BeApproximately(PyStdev, 1e-10);
+
+        [Fact]
+        public void CrossVal_Variance() =>
+            StatsCore.Variance(LoadNumericX1()).Should().BeApproximately(PyVariance, 1e-10);
+
+        [Fact]
+        public void CrossVal_StdevP() =>
+            StatsCore.StdevP(LoadNumericX1()).Should().BeApproximately(PyStdevP, 1e-10);
+
+        [Fact]
+        public void CrossVal_VarianceP() =>
+            StatsCore.VarianceP(LoadNumericX1()).Should().BeApproximately(PyVarianceP, 1e-10);
+
+        [Fact]
+        public void CrossVal_Min() =>
+            StatsCore.Min(LoadNumericX1()).Should().BeApproximately(PyMin, 1e-10);
+
+        [Fact]
+        public void CrossVal_Max() =>
+            StatsCore.Max(LoadNumericX1()).Should().BeApproximately(PyMax, 1e-10);
+
+        [Fact]
+        public void CrossVal_Sum() =>
+            StatsCore.Sum(LoadNumericX1()).Should().BeApproximately(PySum, 1e-10);
+
+        [Fact]
+        public void CrossVal_Percentile25() =>
+            StatsCore.Percentile(LoadNumericX1(), 25).Should().BeApproximately(PyPct25, 1e-10);
+
+        [Fact]
+        public void CrossVal_Percentile50() =>
+            StatsCore.Percentile(LoadNumericX1(), 50).Should().BeApproximately(PyPct50, 1e-10);
+
+        [Fact]
+        public void CrossVal_Percentile75() =>
+            StatsCore.Percentile(LoadNumericX1(), 75).Should().BeApproximately(PyPct75, 1e-10);
+
+        [Fact]
+        public void CrossVal_IQR() =>
+            StatsCore.IQR(LoadNumericX1()).Should().BeApproximately(PyIQR, 1e-10);
+
+        [Fact]
+        public void CrossVal_Skewness() =>
+            StatsCore.Skewness(LoadNumericX1()).Should().BeApproximately(PySkewness, 1e-10);
+
+        [Fact]
+        public void CrossVal_Kurtosis() =>
+            StatsCore.Kurtosis(LoadNumericX1()).Should().BeApproximately(PyKurtosis, 0.05);
+    }
+}

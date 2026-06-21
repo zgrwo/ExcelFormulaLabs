@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RootNamespace>ExcelVbaLibraries.Analytics</RootNamespace>
+    <AssemblyName>Analytics</AssemblyName>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>CS1591;NU1701</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>Analytics.Tests</_Parameter1>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>DataToolkit.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
+    <PackageReference Include="ExcelDna.Integration" Version="1.8.0" />
+    <PackageReference Include="ExcelDna.AddIn" Version="1.8.0">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Foundation\Foundation.csproj" />
+  </ItemGroup>
+
+  <!--
+    Analytics.xll — Statistics, Regression, Linear Algebra, PhyChem.
+    Depends on Foundation.dll + MathNet.Numerics.
+    Uses Excel-DNA for .xll packaging and UDF registration.
+  -->
+
+</Project>
