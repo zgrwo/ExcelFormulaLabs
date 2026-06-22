@@ -123,5 +123,8 @@ namespace ExcelVbaLibraries.Analytics.Tests
         // Identity(0): (int)ToLong(0) = 0 -> new double[0,0] empty matrix -> Core.Identity creates it, prep returns it
         [Fact] public void Identity_zero_size() { var r=(double[,])LinalgUdf.UDF_LINALG_IDENTITY(0); r.GetLength(0).Should().Be(0); }
         // Trace on non-square: sums diagonal elements min(rows,cols)
+        // Non-square Trace: MathNet Matrix.Trace() requires square -> throws -> WrapError -> ExcelError.Value
+        [Fact] public void Trace_nonSquare() => LinalgUdf.UDF_LINALG_TRACE(Rect).Should().Be(ExcelError.Value);
+        // Solve with singular matrix: MathNet LU decomposition throws SingularMatrixException -> WrapError -> ExcelError.Value
     }
 }
