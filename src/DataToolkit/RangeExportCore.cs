@@ -34,7 +34,7 @@ namespace ExcelVbaLibraries.DataToolkit
             int rows = data.GetLength(0), cols = data.GetLength(1); if (rows == 0) return ""; var sb = new StringBuilder();
             for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(" | "); sb.Append(hasHeader ? InputNormalizer.ToString(data[0, c]) : $"Col{c + 1}"); } sb.AppendLine();
             for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(" | "); sb.Append("---"); } sb.AppendLine();
-            for (int r = hasHeader ? 1 : 0; r < rows; r++) { for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(" | "); sb.Append(InputNormalizer.ToString(data[r, c])); } if (r < rows - 1) sb.AppendLine(); }
+            for (int r = hasHeader ? 1 : 0; r < rows; r++) { for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(" | "); sb.Append(InputNormalizer.ToString(data[r, c])); } sb.AppendLine(); }
             return sb.ToString();
         }
 

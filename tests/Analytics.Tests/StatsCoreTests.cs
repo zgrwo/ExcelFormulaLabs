@@ -79,6 +79,10 @@ namespace ExcelVbaLibraries.Analytics.Tests
         [Fact] public void ZScore() => StatsCore.ZScore(D).Length.Should().Be(5);
         [Fact] public void CorrelationMatrix()
         { var r=StatsCore.CorrelationMatrix(new double[,]{{1,2},{2,4},{3,6}}); Math.Abs(r[0,1]).Should().BeApproximately(1.0,1e-10); }
+        [Fact] public void CorrelationMatrix_single_column()
+        { var r=StatsCore.CorrelationMatrix(new double[,]{{1},{2},{3}}); r[0,0].Should().Be(1.0); }
+        [Fact] public void CorrelationMatrix_constant_column()
+        { var r=StatsCore.CorrelationMatrix(new double[,]{{5,1},{5,2},{5,3}}); double.IsNaN(r[0,1]).Should().BeTrue(); }
 
         // =====================================================================
         // NEW FUNCTION TESTS (expected values cross-validated with Python)
