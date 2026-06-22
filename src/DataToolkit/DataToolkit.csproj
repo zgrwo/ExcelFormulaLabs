@@ -33,6 +33,7 @@
     <PackageReference Include="ExcelDna.AddIn" Version="1.8.0">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="ExcelDna.IntelliSense" Version="1.8.0" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">

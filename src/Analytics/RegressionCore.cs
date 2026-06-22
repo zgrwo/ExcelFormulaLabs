@@ -12,6 +12,15 @@ namespace ExcelVbaLibraries.Analytics
     /// </summary>
     internal static class RegressionCore
     {
+        /// <summary>
+        /// Ordinary Least Squares regression. Minimizes sum of squared residuals.
+        /// Used by REGRESS.OLS.
+        /// </summary>
+        /// <returns>
+        /// Dictionary: coefficients, sse, r_squared, adj_r_squared, residuals,
+        /// fitted_values, standard_errors, t_stats, p_values, n, df.
+        /// p&lt;0.05 = significant; R² near 1 = good fit.
+        /// </returns>
         internal static Dictionary<string, object> FitOLS(double[,] X, double[] y)
         {
             int n = X.GetLength(0), p = X.GetLength(1);
@@ -52,6 +61,15 @@ namespace ExcelVbaLibraries.Analytics
             };
         }
 
+        /// <summary>
+        /// Weighted Least Squares regression. Transforms X and y by sqrt(w)
+        /// then delegates to FitOLS. For heteroskedastic data.
+        /// Used by REGRESS.WLS.
+        /// </summary>
+        /// <returns>
+        /// Same keys as FitOLS: coefficients, sse, r_squared, adj_r_squared,
+        /// residuals, fitted_values, standard_errors, t_stats, p_values, n, df.
+        /// </returns>
         internal static Dictionary<string, object> FitWLS(double[,] X, double[] y, double[] w)
         {
             int n = X.GetLength(0), p = X.GetLength(1);
@@ -66,6 +84,16 @@ namespace ExcelVbaLibraries.Analytics
             return FitOLS(Xw, yw);
         }
 
+        /// <summary>
+        /// Ridge regression with L2 regularization. Adds lambda*I to X'X before solving.
+        /// Shrinks coefficients to reduce overfitting. No standard errors or p-values
+        /// (inferential statistics are not valid under regularization).
+        /// Used by REGRESS.RIDGE.
+        /// </summary>
+        /// <returns>
+        /// Dictionary: coefficients, sse, r_squared, residuals, fitted_values,
+        /// lambda, n, df. NOTE: standard_errors, t_stats, p_values are NOT returned.
+        /// </returns>
         internal static Dictionary<string, object> FitRidge(double[,] X, double[] y, double lambda = 1.0)
         {
             int n = X.GetLength(0), p = X.GetLength(1);
@@ -92,6 +120,16 @@ namespace ExcelVbaLibraries.Analytics
             };
         }
 
+        /// <summary>
+        /// One-way Analysis of Variance. Tests whether group means differ significantly.
+        /// Groups passed as a jagged array (one array per group column).
+        /// Used by REGRESS.ANOVA1.
+        /// </summary>
+        /// <returns>
+        /// Dictionary: ss_between, ss_within, ss_total, df_between, df_within,
+        /// df_total, ms_between, ms_within, f_stat, p_value, group_means, group_counts.
+        /// p&lt;0.05 = at least one group mean differs significantly from the others.
+        /// </returns>
         internal static Dictionary<string, object> AnovaOneWay(double[][] groups)
         {
             int k = groups.Length;
@@ -120,6 +158,13 @@ namespace ExcelVbaLibraries.Analytics
             };
         }
 
+        /// <summary>
+        /// Rank predictors by absolute t-statistic after standardizing columns.
+        /// Standardizes X, fits OLS, then orders indices 0..p-1 by descending |t|.
+        /// Higher rank = greater predictive importance.
+        /// Used by REGRESS.FACTORIMP.
+        /// </summary>
+        /// <returns>Column indices sorted most-to-least important.</returns>
         internal static int[] FactorImportance(double[,] X, double[] y)
         {
             int n = X.GetLength(0), p = X.GetLength(1);

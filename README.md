@@ -271,13 +271,17 @@ dotnet build
 dotnet test
 ```
 
-构建产物：
-```
-src/Analytics/bin/Release/net8.0-windows/publish/Analytics-AddIn-packed.xll      (.NET 8)
-src/Analytics/bin/Release/net48/publish/Analytics-AddIn-packed.xll               (.NET Framework 4.8)
-src/DataToolkit/bin/Release/net8.0-windows/publish/DataToolkit-AddIn-packed.xll  (.NET 8)
-src/DataToolkit/bin/Release/net48/publish/DataToolkit-AddIn-packed.xll           (.NET Framework 4.8)
-```
+构建产物（`dotnet build -c Release` 后）：
+
+| 文件 | 用途 | .NET 8 | .NET 4.8 |
+|------|------|:---:|:---:|
+| `Analytics-AddIn-packed.xll` (32-bit) | 统计/回归/矩阵/物化 — Excel 加载 | ✅ net8.0-windows | ✅ net48 |
+| `Analytics-AddIn64-packed.xll` (64-bit) | 同上，64 位 Excel 用 | ✅ | ✅ |
+| `DataToolkit-AddIn-packed.xll` (32-bit) | 字符串/日期/正则/JSON/数组 — Excel 加载 | ✅ | ✅ |
+| `DataToolkit-AddIn64-packed.xll` (64-bit) | 同上，64 位 Excel 用 | ✅ | ✅ |
+
+> `packed` 版本已将依赖嵌入 .xll，单文件分发即可。64 位 Excel 用 `64-packed`，32 位用 `packed`。
+> 发布位置：`src/*/bin/Release/{net8.0-windows|net48}/publish/`
 
 ## 项目结构
 

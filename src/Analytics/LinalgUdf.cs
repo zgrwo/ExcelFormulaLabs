@@ -8,7 +8,7 @@ namespace ExcelVbaLibraries.Analytics
         private static double[,] M(object d) => AnalyticsHelpers.PrepM(d);
         private static double[] V(object d) => AnalyticsHelpers.PrepV(d);
 
-        [ExcelFunction(Name = "LINALG.SVD", Description = "SVD: returns U, S, Vt.")]
+        [ExcelFunction(Name = "LINALG.SVD", Description = "SVD: A = U*diag(S)*Vt. Returns 1x3 horizontal array {U matrix, S vector, Vt matrix}.")]
         public static object UDF_LINALG_SVD(object d)
             => OutputWrapper.WrapError(() => { var (U,S,Vt)=LinalgCore.Svd(M(d)); return new object[]{U,S,Vt}; });
 
@@ -16,11 +16,11 @@ namespace ExcelVbaLibraries.Analytics
         public static object UDF_LINALG_PINV(object d)
             => OutputWrapper.WrapError(() => LinalgCore.PseudoInverse(M(d)));
 
-        [ExcelFunction(Name = "LINALG.QR", Description = "QR decomposition.")]
+        [ExcelFunction(Name = "LINALG.QR", Description = "QR: A = Q*R. Returns 1x2 horizontal array {Q matrix, R upper-triangular matrix}.")]
         public static object UDF_LINALG_QR(object d)
             => OutputWrapper.WrapError(() => { var (Q,R)=LinalgCore.Qr(M(d)); return new[]{Q,R}; });
 
-        [ExcelFunction(Name = "LINALG.LU", Description = "LU decomposition.")]
+        [ExcelFunction(Name = "LINALG.LU", Description = "LU: PA = LU with partial pivoting. Returns 1x3 horizontal array {L lower-triangular, U upper-triangular, P permutation matrix}.")]
         public static object UDF_LINALG_LU(object d)
             => OutputWrapper.WrapError(() => { var (L,U,P)=LinalgCore.Lu(M(d)); return new[]{L,U,P}; });
 
