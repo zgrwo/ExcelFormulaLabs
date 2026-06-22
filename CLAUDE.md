@@ -1,91 +1,43 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+本文件是 AI 的项目宪法，始终在上下文中。编码细节按需从 [SKILL.md](SKILL.md) 加载。
 
-## Build & Test Commands
+## 语言
 
-```bash
-dotnet build                              # Full solution build
-dotnet test                               # Run all tests (1,352 tests, 33 files)
-dotnet test --filter "ClassName"          # Run a single test class
-dotnet test --no-build -v q               # Quick re-run without rebuild
-```
+所有 Markdown 文档默认优先中文。
 
-Target: `net8.0-windows` (Analytics/DataToolkit, for Excel-DNA) / `net8.0` (Foundation).
-Tests: xUnit `[Fact]` + FluentAssertions 6.12.0. No `[Theory]` used.
-CodeGraph indexed: `codegraph explore "<symbol>"` for fast code lookup.
-
-## Architecture
+## 项目架构
 
 ```
-UDF ([ExcelFunction], public static object)     ← Excel-facing, ~214 methods
-  ↓  calls one of three patterns:
-  ├── MapOver<TIn,TOut>        → preserves shape, null/error/empty pass through
-  ├── MapOverFlat<TIn,TOut>    → ALWAYS returns object[], even for scalar
-  ├── MapOverMulti<T1,T2,TOut> → broadcasting, null first→ExcelEmpty, mismatch→ExcelError
-  └── V()/M() helpers          → bypass MapOver entirely! Normalize→Core directly
-       ↓
-Core functions (internal static, type-safe)    ← pure logic, 100% test covered
-       ↓
-OutputWrapper.WrapError                         ← exception→#VALUE!
+UDF ([ExcelFunction]) → InputNormalizer → MapOver/MapOverFlat/MapOverMulti/V() → Core → WrapError → Excel
 ```
+Core 层 100% 测试覆盖。UDF 214 个方法，各模块职责见 [SKILL.md](SKILL.md)。
 
-### Critical: V()/M() vs MapOverMulti
+## 编码规范
 
-`StatsUdf` covariance/correlation methods (CVP, CV, PEAR, SPR, T1, T2) use `V()` helpers
-that call Core **directly**, bypassing `MapOverMulti`. This means:
-- Size mismatch → Core returns `NaN` (not `ExcelError.Value`)
-- `V(null)` → empty array → Core returns `NaN` (not `ExcelEmpty.Value`)
-- Exception from MathNet (e.g. Pearson on empty) → WrapError → `ExcelError.Value`
+修改代码前：先加载 [SKILL.md](SKILL.md) 了解该模块的编码模式和关键行为差异。
 
-`MapOverMulti` is used by StringUdf (STARTSWITH, COMMONPFX, LEVENSHTEIN, etc.) and has
-different null/mismatch behavior. Always check the UDF source to see which pattern it uses.
+## 接口约束
 
-### ElementWiseMapper behavior summary
+**禁止修改 VBA-Core 类（Foundation/Analytics/DataToolkit 中的 internal static class）的 Public 接口**，除非用户明确要求并确认影响范围。
 
-| Pattern | Scalar input | Null input | Error input | Mismatched arrays |
-|---------|-------------|------------|-------------|-------------------|
-| MapOver | scalar | null passthrough | error passthrough | N/A |
-| MapOverFlat | object[1] | object[0] | error passthrough | N/A |
-| MapOverMulti | scalar | ExcelEmpty.Value | depends | ExcelError.Value |
+## 缺陷处理
 
-### InputNormalizer key behaviors
+发现缺陷 → 复核并追踪根因 → 将根因写入 memory 系统或记录为改进计划。
 
-- `NormalizeTo1D(null)` → `new object[0]` (no exception)
-- `NormalizeTo2D(null)` → `null` (caller must handle or `!`)
-- `ToDoubles()` filters non-numeric elements silently
-- `ToDateTime()` uses OLE Automation epoch (1899-12-30)
+## 上下文管理
 
-## Test Conventions
+上下文膨胀时主动建议开新会话。新会话自动继承本文件和 [SKILL.md](SKILL.md)，无需重复加载。
 
-UDF methods return `object`. Cast before using FluentAssertions numeric/string matchers:
-```csharp
-((double)Udf.Method(args)).Should().BeApproximately(3.0, 1e-10);  // numeric
-((long)Udf.Method(args)).Should().Be(3);                            // long
-((bool)Udf.Method(args)).Should().BeTrue();                         // bool
-((string)Udf.Method(args)).Should().Be("expected");                 // string
-var r = (object[])Udf.Method(args);                                 // 1D array
-var r = (object[,])Udf.Method(args);                                // 2D array
-// MapOverFlat: ALWAYS object[], even for scalar
-var r = (object[])Udf.Method(scalar); r[0].Should()...
-```
+## 会话进度
 
-**Edge cases every UDF test should cover**: null input, empty input, error input passthrough,
-array input (element-wise mapping), and for multi-arg: mismatched sizes.
+会话结束前将进度和待办写入 memory 系统，不写入本文件（避免 git 噪音）。
 
-**Python cross-validation**: `tests/TestData/Cross_Validation_vs_Python.xlsx` —
-StatsCore cross-val tests read NumericX1 column via ClosedXML and compare against
-numpy/scipy reference values. Quantile methods use R7 definition (Python-compatible).
+## Git
 
-## InternalsVisibleTo
+- `git push` 前必须获得用户明确同意
+- 禁止推送本项目结构（src/tests）之外的文件或文件夹
 
-- `Analytics.csproj`: Analytics.Tests, DataToolkit.Tests
-- `DataToolkit.csproj`: DataToolkit.Tests
-- Foundation methods are `public` — no InternalsVisibleTo needed
+## 文档原则
 
-## Known Limitations
-
-- `TryExtractComRangeValue`: untestable without COM Excel Range object
-- `Solve` on singular matrices: MathNet 5.0 may not throw (uses internal fallback)
-- `GasToSTP` invalid unit strings: fall through to default case, behavior version-dependent
-- FileSystem UDF methods: only null/empty tested; real filesystem ops depend on environment
+信息只在一处定义，其余各处链接引用。按任务类型查找对应文档：编码规范→[SKILL.md](SKILL.md)、测试数据→tests/TestData/
