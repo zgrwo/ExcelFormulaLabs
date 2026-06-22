@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace ExcelVbaLibraries.Foundation
 {
@@ -292,10 +293,15 @@ namespace ExcelVbaLibraries.Foundation
             T tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
         }
 
+        /// <summary>Returns true for numeric primitive types and numeric strings.
+        /// Consistent with ComparisonUtils.IsNumeric for cross-module behaviour.</summary>
         private static bool IsNumericValue<T>(T value) =>
             value is int || value is long || value is float || value is double
             || value is decimal || value is short || value is byte
-            || value is sbyte || value is ushort || value is uint || value is ulong;
+            || value is sbyte || value is ushort || value is uint || value is ulong
+            || (value is string s && s.Trim().Length > 0
+                && double.TryParse(s, NumberStyles.Float | NumberStyles.AllowThousands,
+                    CultureInfo.InvariantCulture, out _));
 
         // ─────────────────────────────────────────────────────────────────
         // CollectNumericColumns

@@ -175,7 +175,7 @@ namespace ExcelVbaLibraries.Analytics.Tests
         [Fact] public void KgToLb_one()
         {
             var r = PhyChemUdf.UDF_PC_KG2LB(1.0);
-            ((double)r).Should().BeApproximately(2.20462, 1e-6);
+            ((double)r).Should().BeApproximately(2.20462, 1e-5);
         }
 
         [Fact] public void KgToLb_zero()
@@ -188,7 +188,7 @@ namespace ExcelVbaLibraries.Analytics.Tests
         [Fact] public void LbToKg_one()
         {
             var r = PhyChemUdf.UDF_PC_LB2KG(2.20462);
-            ((double)r).Should().BeApproximately(1.0, 1e-6);
+            ((double)r).Should().BeApproximately(1.0, 1e-5);
         }
 
         [Fact] public void LbToKg_zero()

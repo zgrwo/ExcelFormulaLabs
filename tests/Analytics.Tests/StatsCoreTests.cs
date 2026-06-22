@@ -315,5 +315,11 @@ namespace ExcelVbaLibraries.Analytics.Tests
         [Fact] public void Skewness_insufficient_n() => StatsCore.Skewness(new[]{1.0,2}).Should().Be(double.NaN);
         [Fact] public void Variance_insufficient_n() => StatsCore.Variance(new[]{1.0}).Should().Be(double.NaN);
         [Fact] public void Stdev_insufficient_n() => StatsCore.Stdev(new[]{1.0}).Should().Be(double.NaN);
+        // Mode tests
+        [Fact] public void Mode_basic() => StatsCore.Mode(new[]{1.0,2,2,3}).Should().Be(2.0);
+        [Fact] public void Mode_empty() => double.IsNaN(StatsCore.Mode(Array.Empty<double>())).Should().BeTrue();
+        [Fact] public void Mode_singleValue() => StatsCore.Mode(new[]{5.0}).Should().Be(5.0);
+        [Fact] public void Mode_firstWins_onTie() => StatsCore.Mode(new[]{1.0,2,1,2}).Should().Be(1.0);
+        [Fact] public void Mode_allUnique_isFirst() => StatsCore.Mode(new[]{3.0,1,2}).Should().Be(3.0);
     }
 }

@@ -54,6 +54,20 @@ namespace ExcelVbaLibraries.Analytics
         internal static double Sum(double[] d) { var r = d.Sum(); return double.IsInfinity(r) ? double.NaN : r; }
         internal static double Product(double[] d) { if (d.Length == 0) return 0.0; var r = d.Aggregate(1.0, (a, x) => a * x); return double.IsInfinity(r) ? double.NaN : r; }
 
+        /// <summary>Most frequent value. Single-pass O(n) with Dictionary.
+        /// Returns NaN for empty input.</summary>
+        internal static double Mode(double[] d)
+        {
+            if (d.Length == 0) return double.NaN;
+            var counts = new System.Collections.Generic.Dictionary<double, int>();
+            foreach (double x in d)
+                counts[x] = counts.TryGetValue(x, out int c) ? c + 1 : 1;
+            int maxCount = 0; double mode = double.NaN;
+            foreach (var kv in counts)
+                if (kv.Value > maxCount) { maxCount = kv.Value; mode = kv.Key; }
+            return mode;
+        }
+
         internal static double CovarianceP(double[] a, double[] b)
         {
             if (a.Length != b.Length || a.Length == 0) return double.NaN;

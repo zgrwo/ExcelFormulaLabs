@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Factorization;
 using ExcelVbaLibraries.Foundation;
 
 namespace ExcelVbaLibraries.Analytics
@@ -29,27 +30,40 @@ namespace ExcelVbaLibraries.Analytics
 
         internal static (double[,] Q, double[,] R) Qr(double[,] m)
         {
-            var A = Matrix<double>.Build.DenseOfArray(m);
-            var qr = A.QR();
-            int rows = A.RowCount, cols = A.ColumnCount, k = Math.Min(rows, cols);
-            return (qr.Q.SubMatrix(0, rows, 0, k).ToArray(),
-                    qr.R.SubMatrix(0, k, 0, cols).ToArray());
+            int rows = m.GetLength(0), cols = m.GetLength(1);
+            if (rows >= cols)
+            {
+                // Tall or square: MathNet QR directly supported.
+                var A = Matrix<double>.Build.DenseOfArray(m);
+                var qr = A.QR(QRMethod.Full);
+                return (qr.Q.SubMatrix(0, rows, 0, cols).ToArray(),
+                        qr.R.SubMatrix(0, cols, 0, cols).ToArray());
+            }
+            // Wide (rows < cols): MathNet QR requires m ≥ n. Zero-pad to square n×n,
+            // decompose, then extract Q[0:m, 0:m] and R[0:m, 0:n].
+            // Since padded rows are all zeros, the extracted Q remains orthogonal and
+            // A = Q_thin · R_thin holds exactly.
+            var pad = Matrix<double>.Build.Dense(cols, cols);
+            var Aorig = Matrix<double>.Build.DenseOfArray(m);
+            for (int i = 0; i < rows; i++)
+                for (int j = 0; j < cols; j++)
+                    pad[i, j] = Aorig[i, j];
+            var q = pad.QR(QRMethod.Full);
+            return (q.Q.SubMatrix(0, rows, 0, rows).ToArray(),
+                    q.R.SubMatrix(0, rows, 0, cols).ToArray());
         }
 
         internal static (double[,] L, double[,] U, double[,] P) Lu(double[,] m)
         {
             var A = Matrix<double>.Build.DenseOfArray(m);
             var lu = A.LU();
-            // P is a Permutation, format as identity matrix permuted
-            var P = Matrix<double>.Build.DenseIdentity(A.RowCount);
+            // perm[i] = row index of original A that ends up at row i of the permuted matrix.
+            // Build P element-wise: P[i, perm[i]] = 1.0 avoids the swap-in-place bug
+            // where cycling permutations (length > 2) would overwrite previously placed rows.
             var perm = lu.P;
+            var P = Matrix<double>.Build.Dense(A.RowCount, A.RowCount);
             for (int i = 0; i < A.RowCount; i++)
-            {
-                int row = perm[i];
-                var temp = P.Row(i).ToArray();
-                P.SetRow(i, P.Row(row));
-                P.SetRow(row, temp);
-            }
+                P[i, perm[i]] = 1.0;
             return (lu.L.ToArray(), lu.U.ToArray(), P.ToArray());
         }
 

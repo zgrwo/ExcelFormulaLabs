@@ -59,8 +59,18 @@ Analytics → Analytics.Tests, DataToolkit.Tests / DataToolkit → DataToolkit.T
 - Solve 奇异矩阵：MathNet 5.0 可能不抛异常
 - GasToSTP 无效单位：走 default 分支
 - FileSystem UDF：依赖真实文件系统，部分测试需特定环境
+- MathNet 5.0 QR 不支持宽矩阵 (m < n)，采用零填充方阵后提取子矩阵
+- FilterPasses 比较运算符使用类型感知 Compare（与 VBA 语义一致）
 
 ## 历史修复
 - StdevP/CovarianceP/Covariance：MathNet 5.0 破性变更（样本→总体协方差）
 - IsoYear/IsoWeekNum：net48 无 System.Globalization.ISOWeek，手工 polyfill
 - Coalesce：null 与空字符串统一处理
+- Lu P 矩阵：排列循环 > 2 时行交换 bug，改为逐元素赋值 P[i,perm[i]]=1.0
+- Qr 宽矩阵：零填充法支持 m < n 的 QR 分解
+- Stats.Mode：O(n²) GroupBy→O(n) Dictionary，委托 StatsCore.Mode
+- PhyChem 便捷 UDF：C_TO_F 等委托 PhyChemCore 消除公式重复
+- PhyChem LB 常数：453.592→453.59237（国际标准 lb=0.45359237 kg）
+- StringCore.RandomString：static Random→ThreadLocal<Random>/Random.Shared（多线程安全）
+- SqlCore.CreateTable：列类型推断单行→扫描前10行；列名去重追加 _2/_3 后缀
+- ArrayOperations.IsNumericValue：新增数值字符串识别，与 ComparisonUtils.IsNumeric 统一

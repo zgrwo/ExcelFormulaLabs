@@ -34,4 +34,8 @@ public class FilterPassesTests
     [Fact] public void Equals_empty_string_element() => FilterUtils.FilterPasses("", "", "=").Should().BeTrue();
     [Fact] public void Regex_invalid_pattern_returns_false() => FilterUtils.FilterPasses("test", "[invalid", "regex").Should().BeFalse();
     [Fact] public void DBNull_value() => FilterUtils.FilterPasses(System.DBNull.Value, "test", "=").Should().BeFalse();
+    [Fact] public void Numeric_string_eq() => FilterUtils.FilterPasses("3.14", "3.14", "=").Should().BeTrue();
+    [Fact] public void Numeric_int_vs_string_eq() => FilterUtils.FilterPasses(42, "42", "=").Should().BeTrue();
+    [Fact] public void Numeric_gt_string() => FilterUtils.FilterPasses("10", "5", ">").Should().BeTrue();
+    [Fact] public void Contains_case_insensitive() => FilterUtils.FilterPasses("HELLO", "hello", "contains").Should().BeTrue();
 }

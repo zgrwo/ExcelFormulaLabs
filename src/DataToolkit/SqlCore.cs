@@ -37,11 +37,27 @@ namespace ExcelVbaLibraries.DataToolkit
         {
             int rows = data.GetLength(0), cols = data.GetLength(1); if (rows == 0) return;
             var names = new string[cols]; var types = new string[cols];
+            var usedNames = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
             for (int c = 0; c < cols; c++)
             {
-                string raw = InputNormalizer.ToString(data[0, c]); names[c] = Sanitize(raw, c);
-                types[c] = (rows > 1 && data[1, c] is double or int or long or float) ? "REAL" :
-                    (rows > 1 && data[1, c] is long or int) ? "INTEGER" : "TEXT";
+                string raw = InputNormalizer.ToString(data[0, c]); string baseName = Sanitize(raw, c);
+                // De-duplicate: append _2, _3... if sanitised names collide
+                string colName = baseName;
+                for (int dedup = 2; !usedNames.Add(colName); dedup++)
+                    colName = baseName + "_" + dedup;
+                names[c] = colName;
+                // Scan up to 10 data rows to determine the widest type
+                bool hasReal = false, hasInt = false;
+                int scanEnd = Math.Min(rows, 11);  // row 0 is header, scan rows 1..10
+                for (int r = 1; r < scanEnd; r++)
+                {
+                    object v = data[r, c];
+                    if (v == null || v is DBNull || ReferenceEquals(v, ExcelEmpty.Value) || v is ExcelError) continue;
+                    if (v is double or float) hasReal = true;
+                    else if (v is int or long) hasInt = true;
+                    else { hasReal = false; hasInt = false; break; }  // non-numeric → TEXT
+                }
+                types[c] = hasReal ? "REAL" : hasInt ? "INTEGER" : "TEXT";
             }
             var parts = new string[cols]; for (int c = 0; c < cols; c++) parts[c] = $"\"{names[c]}\" {types[c]}";
             using var create = conn.CreateCommand(); create.CommandText = $"CREATE TABLE \"{name}\" ({string.Join(",", parts)})"; create.ExecuteNonQuery();

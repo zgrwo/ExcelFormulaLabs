@@ -24,7 +24,8 @@ namespace ExcelVbaLibraries.Foundation
         /// </summary>
         public static bool FilterPasses(object? element, object? matchValue, string op)
         {
-            switch (op.ToLowerInvariant())
+            string opLower = op.ToLowerInvariant();
+            switch (opLower)
             {
                 case "isblank":    return IsBlank(element);
                 case "isnotblank": return !IsBlank(element);
@@ -41,7 +42,7 @@ namespace ExcelVbaLibraries.Foundation
             if (matchValue is Array) return false;
             if (matchValue is not string && Marshal.IsComObject(matchValue)) return false;
 
-            return op.ToLowerInvariant() switch
+            return opLower switch
             {
                 "=" => ComparisonUtils.ValuesEqual(element, matchValue),
                 "<>" => !ComparisonUtils.ValuesEqual(element, matchValue),

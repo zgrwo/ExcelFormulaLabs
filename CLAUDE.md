@@ -22,6 +22,7 @@
 - **Git**：push 前须用户明确同意。禁止推送 src/tests 外的文件/文件夹。
 - **文档**：信息只在一处定义，其余链接引用。数字仅存 api-reference.md。
 - **上下文**：膨胀时主动建议开新会话。新会话自动继承本文件。
+- **验证**：修改函数前用 CodeGraph 检查调用者（blast radius），修改后用 CodeGraph 验证一致性。如 skill 或 CodeGraph 冲突，优先 CodeGraph。
 
 ## 构建
 

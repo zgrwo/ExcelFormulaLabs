@@ -134,13 +134,13 @@ namespace ExcelVbaLibraries.Analytics
             double g = from.ToUpperInvariant() switch
             {
                 "KG" => v * 1000, "G" or "GRAM" => v, "MG" => v / 1000.0,
-                "LB" or "LBS" => v * 453.592, "OZ" => v * 28.3495, "TON" => v * 1e6,
+                "LB" or "LBS" => v * 453.59237, "OZ" => v * 28.3495, "TON" => v * 1e6,
                 _ => double.NaN,
             };
             return to.ToUpperInvariant() switch
             {
                 "KG" => g / 1000, "G" or "GRAM" => g, "MG" => g * 1000,
-                "LB" or "LBS" => g / 453.592, "OZ" => g / 28.3495, "TON" => g / 1e6,
+                "LB" or "LBS" => g / 453.59237, "OZ" => g / 28.3495, "TON" => g / 1e6,
                 _ => double.NaN,
             };
         }

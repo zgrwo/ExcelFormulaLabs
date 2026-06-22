@@ -3,6 +3,9 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+#if !NET8_0_OR_GREATER
+using System.Threading;
+#endif
 using ExcelVbaLibraries.Foundation;
 
 namespace ExcelVbaLibraries.DataToolkit
@@ -78,9 +81,14 @@ namespace ExcelVbaLibraries.DataToolkit
         internal static string Base64Decode(string t)=>Encoding.UTF8.GetString(Convert.FromBase64String(t));
 
         internal static string UUID()=>Guid.NewGuid().ToString();
-        private static readonly Random _rng = new();
+#if NET8_0_OR_GREATER
         internal static string RandomString(long len=8,string? cs=null)
-        { cs??="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"; var sb=new StringBuilder((int)len); for(int i=0;i<len;i++)sb.Append(cs[_rng.Next(cs.Length)]); return sb.ToString(); }
+        { cs??="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"; var sb=new StringBuilder((int)len); for(int i=0;i<len;i++)sb.Append(cs[Random.Shared.Next(cs.Length)]); return sb.ToString(); }
+#else
+        private static readonly ThreadLocal<Random> _rng = new(() => new Random());
+        internal static string RandomString(long len=8,string? cs=null)
+        { cs??="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"; var sb=new StringBuilder((int)len); var r=_rng.Value!; for(int i=0;i<len;i++)sb.Append(cs[r.Next(cs.Length)]); return sb.ToString(); }
+#endif
 
         internal static bool IsNullOrEmptyStr(string? t)=>string.IsNullOrEmpty(t);
         internal static bool IsNullOrWhitespaceStr(string? t)=>string.IsNullOrWhiteSpace(t);
