@@ -51,9 +51,8 @@ namespace ExcelVbaLibraries.Analytics
         internal static double Range(double[] d) =>
             d.Length == 0 ? double.NaN : Max(d) - Min(d);
 
-        internal static double Sum(double[] d) => d.Sum();
-        internal static double Product(double[] d) =>
-            d.Length == 0 ? 0.0 : d.Aggregate(1.0, (a, x) => a * x);
+        internal static double Sum(double[] d) { var r = d.Sum(); return double.IsInfinity(r) ? double.NaN : r; }
+        internal static double Product(double[] d) { if (d.Length == 0) return 0.0; var r = d.Aggregate(1.0, (a, x) => a * x); return double.IsInfinity(r) ? double.NaN : r; }
 
         internal static double CovarianceP(double[] a, double[] b)
         {

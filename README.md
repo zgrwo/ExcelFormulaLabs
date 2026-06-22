@@ -1,6 +1,6 @@
 # Excel 函数增强库
 
-**在 Excel 里直接用 `=STATS.MEAN()`、`=STR.REVERSE()`、`=JSON.PARSE()` 等 140+ 个 VBA 没有或难实现的函数。** 基于 C# 高性能实现，Python 级精度。
+**在 Excel 里直接用 `=STATS.MEAN()`、`=STR.REVERSE()`、`=JSON.PARSE()` 等函数，覆盖 VBA 没有或难实现的场景。** 基于 C# 高性能实现，Python 级精度。
 
 ## 什么时候用这个项目
 
@@ -69,7 +69,7 @@ Excel → 文件 → 选项 → 加载项
 
 > 💡 所有函数都支持**数组公式**：传入一个区域，自动对每个元素进行计算。完整函数签名见 [API 参考](docs/api-reference.md)。
 
-### 字符串 · `STR.*`（33 个函数）
+### 字符串 · `STR.*`
 
 文本反转、提取、编解码、格式化、随机生成……最常用的文本工具集。
 
@@ -84,7 +84,7 @@ Excel → 文件 → 选项 → 加载项
 =STR.BASE64ENC("hello")             → "aGVsbG8="
 ```
 
-### 统计 · `STATS.*`（32 个函数）
+### 统计 · `STATS.*`
 
 描述统计全覆盖，精度对标 Python scipy（差异 < 1e-10）。
 
@@ -103,7 +103,7 @@ Excel → 文件 → 选项 → 加载项
 =STATS.HARMEAN(A1:A10)             → 调和均值
 ```
 
-### 日期时间 · `DT.*`（26 个函数）
+### 日期时间 · `DT.*`
 
 ISO 周、工作日计算、年龄、时间戳……弥补 Excel 原生日期函数的缺口。
 
@@ -117,7 +117,7 @@ ISO 周、工作日计算、年龄、时间戳……弥补 Excel 原生日期函
 =DT.DATEDIFF("M", A1, B1)         → 月份差
 ```
 
-### 数组 · `ARR.*`（22 个函数）
+### 数组 · `ARR.*`
 
 排序、筛选、去重、切片、合并……不用写 VBA 循环。
 
@@ -130,7 +130,7 @@ ISO 周、工作日计算、年龄、时间戳……弥补 Excel 原生日期函
 =ARR.SHUFFLE(A1:A100)                → 随机打乱
 ```
 
-### 正则 · `REGEX.*`（9 个函数）
+### 正则 · `REGEX.*`
 
 Excel 原生没有正则。这 9 个函数补上了。
 
@@ -154,7 +154,7 @@ Excel 原生没有正则。这 9 个函数补上了。
 =XML.XPATH(A1, "//item/@id")          → XPath 查询
 ```
 
-### 字典/集合 · `DICT.*`（8 个函数）
+### 字典/集合 · `DICT.*`
 
 频率统计、交集/并集/差集、键值查找。
 
@@ -164,7 +164,7 @@ Excel 原生没有正则。这 9 个函数补上了。
 =DICT.UNION(A1:A10, B1:B10)           → 并集
 ```
 
-### 文件系统 · `FS.*`（22 个函数）
+### 文件系统 · `FS.*`
 
 在 Excel 里读写文件、列目录、查大小。注意：需要宏安全设置允许。
 
@@ -175,7 +175,7 @@ Excel 原生没有正则。这 9 个函数补上了。
 =FS.FEXISTS("C:\data.txt")           → 检查文件是否存在
 ```
 
-### 物理化学 · `PHYCHEM.*`（16 个函数）
+### 物理化学 · `PHYCHEM.*`
 
 分子量计算、温度/压力/质量/体积单位换算。
 
@@ -187,7 +187,7 @@ Excel 原生没有正则。这 9 个函数补上了。
 =PHYCHEM.DENSITY(100, 25)            → 4（密度 = 质量/体积）
 ```
 
-### 线性代数 · `LINALG.*`（14 个函数）
+### 线性代数 · `LINALG.*`
 
 矩阵行列式、求逆、特征值、SVD/QR/LU 分解、伪逆。
 
@@ -199,7 +199,7 @@ Excel 原生没有正则。这 9 个函数补上了。
 =LINALG.SVD(A1:C3)                   → 奇异值分解
 ```
 
-### 回归分析 · `REGRESS.*`（7 个函数）
+### 回归分析 · `REGRESS.*`
 
 OLS、加权最小二乘、岭回归、ANOVA、因子重要性。
 
@@ -209,7 +209,7 @@ OLS、加权最小二乘、岭回归、ANOVA、因子重要性。
 =REGRESS.ANOVA1(A1:D100)             → 单因素方差分析
 ```
 
-### 范围导出 · `RANGE.*`（9 个函数）
+### 范围导出 · `RANGE.*`
 
 把 Excel 范围导出为 HTML、JSON、Markdown、CSV。
 
@@ -220,7 +220,7 @@ OLS、加权最小二乘、岭回归、ANOVA、因子重要性。
 =RANGE.TRANSPOSE(A1:D10)              → 转置
 ```
 
-### 数据透视 · `PIVOT.*`（4 个函数）
+### 数据透视 · `PIVOT.*`
 
 透视表、逆透视、分组聚合、交叉连接。
 
@@ -229,7 +229,7 @@ OLS、加权最小二乘、岭回归、ANOVA、因子重要性。
 =PIVOT.GROUPBY(A1:C100, {1}, 3, "avg")   → 按第 1 列分组求第 3 列均值
 ```
 
-### SQL 查询 · `SQL.*`（3 个函数）
+### SQL 查询 · `SQL.*`
 
 把 Excel 区域当数据库表，写 SQL 查询。
 
@@ -238,24 +238,19 @@ OLS、加权最小二乘、岭回归、ANOVA、因子重要性。
 =SQL.JOIN(A1:D100, E1:F50, "SELECT a.Col1, b.Col2 FROM data a JOIN extra b ON a.Col1=b.Col1")
 ```
 
+> ⚠️ **安全说明**：数据行通过参数化 INSERT 插入，列名经过字母数字消毒。但 SQL 查询语句本身由用户自由编写，恶意构造的 SQL（如 `DROP TABLE`）可被执行。请勿在不可信输入上使用此功能。
+
 ---
 
 ## 质量保证
 
 ### 测试覆盖
 
-| 模块 | 测试数 | 状态 |
-|---|---|---|
-| Foundation | 396（198 × 2 TFM） | ✅ |
-| Analytics | 524（262 × 2 TFM） | ✅ |
-| DataToolkit | 1,784（892 × 2 TFM） | ✅ |
-| **总计** | **2,704** | **0 失败** |
-
-两个目标框架（.NET 8 和 .NET Framework 4.8）全部通过同批测试。
+Foundation、Analytics、DataToolkit 三个模块均有完整的单元测试（xUnit + FluentAssertions），覆盖标量/数组/空值/错误透传/多参数尺寸不匹配等场景。全部测试在 **.NET 8 和 .NET Framework 4.8 双目标下均通过**（运行 `dotnet test` 验证）。
 
 ### Python 交叉验证
 
-所有统计函数（`STATS.*`）与 **Python numpy/scipy** 做了交叉验证。282 个真实数据点的 Mean、Stdev、Variance、Percentile、IQR、Skewness、Kurtosis 等 14 个指标与 Python 输出一致（精度 1e-10）。
+所有统计函数（`STATS.*`）与 **Python numpy/scipy** 做了交叉验证。多个真实数据点的 Mean、Stdev、Variance、Percentile、IQR、Skewness、Kurtosis 等指标与 Python 输出一致（精度 1e-10）。
 
 详见 [tests/TestData/Cross_Validation_vs_Python.xlsx](tests/TestData/Cross_Validation_vs_Python.xlsx)。
 

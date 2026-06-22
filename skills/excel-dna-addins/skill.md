@@ -38,7 +38,7 @@
 
 ## 本项目架构
 
-三层结构：`Foundation`（零依赖基础层，8 个源文件）→ `Analytics`（统计/回归/线性代数/物理化学）→ `DataToolkit`（字符串/日期/正则/数组/字典/JSON/XML/透视/文件/SQL/范围）。每个模块含 `Core`（纯逻辑 `internal static`）和 `Udf`（`[ExcelFunction]` 包装）双文件。
+三层结构：`Foundation`（零依赖基础层）→ `Analytics`（统计/回归/线性代数/物理化学）→ `DataToolkit`（字符串/日期/正则/数组/字典/JSON/XML/透视/文件/SQL/范围）。每个模块含 `Core`（纯逻辑 `internal static`）和 `Udf`（`[ExcelFunction]` 包装）双文件。
 
 调用链：`UDF → InputNormalizer → MapOver/MapOverFlat/MapOverMulti/V() → Core → OutputWrapper.WrapError → Excel`
 

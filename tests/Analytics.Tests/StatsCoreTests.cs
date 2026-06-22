@@ -133,6 +133,8 @@ namespace ExcelVbaLibraries.Analytics.Tests
 
         [Fact] public void Product_empty() =>
             StatsCore.Product(Empty).Should().Be(0.0);
+        [Fact] public void Sum_overflow_returns_NaN() { var d = new[] { double.MaxValue, double.MaxValue }; double.IsNaN(StatsCore.Sum(d)).Should().BeTrue(); }
+        [Fact] public void Product_overflow_returns_NaN() { var d = new[] { double.MaxValue, 2.0 }; double.IsNaN(StatsCore.Product(d)).Should().BeTrue(); }
 
         // =====================================================================
         // CROSS-VALIDATION TESTS AGAINST PYTHON (numpy / scipy)
