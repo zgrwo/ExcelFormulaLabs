@@ -97,6 +97,7 @@ namespace ExcelVbaLibraries.Analytics
         internal static double[] Summary(double[] d, QuantileDefinition? def = null)
         {
             if (d.Length == 0) return Array.Empty<double>();
+            if (d.Length == 1) return new[] { 1.0, d[0], double.NaN, d[0], d[0], d[0], d[0], d[0], 0.0 };
             var qd = def ?? DefaultQuantileDefinition;
             double q1 = Statistics.QuantileCustom(d, 0.25, qd);
             double q3 = Statistics.QuantileCustom(d, 0.75, qd);
@@ -150,6 +151,7 @@ namespace ExcelVbaLibraries.Analytics
             if (a.Length < 2 || b.Length < 2) return double.NaN;
             double ma = Statistics.Mean(a), mb = Statistics.Mean(b);
             double va = Variance(a), vb = Variance(b);
+            if (va + vb < 1e-15) return ma == mb ? 1.0 : double.NaN;
             double se = Math.Sqrt(va / a.Length + vb / b.Length);
             double t = (ma - mb) / se;
             double num = (va / a.Length + vb / b.Length);
@@ -163,6 +165,7 @@ namespace ExcelVbaLibraries.Analytics
         {
             double m = Statistics.Mean(d);
             double sd = Math.Sqrt(Variance(d));
+            if (sd < 1e-15) throw new ArgumentException("Cannot compute z-scores for constant data (zero variance).");
             return d.Select(x => (x - m) / sd).ToArray();
         }
 

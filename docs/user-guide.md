@@ -37,26 +37,29 @@ Excel 工作表 → UDF Layer ([ExcelFunction]) → ElementWiseMapper + InputNor
 
 ## 安装
 
-### 1. 安装 .NET 8 运行时
+### 方式一：无需安装运行时（推荐 Windows 10/11 用户）
 
-本加载项基于 .NET 8 构建，运行前必须在 Windows 上安装 .NET 8 Runtime。
+Windows 10/11 自带 .NET Framework 4.8，可直接加载 net48 版本的 .xll：
+
+1. 打开 Excel → 文件 → 选项 → 加载项 → 管理：Excel 加载项 → 转到 → 浏览
+2. 选择对应 .xll：
+   - `src\Analytics\bin\Release\net48\publish\Analytics-AddIn-packed.xll`
+   - `src\DataToolkit\bin\Release\net48\publish\DataToolkit-AddIn-packed.xll`
+3. 64 位 Excel 选 `64-packed`，32 位选 `packed`
+
+### 方式二：安装 .NET 8 运行时
+
+如需使用 .NET 8 版本（性能更优），先安装运行时：
 
 - 下载地址：https://dotnet.microsoft.com/download/dotnet/8.0
 - 选择 **.NET Desktop Runtime 8.0.x** (Windows x64)
 - 下载后双击安装，默认选项即可
 
-验证安装：打开命令提示符，运行 `dotnet --list-runtimes`，应出现 `Microsoft.NETCore.App 8.0.x` 和 `Microsoft.WindowsDesktop.App 8.0.x`。
+验证：命令行运行 `dotnet --list-runtimes`，应出现 `Microsoft.NETCore.App 8.0.x`。
 
-### 2. 在 Excel 中加载 .xll 文件
-
-1. 打开 Excel
-2. 点击 **文件 → 选项 → 加载项**
-3. 在底部"管理"下拉框中选择 **Excel 加载项**，点击 **转到...**
-4. 在加载项对话框中点击 **浏览...**
-5. 定位到以下 .xll 文件并逐一加载：
+然后加载 net8.0 版本的 .xll：
    - `src\Analytics\bin\Release\net8.0-windows\publish\Analytics-AddIn-packed.xll`
    - `src\DataToolkit\bin\Release\net8.0-windows\publish\DataToolkit-AddIn-packed.xll`
-6. 加载成功后，所有函数即可在工作表中使用
 
 > **注意**：如果 Excel 提示"此加载项可能包含病毒"或类似安全警告，请确保文件来自可信来源，并点击"启用"。
 

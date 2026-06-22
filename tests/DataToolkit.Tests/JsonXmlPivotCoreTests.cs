@@ -86,5 +86,27 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
             var r = PivotCore.GroupBy(d, new[] { 0 }, 1, "sum");
             r[0, 1].Should().Be(30.0); r[1, 1].Should().Be(30.0);
         }
+        [Fact] public void Pivot_deterministic_order()
+        {
+            var d = new object[,] { { "K", "P", "V" }, { "B", "X", 10 }, { "A", "Y", 20 }, { "C", "X", 30 } };
+            var r1 = PivotCore.Pivot(d, 0, 1, 2);
+            var r2 = PivotCore.Pivot(d, 0, 1, 2);
+            // Same input → same output (insertion order preserved)
+            for (int i = 0; i < r1.GetLength(0); i++)
+                for (int j = 0; j < r1.GetLength(1); j++)
+                    r1[i, j].Should().Be(r2[i, j]);
+        }
+        [Fact] public void Unpivot_invalid_column_index()
+        {
+            var d = new object[,] { { "ID", "V1" }, { "A", 10 } };
+            var act = () => PivotCore.Unpivot(d, new[] { 0 }, new[] { 5 });
+            act.Should().Throw<ArgumentException>();
+        }
+        [Fact] public void Pivot_unknown_agg_defaults_to_min()
+        {
+            var d = new object[,] { { "K", "P", "V" }, { "A", "X", 10 }, { "A", "X", 5 } };
+            var r = PivotCore.Pivot(d, 0, 1, 2, "UNKNOWN");
+            r[1, 1].Should().Be(5.0);  // MIN is the fallback
+        }
     }
 }

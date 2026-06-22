@@ -39,8 +39,10 @@ namespace ExcelVbaLibraries.Analytics
                 return (qr.Q.SubMatrix(0, rows, 0, cols).ToArray(),
                         qr.R.SubMatrix(0, cols, 0, cols).ToArray());
             }
-            // Wide (rows < cols): MathNet QR requires m ≥ n. Zero-pad to square n×n,
+            // Wide (rows &lt; cols): MathNet QR requires m ≥ n. Zero-pad to square n×n,
             // decompose, then extract Q[0:m, 0:m] and R[0:m, 0:n].
+            // WARNING: allocates a cols×cols matrix — O(cols²) memory. For wide matrices
+            // (cols &gt;&gt; rows), consider transposing the input or using a thin QR alternative.
             // Since padded rows are all zeros, the extracted Q remains orthogonal and
             // A = Q_thin · R_thin holds exactly.
             var pad = Matrix<double>.Build.Dense(cols, cols);

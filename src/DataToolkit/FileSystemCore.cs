@@ -25,6 +25,8 @@ namespace ExcelVbaLibraries.DataToolkit
             if (SandboxRoot == null) return;
             string normalized = NormalizePath(path);
             string root = NormalizePath(SandboxRoot);
+            if (root.Length == 0 || root[root.Length - 1] != Path.DirectorySeparatorChar)
+                root += Path.DirectorySeparatorChar;
             if (!normalized.StartsWith(root, StringComparison.OrdinalIgnoreCase))
                 throw new UnauthorizedAccessException(
                     $"Path '{path}' is outside the sandbox root '{SandboxRoot}'.");

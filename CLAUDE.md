@@ -44,7 +44,7 @@
 
 ```
 src/
-├── Foundation/         共享基础设施（InputNormalizer, ElementWiseMapper, OutputWrapper, FilterUtils, ArrayOperations）
+├── Foundation/         共享基础设施（InputNormalizer, ElementWiseMapper, OutputWrapper, FilterUtils, ArrayOperations, ComparisonUtils, DictOperations, ExcelEmpty, ExcelError）
 ├── Analytics/          分析引擎（Stats, Linalg, Regression, PhyChem）+ Excel-DNA 加载项
 └── DataToolkit/        数据工具箱（String, DateTime, Regex, JSON/XML, Pivot, SQL, FileSystem, Array, DictSet）+ 加载项
 
@@ -55,8 +55,8 @@ tests/
 
 docs/
 ├── api-reference.md    214 UDF 完整签名与说明（数字的唯一来源）
-├── user-guide.md       安装与使用指南
-└── CONTEXT.md          领域术语表
+└── user-guide.md       安装与使用指南
+CONTEXT.md              领域术语表（项目根目录）
 ```
 
 ### 架构分层

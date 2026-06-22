@@ -7,3 +7,5 @@ obj/
 *.deps.json
 *.runtimeconfig.json
 TestResults/
+src/**/Analytics-AddIn.dna
+src/**/DataToolkit-AddIn.dna

@@ -13,20 +13,22 @@ namespace ExcelVbaLibraries.DataToolkit
             agg = agg.ToUpperInvariant();
             int rows = data.GetLength(0);
             var map = new Dictionary<(string k, string p), double>();
-            var keySet = new HashSet<string>(); var pivotSet = new HashSet<string>();
+            var keySet = new HashSet<string>(); var keyList = new List<string>();
+            var pivotSet = new HashSet<string>(); var pivotList = new List<string>();
             for (int r = 0; r < rows; r++)
             {
                 string k = InputNormalizer.ToString(data[r, keyCol]);
                 string p = InputNormalizer.ToString(data[r, pivotCol]);
                 double v = InputNormalizer.ToDouble(data[r, valueCol]);
                 if (double.IsNaN(v)) continue;
-                keySet.Add(k); pivotSet.Add(p);
+                if (keySet.Add(k)) keyList.Add(k);
+                if (pivotSet.Add(p)) pivotList.Add(p);
                 var kv = (k, p);
                 map[kv] = map.TryGetValue(kv, out double ex)
                     ? (agg == "SUM" ? ex + v : agg == "MAX" ? Math.Max(ex, v) : Math.Min(ex, v))
                     : v;
             }
-            var keys = keySet.ToList(); var pivots = pivotSet.ToList();
+            var keys = keyList; var pivots = pivotList;
             var result = new object[keys.Count + 1, pivots.Count + 1];
             result[0, 0] = "Key \\ Pivot";
             for (int c = 0; c < pivots.Count; c++) result[0, c + 1] = pivots[c];
@@ -36,6 +38,9 @@ namespace ExcelVbaLibraries.DataToolkit
 
         internal static object[,] Unpivot(object[,] data, int[] idCols, int[] valueCols)
         {
+            int cols = data.GetLength(1);
+            if (idCols.Any(c => c < 0 || c >= cols) || valueCols.Any(c => c < 0 || c >= cols))
+                throw new ArgumentException("Column index out of range.");
             int rows = data.GetLength(0); int nId = idCols.Length;
             var result = new List<object[]>();
             for (int r = 0; r < rows; r++) { var ids = idCols.Select(c => data[r, c]).ToArray(); foreach (int vc in valueCols) result.Add(ids.Concat(new[] { data[0, vc], data[r, vc] }).ToArray()); }

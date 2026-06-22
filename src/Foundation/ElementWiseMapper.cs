@@ -321,8 +321,7 @@ namespace ExcelVbaLibraries.Foundation
                     break;
                 }
             }
-            // If flat doesn't divide evenly into rows, don't silently truncate.
-            // Return as single-row to preserve all values.
+            // If flat doesn't divide evenly into rows, return as single-row to preserve all values.
             if (rows == 0 || flat.Length % rows != 0) rows = 1;
             int cols = flat.Length / rows;
             if (cols == 0) cols = 1;
