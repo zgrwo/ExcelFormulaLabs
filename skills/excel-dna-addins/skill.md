@@ -27,9 +27,9 @@ disable-model-invocation: true
 ## 本项目技术栈
 
 - Excel-DNA 版本：1.8.0（通过 NuGet ExcelDna.AddIn）
-- 目标框架：net8.0-windows（Analytics/DataToolkit）/ net8.0（Foundation）
-- 语言：C#，SDK 风格 .csproj
-- 输出：.xll 文件（ExcelDnaPack 打包为 -packed.xll）
+- 目标框架：多目标 `net8.0-windows;net48`（Analytics/DataToolkit）/ `net8.0;net48`（Foundation）
+- 语言：C#，SDK 风格 .csproj，`LangVersion=latest`
+- 输出：每个模块产出两套 .xll（net8.0-windows + net48）
 
 ## Golden Rules（Excel-DNA 黄金法则）
 
@@ -37,7 +37,7 @@ disable-model-invocation: true
 2. **优先简单、确定性、无副作用的函数。** 除非需求明确要求异步、流式、对象句柄、宏或 UI 交互。
 3. **UI 操作和工作簿修改远离普通工作表函数。** 将状态更改放在 Ribbon 回调、命令、宏或
    通过 ExcelAsyncUtil.QueueAsMacro 排队的代码中。
-4. **提前决定运行时和部署。** 本项目使用 .NET 8。用户机器需安装 .NET 8 Runtime。
+4. **提前决定运行时和部署。** 本项目双目标：net8.0（需 .NET 8 Runtime）和 net48（Win10/11 自带，零安装）。分发时根据用户环境选择对应的 .xll。
 5. **显式注册。** 优先使用 [ExcelFunction] 特性和 ExcelAddInExplicitExports=true。
 6. **尊重 Excel 线程模型。** 切勿从任意后台线程调用 Excel COM 对象模型。
 7. **使用 Excel-DNA 构建任务和打包。** 签名打包的 .xll 文件用于分发。
@@ -89,22 +89,23 @@ dotnet build -c Release
 dotnet clean
 ```
 
-构建输出：
-- `src/Analytics/bin/Release/net8.0-windows/Analytics-packed.xll`
-- `src/DataToolkit/bin/Release/net8.0-windows/DataToolkit-packed.xll`
+构建输出（每个模块双 TFM）：
+- `src/Analytics/bin/Release/net8.0-windows/publish/Analytics-AddIn-packed.xll`  (.NET 8)
+- `src/Analytics/bin/Release/net48/publish/Analytics-AddIn-packed.xll`       (.NET Framework 4.8)
+- `src/DataToolkit/bin/Release/net8.0-windows/publish/DataToolkit-AddIn-packed.xll`  (.NET 8)
+- `src/DataToolkit/bin/Release/net48/publish/DataToolkit-AddIn-packed.xll`           (.NET Framework 4.8)
 
 
 ## Excel 加载 .xll
 
-1. 确保安装 .NET 8 Runtime
+1. **选择版本**：net48 版（Win10/11 直接可用）或 net8.0 版（需安装 [.NET 8 Runtime](https://dotnet.microsoft.com/download/dotnet/8.0)）
 2. Excel → 文件 → 选项 → 加载项 → Excel 加载项 → 转到 → 浏览
-3. 选择 `src\Analytics\bin\Release\net8.0-windows\Analytics-packed.xll`
-4. 选择 `src\DataToolkit\bin\Release\net8.0-windows\DataToolkit-packed.xll`
-5. 函数即可在工作表中使用，如 `=STATS.MEAN(A1:A100)` 或 `=STR.REVERSE("hello")`
+3. 选择对应的 `-packed.xll` 文件
+4. 函数即可在工作表中使用，如 `=STATS.MEAN(A1:A100)` 或 `=STR.REVERSE("hello")`
 
 ## 相关文档
 
-- [CLAUDE.md](../../CLAUDE.md) — 项目宪法（规则和架构概览）
+- [CLAUDE.md](../../CLAUDE.md) — 项目宪法（规则和技能路由）
 - [skill.md](../excel-dna-project/skill.md) — 编码规范和详细参考
 - [README.md](../../README.md) — 用户向项目说明
 - 测试数据：tests/TestData/Cross_Validation_vs_Python.xlsx

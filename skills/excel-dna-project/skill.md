@@ -58,7 +58,9 @@ Analytics → Analytics.Tests, DataToolkit.Tests / DataToolkit → DataToolkit.T
 - TryExtractComRangeValue：需 COM Excel Range 对象
 - Solve 奇异矩阵：MathNet 5.0 可能不抛异常
 - GasToSTP 无效单位：走 default 分支
-- FileSystem UDF：仅测试 null/empty
+- FileSystem UDF：依赖真实文件系统，部分测试需特定环境
 
-## Bug 修复
-StdevP, CovarianceP, Covariance, IsoYear, IsoWeekNum, Coalesce
+## 历史修复
+- StdevP/CovarianceP/Covariance：MathNet 5.0 破性变更（样本→总体协方差）
+- IsoYear/IsoWeekNum：net48 无 System.Globalization.ISOWeek，手工 polyfill
+- Coalesce：null 与空字符串统一处理
