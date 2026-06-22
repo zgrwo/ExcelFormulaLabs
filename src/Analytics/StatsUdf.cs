@@ -34,11 +34,11 @@ namespace ExcelVbaLibraries.Analytics
         [ExcelFunction(Name="STATS.ZSCORE", Description="Standardize to z-scores: (x - mean) / stdev")] public static object UDF_STAT_ZS(object d)=>OutputWrapper.WrapError(()=>StatsCore.ZScore(V(d)));
         [ExcelFunction(Name="STATS.COUNT", Description="Count of numeric elements in an array")] public static object UDF_STAT_CNT(object d)=>OutputWrapper.WrapError(()=>V(d).Length);
         [ExcelFunction(Name="STATS.MODE", Description="Most frequent value. Returns NaN if all unique (matches Excel MODE.SNGL)")] public static object UDF_STAT_MODE(object d)=>OutputWrapper.WrapError(()=>(object)StatsCore.Mode(V(d)));
-        [ExcelFunction(Name="STATS.ABS", Description="Element-wise absolute value")] public static object UDF_STAT_ABS(object d)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOverFlat<double,double>(d,Math.Abs));
-        [ExcelFunction(Name="STATS.SQRT", Description="Element-wise square root")] public static object UDF_STAT_SQRT(object d)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOverFlat<double,double>(d,Math.Sqrt));
-        [ExcelFunction(Name="STATS.LN", Description="Element-wise natural logarithm")] public static object UDF_STAT_LN(object d)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOverFlat<double,double>(d,Math.Log));
-        [ExcelFunction(Name="STATS.LOG10", Description="Element-wise base-10 logarithm")] public static object UDF_STAT_LOG10(object d)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOverFlat<double,double>(d,Math.Log10));
-        [ExcelFunction(Name="STATS.EXP", Description="Element-wise exponential (e^x)")] public static object UDF_STAT_EXP(object d)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOverFlat<double,double>(d,Math.Exp));
-        [ExcelFunction(Name="STATS.SIGN", Description="Element-wise sign: -1, 0, or 1")] public static object UDF_STAT_SGN(object d)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOverFlat<double,long>(d,x=>(long)Math.Sign(x)));
+        [ExcelFunction(Name="STATS.ABS", Description="Element-wise absolute value")] public static object UDF_STAT_ABS(object d)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOver<double,double>(d,Math.Abs));
+        [ExcelFunction(Name="STATS.SQRT", Description="Element-wise square root")] public static object UDF_STAT_SQRT(object d)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOver<double,double>(d,Math.Sqrt));
+        [ExcelFunction(Name="STATS.LN", Description="Element-wise natural logarithm")] public static object UDF_STAT_LN(object d)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOver<double,double>(d,Math.Log));
+        [ExcelFunction(Name="STATS.LOG10", Description="Element-wise base-10 logarithm")] public static object UDF_STAT_LOG10(object d)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOver<double,double>(d,Math.Log10));
+        [ExcelFunction(Name="STATS.EXP", Description="Element-wise exponential (e^x)")] public static object UDF_STAT_EXP(object d)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOver<double,double>(d,Math.Exp));
+        [ExcelFunction(Name="STATS.SIGN", Description="Element-wise sign: -1, 0, or 1")] public static object UDF_STAT_SGN(object d)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOver<double,long>(d,x=>(long)Math.Sign(x)));
     }
 }

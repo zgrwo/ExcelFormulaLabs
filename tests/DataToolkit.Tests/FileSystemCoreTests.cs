@@ -170,5 +170,12 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
 
         // GetExtension edge: double extension (.tar.gz)
         [Fact] public void GetExtension_doubleExt() => FileSystemCore.GetExtension("file.tar.gz").Should().Be(".gz");
+        [Fact] public void Sandbox_blocks_path_traversal()
+        {
+            var tmp = FileSystemCore.GetTempPath();
+            FileSystemCore.SandboxRoot = tmp;
+            try { var a = () => FileSystemCore.ReadTextFile(@"..\..\outside.txt"); a.Should().Throw<UnauthorizedAccessException>(); }
+            finally { FileSystemCore.SandboxRoot = null; }
+        }
     }
 }

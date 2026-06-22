@@ -93,7 +93,8 @@ namespace ExcelVbaLibraries.Foundation
                 return Regex.IsMatch(
                     InputNormalizer.ToString(element),
                     pattern,
-                    RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                    RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
+                    TimeSpan.FromSeconds(5));
             }
             catch
             {

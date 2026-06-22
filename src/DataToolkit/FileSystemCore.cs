@@ -8,6 +8,28 @@ namespace ExcelVbaLibraries.DataToolkit
     /// <summary>File I/O and path operations. Ported from FileSystemUtils.bas.</summary>
     internal static class FileSystemCore
     {
+        /// <summary>
+        /// Optional sandbox root directory. When set, all file I/O is restricted to
+        /// paths within this directory. Set to null to disable (default).
+        /// Set this before loading workbooks that call FS.* UDFs.
+        /// </summary>
+        public static string? SandboxRoot { get; set; }
+
+        /// <summary>
+        /// Throws <see cref="UnauthorizedAccessException"/> if <paramref name="path"/>
+        /// (after normalization) is outside <see cref="SandboxRoot"/>.
+        /// No-op when <see cref="SandboxRoot"/> is null.
+        /// </summary>
+        internal static void ValidatePath(string path)
+        {
+            if (SandboxRoot == null) return;
+            string normalized = NormalizePath(path);
+            string root = NormalizePath(SandboxRoot);
+            if (!normalized.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+                throw new UnauthorizedAccessException(
+                    $"Path '{path}' is outside the sandbox root '{SandboxRoot}'.");
+        }
+
         internal static string NormalizePath(string p) => Path.GetFullPath(p);
         internal static string PathCombine(string a, string b) => Path.Combine(a, b);
         internal static string GetFileName(string p) => Path.GetFileName(p);
@@ -17,19 +39,19 @@ namespace ExcelVbaLibraries.DataToolkit
         internal static bool IsPathValid(string p) { if(string.IsNullOrEmpty(p))return false; if(p.IndexOfAny(System.IO.Path.GetInvalidPathChars())>=0)return false; try{Path.GetFullPath(p);return true;}catch{return false;} }
         internal static bool FileExists(string p) => File.Exists(p);
         internal static long GetFileSize(string p) => File.Exists(p) ? new FileInfo(p).Length : -1;
-        internal static string ReadTextFile(string p, Encoding? e = null) { try { return File.ReadAllText(p, e ?? Encoding.UTF8); } catch { return ""; } }
-        internal static string[] ReadAllLines(string p, Encoding? e = null) { try { return File.ReadAllLines(p, e ?? Encoding.UTF8); } catch { return Array.Empty<string>(); } }
-        internal static bool WriteTextFile(string p, string c, Encoding? e = null) { try { File.WriteAllText(p, c, e ?? Encoding.UTF8); return true; } catch { return false; } }
-        internal static bool AppendTextFile(string p, string c, Encoding? e = null) { try { File.AppendAllText(p, c, e ?? Encoding.UTF8); return true; } catch { return false; } }
-        internal static bool DeleteFile(string p) { try { if (File.Exists(p)) File.Delete(p); return true; } catch { return false; } }
-        internal static bool CopyFile(string s, string d, bool o = false) { try { File.Copy(s, d, o); return true; } catch { return false; } }
-        internal static bool MoveFile(string s, string d) { try { File.Move(s, d); return true; } catch { return false; } }
+        internal static string ReadTextFile(string p, Encoding? e = null) { ValidatePath(p); return File.ReadAllText(p, e ?? Encoding.UTF8); }
+        internal static string[] ReadAllLines(string p, Encoding? e = null) { ValidatePath(p); return File.ReadAllLines(p, e ?? Encoding.UTF8); }
+        internal static bool WriteTextFile(string p, string c, Encoding? e = null) { ValidatePath(p); File.WriteAllText(p, c, e ?? Encoding.UTF8); return true; }
+        internal static bool AppendTextFile(string p, string c, Encoding? e = null) { ValidatePath(p); File.AppendAllText(p, c, e ?? Encoding.UTF8); return true; }
+        internal static bool DeleteFile(string p) { ValidatePath(p); if (File.Exists(p)) File.Delete(p); return true; }
+        internal static bool CopyFile(string s, string d, bool o = false) { ValidatePath(s); ValidatePath(d); File.Copy(s, d, o); return true; }
+        internal static bool MoveFile(string s, string d) { ValidatePath(s); ValidatePath(d); File.Move(s, d); return true; }
         internal static bool FolderExists(string p) => Directory.Exists(p);
-        internal static bool EnsureFolder(string p) { try { if (!Directory.Exists(p)) Directory.CreateDirectory(p); return true; } catch { return false; } }
-        internal static string[] ListFiles(string p, string pat = "*") { try { return Directory.GetFiles(p, pat); } catch { return Array.Empty<string>(); } }
-        internal static string[] ListFolders(string p, string pat = "*") { try { return Directory.GetDirectories(p, pat); } catch { return Array.Empty<string>(); } }
-        internal static bool DeleteFolder(string p, bool r = false) { try { if (Directory.Exists(p)) Directory.Delete(p, r); return true; } catch { return false; } }
-        internal static string[] GetDrives() { try { return Array.ConvertAll(DriveInfo.GetDrives(), d => d.Name); } catch { return Array.Empty<string>(); } }
+        internal static bool EnsureFolder(string p) { ValidatePath(p); if (!Directory.Exists(p)) Directory.CreateDirectory(p); return true; }
+        internal static string[] ListFiles(string p, string pat = "*") { ValidatePath(p); return Directory.GetFiles(p, pat); }
+        internal static string[] ListFolders(string p, string pat = "*") { ValidatePath(p); return Directory.GetDirectories(p, pat); }
+        internal static bool DeleteFolder(string p, bool r = false) { ValidatePath(p); if (Directory.Exists(p)) Directory.Delete(p, r); return true; }
+        internal static string[] GetDrives() { return Array.ConvertAll(DriveInfo.GetDrives(), d => d.Name); }
         internal static string GetCurrentFolder() => Directory.GetCurrentDirectory();
         internal static string GetTempPath() => Path.GetTempPath();
         internal static string GetTempFileName() => Path.GetTempFileName();

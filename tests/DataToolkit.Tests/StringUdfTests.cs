@@ -383,9 +383,10 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void Isne_null() => StringUdf.UDF_STR_ISNE(null!).Should().BeNull();
         [Fact] public void Isne_array() { var r=(object[])StringUdf.UDF_STR_ISNE(new object[]{"","hello",null}); ((bool)r[0]).Should().BeTrue(); ((bool)r[1]).Should().BeFalse(); r[2].Should().BeNull(); }
 
-        [Fact] public void Fmt_number() => StringUdf.UDF_STR_FMT("42", "D4").Should().Be("42");
+        // STR.FORMAT does not yet support standard numeric format strings; passes through as-is.
+        [Fact] public void Fmt_unsupported_format_passthrough() => StringUdf.UDF_STR_FMT("42", "D4").Should().Be("42");
         [Fact] public void Fmt_null_value() => StringUdf.UDF_STR_FMT(null!, "D4").Should().Be(ExcelEmpty.Value);
-        [Fact] public void Fmt_currency() => StringUdf.UDF_STR_FMT("100", "C").Should().Be("100");
+        [Fact] public void Fmt_currency_passthrough() => StringUdf.UDF_STR_FMT("100", "C").Should().Be("100");
         [Fact] public void Fmt_array() { var r=(object[])StringUdf.UDF_STR_FMT(new object[]{"42","100"}, "D4"); ((string)r[0]).Should().Be("42"); ((string)r[1]).Should().Be("100"); }
 
         [Fact] public void Coal_primary_null() => StringUdf.UDF_STR_COAL(null!, "fallback").Should().Be(ExcelEmpty.Value);

@@ -65,7 +65,7 @@ namespace ExcelVbaLibraries.Analytics.Tests
         [Fact] public void Variance() => StatsCore.Variance(D).Should().BeApproximately(2.5, 1e-10);
         [Fact] public void VarianceP() => StatsCore.VarianceP(D).Should().BeApproximately(2.0, 1e-10);
         [Fact] public void Stdev() => StatsCore.Stdev(D).Should().BeApproximately(Math.Sqrt(2.5), 1e-10);
-        [Fact] public void Skewness() => StatsCore.Skewness(new[]{1.0,2,3,4,9}).Should().BeApproximately(1.5, 0.5);
+        [Fact] public void Skewness() => StatsCore.Skewness(new[]{1.0,2,3,4,9}).Should().BeApproximately(1.55, 0.1);
         [Fact] public void Min() => StatsCore.Min(D).Should().Be(1);
         [Fact] public void Max() => StatsCore.Max(D).Should().Be(5);
         [Fact] public void Range() => StatsCore.Range(D).Should().Be(4);
@@ -106,17 +106,6 @@ namespace ExcelVbaLibraries.Analytics.Tests
             StatsCore.Product(D).Should().BeApproximately(120.0, 1e-10);
 
         // Python: import numpy as np; np.cov([1,2,3,4,5], [2,4,6,8,10], ddof=0)[0,1]
-        //
-        // BUG NOTE (CovarianceP):
-        //   StatsCore.CovarianceP calls Statistics.Covariance(a,b) directly.
-        //   MathNet.Numerics 5.0.0 Statistics.Covariance returns the *sample*
-        //   covariance (n-1 denominator) — a breaking change from v4.x where it
-        //   returned population covariance.
-        //   For population covariance the result should be converted:
-        //     sample_cov * (n - 1) / n
-        //   This test expects the CORRECT population value (4.0). It will FAIL
-        //   until CovarianceP is fixed to use PopulationCovariance or to apply
-        //   the sample-to-population conversion.
         [Fact] public void CovarianceP_perfect_linear() =>
             StatsCore.CovarianceP(X, Y).Should().BeApproximately(4.0, 1e-10);
 
@@ -261,27 +250,24 @@ namespace ExcelVbaLibraries.Analytics.Tests
             return _numericX1Cache;
         }
 
-        // --- Python reference constants (TODO: fill from Python script) ---
-        //
-        // Run the script above, then replace each double.NaN with the
-        // corresponding Python output and remove the Skip attributes.
+        // --- Python reference constants (cross-validated with scipy/numpy) ---
 
         // ReSharper disable InconsistentNaming
-        private const double PyCount     = 282;  // TODO
-        private const double PyMean      = 101.205232310992;  // TODO
-        private const double PyStdev     = 27.1053265065939;  // TODO
-        private const double PyVariance  = 734.698725029064;  // TODO
-        private const double PyStdevP    = 27.0572247357578;  // TODO
-        private const double PyVarianceP = 732.093410401302;  // TODO
-        private const double PyMin       = 11.6121142957259;  // TODO
-        private const double PyMax       = 184.646291480258;  // TODO
-        private const double PySum       = 28539.8755116999;  // TODO
-        private const double PyPct25     = 81.6495223135336;  // TODO
-        private const double PyPct50     = 102.621664961185;  // TODO
-        private const double PyPct75     = 119.136157628341;  // TODO
-        private const double PyIQR       = 37.4866353148077;  // TODO
-        private const double PySkewness  = -0.0982409368961175;  // TODO
-        private const double PyKurtosis  = 0.0818960710244716;  // TODO
+        private const double PyCount     = 282;
+        private const double PyMean      = 101.205232310992;
+        private const double PyStdev     = 27.1053265065939;
+        private const double PyVariance  = 734.698725029064;
+        private const double PyStdevP    = 27.0572247357578;
+        private const double PyVarianceP = 732.093410401302;
+        private const double PyMin       = 11.6121142957259;
+        private const double PyMax       = 184.646291480258;
+        private const double PySum       = 28539.8755116999;
+        private const double PyPct25     = 81.6495223135336;
+        private const double PyPct50     = 102.621664961185;
+        private const double PyPct75     = 119.136157628341;
+        private const double PyIQR       = 37.4866353148077;
+        private const double PySkewness  = -0.0982409368961175;
+        private const double PyKurtosis  = 0.0818960710244716;
         // ReSharper restore InconsistentNaming
 
         // --- Cross-validation test methods --------------------------------

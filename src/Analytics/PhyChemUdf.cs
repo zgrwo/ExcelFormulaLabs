@@ -22,6 +22,6 @@ namespace ExcelVbaLibraries.Analytics
         [ExcelFunction(Name="PHYCHEM.GASSTP", Description="Convert gas volume to standard temperature and pressure (STP)")] public static object UDF_PC_STP(object vol,object temp,object press)=>OutputWrapper.WrapError(()=>PhyChemCore.GasToSTP(InputNormalizer.ToDouble(vol),InputNormalizer.ToDouble(temp),InputNormalizer.ToDouble(press)));
         [ExcelFunction(Name="PHYCHEM.DENSITY", Description="Compute density: mass / volume")] public static object UDF_PC_DEN(object mass,object vol)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOverMulti<double,double,double>(mass,vol,(m,v)=>m/v));
         private static string S(object o)=>InputNormalizer.ToString(o);
-        private static double? V(object o){if(o is Foundation.ExcelEmpty||o is ExcelDna.Integration.ExcelEmpty||o==null)return null;return InputNormalizer.ToDouble(o);}
+        private static double? V(object o){if(o is Foundation.ExcelEmpty||o is ExcelDna.Integration.ExcelEmpty||o==null||o is string s&&s=="*")return null;var d=InputNormalizer.ToDouble(o);return double.IsNaN(d)?null:d;}
     }
 }

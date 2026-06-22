@@ -330,5 +330,10 @@ namespace ExcelVbaLibraries.Analytics.Tests
             var r = PhyChemUdf.UDF_PC_DEN(7.5, 7.5);
             ((double)r).Should().BeApproximately(1.0, 1e-10);
         }
+        [Fact] public void IdealGas_star_placeholder()
+        {
+            var r = PhyChemUdf.UDF_PC_GAS("*", 22.4, 1.0, 273.15);
+            ((double)r).Should().BeApproximately(1.0, 0.02);
+        }
     }
 }

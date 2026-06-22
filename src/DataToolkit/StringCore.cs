@@ -20,7 +20,7 @@ namespace ExcelVbaLibraries.DataToolkit
             Regex.Replace(t.Trim(), @"\s+", " ");
 
         internal static string ToTitleCase(string t) =>
-            CultureInfo.CurrentCulture.TextInfo.ToTitleCase(t.ToLowerInvariant());
+            CultureInfo.InvariantCulture.TextInfo.ToTitleCase(t.ToLowerInvariant());
 
         internal static string RemoveChars(string t, string chars)
         { var set = new System.Collections.Generic.HashSet<char>(chars); var sb = new System.Text.StringBuilder(t.Length); foreach (char c in t) if (!set.Contains(c)) sb.Append(c); return sb.ToString(); }
@@ -65,8 +65,9 @@ namespace ExcelVbaLibraries.DataToolkit
         { return string.Join(d, skip?v.Where(x=>!string.IsNullOrEmpty(x)):v); }
 
         internal static long LevenshteinDistance(string a, string b)
-        { int na=a.Length,nb=b.Length; var d=new int[na+1,nb+1]; for(int i=0;i<=na;i++)d[i,0]=i; for(int j=0;j<=nb;j++)d[0,j]=j;
-          for(int i=1;i<=na;i++)for(int j=1;j<=nb;j++)d[i,j]=Math.Min(Math.Min(d[i-1,j]+1,d[i,j-1]+1),d[i-1,j-1]+(a[i-1]==b[j-1]?0:1)); return d[na,nb]; }
+        { int na=a.Length,nb=b.Length; var prev=new int[nb+1]; for(int j=0;j<=nb;j++)prev[j]=j;
+          for(int i=1;i<=na;i++){ var curr=new int[nb+1]; curr[0]=i;
+          for(int j=1;j<=nb;j++)curr[j]=Math.Min(Math.Min(prev[j]+1,curr[j-1]+1),prev[j-1]+(a[i-1]==b[j-1]?0:1)); prev=curr; } return prev[nb]; }
 
         internal static string Soundex(string t)
         { if(string.IsNullOrEmpty(t))return""; char f=char.ToUpperInvariant(t[0]); var sb=new StringBuilder();sb.Append(f);char pc=Sdx(f);

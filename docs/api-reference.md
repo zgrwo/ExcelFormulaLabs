@@ -55,7 +55,7 @@
 | `LINALG.MATMUL` | (A, B) | `double[,]` | 矩阵乘法 |
 | `LINALG.TRANSPOSE` | (matrix) | `double[,]` | 矩阵转置 |
 | `LINALG.TRACE` | (matrix) | `double` | 矩阵迹（对角线元素之和） |
-| `LINALG.RANK` | (matrix, tol) | `long` | 数值秩（默认容差 1e-12） |
+| `LINALG.RANK` | (matrix, tol) | `long` | 数值秩（默认容差 1e-10） |
 | `LINALG.COND` | (matrix) | `double` | 条件数（2-范数） |
 | `LINALG.EIGEN` | (matrix) | `double[]` | 特征值 |
 | `LINALG.SVD` | (matrix) | `1×3 {U, S, Vt}` | 奇异值分解 A = U·diag(S)·Vt。返回水平数组：第1个 U 矩阵，第2个 S 向量，第3个 Vt 矩阵 |

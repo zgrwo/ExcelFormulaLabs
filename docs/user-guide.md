@@ -54,8 +54,8 @@ Excel 工作表 → UDF Layer ([ExcelFunction]) → ElementWiseMapper + InputNor
 3. 在底部"管理"下拉框中选择 **Excel 加载项**，点击 **转到...**
 4. 在加载项对话框中点击 **浏览...**
 5. 定位到以下 .xll 文件并逐一加载：
-   - `src\Analytics\bin\Release\net8.0-windows\Analytics-packed.xll`
-   - `src\DataToolkit\bin\Release\net8.0-windows\DataToolkit-packed.xll`
+   - `src\Analytics\bin\Release\net8.0-windows\publish\Analytics-AddIn-packed.xll`
+   - `src\DataToolkit\bin\Release\net8.0-windows\publish\DataToolkit-AddIn-packed.xll`
 6. 加载成功后，所有函数即可在工作表中使用
 
 > **注意**：如果 Excel 提示"此加载项可能包含病毒"或类似安全警告，请确保文件来自可信来源，并点击"启用"。

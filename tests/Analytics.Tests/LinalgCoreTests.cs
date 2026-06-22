@@ -64,5 +64,11 @@ namespace ExcelVbaLibraries.Analytics.Tests
         [Fact] public void NormFrobenius_zero_matrix() => LinalgCore.NormFrobenius(new double[2,2]).Should().Be(0.0);
         [Fact] public void NormFrobenius_identity() => LinalgCore.NormFrobenius(new double[,]{{1,0},{0,1}}).Should().BeApproximately(Math.Sqrt(2),1e-10);
         [Fact] public void Diagonal_empty() { var d=LinalgCore.Diagonal(new double[0]); d.GetLength(0).Should().Be(0); }
+        [Fact] public void Rank_with_tolerance()
+        {
+            var m = new double[,] { { 1, 1 }, { 1, 1 + 1e-8 } };
+            LinalgCore.Rank(m, 1e-10).Should().Be(2);  // tight tol → full rank
+            LinalgCore.Rank(m, 1e-6).Should().Be(1);   // loose tol → rank 1
+        }
     }
 }

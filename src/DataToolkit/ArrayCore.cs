@@ -14,7 +14,7 @@ namespace ExcelVbaLibraries.DataToolkit
         internal static object[] Slice(object[] a, long start, long len = -1) => ArrayOperations.Slice(a, start>int.MaxValue?int.MaxValue:(int)start, len>int.MaxValue?int.MaxValue:(int)len);
         internal static object[] Flatten2D(object[,] a, string order = "R") => ArrayOperations.Flatten(a, order=="C"?NormalizeOrder.ColumnMajor:NormalizeOrder.RowMajor);
         internal static object[] Filter(object[] a, object crit, string op) { var r=new List<object>(); foreach(var v in a)if(FilterUtils.FilterPasses(v,crit,op))r.Add(v); return r.ToArray(); }
-        internal static object[] Concat(object[] a, object[] b) => a.Concat(b).ToArray();
+        internal static object[] Concat(object[] a, object[] b) { var r = new object[a.Length + b.Length]; Array.Copy(a, 0, r, 0, a.Length); Array.Copy(b, 0, r, a.Length, b.Length); return r; }
         internal static object[] Reverse(object[] a) { var r=new object[a.Length]; for(int i=0;i<a.Length;i++)r[i]=a[a.Length-1-i]; return r; }
         internal static long Count(object[] a) => a.Length;
         internal static bool Contains(object[] a, object v) => ArrayOperations.IndexOf(a,v)>=0;

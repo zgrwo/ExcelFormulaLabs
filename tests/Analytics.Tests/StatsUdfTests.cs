@@ -60,37 +60,12 @@ namespace ExcelVbaLibraries.Analytics.Tests
         [Fact] public void TTest2_two_groups() => ((double)StatsUdf.UDF_STAT_T2(new double[] { 1, 2, 3 }, new double[] { 4, 5, 6 })).Should().BeLessThan(0.05);
 
         // ── MapOverFlat: ALWAYS returns object[], even for scalar ──
-        [Fact] public void Abs_scalar_returns_object_array()
-        {
-            var r = (object[])StatsUdf.UDF_STAT_ABS(-5.0);
-            ((double)r[0]).Should().Be(5.0);
-        }
-        [Fact] public void Sqrt_scalar_returns_object_array()
-        {
-            var r = (object[])StatsUdf.UDF_STAT_SQRT(4.0);
-            ((double)r[0]).Should().Be(2.0);
-        }
-        [Fact] public void Ln_scalar_returns_object_array()
-        {
-            var r = (object[])StatsUdf.UDF_STAT_LN(Math.E);
-            ((double)r[0]).Should().BeApproximately(1.0, 1e-10);
-        }
-        [Fact] public void Log10_scalar_returns_object_array()
-        {
-            var r = (object[])StatsUdf.UDF_STAT_LOG10(100.0);
-            ((double)r[0]).Should().BeApproximately(2.0, 1e-10);
-        }
-        [Fact] public void Exp_scalar_returns_object_array()
-        {
-            var r = (object[])StatsUdf.UDF_STAT_EXP(0.0);
-            ((double)r[0]).Should().BeApproximately(1.0, 1e-10);
-        }
-        [Fact] public void Sign_scalar_returns_object_array()
-        {
-            var r = (object[])StatsUdf.UDF_STAT_SGN(-3.0);
-            r.Should().BeOfType<object[]>();
-            ((long)r[0]).Should().Be(-1L);
-        }
+        [Fact] public void Abs_scalar() => ((double)StatsUdf.UDF_STAT_ABS(-5.0)).Should().Be(5.0);
+        [Fact] public void Sqrt_scalar() => ((double)StatsUdf.UDF_STAT_SQRT(4.0)).Should().Be(2.0);
+        [Fact] public void Ln_scalar() => ((double)StatsUdf.UDF_STAT_LN(Math.E)).Should().BeApproximately(1.0, 1e-10);
+        [Fact] public void Log10_scalar() => ((double)StatsUdf.UDF_STAT_LOG10(100.0)).Should().BeApproximately(2.0, 1e-10);
+        [Fact] public void Exp_scalar() => ((double)StatsUdf.UDF_STAT_EXP(0.0)).Should().BeApproximately(1.0, 1e-10);
+        [Fact] public void Sign_scalar() => ((long)StatsUdf.UDF_STAT_SGN(-3.0)).Should().Be(-1L);
 
         // ── Multi-arg methods (CVP, CV, PEAR, SPR, T1, T2) ──
         // Size mismatch -> MapOverMulti returns ExcelError.Value
@@ -101,35 +76,24 @@ namespace ExcelVbaLibraries.Analytics.Tests
         // TTest: same groups -> p~1.0
         [Fact] public void T2_same_group() => ((double)StatsUdf.UDF_STAT_T2(D,D)).Should().BeApproximately(1.0,0.1);
 
-        // ── MapOverFlat element-wise edge cases (Abs, Sqrt, Ln, Log10, Exp, Sign) ──
+        // ── MapOver element-wise edge cases (Abs, Sqrt, Ln, Log10, Exp, Sign) ──
         // Abs: array input
         [Fact] public void Abs_array() { var r=(object[])StatsUdf.UDF_STAT_ABS(new object[]{-1.0,2,-3}); r.Should().Equal(1.0,2.0,3.0); }
-        // Abs: zero
-        [Fact] public void Abs_zero() { var r=(object[])StatsUdf.UDF_STAT_ABS(0.0); ((double)r[0]).Should().Be(0.0); }
-        // Sqrt: zero
-        [Fact] public void Sqrt_zero() { var r=(object[])StatsUdf.UDF_STAT_SQRT(0.0); ((double)r[0]).Should().Be(0.0); }
-        // Sqrt: negative -> NaN (Math.Sqrt of negative = NaN, not exception)
-        [Fact] public void Sqrt_negative_NaN() { var r=(object[])StatsUdf.UDF_STAT_SQRT(-1.0); ((double)r[0]).Should().Be(double.NaN); }
+        [Fact] public void Abs_zero() => ((double)StatsUdf.UDF_STAT_ABS(0.0)).Should().Be(0.0);
+        [Fact] public void Sqrt_zero() => ((double)StatsUdf.UDF_STAT_SQRT(0.0)).Should().Be(0.0);
+        [Fact] public void Sqrt_negative_NaN() => ((double)StatsUdf.UDF_STAT_SQRT(-1.0)).Should().Be(double.NaN);
         // Sqrt: array
         [Fact] public void Sqrt_array() { var r=(object[])StatsUdf.UDF_STAT_SQRT(new object[]{4.0,9,16}); r.Should().Equal(2.0,3.0,4.0); }
-        // Ln: 1 -> 0
-        [Fact] public void Ln_one() { var r=(object[])StatsUdf.UDF_STAT_LN(1.0); ((double)r[0]).Should().Be(0.0); }
-        // Ln: 0 -> -Infinity
-        [Fact] public void Ln_zero() { var r=(object[])StatsUdf.UDF_STAT_LN(0.0); ((double)r[0]).Should().Be(double.NegativeInfinity); }
-        // Ln: negative -> NaN
-        [Fact] public void Ln_negative_NaN() { var r=(object[])StatsUdf.UDF_STAT_LN(-1.0); ((double)r[0]).Should().Be(double.NaN); }
-        // Log10: 1 -> 0
-        [Fact] public void Log10_one() { var r=(object[])StatsUdf.UDF_STAT_LOG10(1.0); ((double)r[0]).Should().Be(0.0); }
-        // Exp: 1 -> e
-        [Fact] public void Exp_one() { var r=(object[])StatsUdf.UDF_STAT_EXP(1.0); ((double)r[0]).Should().BeApproximately(Math.E,1e-10); }
-        // Exp: -10 -> small positive
-        [Fact] public void Exp_negative() { var r=(object[])StatsUdf.UDF_STAT_EXP(-10.0); ((double)r[0]).Should().BeApproximately(Math.Exp(-10),1e-10); }
-        // Exp: 1000 -> Infinity (overflow)
-        [Fact] public void Exp_large_infinity() { var r=(object[])StatsUdf.UDF_STAT_EXP(1000.0); ((double)r[0]).Should().Be(double.PositiveInfinity); }
-        // Sign: positive/negative/zero
-        [Fact] public void Sign_positive() { var r=(object[])StatsUdf.UDF_STAT_SGN(42.0); ((long)r[0]).Should().Be(1L); }
-        [Fact] public void Sign_negative() { var r=(object[])StatsUdf.UDF_STAT_SGN(-7.0); ((long)r[0]).Should().Be(-1L); }
-        [Fact] public void Sign_zero() { var r=(object[])StatsUdf.UDF_STAT_SGN(0.0); ((long)r[0]).Should().Be(0L); }
+        [Fact] public void Ln_one() => ((double)StatsUdf.UDF_STAT_LN(1.0)).Should().Be(0.0);
+        [Fact] public void Ln_zero() => ((double)StatsUdf.UDF_STAT_LN(0.0)).Should().Be(double.NegativeInfinity);
+        [Fact] public void Ln_negative_NaN() => ((double)StatsUdf.UDF_STAT_LN(-1.0)).Should().Be(double.NaN);
+        [Fact] public void Log10_one() => ((double)StatsUdf.UDF_STAT_LOG10(1.0)).Should().Be(0.0);
+        [Fact] public void Exp_one() => ((double)StatsUdf.UDF_STAT_EXP(1.0)).Should().BeApproximately(Math.E,1e-10);
+        [Fact] public void Exp_negative() => ((double)StatsUdf.UDF_STAT_EXP(-10.0)).Should().BeApproximately(Math.Exp(-10),1e-10);
+        [Fact] public void Exp_large_infinity() => ((double)StatsUdf.UDF_STAT_EXP(1000.0)).Should().Be(double.PositiveInfinity);
+        [Fact] public void Sign_positive() => ((long)StatsUdf.UDF_STAT_SGN(42.0)).Should().Be(1L);
+        [Fact] public void Sign_negative() => ((long)StatsUdf.UDF_STAT_SGN(-7.0)).Should().Be(-1L);
+        [Fact] public void Sign_zero() => ((long)StatsUdf.UDF_STAT_SGN(0.0)).Should().Be(0L);
         // Sign: array
         [Fact] public void Sign_array() { var r=(object[])StatsUdf.UDF_STAT_SGN(new object[]{5.0,-2.0,0.0}); r.Should().Equal(1L,-1L,0L); }
 

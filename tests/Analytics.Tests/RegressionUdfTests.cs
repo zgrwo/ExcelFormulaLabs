@@ -17,21 +17,42 @@ namespace ExcelVbaLibraries.Analytics.Tests
             var r = (object[,])RegressionUdf.UDF_REGRESS_OLS(X, y);
             r.GetLength(0).Should().Be(2);
             r.GetLength(1).Should().BeGreaterOrEqualTo(5);
+            // Find coefficients column by key name
+            var coef = FindColumn(r, "coefficients") as double[];
+            coef.Should().NotBeNull();
+            coef![0].Should().BeApproximately(2.0, 1e-10);
+            coef[1].Should().BeApproximately(3.0, 1e-10);
         }
         [Fact] public void WLS_equal_weights()
         {
             var r = (object[,])RegressionUdf.UDF_REGRESS_WLS(X, y, new double[] { 1.0, 1.0, 1.0 });
             r.GetLength(0).Should().Be(2);
+            var coef = FindColumn(r, "coefficients") as double[];
+            coef.Should().NotBeNull();
+            coef![0].Should().BeApproximately(2.0, 1e-10);
+            coef[1].Should().BeApproximately(3.0, 1e-10);
         }
         [Fact] public void Ridge_keys()
         {
             var r = (object[,])RegressionUdf.UDF_REGRESS_RIDGE(X, y, 0.1);
             r.GetLength(0).Should().Be(2);
+            var coef = FindColumn(r, "coefficients") as double[];
+            coef.Should().NotBeNull();
+            coef![0].Should().BeApproximately(2.0, 0.15);
+            coef[1].Should().BeApproximately(3.0, 0.15);
         }
         [Fact] public void Anova1_keys()
         {
             var r = (object[,])RegressionUdf.UDF_REGRESS_ANOVA1(new double[,] { { 5, 8 }, { 6, 9 }, { 7, 10 } });
             r.GetLength(0).Should().Be(2);
+            r.GetLength(1).Should().BeGreaterOrEqualTo(4);
+        }
+
+        private static object? FindColumn(object[,] r, string key)
+        {
+            for (int c = 0; c < r.GetLength(1); c++)
+                if (r[0, c] is string s && s == key) return r[1, c];
+            return null;
         }
 
         // ── Factor importance (returns long[]) ──

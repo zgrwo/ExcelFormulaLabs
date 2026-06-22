@@ -10,6 +10,7 @@ namespace ExcelVbaLibraries.DataToolkit
     {
         internal static object[,] Pivot(object[,] data, int keyCol, int pivotCol, int valueCol, string agg = "SUM")
         {
+            agg = agg.ToUpperInvariant();
             int rows = data.GetLength(0);
             var map = new Dictionary<(string k, string p), double>();
             var keySet = new HashSet<string>(); var pivotSet = new HashSet<string>();
@@ -45,6 +46,7 @@ namespace ExcelVbaLibraries.DataToolkit
 
         internal static object[,] GroupBy(object[,] data, int[] gCols, int aCol, string agg = "SUM")
         {
+            agg = agg.ToUpperInvariant();
             int rows = data.GetLength(0), nG = gCols.Length;
             var groups = new Dictionary<string, (double val, long cnt)>();
             var keyNames = new List<object[]>(); var seen = new HashSet<string>();
@@ -53,7 +55,7 @@ namespace ExcelVbaLibraries.DataToolkit
                 var gk = gCols.Select(c => InputNormalizer.ToString(data[r, c])).ToArray();
                 string gks = string.Join("|", gk); double v = InputNormalizer.ToDouble(data[r, aCol]);
                 if (double.IsNaN(v)) continue;
-                if (groups.TryGetValue(gks, out var ex)) groups[gks] = agg switch { "SUM" => (ex.val + v, ex.cnt + 1), "MAX" => (Math.Max(ex.val, v), ex.cnt + 1), "MIN" => (Math.Min(ex.val, v), ex.cnt + 1), _ => (ex.val + v, ex.cnt + 1) };
+                if (groups.TryGetValue(gks, out var ex)) groups[gks] = agg switch { "SUM" => (ex.val + v, ex.cnt + 1), "MAX" => (Math.Max(ex.val, v), ex.cnt + 1), "MIN" => (Math.Min(ex.val, v), ex.cnt + 1), "COUNT" => (0, ex.cnt + 1), "AVG" => (ex.val + v, ex.cnt + 1), _ => (ex.val + v, ex.cnt + 1) };
                 else { groups[gks] = (v, 1); if (seen.Add(gks)) keyNames.Add(gk); }
             }
             var result = new object[keyNames.Count, nG + 1];

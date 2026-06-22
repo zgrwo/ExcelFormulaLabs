@@ -45,24 +45,17 @@
     <PackageReference Include="System.Text.Json" Version="8.0.4" />
   </ItemGroup>
 
-  <!-- Generate correct .dna from templates per target (avoids cross-target DLL references) -->
-  <Target Name="CleanStaleDna" BeforeTargets="GenerateDnaFromTemplate">
-    <!-- Always clean up generated .dna from previous (possibly failed) builds -->
-    <Delete Files="DataToolkit-AddIn.dna;DataToolkit-AddIn-net48.dna" />
-  </Target>
-  <Target Name="GenerateDnaFromTemplate" BeforeTargets="BeforeBuild" DependsOnTargets="CleanStaleDna">
+  <!-- Generate correct .dna from templates per target. The DNA file lives in
+       the project root and is shared across inner builds; delete stale copies
+       and recopy the TFM-correct template before ExcelDnaBuild processes it. -->
+  <Target Name="GenerateDnaFromTemplate" BeforeTargets="ExcelDnaBuild">
+    <Delete Files="DataToolkit-AddIn.dna" />
     <Copy Condition="'$(TargetFramework)' == 'net8.0-windows'"
           SourceFiles="DataToolkit-AddIn-net8.dna.tpl"
           DestinationFiles="DataToolkit-AddIn.dna" />
     <Copy Condition="'$(TargetFramework)' == 'net48'"
           SourceFiles="DataToolkit-AddIn-net48.dna.tpl"
-          DestinationFiles="DataToolkit-AddIn-net48.dna" />
-  </Target>
-  <Target Name="CleanGeneratedDna" AfterTargets="AfterBuild">
-    <Delete Condition="'$(TargetFramework)' == 'net8.0-windows' and Exists('DataToolkit-AddIn.dna')"
-            Files="DataToolkit-AddIn.dna" />
-    <Delete Condition="'$(TargetFramework)' == 'net48' and Exists('DataToolkit-AddIn-net48.dna')"
-            Files="DataToolkit-AddIn-net48.dna" />
+          DestinationFiles="DataToolkit-AddIn.dna" />
   </Target>
 
 </Project>

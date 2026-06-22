@@ -14,7 +14,7 @@ namespace ExcelVbaLibraries.DataToolkit
         [ExcelFunction(Name="RANGE.TOCSVTAB", Description="Export range to tab-separated values (TSV)")] public static object UDF_RANGE_TSV(object d)=>OutputWrapper.WrapError(()=>RangeExportCore.RangeToCsv(D(d),"\t",false));
         [ExcelFunction(Name="RANGE.TOCSVSEMI", Description="Export range to semicolon-separated CSV")] public static object UDF_RANGE_SCSV(object d)=>OutputWrapper.WrapError(()=>RangeExportCore.RangeToCsv(D(d),";",true));
         [ExcelFunction(Name="RANGE.TRANSPOSE", Description="Transpose rows and columns")] public static object UDF_RANGE_TRANS(object d)=>OutputWrapper.WrapError(()=>RangeExportCore.Transpose(D(d)));
-        [ExcelFunction(Name="RANGE.SELCOLS", Description="Select specified columns from a range")] public static object UDF_RANGE_SELC(object d,object c)=>OutputWrapper.WrapError(()=>RangeExportCore.SelectColumns(D(d),c is int[] ci?ci:InputNormalizer.NormalizeTo1D(c).Select(x=>(int)InputNormalizer.ToLong(x)).ToArray()));
-        [ExcelFunction(Name="RANGE.SELROWS", Description="Select specified rows from a range")] public static object UDF_RANGE_SELR(object d,object r)=>OutputWrapper.WrapError(()=>RangeExportCore.SelectRows(D(d),r is int[] ri?ri:InputNormalizer.NormalizeTo1D(r).Select(x=>(int)InputNormalizer.ToLong(x)).ToArray()));
+        [ExcelFunction(Name="RANGE.SELCOLS", Description="Select specified columns from a range")] public static object UDF_RANGE_SELC(object d,object c)=>OutputWrapper.WrapError(()=>RangeExportCore.SelectColumns(D(d),InputNormalizer.NormalizeTo1D(c).Select(x=>(int)InputNormalizer.ToLong(x)).ToArray()));
+        [ExcelFunction(Name="RANGE.SELROWS", Description="Select specified rows from a range")] public static object UDF_RANGE_SELR(object d,object r)=>OutputWrapper.WrapError(()=>RangeExportCore.SelectRows(D(d),InputNormalizer.NormalizeTo1D(r).Select(x=>(int)InputNormalizer.ToLong(x)).ToArray()));
     }
 }

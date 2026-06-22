@@ -20,6 +20,7 @@ namespace ExcelVbaLibraries.Analytics.Tests
         [Fact] public void IdealGasLaw_P() => PhyChemCore.IdealGasLaw(v:22.4,n:1,t:273.15).Should().BeApproximately(1.0,0.02);
         [Fact] public void IdealGasLaw_NaN_if_2_missing() => PhyChemCore.IdealGasLaw(p:1,v:22.4).Should().Be(double.NaN);
         [Fact] public void GasToSTP() => PhyChemCore.GasToSTP(22.4,0,1,"C","atm").Should().BeApproximately(22.4,0.01);
-        // Edge: invalid unit strings fall through to defaults
-                    }
+        [Fact] public void MolecularWeight_hydrate() => PhyChemCore.MolecularWeight("CuSO4.5H2O").Should().BeApproximately(249.69, 0.1);
+        [Fact] public void GasToSTP_no_vUnit() => PhyChemCore.GasToSTP(22.4, 0, 1).Should().BeApproximately(22.4, 0.01);
+    }
 }

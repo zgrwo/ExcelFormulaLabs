@@ -17,20 +17,16 @@ namespace ExcelVbaLibraries.DataToolkit
     {
         internal static object[,]? SqlQuery(object[,] range, string sql, Dictionary<string, object[,]>? extra = null)
         {
-            try
-            {
-                using var conn = new SqlConn("Data Source=:memory:");
-                conn.Open();
-                CreateTable(conn, "data", range);
-                if (extra != null) foreach (var kv in extra) CreateTable(conn, kv.Key, kv.Value);
-                using var cmd = conn.CreateCommand(); cmd.CommandText = sql;
-                using var reader = cmd.ExecuteReader();
-                int cols = reader.FieldCount; var rows = new List<object[]>(); var hdr = new object[cols];
-                for (int i = 0; i < cols; i++) hdr[i] = reader.GetName(i); rows.Add(hdr);
-                while (reader.Read()) { var row = new object[cols]; for (int i = 0; i < cols; i++) row[i] = reader.IsDBNull(i) ? ExcelEmpty.Value : reader.GetValue(i); rows.Add(row); }
-                var result = new object[rows.Count, cols]; for (int r = 0; r < rows.Count; r++) for (int c = 0; c < cols; c++) result[r, c] = rows[r][c]; return result;
-            }
-            catch { return null; }
+            using var conn = new SqlConn("Data Source=:memory:");
+            conn.Open();
+            CreateTable(conn, "data", range);
+            if (extra != null) foreach (var kv in extra) CreateTable(conn, kv.Key, kv.Value);
+            using var cmd = conn.CreateCommand(); cmd.CommandText = sql;
+            using var reader = cmd.ExecuteReader();
+            int cols = reader.FieldCount; var rows = new List<object[]>(); var hdr = new object[cols];
+            for (int i = 0; i < cols; i++) hdr[i] = reader.GetName(i); rows.Add(hdr);
+            while (reader.Read()) { var row = new object[cols]; for (int i = 0; i < cols; i++) row[i] = reader.IsDBNull(i) ? ExcelEmpty.Value : reader.GetValue(i); rows.Add(row); }
+            var result = new object[rows.Count, cols]; for (int r = 0; r < rows.Count; r++) for (int c = 0; c < cols; c++) result[r, c] = rows[r][c]; return result;
         }
 
         private static void CreateTable(SqlConn conn, string name, object[,] data)
@@ -46,10 +42,9 @@ namespace ExcelVbaLibraries.DataToolkit
                 for (int dedup = 2; !usedNames.Add(colName); dedup++)
                     colName = baseName + "_" + dedup;
                 names[c] = colName;
-                // Scan up to 10 data rows to determine the widest type
+                // Scan all data rows to determine the widest type; mixed → TEXT
                 bool hasReal = false, hasInt = false;
-                int scanEnd = Math.Min(rows, 11);  // row 0 is header, scan rows 1..10
-                for (int r = 1; r < scanEnd; r++)
+                for (int r = 1; r < rows; r++)
                 {
                     object v = data[r, c];
                     if (v == null || v is DBNull || ReferenceEquals(v, ExcelEmpty.Value) || v is ExcelError) continue;

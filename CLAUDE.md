@@ -28,6 +28,35 @@
   豁免：FS.*（POSIX 差异）、RANGE.*（无标准输出格式），标记 `// No Python ref:`。
   数据源：`tests/TestData/Cross_Validation_vs_Python.xlsx`。
 
+## 项目结构
+
+```
+src/
+├── Foundation/         共享基础设施（InputNormalizer, ElementWiseMapper, OutputWrapper, FilterUtils, ArrayOperations）
+├── Analytics/          分析引擎（Stats, Linalg, Regression, PhyChem）+ Excel-DNA 加载项
+└── DataToolkit/        数据工具箱（String, DateTime, Regex, JSON/XML, Pivot, SQL, FileSystem, Array, DictSet）+ 加载项
+
+tests/
+├── Foundation.Tests/   ArrayOperations, ComparisonUtils, DictOperations, ElementWiseMapper, FilterUtils, InputNormalizer, OutputWrapper
+├── Analytics.Tests/    Stats, Linalg, Regression, PhyChem 的 Core + UDF 双重测试 + Python 交叉验证
+└── DataToolkit.Tests/  DataToolkit 的 Core + UDF 双重测试 + PythonCrossValidationTests
+
+docs/
+├── api-reference.md    214 UDF 完整签名与说明（数字的唯一来源）
+├── user-guide.md       安装与使用指南
+└── CONTEXT.md          领域术语表
+```
+
+### 架构分层
+
+```
+UDF (public static, [ExcelFunction])  →  Excel-DNA 入口
+  ↓ 调用
+Core (internal static, 纯逻辑)         →  零 Excel 依赖，100% 单元测试
+  ↓ 依赖
+Foundation (共享工具)                   →  InputNormalizer, ElementWiseMapper, OutputWrapper
+```
+
 ## 构建
 
 ```bash

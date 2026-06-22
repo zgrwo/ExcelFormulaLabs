@@ -48,7 +48,7 @@ namespace ExcelVbaLibraries.Analytics
             {
                 se[j] = Math.Sqrt(sigma2 * XtXInv[j, j]);
                 tStat[j] = beta[j] / se[j];
-                pVal[j] = TStatPValue(Math.Abs(tStat[j]), df);
+                pVal[j] = StatsCore.TStatPValue(Math.Abs(tStat[j]), df);
             }
 
             return new Dictionary<string, object>
@@ -174,7 +174,7 @@ namespace ExcelVbaLibraries.Analytics
                 double mean = 0, sd = 0;
                 for (int i = 0; i < n; i++) mean += X[i, j];
                 mean /= n;
-                for (int i = 0; i < n; i++) sd += Math.Pow(X[i, j] - mean, 2);
+                for (int i = 0; i < n; i++) { double d = X[i, j] - mean; sd += d * d; }
                 sd = Math.Sqrt(sd / (n - 1));
                 if (sd < 1e-12) sd = 1;
                 for (int i = 0; i < n; i++) Xs[i, j] = (X[i, j] - mean) / sd;
@@ -184,18 +184,12 @@ namespace ExcelVbaLibraries.Analytics
             return Enumerable.Range(0, p).OrderByDescending(j => Math.Abs(t[j])).ToArray();
         }
 
-        private static double TStatPValue(double t, double df)
-        {
-            double x = df / (df + t * t);
-            return MathNet.Numerics.SpecialFunctions.BetaRegularized(df / 2.0, 0.5, x);
-        }
-
         private static double FDistPValue(double f, double df1, double df2)
         {
             double x = df2 / (df2 + df1 * f);
             // BetaRegularized(df2/2, df1/2, x) = P(F > f) — the upper-tail p-value directly.
-            // Do NOT add 1.0- here; TStatPValue uses a different parameterisation that
-            // returns the two-tailed p-value directly.
+            // Do NOT add 1.0- here; StatsCore.TStatPValue uses a different
+            // parameterisation that returns the two-tailed p-value directly.
             return MathNet.Numerics.SpecialFunctions.BetaRegularized(df2 / 2.0, df1 / 2.0, x);
         }
     }

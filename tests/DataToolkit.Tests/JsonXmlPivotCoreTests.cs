@@ -80,5 +80,11 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
             var b = new object[,] { { "x" }, { "y" } };
             PivotCore.CrossJoin(a, b).GetLength(0).Should().Be(0);
         }
+        [Fact] public void GroupBy_lowercase_agg()
+        {
+            var d = new object[,] { { "G", "V" }, { "A", 10 }, { "A", 20 }, { "B", 30 } };
+            var r = PivotCore.GroupBy(d, new[] { 0 }, 1, "sum");
+            r[0, 1].Should().Be(30.0); r[1, 1].Should().Be(30.0);
+        }
     }
 }

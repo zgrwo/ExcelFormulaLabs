@@ -32,7 +32,7 @@ namespace ExcelVbaLibraries.Foundation
         public static object WrapError(Func<object> action)
         {
             try { return action(); }
-            catch { return ExcelError.Value; }
+            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException) { return ExcelError.Value; }
         }
 
         /// <summary>
@@ -42,7 +42,7 @@ namespace ExcelVbaLibraries.Foundation
         public static T WrapError<T>(Func<T> action, T errorResult)
         {
             try { return action(); }
-            catch { return errorResult; }
+            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException) { return errorResult; }
         }
 
         /// <summary>

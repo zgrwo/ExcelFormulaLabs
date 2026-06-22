@@ -129,9 +129,11 @@ namespace ExcelVbaLibraries.Analytics
         {
             int cols = data.GetLength(1);
             var r = new double[cols, cols];
+            var colCache = new double[cols][];
+            for (int i = 0; i < cols; i++) colCache[i] = ExtractColumn(data, i);
             for (int i = 0; i < cols; i++)
-                for (int j = 0; j < cols; j++)
-                    r[i, j] = Pearson(ExtractColumn(data, i), ExtractColumn(data, j));
+                for (int j = i; j < cols; j++)
+                    r[i, j] = r[j, i] = Pearson(colCache[i], colCache[j]);
             return r;
         }
 
@@ -165,7 +167,7 @@ namespace ExcelVbaLibraries.Analytics
         }
 
         /// <summary>Two-tailed p-value from t-statistic using Beta regularised.</summary>
-        private static double TStatPValue(double t, double df)
+        internal static double TStatPValue(double t, double df)
         {
             double x = df / (df + t * t);
             return MathNet.Numerics.SpecialFunctions.BetaRegularized(df / 2.0, 0.5, x);

@@ -41,12 +41,19 @@ namespace ExcelVbaLibraries.Analytics
             if (string.IsNullOrWhiteSpace(formula)) return double.NaN;
             if (formula.Contains("."))
             {
-                double total = 0;
-                foreach (string p in formula.Split('.'))
+                string[] parts = formula.Split('.');
+                double total = MolecularWeight(parts[0]);
+                if (double.IsNaN(total)) return double.NaN;
+                for (int i = 1; i < parts.Length; i++)
                 {
-                    double pm = MolecularWeight(p);
+                    string p = parts[i];
+                    int coeff = 0, j = 0;
+                    while (j < p.Length && char.IsDigit(p[j])) { coeff = coeff * 10 + (p[j] - '0'); j++; }
+                    if (coeff == 0) coeff = 1;
+                    string sub = p.Substring(j);
+                    double pm = MolecularWeight(sub);
                     if (double.IsNaN(pm)) return double.NaN;
-                    total += pm;
+                    total += coeff * pm;
                 }
                 return total;
             }
@@ -157,7 +164,7 @@ namespace ExcelVbaLibraries.Analytics
         }
 
         internal static double GasToSTP(double vol, double temp, double press,
-            string tUnit = "C", string pUnit = "atm", string vUnit = "L")
+            string tUnit = "C", string pUnit = "atm")
         {
             double tK = ConvertTemperature(temp, tUnit, "K");
             double pAtm = ConvertPressure(press, pUnit, "atm");

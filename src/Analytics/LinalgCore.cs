@@ -88,8 +88,12 @@ namespace ExcelVbaLibraries.Analytics
         internal static double ConditionNumber(double[,] m) =>
             Matrix<double>.Build.DenseOfArray(m).ConditionNumber();
 
-        internal static int Rank(double[,] m, double tol = 1e-10) =>
-            Matrix<double>.Build.DenseOfArray(m).Rank();
+        internal static int Rank(double[,] m, double tol = 1e-10)
+        {
+            var A = Matrix<double>.Build.DenseOfArray(m);
+            var svd = A.Svd(computeVectors: false);
+            return svd.S.Count(s => s > tol);
+        }
 
         internal static double NormFrobenius(double[,] m) =>
             Matrix<double>.Build.DenseOfArray(m).FrobeniusNorm();
