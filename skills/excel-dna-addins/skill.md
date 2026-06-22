@@ -1,3 +1,9 @@
+---
+name: excel-dna-addins
+description: Excel-DNA 加载项开发全流程 — 创建、打包、测试、分发 .xll 加载项。Use when the user needs to create, review, extend, test, or troubleshoot Excel-DNA add-ins (.xll), design UDFs with [ExcelFunction], or package/sign add-ins for distribution.
+disable-model-invocation: true
+---
+
 # Excel-DNA 加载项开发技能
 
 在 Windows 上使用 .NET 创建、审查、扩展、测试、排查和分发 Excel-DNA (.xll) 加载项时使用此技能。
@@ -38,11 +44,7 @@
 
 ## 本项目架构
 
-三层结构：`Foundation`（零依赖基础层）→ `Analytics`（统计/回归/线性代数/物理化学）→ `DataToolkit`（字符串/日期/正则/数组/字典/JSON/XML/透视/文件/SQL/范围）。每个模块含 `Core`（纯逻辑 `internal static`）和 `Udf`（`[ExcelFunction]` 包装）双文件。
-
-调用链：`UDF → InputNormalizer → MapOver/MapOverFlat/MapOverMulti/V() → Core → OutputWrapper.WrapError → Excel`
-
-完整的文件清单和类说明见 [skill.md](../excel-dna-project/skill.md)。
+三层双文件结构（Foundation → Analytics → DataToolkit），调用链和模块职责详见 [/excel-dna-project](../excel-dna-project/skill.md#架构)。
 
 
 ## 新 UDF 实现清单

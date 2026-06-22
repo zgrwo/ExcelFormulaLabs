@@ -299,7 +299,11 @@ ExcelVbaLibraries.sln
 
 ## 更多文档
 
+### 用户文档
 - [API 参考 — 完整函数签名](docs/api-reference.md)
 - [用户指南](docs/user-guide.md)
-- [Excel-DNA 加载项开发](skills/excel-dna-addins/skill.md)
-- [项目编码规范](skills/excel-dna-project/skill.md)
+
+### 开发者文档
+- [/excel-dna-project](skills/excel-dna-project/skill.md) — 编码规范与架构
+- [/excel-dna-addins](skills/excel-dna-addins/skill.md) — 加载项开发
+- [CONTEXT.md](CONTEXT.md) — 领域术语表
