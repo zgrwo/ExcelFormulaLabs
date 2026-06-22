@@ -209,7 +209,7 @@ namespace ExcelVbaLibraries.Analytics.Tests
             using var wb = new XLWorkbook(ExcelPath);
             var ws = wb.Worksheet("SourceData");
 
-            // Skip header row (row 1), read column A (1-based index 1).
+            // Skip header row (row 1), read column U (1-based index 21: NumericX1).
             foreach (var row in ws.RowsUsed())
             {
                 if (row.RowNumber() == 1)

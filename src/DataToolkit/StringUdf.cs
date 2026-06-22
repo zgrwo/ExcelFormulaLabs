@@ -38,7 +38,7 @@ namespace ExcelVbaLibraries.DataToolkit
         [ExcelFunction(Name="STR.ISNULLEMPTY")] public static object UDF_STR_ISNE(object t)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOver<string,bool>(t,s=>StringCore.IsNullOrEmptyStr(s)));
         [ExcelFunction(Name="STR.ISNULLWS")] public static object UDF_STR_ISNW(object t)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOver<string,bool>(t,s=>StringCore.IsNullOrWhitespaceStr(s)));
         [ExcelFunction(Name="STR.COALESCE")] public static object UDF_STR_COAL(object p,object fb)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOverMulti<string,string,string>(p,fb,(a,b)=>StringCore.Coalesce(a,b)));
-        [ExcelFunction(Name="STR.FORMAT")] public static object UDF_STR_FMT(object v,object fmt)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOverMulti<string,string,string>(v,fmt,(a,b)=>{try{return string.Format("{0:"+b+"}",a);}catch{return a;}}));
+        [ExcelFunction(Name="STR.FORMAT")] public static object UDF_STR_FMT(object v,object fmt)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOverMulti<string,string,string>(v,fmt,(a,b)=>string.Format("{0:"+b+"}",a)));
         [ExcelFunction(Name="STR.STRIPHTML")] public static object UDF_STR_SHTML(object t)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOver<string,string>(t,s=>System.Text.RegularExpressions.Regex.Replace(s,"<[^>]+>","")));
     }
 }

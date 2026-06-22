@@ -34,7 +34,7 @@ namespace ExcelVbaLibraries.Analytics
         [ExcelFunction(Name="STATS.TTEST2")] public static object UDF_STAT_T2(object a,object b)=>OutputWrapper.WrapError(()=>(object)StatsCore.TTestTwoSample(V(a),V(b)));
         [ExcelFunction(Name="STATS.ZSCORE")] public static object UDF_STAT_ZS(object d)=>OutputWrapper.WrapError(()=>StatsCore.ZScore(V(d)));
         [ExcelFunction(Name="STATS.COUNT")] public static object UDF_STAT_CNT(object d)=>OutputWrapper.WrapError(()=>V(d).Length);
-        [ExcelFunction(Name="STATS.MODE")] public static object UDF_STAT_MODE(object d)=>OutputWrapper.WrapError(()=>{var a=V(d);return a.GroupBy(x=>x).OrderByDescending(g=>g.Count()).First().Key;});
+        [ExcelFunction(Name="STATS.MODE")] public static object UDF_STAT_MODE(object d)=>OutputWrapper.WrapError(()=>{var a=V(d);return a.GroupBy(x=>x).OrderByDescending(g=>g.Count()).ThenBy(g=>Array.IndexOf(a,g.Key)).First().Key;});
         [ExcelFunction(Name="STATS.ABS")] public static object UDF_STAT_ABS(object d)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOverFlat<double,double>(d,Math.Abs));
         [ExcelFunction(Name="STATS.SQRT")] public static object UDF_STAT_SQRT(object d)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOverFlat<double,double>(d,Math.Sqrt));
         [ExcelFunction(Name="STATS.LN")] public static object UDF_STAT_LN(object d)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOverFlat<double,double>(d,Math.Log));
