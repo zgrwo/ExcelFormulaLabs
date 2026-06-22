@@ -5,14 +5,14 @@ Excel-DNA C# implementation with clean layered architecture.
 ## Structure
 
 ```
-dotnet/
-├── ExcelVbaLibraries.sln
+ExcelVbaLibraries.sln
 ├── src/
 │   ├── Foundation/         ← Zero-dependency class library (8 source files)
-│   ├── Analytics/          ← Statistics, regression, linear algebra (Phase 2)
-│   └── DataToolkit/        ← JSON, XML, regex, text, dates, files (Phase 2)
-└── tests/
-    └── Foundation.Tests/   ← xUnit unit tests
+│   ├── Analytics/          ← Statistics, regression, linear algebra
+│   └── DataToolkit/        ← JSON, XML, regex, text, dates, files
+├── tests/
+│   └── Foundation.Tests/   ← xUnit unit tests
+└── skills/                 ← AI assistant skills/reference docs
 ```
 
 ## Architecture
@@ -31,19 +31,7 @@ Return to Excel
 
 ## Foundation.dll — API Reference
 
-**Zero NuGet dependencies — pure .NET 8.**
-
-| Class | Role | Ported From |
-|-------|------|-------------|
-| `ExcelError` | Immutable struct with 7 standard error codes | VBA CVErr |
-| `ExcelEmpty` | Empty cell sentinel (singleton) | VBA Empty |
-| `InputNormalizer` | COM Range detection, type probing, safe coercion, array normalisation | VariantKit.cls |
-| `ElementWiseMapper` | Core abstraction — eliminates ~3000 lines of duplicated boilerplate | N/A (new) |
-| `OutputWrapper` | WrapError, ReshapeOutput — error-safe execution | VBA On Error pattern |
-| `ArrayOperations` | Hybrid quicksort, slice, index-of, flatten, argsort, column detection | ArrayOps.cls |
-| `DictOperations` | Dictionary factory, FromKeys, ToArray, Merge | DictProxy.cls |
-| `ComparisonUtils` | ValuesEqual, Compare, SafeKey — type-aware comparison | VariantKit.cls |
-| `FilterUtils` | FilterPasses — 12 operators (regex, contains, comparisons) | VariantKit.cls |
+详见 [skills/excel-dna-addins/skill.md](skills/excel-dna-addins/skill.md) 架构部分，包含全部 Foundation 类说明和调用链。
 
 ### Target UDF Pattern
 
@@ -80,16 +68,18 @@ public static object UDF_STR_EXTRACTBETWEEN(
 ## Build & Test
 
 ```bash
-cd dotnet
 dotnet restore
 dotnet build
 dotnet test
 ```
 
-## Phase Status
+## Status
 
-| Phase | Status |
-|-------|--------|
-| Solution scaffold + all 8 source files | ✅ Complete |
-| Unit tests | 📝 Pending |
-| Analytics.dll + DataToolkit.dll | 📅 Future |
+| Layer | Core Tests | UDF Tests | Status |
+|-------|-----------|-----------|--------|
+| Foundation | 198 | N/A (public) | ✅ Complete |
+| Analytics | 104 | 158 | ✅ Complete |
+| DataToolkit | 157 | 735 | ✅ Complete |
+| **Total** | **459** | **893** | **1,352 tests, 0 failures** |
+
+See [docs/api-reference.md](docs/api-reference.md) for full function list.

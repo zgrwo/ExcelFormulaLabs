@@ -2,7 +2,7 @@
 
 ## 概述
 
-Excel VBA Libraries 是一个基于 .NET 的 Excel-DNA 加载项，将原 VBA 函数库完整移植到 C# 平台。提供 **214 个工作表函数 (UDF)**，按功能划分为 **12 个类别**，涵盖统计、线性代数、回归、物理化学、字符串、日期时间、正则表达式、数组、字典/集合、JSON/XML、数据透视、文件系统和范围导出等常用领域。
+Excel VBA Libraries 是一个基于 .NET 的 Excel-DNA 加载项，将原 VBA 函数库完整移植到 C# 平台。提供 **214 个工作表函数 (UDF)**（数量以 [api-reference.md](api-reference.md) 为准），按功能划分为 **14 个类别**，涵盖统计、线性代数、回归、物理化学、字符串、日期时间、正则表达式、数组、字典/集合、JSON/XML、数据透视、文件系统、SQL 查询和范围导出等常用领域。
 
 ### 技术架构
 
@@ -12,25 +12,28 @@ Excel 工作表 → UDF Layer ([ExcelFunction]) → ElementWiseMapper + InputNor
 
 所有函数均支持数组公式（自动），错误值（`#VALUE!`）和空白单元格（`ExcelEmpty`）在传输过程中自动透传过滤。
 
-### 12 个函数类别
+### 14 个函数类别
+
+> 各分类具体函数数量以 [api-reference.md](api-reference.md) 为准。
 
 | # | 类别前缀 | 函数数量 | 说明 | 示例 |
 |---|---------|---------|------|------|
-| 1 | `STATS.*` | 33 | 描述统计、假设检验、数学函数 | `=STATS.MEAN(A1:A100)` |
-| 2 | `LINALG.*` | 14 | 矩阵运算、线性代数分解 | `=LINALG.DET(A1:D4)` |
-| 3 | `REGRESS.*` | 7 | OLS/WLS/Ridge 回归、方差分析 | `=REGRESS.OLS(X,Y)` |
-| 4 | `PHYCHEM.*` | 16 | 物理化学单位换算、理想气体、分子量 | `=PHYCHEM.C_TO_F(25)` |
-| 5 | `STR.*` | 34 | 字符串处理、编码、格式化 | `=STR.REVERSE("hello")` |
-| 6 | `DT.*` | 25 | 日期时间计算、工作日、年龄 | `=DT.AGEYEARS(B2,TODAY())` |
-| 7 | `REGEX.*` | 9 | 正则匹配、替换、捕获分组 | `=REGEX.MATCH(A1,"\d+")` |
-| 8 | `ARR.*` | 22 | 数组排序、过滤、切片、填充 | `=ARR.SORT(A1:A100,,TRUE)` |
-| 9 | `DICT.*` | 8 | 字典/集合操作（频率、交/并/差集） | `=DICT.FREQUENCY(A1:A100)` |
-| 10 | `JSON.*` / `XML.*` | 8 | JSON 解析/查询，XML XPath/验证 | `=JSON.QUERY(A1,"$.name")` |
-| 11 | `PIVOT.*` | 4 | 数据透视/逆透视、分组、交叉连接 | `=PIVOT.PIVOT(A1:D100,1,2,3,"SUM")` |
-| 12 | `FS.*` | 22 | 文件系统操作（读/写/删除/列表） | `=FS.READ("C:\data.txt")` |
-|   | `SQL.*` | 3 | SQL 查询 Excel 范围 | `=SQL.QUERY(A1:D100,"SELECT * FROM data")` |
-|   | `RANGE.*` | 9 | 范围导出（HTML/JSON/MD/CSV） | `=RANGE.TOJSON(A1:D10,TRUE)` |
-|   | **合计** | **214** |   |   |
+| 1 | `STATS.*` | — | 描述统计、假设检验、数学函数 | `=STATS.MEAN(A1:A100)` |
+| 2 | `LINALG.*` | — | 矩阵运算、线性代数分解 | `=LINALG.DET(A1:D4)` |
+| 3 | `REGRESS.*` | — | OLS/WLS/Ridge 回归、方差分析 | `=REGRESS.OLS(X,Y)` |
+| 4 | `PHYCHEM.*` | — | 物理化学单位换算、理想气体、分子量 | `=PHYCHEM.C_TO_F(25)` |
+| 5 | `STR.*` | — | 字符串处理、编码、格式化 | `=STR.REVERSE("hello")` |
+| 6 | `DT.*` | — | 日期时间计算、工作日、年龄 | `=DT.AGEYEARS(B2,TODAY())` |
+| 7 | `REGEX.*` | — | 正则匹配、替换、捕获分组 | `=REGEX.MATCH(A1,"\d+")` |
+| 8 | `ARR.*` | — | 数组排序、过滤、切片、填充 | `=ARR.SORT(A1:A100,,TRUE)` |
+| 9 | `DICT.*` | — | 字典/集合操作（频率、交/并/差集） | `=DICT.FREQUENCY(A1:A100)` |
+| 10 | `JSON.*` / `XML.*` | — | JSON 解析/查询，XML XPath/验证 | `=JSON.QUERY(A1,"$.name")` |
+| 11 | `PIVOT.*` | — | 数据透视/逆透视、分组、交叉连接 | `=PIVOT.PIVOT(A1:D100,1,2,3,"SUM")` |
+| 12 | `FS.*` | — | 文件系统操作（读/写/删除/列表） | `=FS.READ("C:\data.txt")` |
+| 13 | `SQL.*` | — | SQL 查询 Excel 范围 | `=SQL.QUERY(A1:D100,"SELECT * FROM data")` |
+| 14 | `RANGE.*` | — | 范围导出（HTML/JSON/MD/CSV） | `=RANGE.TOJSON(A1:D10,TRUE)` |
+
+> 函数数量以 [api-reference.md](api-reference.md) 为准。
 
 ## 安装
 
@@ -86,9 +89,9 @@ Excel 工作表 → UDF Layer ([ExcelFunction]) → ElementWiseMapper + InputNor
 // 标量参数自动广播——对 A1:A10 中每个元素与 B1 比较
 =STR.STARTSWITH(A1:A10, B1)
 
-// 两个等长数组逐元素计算
-=STATS.ABS(A1:A10)    // 单参数，保持形状
-=DICT.FREQUENCY(A1:A10)  // 统计出现次数
+// 两个等长数组逐元素配对计算
+=STATS.COVAR(A1:A10, B1:B10)  // 两组数据协方差
+=STR.STARTSWITH(A1:A10, B1)   // 标量第二参广播
 ```
 
 ### 错误处理
@@ -96,7 +99,7 @@ Excel 工作表 → UDF Layer ([ExcelFunction]) → ElementWiseMapper + InputNor
 - 输入中的 `#N/A`、`#VALUE!` 等 Excel 错误值在计算前被过滤
 - 空白单元格被跳过（不参与统计计算）
 - 如果所有输入都被过滤（全部为空或错误），函数返回 `#VALUE!`
-- 多数组参数尺寸不匹配时，统计类函数（`STATS.COVAR`、`STATS.PEARSON` 等）返回 `#VALUE!`
+- 多数组参数尺寸不匹配时，统计类函数（`STATS.COVAR`、`STATS.COVARP`、`STATS.PEARSON`、`STATS.SPEARMAN` 等）返回 `NaN`（在 Excel 中可能显示为 `#NUM!`）
 
 ### 典型场景示例
 

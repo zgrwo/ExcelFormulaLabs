@@ -27,8 +27,7 @@
 
 ## Golden Rules（Excel-DNA 黄金法则）
 
-1. **UDF 是主要产品。** 把 .NET 计算暴露为参与 Excel 重算、依赖、审计和建模工作流的工
-   作表函数。
+1. **UDF 是主要产品。** 把 .NET 计算暴露为参与 Excel 重算、依赖、审计和建模工作流的工作表函数。
 2. **优先简单、确定性、无副作用的函数。** 除非需求明确要求异步、流式、对象句柄、宏或 UI 交互。
 3. **UI 操作和工作簿修改远离普通工作表函数。** 将状态更改放在 Ribbon 回调、命令、宏或
    通过 ExcelAsyncUtil.QueueAsMacro 排队的代码中。
@@ -39,45 +38,29 @@
 
 ## 本项目架构
 
-```
-src/
-├── Foundation/           ← 零依赖类库（8 个源文件）
-│   ├── ExcelError.cs     ← 不可变结构体，7 种标准错误码
-│   ├── ExcelEmpty.cs     ← 空白单元格哨兵（单例）
-│   ├── InputNormalizer.cs← COM Range 检测、类型探测、安全转换、数组归一化
-│   ├── ElementWiseMapper.cs← 核心抽象层，消除 ~3000 行重复模板代码
-│   ├── OutputWrapper.cs  ← WrapError、ReshapeOutput — 错误安全执行
-│   ├── ArrayOperations.cs← 混合快速排序、切片、查找、展平、argsort、列检测
-│   ├── DictOperations.cs ← 字典工厂、FromKeys、ToArray、Merge
-│   ├── ComparisonUtils.cs← ValuesEqual、Compare、SafeKey — 类型感知比较
-│   └── FilterUtils.cs    ← FilterPasses — 12 种运算符（regex、contains、比较）
-├── Analytics/            ← 统计、回归、线性代数、物理化学
-│   ├── StatsCore.cs / StatsUdf.cs
-│   ├── LinalgCore.cs / LinalgUdf.cs
-│   ├── RegressionCore.cs / RegressionUdf.cs
-│   └── PhyChemCore.cs / PhyChemUdf.cs
-└── DataToolkit/          ← 字符串、日期、正则、数组、字典、JSON/XML、透视、文件、SQL、范围
-    ├── StringCore.cs / StringUdf.cs
-    ├── DateTimeCore.cs / DateTimeUdf.cs
-    ├── RegexCore.cs / RegexUdf.cs
-    ├── ArrayCore.cs / ArrayUdf.cs
-    ├── DictSetCore.cs / DictSetUdf.cs
-    ├── JsonXmlCore.cs / JsonXmlUdf.cs
-    ├── PivotCore.cs / PivotUdf.cs
-    ├── FileSystemCore.cs / FileSystemUdf.cs
-    ├── SqlCore.cs / SqlUdf.cs
-    └── RangeExportCore.cs / RangeExportUdf.cs
+三层结构：`Foundation`（零依赖基础层，8 个源文件）→ `Analytics`（统计/回归/线性代数/物理化学）→ `DataToolkit`（字符串/日期/正则/数组/字典/JSON/XML/透视/文件/SQL/范围）。每个模块含 `Core`（纯逻辑 `internal static`）和 `Udf`（`[ExcelFunction]` 包装）双文件。
 
-调用链：UDF → InputNormalizer → MapOver/MapOverFlat/MapOverMulti/V() → Core → OutputWrapper.WrapError → Excel
-```
+调用链：`UDF → InputNormalizer → MapOver/MapOverFlat/MapOverMulti/V() → Core → OutputWrapper.WrapError → Excel`
+
+完整的文件清单和类说明见 [skill.md](../excel-dna-project/skill.md)。
 
 
 ## 新 UDF 实现清单
 
-1. 在对应的 Core 类中实现  方法（纯逻辑，无 Excel 依赖）
-2. 在对应的 Udf 类中添加  包装方法，选择正确的 MapOver 变体
+1. 在对应的 Core 类中实现 `internal static` 方法（纯逻辑，无 Excel 依赖）
+2. 在对应的 Udf 类中添加 `[ExcelFunction]` 包装方法，选择正确的 MapOver 变体
 3. 编写单元测试：标量、null、error 透传、数组、多参数尺寸不匹配
 4. 如果涉及统计函数，与 Python numpy/scipy 交叉验证
+
+```csharp
+// Core (internal static, no Excel dependency)
+internal static string ReverseString(string s) => new string(s.Reverse().ToArray());
+
+// UDF ([ExcelFunction], public static object)
+[ExcelFunction(Name = "STR.REVERSE")]
+public static object UDF_STR_REV(object t)
+    => OutputWrapper.WrapError(() => ElementWiseMapper.MapOver<string, string>(t, StringCore.ReverseString));
+```
 
 ## 本项目常用命令
 
@@ -125,12 +108,3 @@ dotnet clean
 - 测试数据：tests/TestData/Cross_Validation_vs_Python.xlsx
 - Excel-DNA 官方文档：https://github.com/Excel-DNA/ExcelDna
 
-## 默认输出风格
-
-生成 Excel-DNA 项目代码时：
-- 使用 SDK 风格 .csproj
-- PackageReference Include="ExcelDna.AddIn" Version="1.8.0"
-- 目标 net8.0-windows
-- 使用 ExcelAddInExplicitExports=true
-- 包含 [ExcelFunction] 和 [ExcelArgument] 元数据
-- 包含至少一个可冒烟测试的 UDF

@@ -6,12 +6,12 @@
 
 所有 Markdown 文档默认优先中文。
 
-## 项目架构
+## 参考索引
 
 ```
 UDF ([ExcelFunction]) → InputNormalizer → MapOver/MapOverFlat/MapOverMulti/V() → Core → WrapError → Excel
 ```
-Core 层 100% 测试覆盖。UDF 214 个方法，各模块职责见 [skills/excel-dna-project/skill.md](skills/excel-dna-project/skill.md)。
+Core 层测试覆盖（状态见 [README.md](README.md)）。UDF 方法（数量见 [docs/api-reference.md](docs/api-reference.md)）。各模块职责见 [skills/excel-dna-project/skill.md](skills/excel-dna-project/skill.md)，Excel-DNA 加载项开发见 [skills/excel-dna-addins/skill.md](skills/excel-dna-addins/skill.md)。
 
 ## 编码规范
 
