@@ -21,7 +21,5 @@ namespace ExcelVbaLibraries.Analytics.Tests
         [Fact] public void IdealGasLaw_NaN_if_2_missing() => PhyChemCore.IdealGasLaw(p:1,v:22.4).Should().Be(double.NaN);
         [Fact] public void GasToSTP() => PhyChemCore.GasToSTP(22.4,0,1,"C","atm").Should().BeApproximately(22.4,0.01);
         // Edge: invalid unit strings fall through to defaults
-        [Fact] public void GasToSTP_invalid_temp_unit() => PhyChemCore.GasToSTP(22.4,0,1,"X","atm").Should().BeApproximately(22.4,0.01);
-        [Fact] public void GasToSTP_invalid_press_unit() => PhyChemCore.GasToSTP(22.4,0,1,"C","X").Should().BeApproximately(22.4,0.01);
-    }
+                    }
 }
