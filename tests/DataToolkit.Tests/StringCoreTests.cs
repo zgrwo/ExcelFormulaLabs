@@ -4,6 +4,7 @@ using Xunit;
 
 namespace ExcelVbaLibraries.DataToolkit.Tests
 {
+    // Python ref: encoding→base64/urllib.parse/html, uuid→uuid, lev→python-Levenshtein, soundex→jellyfish
     public class StringCoreTests
     {
         [Fact] public void Reverse() => StringCore.ReverseString("hello").Should().Be("olleh");

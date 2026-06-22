@@ -40,5 +40,9 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void UnixTimestamp() => DateTimeCore.UnixTimestamp(new DateTime(2024,1,1,0,0,0,DateTimeKind.Utc)).Should().Be(1704067200.0);
         [Fact] public void FromUnixTimestamp_roundtrip() { var ts=1704067200.0; var r=DateTimeCore.FromUnixTimestamp(ts); DateTimeCore.UnixTimestamp(r).Should().BeApproximately(ts,1.0); }
         [Fact] public void IsoWeekNum_edge_2024_12_31() => DateTimeCore.IsoWeekNum(new(2024,12,31)).Should().Be(1);
+        // Easter dates cross-validated with US Naval Observatory / Python easter lib
+        [Fact] public void Easter_2024() => DateTimeCore.Easter(2024).Should().Be(new DateTime(2024,3,31));
+        [Fact] public void Easter_2023() => DateTimeCore.Easter(2023).Should().Be(new DateTime(2023,4,9));
+        [Fact] public void Easter_2000() => DateTimeCore.Easter(2000).Should().Be(new DateTime(2000,4,23));
     }
 }

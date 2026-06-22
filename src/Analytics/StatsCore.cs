@@ -55,7 +55,8 @@ namespace ExcelVbaLibraries.Analytics
         internal static double Product(double[] d) { if (d.Length == 0) return 0.0; var r = d.Aggregate(1.0, (a, x) => a * x); return double.IsInfinity(r) ? double.NaN : r; }
 
         /// <summary>Most frequent value. Single-pass O(n) with Dictionary.
-        /// Returns NaN for empty input.</summary>
+        /// Returns NaN for empty input or when all values are unique (matches Excel MODE #N/A).
+        /// On ties, returns the smallest value (matches scipy.stats.mode and Excel MODE.SNGL).</summary>
         internal static double Mode(double[] d)
         {
             if (d.Length == 0) return double.NaN;
@@ -64,7 +65,11 @@ namespace ExcelVbaLibraries.Analytics
                 counts[x] = counts.TryGetValue(x, out int c) ? c + 1 : 1;
             int maxCount = 0; double mode = double.NaN;
             foreach (var kv in counts)
+            {
                 if (kv.Value > maxCount) { maxCount = kv.Value; mode = kv.Key; }
+                else if (kv.Value == maxCount && kv.Key < mode) { mode = kv.Key; }
+            }
+            if (maxCount == 1 && d.Length > 1) return double.NaN;  // all unique → no mode
             return mode;
         }
 

@@ -23,6 +23,10 @@
 - **文档**：信息只在一处定义，其余链接引用。数字仅存 api-reference.md。
 - **上下文**：膨胀时主动建议开新会话。新会话自动继承本文件。
 - **验证**：修改函数前用 CodeGraph 检查调用者（blast radius），修改后用 CodeGraph 验证一致性。如 skill 或 CodeGraph 冲突，优先 CodeGraph。
+- **全量测试** = ①单元测试 ②交叉验证 ③DLL/XLL net8.0 + net48 双目标构建。
+  所有测试（除已豁免外）须验证与 Python 专业包行为/结果一致（数值精度 1e-10）。
+  豁免：FS.*（POSIX 差异）、RANGE.*（无标准输出格式），标记 `// No Python ref:`。
+  数据源：`tests/TestData/Cross_Validation_vs_Python.xlsx`。
 
 ## 构建
 

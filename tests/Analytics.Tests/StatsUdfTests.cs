@@ -47,7 +47,7 @@ namespace ExcelVbaLibraries.Analytics.Tests
         }
         [Fact] public void Count() => ((int)StatsUdf.UDF_STAT_CNT(D)).Should().Be(5);
         [Fact] public void Mode() => ((double)StatsUdf.UDF_STAT_MODE(new double[] { 1, 2, 2, 3 })).Should().Be(2.0);
-        [Fact] public void Mode_ties_returns_first_occurrence() => ((double)StatsUdf.UDF_STAT_MODE(new double[] { 1, 1, 2, 2 })).Should().Be(1.0); // ties: 1 appears first
+        [Fact] public void Mode_ties_returns_smallest() => ((double)StatsUdf.UDF_STAT_MODE(new double[] { 2, 2, 1, 1 })).Should().Be(1.0); // ties: returns smallest, matches scipy
 
         // ── Covariance / Correlation ──
         [Fact] public void CovarianceP_perfect_linear() => ((double)StatsUdf.UDF_STAT_CVP(X, Y)).Should().BeApproximately(4.0, 1e-10);

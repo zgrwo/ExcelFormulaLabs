@@ -148,7 +148,10 @@ namespace ExcelVbaLibraries.Analytics
         private static double FDistPValue(double f, double df1, double df2)
         {
             double x = df2 / (df2 + df1 * f);
-            return 1.0 - MathNet.Numerics.SpecialFunctions.BetaRegularized(df2 / 2.0, df1 / 2.0, x);
+            // BetaRegularized(df2/2, df1/2, x) = P(F > f) — the upper-tail p-value directly.
+            // Do NOT add 1.0- here; TStatPValue uses a different parameterisation that
+            // returns the two-tailed p-value directly.
+            return MathNet.Numerics.SpecialFunctions.BetaRegularized(df2 / 2.0, df1 / 2.0, x);
         }
     }
 }

@@ -9,6 +9,41 @@ using Xunit;
 
 namespace ExcelVbaLibraries.Analytics.Tests
 {
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Python Cross-Validation Reference Script
+    // ═══════════════════════════════════════════════════════════════════════════
+    // To regenerate expected values after changing test data, run:
+    //
+    //   import openpyxl, numpy as np
+    //   from scipy import stats
+    //
+    //   wb = openpyxl.load_workbook(
+    //       r'tests\TestData\Cross_Validation_vs_Python.xlsx')
+    //   ws = wb['SourceData']
+    //
+    //   x1 = [float(r[0]) for r in ws.iter_rows(min_row=2, max_col=3,
+    //         values_only=True) if r[0] is not None]
+    //   a = np.array(x1)
+    //
+    //   print(f'PyCount     = {len(x1)}')
+    //   print(f'PyMean      = {np.mean(a):.15f}')
+    //   print(f'PyStdev     = {np.std(a, ddof=1):.15f}')
+    //   print(f'PyVariance  = {np.var(a, ddof=1):.15f}')
+    //   print(f'PyStdevP    = {np.std(a, ddof=0):.15f}')
+    //   print(f'PyVarianceP = {np.var(a, ddof=0):.15f}')
+    //   print(f'PyMin       = {np.min(a):.15f}')
+    //   print(f'PyMax       = {np.max(a):.15f}')
+    //   print(f'PySum       = {np.sum(a):.15f}')
+    //   print(f'PyPct25     = {np.percentile(a, 25):.15f}')
+    //   print(f'PyPct50     = {np.percentile(a, 50):.15f}')
+    //   print(f'PyPct75     = {np.percentile(a, 75):.15f}')
+    //   print(f'PyIQR       = {stats.iqr(a):.15f}')
+    //   print(f'PySkewness  = {stats.skew(a):.15f}')
+    //   print(f'PyKurtosis  = {stats.kurtosis(a, fisher=True):.15f}')
+    //
+    // Paste the output into the PyCount..PyKurtosis constants below.
+    // ═══════════════════════════════════════════════════════════════════════════
+
     public class StatsCoreTests
     {
         // -----------------------------------------------------------------
@@ -319,7 +354,11 @@ namespace ExcelVbaLibraries.Analytics.Tests
         [Fact] public void Mode_basic() => StatsCore.Mode(new[]{1.0,2,2,3}).Should().Be(2.0);
         [Fact] public void Mode_empty() => double.IsNaN(StatsCore.Mode(Array.Empty<double>())).Should().BeTrue();
         [Fact] public void Mode_singleValue() => StatsCore.Mode(new[]{5.0}).Should().Be(5.0);
-        [Fact] public void Mode_firstWins_onTie() => StatsCore.Mode(new[]{1.0,2,1,2}).Should().Be(1.0);
-        [Fact] public void Mode_allUnique_isFirst() => StatsCore.Mode(new[]{3.0,1,2}).Should().Be(3.0);
+        [Fact] public void Mode_tie_returnsSmallest() => StatsCore.Mode(new[]{2.0,1,2,1}).Should().Be(1.0);
+        [Fact] public void Mode_allUnique_returnsNaN() => double.IsNaN(StatsCore.Mode(new[]{3.0,1,2})).Should().BeTrue();
+        // TTest cross-validation with scipy.stats.ttest_1samp / ttest_ind
+        private static readonly double[] Tcv = {2.1,3.8,5.2,7.1,8.9,10.8,13.1,14.9,16.8,18.9};
+        [Fact] public void TTestOneSample_crossval() => StatsCore.TTestOneSample(Tcv,8.0).Should().BeApproximately(0.261808259603258,1e-8);
+        [Fact] public void TTestTwoSample_crossval() { var a=new[]{1.0,2,3,4,5};var b=new[]{6.0,7,8,9,10};StatsCore.TTestTwoSample(a,b).Should().BeApproximately(0.001052825793367,1e-8); }
     }
 }

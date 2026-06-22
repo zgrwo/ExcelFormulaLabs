@@ -22,5 +22,16 @@ namespace ExcelVbaLibraries.Analytics.Tests
         private static readonly double[,] Xf = {{1,1,3},{1,2,1},{1,3,4},{1,4,1},{1,5,6}};
         private static readonly double[] yf = {4,5,10,11,16};
         [Fact] public void FactorImportance_ranking() { var r=RegressionCore.FactorImportance(Xf,yf); r.Length.Should().Be(3); r.Should().OnlyHaveUniqueItems(); }
+        // Python statsmodels cross-validation: X=[1..10], y≈2x (realistic, not perfect fit)
+        private static readonly double[,] Xcv = {{1,1},{1,2},{1,3},{1,4},{1,5},{1,6},{1,7},{1,8},{1,9},{1,10}};
+        private static readonly double[] ycv = {2.1,3.8,5.2,7.1,8.9,10.8,13.1,14.9,16.8,18.9};
+        [Fact] public void OLS_crossval_coef() { var c=(double[])RegressionCore.FitOLS(Xcv,ycv)["coefficients"]; c[0].Should().BeApproximately(-0.193333333333334,1e-8); c[1].Should().BeApproximately(1.882424242424243,1e-8); }
+        [Fact] public void OLS_crossval_r2() => ((double)RegressionCore.FitOLS(Xcv,ycv)["r_squared"]).Should().BeApproximately(0.997871700442665,1e-10);
+        [Fact] public void OLS_crossval_sse() => ((double)RegressionCore.FitOLS(Xcv,ycv)["sse"]).Should().BeApproximately(0.62351515151515,1e-10);
+        [Fact] public void OLS_crossval_se() { var se=(double[])RegressionCore.FitOLS(Xcv,ycv)["standard_errors"]; se[0].Should().BeApproximately(0.190713704729673,1e-8); se[1].Should().BeApproximately(0.030736296565105,1e-8); }
+        [Fact] public void OLS_crossval_tstat() { var t=(double[])RegressionCore.FitOLS(Xcv,ycv)["t_stats"]; t[0].Should().BeApproximately(-1.013735922163402,1e-6); t[1].Should().BeApproximately(61.244341472204,1e-6); }
+        [Fact] public void OLS_crossval_pval() { var p=(double[])RegressionCore.FitOLS(Xcv,ycv)["p_values"]; p[0].Should().BeApproximately(0.340383606094307,1e-6); p[1].Should().BeApproximately(5.6151214e-12,1e-4); }
+        // ANOVA cross-validation with scipy.stats.f_oneway
+        [Fact] public void ANOVA_crossval() { var a=RegressionCore.AnovaOneWay(new[]{new[]{5.0,6,7,8},new[]{7.0,8,9,10},new[]{9.0,10,11,12}}); ((double)a["f_stat"]).Should().BeApproximately(9.6,1e-8); ((double)a["p_value"]).Should().BeApproximately(0.00586098088586,1e-8); }
     }
 }
