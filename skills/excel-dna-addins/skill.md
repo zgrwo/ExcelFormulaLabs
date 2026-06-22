@@ -39,6 +39,37 @@
 
 ## 本项目架构
 
+```
+src/
+├── Foundation/           ← 零依赖类库（8 个源文件）
+│   ├── ExcelError.cs     ← 不可变结构体，7 种标准错误码
+│   ├── ExcelEmpty.cs     ← 空白单元格哨兵（单例）
+│   ├── InputNormalizer.cs← COM Range 检测、类型探测、安全转换、数组归一化
+│   ├── ElementWiseMapper.cs← 核心抽象层，消除 ~3000 行重复模板代码
+│   ├── OutputWrapper.cs  ← WrapError、ReshapeOutput — 错误安全执行
+│   ├── ArrayOperations.cs← 混合快速排序、切片、查找、展平、argsort、列检测
+│   ├── DictOperations.cs ← 字典工厂、FromKeys、ToArray、Merge
+│   ├── ComparisonUtils.cs← ValuesEqual、Compare、SafeKey — 类型感知比较
+│   └── FilterUtils.cs    ← FilterPasses — 12 种运算符（regex、contains、比较）
+├── Analytics/            ← 统计、回归、线性代数、物理化学
+│   ├── StatsCore.cs / StatsUdf.cs
+│   ├── LinalgCore.cs / LinalgUdf.cs
+│   ├── RegressionCore.cs / RegressionUdf.cs
+│   └── PhyChemCore.cs / PhyChemUdf.cs
+└── DataToolkit/          ← 字符串、日期、正则、数组、字典、JSON/XML、透视、文件、SQL、范围
+    ├── StringCore.cs / StringUdf.cs
+    ├── DateTimeCore.cs / DateTimeUdf.cs
+    ├── RegexCore.cs / RegexUdf.cs
+    ├── ArrayCore.cs / ArrayUdf.cs
+    ├── DictSetCore.cs / DictSetUdf.cs
+    ├── JsonXmlCore.cs / JsonXmlUdf.cs
+    ├── PivotCore.cs / PivotUdf.cs
+    ├── FileSystemCore.cs / FileSystemUdf.cs
+    ├── SqlCore.cs / SqlUdf.cs
+    └── RangeExportCore.cs / RangeExportUdf.cs
+
+调用链：UDF → InputNormalizer → MapOver/MapOverFlat/MapOverMulti/V() → Core → OutputWrapper.WrapError → Excel
+```
 
 
 ## 新 UDF 实现清单
@@ -50,20 +81,46 @@
 
 ## 本项目常用命令
 
+```bash
+# 还原依赖
+dotnet restore
+
+# 构建全部项目
+dotnet build
+
+# 运行全部测试
+dotnet test
+
+# 运行指定测试类
+dotnet test --filter ClassName
+
+# 静默快速测试（跳过构建）
+dotnet test --no-build -v q
+
+# 构建 Release 版本（含 ExcelDnaPack 打包）
+dotnet build -c Release
+
+# 清理构建产物
+dotnet clean
+```
+
+构建输出：
+- `src/Analytics/bin/Release/net8.0-windows/Analytics-packed.xll`
+- `src/DataToolkit/bin/Release/net8.0-windows/DataToolkit-packed.xll`
 
 
 ## Excel 加载 .xll
 
 1. 确保安装 .NET 8 Runtime
 2. Excel → 文件 → 选项 → 加载项 → Excel 加载项 → 转到 → 浏览
-3. 选择 
-4. 选择 
-5. 函数即可在工作表中使用，如 
+3. 选择 `src\Analytics\bin\Release\net8.0-windows\Analytics-packed.xll`
+4. 选择 `src\DataToolkit\bin\Release\net8.0-windows\DataToolkit-packed.xll`
+5. 函数即可在工作表中使用，如 `=STATS.MEAN(A1:A100)` 或 `=STR.REVERSE("hello")`
 
 ## 相关文档
 
 - [CLAUDE.md](../../CLAUDE.md) — 项目宪法（规则和架构概览）
-- [SKILL.md](../../SKILL.md) — 编码规范和详细参考
+- [skill.md](../excel-dna-project/skill.md) — 编码规范和详细参考
 - [README.md](../../README.md) — 用户向项目说明
 - 测试数据：tests/TestData/Cross_Validation_vs_Python.xlsx
 - Excel-DNA 官方文档：https://github.com/Excel-DNA/ExcelDna
