@@ -304,5 +304,14 @@ namespace ExcelVbaLibraries.Analytics.Tests
         [Fact]
         public void CrossVal_Kurtosis() =>
             StatsCore.Kurtosis(LoadNumericX1()).Should().BeApproximately(PyKurtosis, 0.05);
+        // Edge: zero/negative values -> NaN
+        [Fact] public void GeometricMean_with_zero() => StatsCore.GeometricMean(new[]{1.0,0,3}).Should().Be(double.NaN);
+        [Fact] public void GeometricMean_with_negative() => StatsCore.GeometricMean(new[]{1.0,-2,3}).Should().Be(double.NaN);
+        [Fact] public void HarmonicMean_with_zero() => StatsCore.HarmonicMean(new[]{1.0,0,3}).Should().Be(double.NaN);
+        // Edge: insufficient data
+        [Fact] public void Kurtosis_insufficient_n() => StatsCore.Kurtosis(new[]{1.0,2,3}).Should().Be(double.NaN);
+        [Fact] public void Skewness_insufficient_n() => StatsCore.Skewness(new[]{1.0,2}).Should().Be(double.NaN);
+        [Fact] public void Variance_insufficient_n() => StatsCore.Variance(new[]{1.0}).Should().Be(double.NaN);
+        [Fact] public void Stdev_insufficient_n() => StatsCore.Stdev(new[]{1.0}).Should().Be(double.NaN);
     }
 }
