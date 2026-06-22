@@ -46,6 +46,7 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         }
     }
 
+    // Python ref: pivot→pandas.pivot_table, groupby→pandas.groupby
     public class PivotCoreTests
     {
         [Fact] public void Pivot_basic()
