@@ -177,5 +177,19 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
             try { var a = () => FileSystemCore.ReadTextFile(@"..\..\outside.txt"); a.Should().Throw<UnauthorizedAccessException>(); }
             finally { FileSystemCore.SandboxRoot = null; }
         }
+        [Fact] public void Sandbox_blocks_sibling_directory()
+        {
+            var tmp = FileSystemCore.GetTempPath();
+            var root = System.IO.Path.Combine(tmp, "Sandbox");
+            var evil = root + "Evil";  // C:\...\SandboxEvil should NOT match C:\...\Sandbox\
+            FileSystemCore.SandboxRoot = root;
+            try
+            {
+                // ValidatePath directly — avoids File.ReadAllText side-effects on net48
+                var act = () => FileSystemCore.ValidatePath(evil);
+                act.Should().Throw<UnauthorizedAccessException>();
+            }
+            finally { FileSystemCore.SandboxRoot = null; }
+        }
     }
 }
