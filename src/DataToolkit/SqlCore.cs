@@ -1,6 +1,14 @@
 using System;
 using System.Collections.Generic;
+#if NET48
+using System.Data.SQLite;
+using SqlConn = System.Data.SQLite.SQLiteConnection;
+using SqlParam = System.Data.SQLite.SQLiteParameter;
+#else
 using Microsoft.Data.Sqlite;
+using SqlConn = Microsoft.Data.Sqlite.SqliteConnection;
+using SqlParam = Microsoft.Data.Sqlite.SqliteParameter;
+#endif
 using ExcelVbaLibraries.Foundation;
 
 namespace ExcelVbaLibraries.DataToolkit
@@ -11,7 +19,7 @@ namespace ExcelVbaLibraries.DataToolkit
         {
             try
             {
-                using var conn = new SqliteConnection("Data Source=:memory:");
+                using var conn = new SqlConn("Data Source=:memory:");
                 conn.Open();
                 CreateTable(conn, "data", range);
                 if (extra != null) foreach (var kv in extra) CreateTable(conn, kv.Key, kv.Value);
@@ -25,7 +33,7 @@ namespace ExcelVbaLibraries.DataToolkit
             catch { return null; }
         }
 
-        private static void CreateTable(SqliteConnection conn, string name, object[,] data)
+        private static void CreateTable(SqlConn conn, string name, object[,] data)
         {
             int rows = data.GetLength(0), cols = data.GetLength(1); if (rows == 0) return;
             var names = new string[cols]; var types = new string[cols];
@@ -40,7 +48,7 @@ namespace ExcelVbaLibraries.DataToolkit
             using var tx = conn.BeginTransaction();
             var ph = new string[cols]; for (int c = 0; c < cols; c++) ph[c] = $"@p{c}";
             using var ins = conn.CreateCommand(); ins.CommandText = $"INSERT INTO \"{name}\" VALUES ({string.Join(",", ph)})";
-            for (int c = 0; c < cols; c++) ins.Parameters.Add(new SqliteParameter($"@p{c}", types[c] == "INTEGER" ? System.Data.DbType.Int64 : types[c] == "REAL" ? System.Data.DbType.Double : System.Data.DbType.String));
+            for (int c = 0; c < cols; c++) ins.Parameters.Add(new SqlParam($"@p{c}", types[c] == "INTEGER" ? System.Data.DbType.Int64 : types[c] == "REAL" ? System.Data.DbType.Double : System.Data.DbType.String));
             for (int r = 1; r < rows; r++) { for (int c = 0; c < cols; c++) { object v = data[r, c]; ins.Parameters[$"@p{c}"].Value = (v == null || v is DBNull || ReferenceEquals(v, ExcelEmpty.Value) || v is ExcelError) ? DBNull.Value : v; } ins.ExecuteNonQuery(); }
             tx.Commit();
         }

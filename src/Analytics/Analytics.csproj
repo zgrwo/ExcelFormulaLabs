@@ -1,15 +1,22 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFrameworks>net8.0-windows;net48</TargetFrameworks>
     <RootNamespace>ExcelVbaLibraries.Analytics</RootNamespace>
     <AssemblyName>Analytics</AssemblyName>
+    <LangVersion>latest</LangVersion>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>CS1591;NU1701</NoWarn>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
 
   <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
@@ -34,8 +41,16 @@
 
   <!--
     Analytics.xll — Statistics, Regression, Linear Algebra, PhyChem.
-    Depends on Foundation.dll + MathNet.Numerics.
+    Targets net8.0-windows + net48. Depends on Foundation.dll + MathNet.Numerics.
     Uses Excel-DNA for .xll packaging and UDF registration.
   -->
+
+  <!-- Generate net48 .dna from template (Avoids Excel-DNA auto-discovery on net8 builds) -->
+  <Target Name="GenerateNet48Dna" BeforeTargets="BeforeBuild" Condition="'$(TargetFramework)' == 'net48'">
+    <Copy SourceFiles="Analytics-AddIn-net48.dna.tpl" DestinationFiles="Analytics-AddIn-net48.dna" />
+  </Target>
+  <Target Name="CleanNet48Dna" AfterTargets="AfterBuild" Condition="'$(TargetFramework)' == 'net48' and Exists('Analytics-AddIn-net48.dna')">
+    <Delete Files="Analytics-AddIn-net48.dna" />
+  </Target>
 
 </Project>

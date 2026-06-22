@@ -39,7 +39,7 @@ namespace ExcelVbaLibraries.Analytics
         internal static double MolecularWeight(string formula)
         {
             if (string.IsNullOrWhiteSpace(formula)) return double.NaN;
-            if (formula.Contains('.'))
+            if (formula.Contains("."))
             {
                 double total = 0;
                 foreach (string p in formula.Split('.'))

@@ -7,8 +7,28 @@ namespace ExcelVbaLibraries.DataToolkit
     /// <summary>ISO week, workdays, age, holidays, Easter. Ported from DateTimeUtils.bas.</summary>
     internal static class DateTimeCore
     {
-        internal static long IsoWeekNum(DateTime d) => ISOWeek.GetWeekOfYear(d);
-        internal static long IsoYear(DateTime d) => ISOWeek.GetYear(d);
+        internal static long IsoWeekNum(DateTime d)
+        {
+#if NET48
+            // ISO 8601: week starts Monday, week 1 contains Jan 4
+            int dow = (int)d.DayOfWeek; if (dow == 0) dow = 7;
+            var thu = d.AddDays(4 - dow);
+            var jan1 = new DateTime(thu.Year, 1, 1);
+            int jdow = (int)jan1.DayOfWeek; if (jdow == 0) jdow = 7;
+            return ((thu - jan1).Days + jdow - 1) / 7 + 1;
+#else
+            return ISOWeek.GetWeekOfYear(d);
+#endif
+        }
+        internal static long IsoYear(DateTime d)
+        {
+#if NET48
+            int dow = (int)d.DayOfWeek; if (dow == 0) dow = 7;
+            return d.AddDays(4 - dow).Year;
+#else
+            return ISOWeek.GetYear(d);
+#endif
+        }
         internal static long Weekday(DateTime d) => (long)d.DayOfWeek + 1;
         internal static long WeekdayISO(DateTime d) => d.DayOfWeek == DayOfWeek.Sunday ? 7 : (long)d.DayOfWeek;
         internal static string WeekdayName(DateTime d) => d.ToString("dddd", CultureInfo.InvariantCulture);

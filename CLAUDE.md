@@ -19,7 +19,9 @@ Core 层测试覆盖（状态见 [README.md](README.md)）。UDF 方法（数量
 
 ## 接口约束
 
-**禁止修改 VBA-Core 类（Foundation/Analytics/DataToolkit 中的 internal static class）的 Public 接口**，除非用户明确要求并确认影响范围。
+**禁止修改 Core 类的 Public 方法签名和 UDF 的 `[ExcelFunction]` 参数/返回值**，除非用户明确要求。
+- Core 类（`internal static class`）的内部实现可通过 `#if NET48`/`#else` 做平台适配，但方法签名必须在双目标（net8.0 + net48）下完全一致。
+- 新增 NuGet 引用需确认包在 net8.0 和 net48 两个 TFM 下均可用；若仅单目标可用，须条件引用（`Condition="'$(TargetFramework)' == '...'"`），并提供另一目标的等效替代。
 
 ## 缺陷处理
 
