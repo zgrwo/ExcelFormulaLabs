@@ -132,5 +132,17 @@ namespace ExcelVbaLibraries.Analytics.Tests
         // Sign: array
         [Fact] public void Sign_array() { var r=(object[])StatsUdf.UDF_STAT_SGN(new object[]{5.0,-2.0,0.0}); r.Should().Equal(1L,-1L,0L); }
 
+        // Multi-arg edge cases: V() passes directly to Core (NOT MapOverMulti). Mismatch/null -> NaN.
+        [Fact] public void Cvp_mismatch() => ((double)StatsUdf.UDF_STAT_CVP(X, new double[]{1.0,2})).Should().Be(double.NaN);
+        [Fact] public void Cv_mismatch() => ((double)StatsUdf.UDF_STAT_CV(X, new double[]{1.0,2})).Should().Be(double.NaN);
+        [Fact] public void Pear_mismatch() => StatsUdf.UDF_STAT_PEAR(X, new double[]{1.0,2}).Should().Be(ExcelError.Value);
+        [Fact] public void Spr_mismatch() => StatsUdf.UDF_STAT_SPR(X, new double[]{1.0,2}).Should().Be(ExcelError.Value);
+        // Null first arg: V(null) = empty array -> Core.Covariance(empty, valid) = NaN
+        [Fact] public void Cvp_null_first() => ((double)StatsUdf.UDF_STAT_CVP(null!, Y)).Should().Be(double.NaN);
+        [Fact] public void Cv_null_first() => ((double)StatsUdf.UDF_STAT_CV(null!, Y)).Should().Be(double.NaN);
+        [Fact] public void Pear_null_first() => StatsUdf.UDF_STAT_PEAR(null!, Y).Should().Be(ExcelError.Value);
+        // TTest: single value (n<2) -> NaN; mismatch -> NaN
+        [Fact] public void T1_single_value() => ((double)StatsUdf.UDF_STAT_T1(new double[]{5.0},0.0)).Should().Be(double.NaN);
+        [Fact] public void T2_mismatch() => ((double)StatsUdf.UDF_STAT_T2(X, new double[]{1.0})).Should().Be(double.NaN);
     }
 }

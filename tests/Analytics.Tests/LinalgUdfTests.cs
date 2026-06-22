@@ -119,5 +119,9 @@ namespace ExcelVbaLibraries.Analytics.Tests
 
         // Condition number: identity = 1
         [Fact] public void Cond_identity_is_one() => ((double)LinalgUdf.UDF_LINALG_COND(new double[,] { { 1, 0 }, { 0, 1 } })).Should().BeApproximately(1.0, 1e-10);
+        // Solve with singular matrix: MathNet throws SingularMatrixException -> WrapError -> ExcelError.Value
+        // Identity(0): (int)ToLong(0) = 0 -> new double[0,0] empty matrix -> Core.Identity creates it, prep returns it
+        [Fact] public void Identity_zero_size() { var r=(double[,])LinalgUdf.UDF_LINALG_IDENTITY(0); r.GetLength(0).Should().Be(0); }
+        // Trace on non-square: sums diagonal elements min(rows,cols)
     }
 }
