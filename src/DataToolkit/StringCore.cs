@@ -20,7 +20,7 @@ namespace ExcelVbaLibraries.DataToolkit
             CultureInfo.CurrentCulture.TextInfo.ToTitleCase(t.ToLowerInvariant());
 
         internal static string RemoveChars(string t, string chars)
-        { var sb = new System.Text.StringBuilder(t); foreach (char c in chars) sb.Replace(c.ToString(), ""); return sb.ToString(); }
+        { var set = new System.Collections.Generic.HashSet<char>(chars); var sb = new System.Text.StringBuilder(t.Length); foreach (char c in t) if (!set.Contains(c)) sb.Append(c); return sb.ToString(); }
 
         internal static string KeepChars(string t, string keep)
         { var sb = new StringBuilder(); foreach (char c in t) if (keep.Contains(c)) sb.Append(c); return sb.ToString(); }
