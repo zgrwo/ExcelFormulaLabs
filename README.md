@@ -1,42 +1,44 @@
-# Excel-VBA-Libraries .NET Port
+# Excel-VBA-Libraries .NET 移植
 
-Excel-DNA C# implementation with clean layered architecture.
+基于 Excel-DNA 的 C# 实现，采用清晰的分层架构。
 
-## Structure
+## 项目结构
 
 ```
 ExcelVbaLibraries.sln
 ├── src/
-│   ├── Foundation/         ← Zero-dependency class library (8 source files)
-│   ├── Analytics/          ← Statistics, regression, linear algebra
-│   └── DataToolkit/        ← JSON, XML, regex, text, dates, files
+│   ├── Foundation/         ← 零依赖类库（8 个源文件）
+│   ├── Analytics/          ← 统计、回归、线性代数
+│   └── DataToolkit/        ← JSON、XML、正则、文本、日期、文件
 ├── tests/
-│   └── Foundation.Tests/   ← xUnit unit tests
-└── skills/                 ← AI assistant skills/reference docs
+│   ├── Foundation.Tests/   ← xUnit 单元测试
+│   ├── Analytics.Tests/
+│   └── DataToolkit.Tests/
+└── skills/                 ← AI 辅助技能/参考文档
 ```
 
-## Architecture
+## 架构
 
 ```
-UDF Layer ([ExcelFunction], ~5 lines, public static object)
+UDF 层 ([ExcelFunction], ~5 行, public static object)
     ↓
-ElementWiseMapper + InputNormalizer   (Pre-processing)
+ElementWiseMapper + InputNormalizer   （预处理）
     ↓
-Core functions                        (internal static, type-safe)
+Core 函数                             （internal static，类型安全）
     ↓
-OutputWrapper                         (Post-processing)
+OutputWrapper                         （后处理）
     ↓
-Return to Excel
+返回 Excel
 ```
 
-## Foundation.dll — API Reference
+## Foundation.dll — API 参考
 
 详见 [skills/excel-dna-addins/skill.md](skills/excel-dna-addins/skill.md) 架构部分，包含全部 Foundation 类说明和调用链。
 
-### Target UDF Pattern
+### UDF 包装模式
 
 ```csharp
-// VBA: 21 lines (18 boilerplate) → C#: 5 lines (0 boilerplate)
+// VBA: 21 行（18 行模板代码） → C#: 5 行（零模板代码）
 [ExcelFunction(Name = "STR.REVERSESTRING", Description = "Reverse a string.",
                Category = "StringUtils")]
 public static object UDF_STR_REVERSESTRING(object text)
@@ -44,7 +46,7 @@ public static object UDF_STR_REVERSESTRING(object text)
         ElementWiseMapper.MapOver(text, StringUtilsCore.ReverseString));
 ```
 
-### Multi-argument UDF
+### 多参数 UDF
 
 ```csharp
 [ExcelFunction(Name = "STR.EXTRACTBETWEEN")]
@@ -60,12 +62,12 @@ public static object UDF_STR_EXTRACTBETWEEN(
                 InputNormalizer.ToBool(include))));
 ```
 
-## Prerequisites
+## 环境要求
 
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-- [Excel-DNA](https://github.com/Excel-DNA/ExcelDna) (for .xll packaging — Phase 2+)
+- [Excel-DNA](https://github.com/Excel-DNA/ExcelDna)（用于 .xll 打包）
 
-## Build & Test
+## 构建与测试
 
 ```bash
 dotnet restore
@@ -73,13 +75,13 @@ dotnet build
 dotnet test
 ```
 
-## Status
+## 当前状态
 
-| Layer | Core Tests | UDF Tests | Status |
+| 层 | Core 测试 | UDF 测试 | 状态 |
 |-------|-----------|-----------|--------|
-| Foundation | 198 | N/A (public) | ✅ Complete |
-| Analytics | 104 | 158 | ✅ Complete |
-| DataToolkit | 157 | 735 | ✅ Complete |
-| **Total** | **459** | **893** | **1,352 tests, 0 failures** |
+| Foundation | 198 | N/A (public) | ✅ 完成 |
+| Analytics | 104 | 158 | ✅ 完成 |
+| DataToolkit | 157 | 735 | ✅ 完成 |
+| **总计** | **459** | **893** | **1,352 测试，0 失败** |
 
-See [docs/api-reference.md](docs/api-reference.md) for full function list.
+完整函数列表见 [docs/api-reference.md](docs/api-reference.md)。
