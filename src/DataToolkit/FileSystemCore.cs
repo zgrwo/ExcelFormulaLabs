@@ -22,7 +22,7 @@ namespace ExcelVbaLibraries.DataToolkit
         /// </summary>
         internal static void ValidatePath(string path)
         {
-            if (SandboxRoot == null) return;
+            if (string.IsNullOrEmpty(SandboxRoot)) return;
             string normalized = NormalizePath(path);
             string root = NormalizePath(SandboxRoot);
             if (root.Length == 0 || root[root.Length - 1] != Path.DirectorySeparatorChar)

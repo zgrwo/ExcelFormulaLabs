@@ -93,5 +93,31 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         {
             StringCore.CountSubstring("hello", "").Should().Be(0);
         }
+
+        [Fact] public void CountSubstring_null_needle()
+        {
+            StringCore.CountSubstring("hello", null!).Should().Be(0);
+        }
+
+        [Fact] public void CountSubstring_null_text()
+        {
+            StringCore.CountSubstring(null!, "a").Should().Be(0);
+        }
+
+        [Fact] public void CountSubstring_both_null()
+        {
+            StringCore.CountSubstring(null!, null!).Should().Be(0);
+        }
+
+        [Fact] public void CountSubstring_empty_text()
+        {
+            StringCore.CountSubstring("", "a").Should().Be(0);
+        }
+
+        [Fact] public void CountSubstring_multiple_occurrences()
+        {
+            StringCore.CountSubstring("aaa", "a").Should().Be(3);
+            StringCore.CountSubstring("aaaa", "aa").Should().Be(2);
+        }
     }
 }

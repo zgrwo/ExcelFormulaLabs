@@ -221,10 +221,13 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void Sandbox_empty_string_root()
         {
             // Empty SandboxRoot should allow all access (no constraint)
-            FileSystemCore.SandboxRoot = "";
-            var act = () => FileSystemCore.ValidatePath(@"C:\temp");
-            act.Should().NotThrow();
-            FileSystemCore.SandboxRoot = null;
+            try
+            {
+                FileSystemCore.SandboxRoot = "";
+                var act = () => FileSystemCore.ValidatePath(@"C:\temp");
+                act.Should().NotThrow();
+            }
+            finally { FileSystemCore.SandboxRoot = null; }
         }
 
         [Fact] public void ValidatePath_normalized_same()
