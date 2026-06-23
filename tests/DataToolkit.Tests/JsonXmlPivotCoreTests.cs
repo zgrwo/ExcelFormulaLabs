@@ -188,5 +188,147 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
             var r = PivotCore.Pivot(d, 0, 1, 2, "UNKNOWN");
             r[1, 1].Should().Be(5.0);  // MIN is the fallback
         }
+
+        // =====================================================================
+        // EDGE CASE TESTS — PIVOT
+        // =====================================================================
+
+        [Fact] public void Pivot_MAX_aggregation()
+        {
+            var d = new object[,] { { "K", "P", "V" }, { "A", "X", 10 }, { "A", "X", 50 } };
+            var r = PivotCore.Pivot(d, 0, 1, 2, "MAX");
+            r[1, 1].Should().Be(50.0);  // MAX of 10 and 50
+        }
+
+        [Fact] public void Pivot_MIN_aggregation()
+        {
+            var d = new object[,] { { "K", "P", "V" }, { "A", "X", 10 }, { "A", "X", 50 } };
+            var r = PivotCore.Pivot(d, 0, 1, 2, "MIN");
+            r[1, 1].Should().Be(10.0);  // MIN of 10 and 50
+        }
+
+        [Fact] public void Pivot_nan_values_skipped()
+        {
+            var d = new object[,] { { "K", "P", "V" }, { "A", "X", double.NaN }, { "A", "X", 30 } };
+            var r = PivotCore.Pivot(d, 0, 1, 2);
+            r[1, 1].Should().Be(30.0);  // NaN skipped, only 30 used
+        }
+
+        [Fact] public void Pivot_single_row_data()
+        {
+            var d = new object[,] { { "K", "P", "V" }, { "A", "X", 42 } };
+            var r = PivotCore.Pivot(d, 0, 1, 2);
+            r.GetLength(0).Should().Be(2);  // header + 1 key
+            r.GetLength(1).Should().Be(2);  // label + 1 pivot
+            r[1, 1].Should().Be(42.0);
+        }
+
+        [Fact] public void Pivot_keys_and_pivots_preserve_insertion_order()
+        {
+            var d = new object[,] { { "K", "P", "V" }, { "C", "Z", 1 }, { "B", "Y", 2 }, { "A", "X", 3 } };
+            var r = PivotCore.Pivot(d, 0, 1, 2);
+            // Keys: C, B, A (insertion order)
+            r[1, 0].Should().Be("C");
+            r[2, 0].Should().Be("B");
+            r[3, 0].Should().Be("A");
+            // Pivots: Z, Y, X
+            r[0, 1].Should().Be("Z");
+            r[0, 2].Should().Be("Y");
+            r[0, 3].Should().Be("X");
+        }
+
+        // =====================================================================
+        // EDGE CASE TESTS — UNPIVOT
+        // =====================================================================
+
+        [Fact] public void Unpivot_single_value_column()
+        {
+            var d = new object[,] { { "ID", "V1" }, { "A", 10 }, { "B", 20 } };
+            var r = PivotCore.Unpivot(d, new[] { 0 }, new[] { 1 });
+            r.GetLength(0).Should().Be(3);  // 3 rows (all rows unpivoted including header)
+            r.GetLength(1).Should().Be(3);  // ID + header + value
+        }
+
+        [Fact] public void Unpivot_multiple_id_columns()
+        {
+            var d = new object[,] { { "ID1", "ID2", "Q1", "Q2" }, { "A", "X", 10, 20 }, { "B", "Y", 30, 40 } };
+            var r = PivotCore.Unpivot(d, new[] { 0, 1 }, new[] { 2, 3 });
+            r.GetLength(0).Should().Be(6);  // 3 rows × 2 value columns (all rows unpivoted)
+            r.GetLength(1).Should().Be(4);  // ID1 + ID2 + header + value
+        }
+
+        [Fact] public void Unpivot_zero_id_columns()
+        {
+            var d = new object[,] { { "V1", "V2" }, { 10, 20 }, { 30, 40 } };
+            var r = PivotCore.Unpivot(d, new int[0], new[] { 0, 1 });
+            r.GetLength(0).Should().Be(6);  // 3 rows × 2 values (all rows unpivoted)
+        }
+
+        // =====================================================================
+        // EDGE CASE TESTS — GROUPBY
+        // =====================================================================
+
+        [Fact] public void GroupBy_AVG_aggregation()
+        {
+            var d = new object[,] { { "G", "V" }, { "A", 10 }, { "A", 20 }, { "B", 30 } };
+            var r = PivotCore.GroupBy(d, new[] { 0 }, 1, "AVG");
+            r.GetLength(0).Should().Be(2);
+            r[0, 1].Should().Be(15.0);  // (10+20)/2
+            r[1, 1].Should().Be(30.0);  // 30/1
+        }
+
+        [Fact] public void GroupBy_MAX_aggregation()
+        {
+            var d = new object[,] { { "G", "V" }, { "A", 10 }, { "A", 50 }, { "B", 30 } };
+            var r = PivotCore.GroupBy(d, new[] { 0 }, 1, "MAX");
+            r[0, 1].Should().Be(50.0);  // MAX of 10, 50
+            r[1, 1].Should().Be(30.0);  // only 30
+        }
+
+        [Fact] public void GroupBy_MIN_aggregation()
+        {
+            var d = new object[,] { { "G", "V" }, { "A", 10 }, { "A", 50 }, { "B", 30 } };
+            var r = PivotCore.GroupBy(d, new[] { 0 }, 1, "MIN");
+            r[0, 1].Should().Be(10.0);  // MIN of 10, 50
+            r[1, 1].Should().Be(30.0);
+        }
+
+        [Fact] public void GroupBy_unknown_agg_defaults_to_sum()
+        {
+            var d = new object[,] { { "G", "V" }, { "A", 10 }, { "A", 20 } };
+            var r = PivotCore.GroupBy(d, new[] { 0 }, 1, "UNKNOWN");
+            r[0, 1].Should().Be(30.0);  // defaults to SUM
+        }
+
+        [Fact] public void GroupBy_multiple_group_columns()
+        {
+            var d = new object[,] { { "G1", "G2", "V" }, { "A", "X", 10 }, { "A", "X", 20 }, { "A", "Y", 5 } };
+            var r = PivotCore.GroupBy(d, new[] { 0, 1 }, 2);
+            r.GetLength(0).Should().Be(2);  // A|X and A|Y
+            r.GetLength(1).Should().Be(3);  // G1, G2, SUM(V)
+        }
+
+        [Fact] public void GroupBy_nan_values_skipped()
+        {
+            var d = new object[,] { { "G", "V" }, { "A", double.NaN }, { "A", 20 }, { "A", 30 } };
+            var r = PivotCore.GroupBy(d, new[] { 0 }, 1);
+            r[0, 1].Should().Be(50.0);  // NaN skipped, 20+30
+        }
+
+        [Fact] public void GroupBy_lowercase_avg()
+        {
+            var d = new object[,] { { "G", "V" }, { "A", 10 }, { "A", 30 } };
+            var r = PivotCore.GroupBy(d, new[] { 0 }, 1, "avg");
+            r[0, 1].Should().Be(20.0);  // (10+30)/2
+        }
+
+        [Fact] public void CrossJoin_single_row_each()
+        {
+            var a = new object[,] { { 1 } };
+            var b = new object[,] { { "x" } };
+            var r = PivotCore.CrossJoin(a, b);
+            r.GetLength(0).Should().Be(1);  // 1×1
+            r.GetLength(1).Should().Be(2);  // col from a + col from b
+        }
     }
 }
