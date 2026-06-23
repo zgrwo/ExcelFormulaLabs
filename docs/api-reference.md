@@ -1,6 +1,6 @@
 # API 参考
 
-> UDF 函数的完整签名。按模块组织。函数数量和用户使用指南见 [user-guide.md](user-guide.md)。
+> **214 个 UDF 函数**的完整签名，按 14 个模块组织。使用指南见 [user-guide.md](user-guide.md)。
 
 ---
 
@@ -57,7 +57,7 @@
 | `LINALG.TRACE` | (matrix) | `double` | 矩阵迹（对角线元素之和） |
 | `LINALG.RANK` | (matrix, tol) | `long` | 数值秩（默认容差 1e-10） |
 | `LINALG.COND` | (matrix) | `double` | 条件数（2-范数） |
-| `LINALG.EIGEN` | (matrix) | `double[]` | 特征值 |
+| `LINALG.EIGEN` | (matrix) | `double[]` | 特征值。要求对称矩阵，非对称输入返回错误 |
 | `LINALG.SVD` | (matrix) | `1×3 {U, S, Vt}` | 奇异值分解 A = U·diag(S)·Vt。返回水平数组：第1个 U 矩阵，第2个 S 向量，第3个 Vt 矩阵 |
 | `LINALG.QR` | (matrix) | `1×2 {Q, R}` | QR 分解 A = Q·R。返回：第1个 Q，第2个 R 上三角 |
 | `LINALG.LU` | (matrix) | `1×3 {L, U, P}` | LU 分解 PA = LU（部分主元）。返回：第1个 L 下三角，第2个 U 上三角，第3个 P 置换矩阵 |
@@ -75,7 +75,7 @@
 |------|------|------|------|
 | `REGRESS.OLS` | (X, y) | `object[2,11]` | **普通最小二乘法**。返回：`coefficients`(系数)、`sse`(残差平方和)、`r_squared`(R²)、`adj_r_squared`(调整R²)、`residuals`(残差)、`fitted_values`(拟合值)、`standard_errors`(标准误)、`t_stats`(t值)、`p_values`(p值)、`n`(样本量)、`df`(自由度)。`p<0.05` 该系数显著。 |
 | `REGRESS.WLS` | (X, y, w) | `object[2,11]` | **加权最小二乘法**（异方差数据）。返回同 OLS 的 11 个字段。 |
-| `REGRESS.RIDGE` | (X, y, lambda) | `object[2,8]` | **岭回归**（L2 正则化，防过拟合）。返回：`coefficients`、`sse`、`r_squared`、`residuals`、`fitted_values`、`lambda`(惩罚参数)、`n`、`df`。**不返回**标准误/t值/p值（正则化下推断无效）。 |
+| `REGRESS.RIDGE` | (X, y, lambda) | `object[2,8]` | **岭回归**（L2 正则化，防过拟合）。λ 默认 1.0。返回：`coefficients`、`sse`、`r_squared`、`residuals`、`fitted_values`、`lambda`(惩罚参数)、`n`、`df`。**不返回**标准误/t值/p值（正则化下推断无效）。 |
 | `REGRESS.ANOVA1` | (data) | `object[2,12]` | **单因素方差分析**。数据按列分组（每列一组）。返回：`ss_between`(组间平方和)、`ss_within`(组内平方和)、`ss_total`、`df_between`、`df_within`、`df_total`、`ms_between`、`ms_within`、`f_stat`(F值)、`p_value`(p值)、`group_means`(各组均值)、`group_counts`(各组样本量)。`p<0.05` = 至少有一组均值显著不同。 |
 | `REGRESS.FACTORIMP` | (X, y) | `long[]` | **因子重要性排名**。按标准化后的 \|t\| 降序排列，返回 0-based 列索引数组。 |
 | `REGRESS.COEF` | (X, y) | `double[]` | OLS 回归系数向量（仅 beta）。 |
@@ -90,8 +90,8 @@
 | `PHYCHEM.MOLWT` | (formula) | `double` | 分子量计算，如 `"H2SO4"` → 98.079 |
 | `PHYCHEM.TEMP` | (value, from, to) | `double` | 温度换算：C, F, K |
 | `PHYCHEM.PRESS` | (value, from, to) | `double` | 压力换算：ATM, PSI, PA, KPA, BAR, MMHG, TORR |
-| `PHYCHEM.VOL` | (value, from, to) | `double` | 体积换算：L, GAL, ML, M3, CC, QT, PT, CUP, FLOZ |
-| `PHYCHEM.MASS` | (value, from, to) | `double` | 质量换算：KG, G, LB, OZ, TONNE, MG |
+| `PHYCHEM.VOL` | (value, from, to) | `double` | 体积换算：L, GAL, ML, M3, QT, FT3 |
+| `PHYCHEM.MASS` | (value, from, to) | `double` | 质量换算：KG, G, LB, OZ, TON, MG |
 | `PHYCHEM.C_TO_F` | (celsius) | `double` | 摄氏度 → 华氏度 |
 | `PHYCHEM.F_TO_C` | (fahrenheit) | `double` | 华氏度 → 摄氏度 |
 | `PHYCHEM.KG_TO_LB` | (kg) | `double` | 千克 → 磅 |
@@ -159,8 +159,8 @@
 | `DT.WEEKDAY` | (date) | `long` | 星期几（Sun=0, Sat=6） |
 | `DT.WEEKDAYISO` | (date) | `long` | 星期几 ISO（Mon=1, Sun=7） |
 | `DT.WEEKDAYNAME` | (date) | `string` | 英文星期名（"Monday" 等） |
-| `DT.SOW` | (date, sd) | `double` | 所在周的第一天（Excel 日期值） |
-| `DT.EOW` | (date, sd) | `double` | 所在周的最后一天 |
+| `DT.SOW` | (date, sd) | `double` | 所在周的第一天。sd 默认 1=周一，0=周日（Excel 日期值） |
+| `DT.EOW` | (date, sd) | `double` | 所在周的最后一天。sd 默认 1=周一，0=周日（Excel 日期值） |
 | `DT.SOM` | (date) | `double` | 当月第一天 |
 | `DT.EOM` | (date) | `double` | 当月最后一天 |
 | `DT.WOM` | (date, sd) | `long` | 当月第几周（1-5） |

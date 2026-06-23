@@ -28,9 +28,9 @@ namespace ExcelVbaLibraries.DataToolkit
         {
             using var d=JsonDocument.Parse(json);
             if(d.RootElement.ValueKind!=JsonValueKind.Array)return null;
-            var rows=new List<Dictionary<string,object?>>(); var keys=new HashSet<string>();
+            var rows=new List<Dictionary<string,object?>>(); var keys=new List<string>(); var seen=new HashSet<string>();
             foreach(var el in d.RootElement.EnumerateArray())
-            { if(el.ValueKind==JsonValueKind.Object){ var row=new Dictionary<string,object?>(); foreach(var p in el.EnumerateObject()){row[p.Name]=Elm(p.Value);keys.Add(p.Name);} rows.Add(row); } }
+            { if(el.ValueKind==JsonValueKind.Object){ var row=new Dictionary<string,object?>(); foreach(var p in el.EnumerateObject()){row[p.Name]=Elm(p.Value);if(seen.Add(p.Name))keys.Add(p.Name);} rows.Add(row); } }
             if(rows.Count==0)return null;
             var ka=keys.ToArray(); var r=new object[rows.Count+1,ka.Length];
             for(int c=0;c<ka.Length;c++)r[0,c]=ka[c];

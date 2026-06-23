@@ -44,5 +44,142 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void Easter_2024() => DateTimeCore.Easter(2024).Should().Be(new DateTime(2024,3,31));
         [Fact] public void Easter_2023() => DateTimeCore.Easter(2023).Should().Be(new DateTime(2023,4,9));
         [Fact] public void Easter_2000() => DateTimeCore.Easter(2000).Should().Be(new DateTime(2000,4,23));
+
+        // =====================================================================
+        // EDGE CASE & DAY-OF-WEEK VARIATIONS
+        // (systematic coverage for DayOfWeek parameterized methods)
+        // =====================================================================
+
+        [Fact] public void StartOfWeek_sunday_start()
+        {
+            // Wednesday with Sunday as start → previous Sunday
+            var d = new DateTime(2025, 6, 18);  // Wednesday
+            var r = DateTimeCore.StartOfWeek(d, DayOfWeek.Sunday);
+            r.DayOfWeek.Should().Be(DayOfWeek.Sunday);
+            r.Day.Should().Be(15);
+        }
+
+        [Fact] public void StartOfWeek_already_start_day()
+        {
+            // Monday is already the start (default) → same day
+            var d = new DateTime(2025, 6, 16);  // Monday
+            DateTimeCore.StartOfWeek(d).Should().Be(d.Date);
+        }
+
+        [Fact] public void EndOfWeek_sunday_start()
+        {
+            var d = new DateTime(2025, 6, 18);  // Wednesday
+            var r = DateTimeCore.EndOfWeek(d, DayOfWeek.Sunday);
+            r.DayOfWeek.Should().Be(DayOfWeek.Saturday);
+            r.Day.Should().Be(21);
+        }
+
+        [Fact] public void EndOfWeek_friday_start()
+        {
+            // Wednesday with Friday as start → end = Thursday
+            var d = new DateTime(2025, 6, 18);  // Wednesday
+            var r = DateTimeCore.EndOfWeek(d, DayOfWeek.Friday);
+            r.DayOfWeek.Should().Be(DayOfWeek.Thursday);
+            r.Day.Should().Be(19);
+        }
+
+        [Fact] public void WeekOfMonth_sunday_start()
+        {
+            var d = new DateTime(2025, 6, 15);  // Sunday
+            var r = DateTimeCore.WeekOfMonth(d, DayOfWeek.Sunday);
+            r.Should().Be(3);
+        }
+
+        [Fact] public void WeekOfMonth_first_day_is_start()
+        {
+            // June 1, 2025 = Sunday. With Sunday start, it's week 1
+            var d = new DateTime(2025, 6, 1);
+            DateTimeCore.WeekOfMonth(d, DayOfWeek.Sunday).Should().Be(1);
+        }
+
+        [Fact] public void AddWorkdays_negative()
+        {
+            // -3 workdays before Monday June 16 → previous Wednesday June 11
+            var r = DateTimeCore.AddWorkdays(new DateTime(2025, 6, 16), -3);
+            r.DayOfWeek.Should().Be(DayOfWeek.Wednesday);
+            r.Day.Should().Be(11);
+        }
+
+        [Fact] public void AddWorkdays_zero()
+        {
+            var d = new DateTime(2025, 6, 15);  // Sunday
+            DateTimeCore.AddWorkdays(d, 0).Should().Be(d);
+        }
+
+        [Fact] public void IsWeekend_weekday()
+        {
+            DateTimeCore.IsWeekend(new DateTime(2025, 6, 18)).Should().BeFalse();  // Wednesday
+            DateTimeCore.IsWeekend(new DateTime(2025, 6, 16)).Should().BeFalse();  // Monday
+        }
+
+        [Fact] public void IsWeekend_saturday()
+        {
+            DateTimeCore.IsWeekend(new DateTime(2025, 6, 21)).Should().BeTrue();
+        }
+
+        [Fact] public void WorkdaysBetween_same_day()
+        {
+            var d = new DateTime(2025, 6, 15);
+            DateTimeCore.WorkdaysBetween(d, d).Should().Be(0);
+        }
+
+        [Fact] public void WorkdaysBetween_reversed()
+        {
+            // Start after end → negative result
+            var a = new DateTime(2025, 6, 20);
+            var b = new DateTime(2025, 6, 15);
+            DateTimeCore.WorkdaysBetween(a, b).Should().BeLessOrEqualTo(0);
+        }
+
+        [Fact] public void DateDiff_year()
+        {
+            DateTimeCore.DateDiff("Y", new DateTime(2020, 6, 15), new DateTime(2025, 6, 15)).Should().Be(5);
+        }
+
+        [Fact] public void DateDiff_year_birthday_not_yet()
+        {
+            // Same year diff but day-of-year not yet reached
+            DateTimeCore.DateDiff("Y", new DateTime(2020, 12, 31), new DateTime(2025, 1, 1)).Should().Be(4);
+        }
+
+        [Fact] public void DateDiff_unknown_unit()
+        {
+            DateTimeCore.DateDiff("HOUR", new DateTime(2025, 1, 1), new DateTime(2025, 1, 10)).Should().Be(0);
+        }
+
+        [Fact] public void NextWorkday_thursday()
+        {
+            var r = DateTimeCore.NextWorkday(new DateTime(2025, 6, 19));  // Thursday → Friday
+            r.DayOfWeek.Should().Be(DayOfWeek.Friday);
+        }
+
+        [Fact] public void AgeYears_birthday_today()
+        {
+            var birth = new DateTime(2000, 6, 15);
+            var refDate = new DateTime(2025, 6, 15);
+            DateTimeCore.AgeYears(birth, refDate).Should().Be(25);
+        }
+
+        [Fact] public void AgeYears_birthday_not_yet()
+        {
+            var birth = new DateTime(2000, 12, 31);
+            var refDate = new DateTime(2025, 1, 1);
+            DateTimeCore.AgeYears(birth, refDate).Should().Be(24);
+        }
+
+        [Fact] public void Quarter_december()
+        {
+            DateTimeCore.Quarter(new DateTime(2024, 12, 1)).Should().Be(4);
+        }
+
+        [Fact] public void Semester_june()
+        {
+            DateTimeCore.Semester(new DateTime(2024, 6, 30)).Should().Be(2);
+        }
     }
 }

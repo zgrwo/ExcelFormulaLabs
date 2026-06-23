@@ -353,5 +353,90 @@ namespace ExcelVbaLibraries.Analytics.Tests
         private static readonly double[] Tcv = {2.1,3.8,5.2,7.1,8.9,10.8,13.1,14.9,16.8,18.9};
         [Fact] public void TTestOneSample_crossval() => StatsCore.TTestOneSample(Tcv,8.0).Should().BeApproximately(0.261808259603258,1e-8);
         [Fact] public void TTestTwoSample_crossval() { var a=new[]{1.0,2,3,4,5};var b=new[]{6.0,7,8,9,10};StatsCore.TTestTwoSample(a,b).Should().BeApproximately(0.001052825793367,1e-8); }
+
+        // =====================================================================
+        // ZERO-VARIANCE / CONSTANT-DATA EDGE CASES
+        // (same pattern as TTestTwoSample/M4 fix — guard against se=0 division)
+        // =====================================================================
+
+        [Fact] public void TTestOneSample_constant_same_mu0()
+        {
+            // All values equal mu0 → no evidence against H0 → p≈1.0
+            // (mirrors TTestTwoSample_equal_constant_groups: va+vb<1e-15 → p=1.0)
+            StatsCore.TTestOneSample(new[] { 5.0, 5.0, 5.0 }, 5.0).Should().Be(1.0);
+        }
+
+        [Fact] public void TTestOneSample_constant_diff_mu0()
+        {
+            // Constant data but mu0 differs from mean → undefined t-stat → NaN
+            // (mirrors TTestTwoSample logic: zero variance, different means → NaN)
+            double.IsNaN(StatsCore.TTestOneSample(new[] { 5.0, 5.0, 5.0 }, 0.0)).Should().BeTrue();
+        }
+
+        [Fact] public void Pearson_constant_array()
+        {
+            // Correlation with zero-variance data → undefined → NaN
+            double.IsNaN(StatsCore.Pearson(new[] { 3.0, 3.0, 3.0 }, new[] { 1.0, 2.0, 3.0 })).Should().BeTrue();
+        }
+
+        [Fact] public void Spearman_constant_array()
+        {
+            // Spearman on constant data — all ranks tied → undefined → NaN
+            double.IsNaN(StatsCore.Spearman(new[] { 5.0, 5.0, 5.0 }, new[] { 1.0, 2.0, 3.0 })).Should().BeTrue();
+        }
+
+        [Fact] public void Covariance_constant_array()
+        {
+            // Covariance with zero variance in either variable → 0 (no co-variation)
+            StatsCore.Covariance(new[] { 5.0, 5.0, 5.0 }, new[] { 1.0, 2.0, 3.0 }).Should().Be(0.0);
+        }
+
+        [Fact] public void CovarianceP_constant_array()
+        {
+            StatsCore.CovarianceP(new[] { 5.0, 5.0, 5.0 }, new[] { 1.0, 2.0, 3.0 }).Should().Be(0.0);
+        }
+
+        // =====================================================================
+        // PERCENTILE / IQR EDGE CASES
+        // =====================================================================
+
+        [Fact] public void Percentile_invalid_p_below_0()
+        {
+            // MathNet QuantileCustom(p<0) returns NaN (cannot extrapolate meaningfully)
+            double.IsNaN(StatsCore.Percentile(D, -1)).Should().BeTrue();
+        }
+
+        [Fact] public void Percentile_invalid_p_above_100()
+        {
+            double.IsNaN(StatsCore.Percentile(D, 150)).Should().BeTrue();
+        }
+
+        [Fact] public void IQR_single_element() =>
+            // Q1=Q3=d[0] for single element → IQR=0 (matches scipy.stats.iqr([42])=0)
+            StatsCore.IQR(new[] { 42.0 }).Should().Be(0.0);
+
+        [Fact] public void VarianceP_single_element() =>
+            // np.var([42], ddof=0) = 0 → PopulationVariance of single element = 0
+            StatsCore.VarianceP(new[] { 42.0 }).Should().Be(0.0);
+
+        [Fact] public void StdevP_single_element() =>
+            // np.std([42], ddof=0) = 0
+            StatsCore.StdevP(new[] { 42.0 }).Should().Be(0.0);
+
+        // =====================================================================
+        // PEARSON / SPEARMAN LENGTH MISMATCH
+        // =====================================================================
+
+        [Fact] public void Pearson_length_mismatch()
+        {
+            var act = () => StatsCore.Pearson(Two, new[] { 1.0 });
+            act.Should().Throw<ArgumentException>().WithMessage("*length*");
+        }
+
+        [Fact] public void Spearman_length_mismatch()
+        {
+            var act = () => StatsCore.Spearman(Two, new[] { 1.0 });
+            act.Should().Throw<ArgumentException>().WithMessage("*length*");
+        }
     }
 }

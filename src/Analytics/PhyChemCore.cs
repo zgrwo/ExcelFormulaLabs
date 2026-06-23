@@ -36,6 +36,14 @@ namespace ExcelVbaLibraries.Analytics
         private static readonly Regex ParenRx = new(@"\(([^()]+)\)(\d*)", RegexOptions.Compiled);
         private static readonly Regex BrackRx = new(@"\[([^\[\]]+)\](\d*)", RegexOptions.Compiled);
 
+        /// <summary>
+        /// Compute molecular weight from a chemical formula string.
+        /// Supports hydrates (CuSO4.5H2O), parentheses Ca(OH)2, and brackets [Fe(CN)6].
+        /// Limitation: the regex-based parser handles one level of bracket/parenthesis
+        /// nesting (e.g. Fe4[Fe(CN)6]3 = Prussian blue). Deeper nesting like
+        /// Ca[Fe[(CN)6]2]3 may produce incorrect results because bracket/paren
+        /// expansion is sequential, not iterative.
+        /// </summary>
         internal static double MolecularWeight(string formula)
         {
             if (string.IsNullOrWhiteSpace(formula)) return double.NaN;

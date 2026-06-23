@@ -31,7 +31,7 @@ namespace ExcelVbaLibraries.Analytics
             d.Length < 2 ? double.NaN : Statistics.Variance(d);
 
         internal static double StdevP(double[] d) =>
-            d.Length < 1 ? double.NaN : Math.Sqrt(Statistics.PopulationVariance(d));
+            d.Length < 1 ? double.NaN : Math.Sqrt(VarianceP(d));
 
         internal static double Stdev(double[] d) =>
             d.Length < 2 ? double.NaN : Math.Sqrt(Variance(d));
@@ -120,11 +120,19 @@ namespace ExcelVbaLibraries.Analytics
             return Statistics.QuantileCustom(d, 0.75, qd) - Statistics.QuantileCustom(d, 0.25, qd);
         }
 
-        internal static double Pearson(double[] a, double[] b) =>
-            Correlation.Pearson(a, b);
+        internal static double Pearson(double[] a, double[] b)
+        {
+            if (a.Length != b.Length)
+                throw new ArgumentException($"Arrays must have the same length (got {a.Length} and {b.Length}).");
+            return Correlation.Pearson(a, b);
+        }
 
-        internal static double Spearman(double[] a, double[] b) =>
-            Correlation.Spearman(a, b);
+        internal static double Spearman(double[] a, double[] b)
+        {
+            if (a.Length != b.Length)
+                throw new ArgumentException($"Arrays must have the same length (got {a.Length} and {b.Length}).");
+            return Correlation.Spearman(a, b);
+        }
 
         internal static double[,] CorrelationMatrix(double[,] data)
         {
@@ -141,7 +149,15 @@ namespace ExcelVbaLibraries.Analytics
         internal static double TTestOneSample(double[] d, double mu0 = 0)
         {
             if (d.Length < 2) return double.NaN;
-            double se = Math.Sqrt(Variance(d)) / Math.Sqrt(d.Length);
+            double va = Variance(d);
+            if (va < 1e-15)
+            {
+                // Zero variance: all values equal. If mean ≈ mu0, no evidence
+                // against H0 → p=1.0; otherwise undefined → NaN.
+                // Mirrors TTestTwoSample zero-variance guard (M4 fix).
+                return Math.Abs(Statistics.Mean(d) - mu0) < 1e-15 ? 1.0 : double.NaN;
+            }
+            double se = Math.Sqrt(va) / Math.Sqrt(d.Length);
             double t = (Statistics.Mean(d) - mu0) / se;
             return TStatPValue(Math.Abs(t), d.Length - 1);
         }

@@ -41,10 +41,13 @@ namespace ExcelVbaLibraries.Analytics
             }
             // Wide (rows &lt; cols): MathNet QR requires m ≥ n. Zero-pad to square n×n,
             // decompose, then extract Q[0:m, 0:m] and R[0:m, 0:n].
-            // WARNING: allocates a cols×cols matrix — O(cols²) memory. For wide matrices
-            // (cols &gt;&gt; rows), consider transposing the input or using a thin QR alternative.
-            // Since padded rows are all zeros, the extracted Q remains orthogonal and
-            // A = Q_thin · R_thin holds exactly.
+            // Guard against excessive memory: cols×cols doubles = cols² × 8 bytes.
+            // Limit cols to 2000 (≈ 32 MB) to prevent OOM from accidentally wide input.
+            const int maxCols = 2000;
+            if (cols > maxCols)
+                throw new ArgumentException(
+                    $"QR decomposition: matrix has {cols} columns but only up to {maxCols} are supported " +
+                    $"for wide matrices (rows={rows} < cols={cols}). For wide input, transpose and use tall-skinny QR.");
             var pad = Matrix<double>.Build.Dense(cols, cols);
             var Aorig = Matrix<double>.Build.DenseOfArray(m);
             for (int i = 0; i < rows; i++)
@@ -78,13 +81,40 @@ namespace ExcelVbaLibraries.Analytics
         internal static double[,] Cholesky(double[,] m) =>
             Matrix<double>.Build.DenseOfArray(m).Cholesky().Factor.ToArray();
 
-        internal static double[] Eigenvalues(double[,] m) =>
-            Matrix<double>.Build.DenseOfArray(m).Evd().EigenValues.Real().ToArray();
+        /// <summary>
+        /// Real eigenvalues via symmetric eigenvalue decomposition (Evd).
+        /// The input matrix MUST be approximately symmetric (|aᵢⱼ − aⱼᵢ| ≤ 1e-8).
+        /// MathNet's Evd is defined only for symmetric/Hermitian matrices;
+        /// non-symmetric input is rejected rather than returning silently wrong values.
+        /// </summary>
+        internal static double[] Eigenvalues(double[,] m)
+        {
+            EnsureSymmetric(m);
+            return Matrix<double>.Build.DenseOfArray(m).Evd().EigenValues.Real().ToArray();
+        }
 
+        /// <summary>
+        /// Real eigenvalues and eigenvectors via symmetric decomposition.
+        /// Same symmetry requirement as <see cref="Eigenvalues"/>.
+        /// </summary>
         internal static (double[] values, double[,] vectors) Eigen(double[,] m)
         {
+            EnsureSymmetric(m);
             var evd = Matrix<double>.Build.DenseOfArray(m).Evd();
             return (evd.EigenValues.Real().ToArray(), evd.EigenVectors.ToArray());
+        }
+
+        private static void EnsureSymmetric(double[,] m)
+        {
+            int n = m.GetLength(0);
+            if (n != m.GetLength(1))
+                throw new ArgumentException($"Eigenvalue decomposition requires a square matrix (got {n}×{m.GetLength(1)}).");
+            for (int i = 0; i < n; i++)
+                for (int j = i + 1; j < n; j++)
+                    if (Math.Abs(m[i, j] - m[j, i]) > 1e-8)
+                        throw new ArgumentException(
+                            $"Matrix is not symmetric: |m[{i},{j}] − m[{j},{i}]| = {Math.Abs(m[i, j] - m[j, i]):E2} > 1e-8. " +
+                            "Eigenvalue decomposition (Evd) requires a symmetric matrix.");
         }
 
         internal static double ConditionNumber(double[,] m) =>

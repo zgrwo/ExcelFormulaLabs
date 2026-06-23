@@ -59,7 +59,7 @@ namespace ExcelVbaLibraries.Analytics.Tests
         }
         [Fact] public void Eigen_length()
         {
-            var r = (double[])LinalgUdf.UDF_LINALG_EIGEN(B);
+            var r = (double[])LinalgUdf.UDF_LINALG_EIGEN(new double[,]{{2,-1,0},{-1,2,-1},{0,-1,2}});
             r.Length.Should().Be(3);
         }
         [Fact] public void Identity_diagonal()

@@ -34,7 +34,8 @@ namespace ExcelVbaLibraries.Analytics.Tests
         [Fact] public void Det() => LinalgCore.Determinant(A).Should().BeApproximately(3.0,1e-10);
         [Fact] public void Solve() { var x=LinalgCore.Solve(A,new[]{4.0,1}); x[0].Should().BeApproximately(3.0,1e-8); x[1].Should().BeApproximately(2.0,1e-8); }
         [Fact] public void Cholesky() => LinalgCore.Cholesky(new double[,]{{4,2},{2,3}}).GetLength(0).Should().Be(2);
-        [Fact] public void Eigenvalues() => LinalgCore.Eigenvalues(B).Length.Should().Be(3);
+        [Fact] public void Eigenvalues() => LinalgCore.Eigenvalues(new double[,]{{2,-1,0},{-1,2,-1},{0,-1,2}}).Length.Should().Be(3);
+        [Fact] public void Eigenvalues_NonSymmetric_Throws() { var a=()=>LinalgCore.Eigenvalues(B); a.Should().Throw<ArgumentException>().WithMessage("*symmetric*"); }
         [Fact] public void Eigen() { var r=LinalgCore.Eigen(A); r.values.Length.Should().Be(2); r.vectors.GetLength(0).Should().Be(2); }
         [Fact] public void Cond() => LinalgCore.ConditionNumber(A).Should().BeGreaterThan(0);
         [Fact] public void Rank() => LinalgCore.Rank(B).Should().Be(3);
@@ -69,6 +70,105 @@ namespace ExcelVbaLibraries.Analytics.Tests
             var m = new double[,] { { 1, 1 }, { 1, 1 + 1e-8 } };
             LinalgCore.Rank(m, 1e-10).Should().Be(2);  // tight tol → full rank
             LinalgCore.Rank(m, 1e-6).Should().Be(1);   // loose tol → rank 1
+        }
+
+        // =====================================================================
+        // EDGE CASE & ERROR BEHAVIOR TESTS
+        // (derived from M7 Qr pattern + systematic matrix edge cases)
+        // =====================================================================
+
+        [Fact] public void Cholesky_non_positive_definite_throws()
+        {
+            // [[1,2],[2,1]] is indefinite (eigenvalues 3, -1) → Cholesky must fail
+            var act = () => LinalgCore.Cholesky(new double[,] { { 1, 2 }, { 2, 1 } });
+            act.Should().Throw<Exception>();
+        }
+
+        [Fact] public void Determinant_singular_returns_zero()
+        {
+            // Linearly dependent rows → det ≈ 0
+            LinalgCore.Determinant(new double[,] { { 1, 2 }, { 2, 4 } })
+                .Should().BeApproximately(0.0, 1e-10);
+        }
+
+        [Fact] public void Identity_zero()
+        {
+            var I = LinalgCore.Identity(0);
+            I.GetLength(0).Should().Be(0);
+            I.GetLength(1).Should().Be(0);
+        }
+
+        [Fact] public void Solve_singular_inconsistent_returns_infinity()
+        {
+            // Singular 2×2 with inconsistent RHS:
+            //   x1+x2=1, x1+x2=2  has no solution.
+            // MathNet Solve → LU factorization fails → returns ±∞ components.
+            var x = LinalgCore.Solve(
+                new double[,] { { 1, 1 }, { 1, 1 } },
+                new[] { 1.0, 2.0 });
+            x.Length.Should().Be(2);
+            // Singular inconsistent: result contains non-finite values
+            x.Should().Contain(v => double.IsInfinity(v));
+        }
+
+        [Fact] public void Eigen_non_symmetric_throws()
+        {
+            var act = () => LinalgCore.Eigen(B);  // B is not symmetric
+            act.Should().Throw<ArgumentException>().WithMessage("*symmetric*");
+        }
+
+        [Fact] public void ConditionNumber_singular()
+        {
+            // Singular matrix → condition number approaches ∞
+            var cond = LinalgCore.ConditionNumber(
+                new double[,] { { 1, 2 }, { 2, 4 } });
+            cond.Should().BeGreaterThan(1e10);
+        }
+
+        [Fact] public void NormFrobenius_non_square()
+        {
+            // Frobenius norm well-defined for any shape
+            var n = LinalgCore.NormFrobenius(new double[,] { { 1, 2, 3 }, { 4, 5, 6 } });
+            n.Should().BeApproximately(Math.Sqrt(1 + 4 + 9 + 16 + 25 + 36), 1e-10);
+        }
+
+        [Fact] public void Rank_all_zero_matrix()
+        {
+            LinalgCore.Rank(new double[3, 3]).Should().Be(0);
+        }
+
+        [Fact] public void Qr_wide_exceeds_maxCols()
+        {
+            // QR with rows=2, cols=2001 > maxCols=2000 → throws ArgumentException
+            var wide = new double[2, 2001];
+            var act = () => LinalgCore.Qr(wide);
+            act.Should().Throw<ArgumentException>()
+                .WithMessage("*QR decomposition*");
+        }
+
+        [Fact] public void Trace_non_square()
+        {
+            // MathNet Trace requires square matrix → throws
+            var act = () => LinalgCore.Trace(new double[,] { { 1, 2, 3 }, { 4, 5, 6 } });
+            act.Should().Throw<ArgumentException>().WithMessage("*square*");
+        }
+
+        [Fact] public void Svd_zero_matrix()
+        {
+            var (U, S, Vt) = LinalgCore.Svd(new double[2, 2]);
+            // All singular values should be 0
+            S.Should().AllBeEquivalentTo(0.0);
+            U.GetLength(0).Should().Be(2);
+            Vt.GetLength(1).Should().Be(2);
+        }
+
+        [Fact] public void Pinv_rank_deficient()
+        {
+            // PseudoInverse of a rank-1 matrix (row 2 = 2×row 1)
+            // should still produce correct dimensions
+            var Ap = LinalgCore.PseudoInverse(new double[,] { { 1, 2, 3 }, { 2, 4, 6 } });
+            Ap.GetLength(0).Should().Be(3);
+            Ap.GetLength(1).Should().Be(2);
         }
     }
 }

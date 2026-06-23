@@ -44,9 +44,9 @@ namespace ExcelVbaLibraries.Analytics
         public static object UDF_LINALG_COND(object d)
             => OutputWrapper.WrapError(() => LinalgCore.ConditionNumber(M(d)));
 
-        [ExcelFunction(Name = "LINALG.RANK", Description = "Numerical rank.")]
+        [ExcelFunction(Name = "LINALG.RANK", Description = "Numerical rank (default tol=1e-10).")]
         public static object UDF_LINALG_RANK(object d, object tol)
-            => OutputWrapper.WrapError(() => (long)LinalgCore.Rank(M(d), InputNormalizer.ToDouble(tol)));
+            => OutputWrapper.WrapError(() => (long)LinalgCore.Rank(M(d), tol is ExcelDna.Integration.ExcelMissing ? 1e-10 : InputNormalizer.ToDouble(tol)));
 
         [ExcelFunction(Name = "LINALG.IDENTITY", Description = "Identity matrix.")]
         public static object UDF_LINALG_IDENTITY(object n)

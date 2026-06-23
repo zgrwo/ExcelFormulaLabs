@@ -177,9 +177,21 @@ namespace ExcelVbaLibraries.Foundation
         /// <summary>
         /// Safe conversion to string. Error/Null/Empty → "".
         /// </summary>
+        /// <summary>
+        /// Detect Excel-DNA's <c>ExcelMissing.Value</c> sentinel without a hard
+        /// assembly reference. When a user omits an optional UDF argument in the
+        /// formula bar, Excel-DNA passes this sentinel; treating it as missing
+        /// prevents garbage like the type name leaking into computation results.
+        /// </summary>
+        private static bool IsExcelMissing(object? value)
+        {
+            return value != null
+                && value.GetType().FullName == "ExcelDna.Integration.ExcelMissing";
+        }
+
         public static string ToString(object? value)
         {
-            if (value == null || value is DBNull) return "";
+            if (value == null || value is DBNull || IsExcelMissing(value)) return "";
             if (ReferenceEquals(value, ExcelEmpty.Value)) return "";
             if (value is ExcelError) return "";
             if (value is string s) return s;
@@ -192,7 +204,7 @@ namespace ExcelVbaLibraries.Foundation
         /// </summary>
         public static double ToDouble(object? value)
         {
-            if (value == null || value is DBNull) return double.NaN;
+            if (value == null || value is DBNull || IsExcelMissing(value)) return double.NaN;
             if (ReferenceEquals(value, ExcelEmpty.Value)) return double.NaN;
             if (value is ExcelError) return double.NaN;
             if (value is double d) return d;
@@ -216,7 +228,7 @@ namespace ExcelVbaLibraries.Foundation
         /// </summary>
         public static long ToLong(object? value)
         {
-            if (value == null || value is DBNull) return 0;
+            if (value == null || value is DBNull || IsExcelMissing(value)) return 0;
             if (ReferenceEquals(value, ExcelEmpty.Value)) return 0;
             if (value is ExcelError) return 0;
             if (value is long l) return l;
@@ -242,7 +254,7 @@ namespace ExcelVbaLibraries.Foundation
         /// </summary>
         public static bool ToBool(object? value)
         {
-            if (value == null || value is DBNull) return false;
+            if (value == null || value is DBNull || IsExcelMissing(value)) return false;
             if (ReferenceEquals(value, ExcelEmpty.Value)) return false;
             if (value is ExcelError) return false;
             if (value is bool b) return b;
@@ -269,7 +281,7 @@ namespace ExcelVbaLibraries.Foundation
         /// </summary>
         public static DateTime ToDateTime(object? value)
         {
-            if (value == null || value is DBNull) return DateTime.MinValue;
+            if (value == null || value is DBNull || IsExcelMissing(value)) return DateTime.MinValue;
             if (ReferenceEquals(value, ExcelEmpty.Value)) return DateTime.MinValue;
             if (value is ExcelError) return DateTime.MinValue;
             if (value is DateTime dt) return dt;

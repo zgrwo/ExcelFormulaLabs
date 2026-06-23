@@ -191,5 +191,53 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
             }
             finally { FileSystemCore.SandboxRoot = null; }
         }
+
+        // =====================================================================
+        // SANDBOX EDGE CASES
+        // (systematic coverage following C1 fix pattern)
+        // =====================================================================
+
+        [Fact] public void Sandbox_null_root_allows_access()
+        {
+            // SandboxRoot=null → sandbox disabled → all paths allowed
+            FileSystemCore.SandboxRoot = null;
+            var act = () => FileSystemCore.ValidatePath(@"C:\any\path");
+            act.Should().NotThrow();
+        }
+
+        [Fact] public void Sandbox_path_exactly_equals_root()
+        {
+            var tmp = FileSystemCore.GetTempPath();
+            FileSystemCore.SandboxRoot = tmp;
+            try
+            {
+                // Path exactly matching the sandbox root should be allowed
+                var act = () => FileSystemCore.ValidatePath(tmp);
+                act.Should().NotThrow();
+            }
+            finally { FileSystemCore.SandboxRoot = null; }
+        }
+
+        [Fact] public void Sandbox_empty_string_root()
+        {
+            // Empty SandboxRoot should allow all access (no constraint)
+            FileSystemCore.SandboxRoot = "";
+            var act = () => FileSystemCore.ValidatePath(@"C:\temp");
+            act.Should().NotThrow();
+            FileSystemCore.SandboxRoot = null;
+        }
+
+        [Fact] public void ValidatePath_normalized_same()
+        {
+            var tmp = FileSystemCore.GetTempPath();
+            FileSystemCore.SandboxRoot = tmp;
+            try
+            {
+                // Path with "." normalizes to parent itself → should match root
+                var act = () => FileSystemCore.ValidatePath(tmp + System.IO.Path.DirectorySeparatorChar + ".");
+                act.Should().NotThrow();
+            }
+            finally { FileSystemCore.SandboxRoot = null; }
+        }
     }
 }

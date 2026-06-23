@@ -73,6 +73,9 @@ namespace ExcelVbaLibraries.Analytics
         internal static Dictionary<string, object> FitWLS(double[,] X, double[] y, double[] w)
         {
             int n = X.GetLength(0), p = X.GetLength(1);
+            // Reject negative weights — Sqrt produces NaN which would silently propagate
+            for (int i = 0; i < w.Length; i++)
+                if (w[i] < 0) throw new ArgumentException($"Weight at index {i} is negative ({w[i]}). All weights must be >= 0.");
             var Xw = new double[n, p];
             var yw = new double[n];
             for (int i = 0; i < n; i++)

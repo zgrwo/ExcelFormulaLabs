@@ -35,7 +35,7 @@ namespace ExcelVbaLibraries.DataToolkit
         { if (t.Length >= len) return t; return t + new string(pad, len - t.Length); }
 
         internal static string Truncate(string t, int max, string suffix = "...")
-        { if (t.Length <= max) return t; return t.Substring(0, max - suffix.Length) + suffix; }
+        { if (max <= 0) return ""; if (t.Length <= max) return t; int keep = max - suffix.Length; if (keep <= 0) return t.Substring(0, max); return t.Substring(0, keep) + suffix; }
 
         internal static long CountSubstring(string t, string s, bool cs = true)
         { int c=0,i=0; var m=cs?0:1; while((i=t.IndexOf(s,i,m==0?StringComparison.Ordinal:StringComparison.OrdinalIgnoreCase))>=0){c++;i+=s.Length;} return c; }

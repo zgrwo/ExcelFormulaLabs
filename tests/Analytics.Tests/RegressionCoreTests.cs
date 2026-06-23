@@ -33,5 +33,55 @@ namespace ExcelVbaLibraries.Analytics.Tests
         [Fact] public void OLS_crossval_pval() { var p=(double[])RegressionCore.FitOLS(Xcv,ycv)["p_values"]; p[0].Should().BeApproximately(0.340383606094307,1e-6); p[1].Should().BeApproximately(5.6151214e-12,1e-4); }
         // ANOVA cross-validation with scipy.stats.f_oneway
         [Fact] public void ANOVA_crossval() { var a=RegressionCore.AnovaOneWay(new[]{new[]{5.0,6,7,8},new[]{7.0,8,9,10},new[]{9.0,10,11,12}}); ((double)a["f_stat"]).Should().BeApproximately(9.6,1e-8); ((double)a["p_value"]).Should().BeApproximately(0.00586098088586,1e-8); }
+
+        // =====================================================================
+        // EDGE CASE & INPUT VALIDATION TESTS
+        // (systematic coverage following H3/M4 pattern)
+        // =====================================================================
+
+        [Fact] public void FitWLS_negative_weight_throws()
+        {
+            // Guard added in round 2 — verify it rejects negative weights
+            var act = () => RegressionCore.FitWLS(X, y, new[] { 1.0, -0.5, 2.0 });
+            act.Should().Throw<ArgumentException>().WithMessage("*negative*");
+        }
+
+        [Fact] public void FitRidge_lambda_zero_approximates_OLS()
+        {
+            // Ridge with λ=0 should give coefficients very close to OLS
+            var ridge = RegressionCore.FitRidge(Xcv, ycv, 0.0);
+            var ols = RegressionCore.FitOLS(Xcv, ycv);
+            var rc = (double[])ridge["coefficients"];
+            var oc = (double[])ols["coefficients"];
+            rc[0].Should().BeApproximately(oc[0], 1e-8);
+            rc[1].Should().BeApproximately(oc[1], 1e-8);
+        }
+
+        [Fact] public void FitRidge_large_lambda_shrinks_coefficients()
+        {
+            // Large λ shrinks coefficients toward zero
+            var ridge = RegressionCore.FitRidge(Xcv, ycv, 1e6);
+            var coef = (double[])ridge["coefficients"];
+            // Coefficients should be near zero (heavily penalized)
+            Math.Abs(coef[0]).Should().BeLessThan(0.01);
+            Math.Abs(coef[1]).Should().BeLessThan(0.01);
+        }
+
+        [Fact] public void AnovaOneWay_single_group()
+        {
+            // Single group → df_between=0 → degenerate ANOVA
+            var a = RegressionCore.AnovaOneWay(new[] { new[] { 1.0, 2, 3, 4 } });
+            ((double)a["f_stat"]).Should().Be(double.NaN);  // division by zero
+        }
+
+        [Fact] public void FactorImportance_constant_column()
+        {
+            // Column with zero variance → sd<1e-12 guard → normalized to 1
+            // Should not throw and should return valid rankings
+            var constX = new double[,] { { 1, 5 }, { 1, 2 }, { 1, 3 }, { 1, 4 }, { 1, 6 } };
+            var r = RegressionCore.FactorImportance(constX, yf);
+            r.Length.Should().Be(2);
+            r.Should().OnlyHaveUniqueItems();
+        }
     }
 }

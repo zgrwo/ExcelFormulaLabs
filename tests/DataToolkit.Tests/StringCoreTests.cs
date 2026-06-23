@@ -1,3 +1,4 @@
+using System;
 using ExcelVbaLibraries.DataToolkit;
 using FluentAssertions;
 using Xunit;
@@ -42,5 +43,55 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void Coalesce_null() => StringCore.Coalesce(null!,"fallback").Should().Be("fallback");
         [Fact] public void Coalesce_empty() => StringCore.Coalesce("","fallback").Should().Be("");
         [Fact] public void RandomString_custom_charset() => StringCore.RandomString(100,"ABC").Should().MatchRegex("^[ABC]+$");
+
+        // =====================================================================
+        // EDGE CASE & ERROR BEHAVIOR TESTS
+        // =====================================================================
+
+        [Fact] public void Truncate_max_zero()
+        {
+            StringCore.Truncate("hello", 0).Should().Be("");
+        }
+
+        [Fact] public void Truncate_max_negative()
+        {
+            StringCore.Truncate("hello", -1).Should().Be("");
+        }
+
+        [Fact] public void Truncate_short_string()
+        {
+            StringCore.Truncate("hi", 10).Should().Be("hi");
+        }
+
+        [Fact] public void Base64Decode_invalid_throws()
+        {
+            var act = () => StringCore.Base64Decode("!!!invalid!!!");
+            act.Should().Throw<Exception>();
+        }
+
+        [Fact] public void ExtractBetween_no_match()
+        {
+            StringCore.ExtractBetween("hello", "[", "]").Should().Be("");
+        }
+
+        [Fact] public void Levenshtein_empty_both()
+        {
+            StringCore.LevenshteinDistance("", "").Should().Be(0);
+        }
+
+        [Fact] public void Levenshtein_one_empty()
+        {
+            StringCore.LevenshteinDistance("abc", "").Should().Be(3);
+        }
+
+        [Fact] public void Soundex_empty()
+        {
+            StringCore.Soundex("").Should().Be("");
+        }
+
+        [Fact] public void CountSubstring_empty_needle()
+        {
+            StringCore.CountSubstring("hello", "").Should().Be(0);
+        }
     }
 }

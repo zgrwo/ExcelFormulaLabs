@@ -44,6 +44,86 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
             var r = JsonXmlCore.XmlToTable("<r><n><a>1</a><b>x</b></n><n><a>2</a><b>y</b></n></r>");
             r!.GetLength(0).Should().BeGreaterThan(0);
         }
+
+        // =====================================================================
+        // EDGE CASE & INPUT VALIDATION TESTS
+        // (systematic coverage — insertion-order, missing keys, nested/mixed data)
+        // =====================================================================
+
+        [Fact] public void JsonToTable_key_insertion_order_preserved()
+        {
+            // Recent fix: List+HashSet preserves key insertion order (was HashSet-only → random order)
+            var json = "[{\"z\":3,\"a\":1,\"m\":2},{\"a\":4,\"z\":6,\"m\":5}]";
+            var r = JsonXmlCore.JsonToTable(json);
+            r![0, 0].Should().Be("z");
+            r![0, 1].Should().Be("a");
+            r![0, 2].Should().Be("m");
+        }
+
+        [Fact] public void JsonToTable_duplicate_keys_across_objects()
+        {
+            // Same key appearing in multiple objects → only one column, first-seen order
+            var json = "[{\"x\":1},{\"x\":2,\"y\":3}]";
+            var r = JsonXmlCore.JsonToTable(json);
+            r!.GetLength(1).Should().Be(2);  // x,y (2 unique keys)
+            r![0, 0].Should().Be("x");
+            r![0, 1].Should().Be("y");
+        }
+
+        [Fact] public void JsonToTable_missing_key_in_some_objects()
+        {
+            // Key present in first object but missing in second → ExcelEmpty for missing
+            var json = "[{\"a\":1,\"b\":2},{\"a\":3}]";
+            var r = JsonXmlCore.JsonToTable(json);
+            r!.GetLength(0).Should().Be(3);  // header + 2 rows
+            r![2, 1].Should().Be(ExcelVbaLibraries.Foundation.ExcelEmpty.Value);
+        }
+
+        [Fact] public void JsonToTable_non_object_elements_skipped()
+        {
+            // Array with mixed types (string, object) → string elements skipped
+            var json = "[\"text\",{\"a\":1},42,{\"a\":2}]";
+            var r = JsonXmlCore.JsonToTable(json);
+            r!.GetLength(0).Should().Be(3);  // header + 2 object rows
+            r![0, 0].Should().Be("a");
+        }
+
+        [Fact] public void JsonQuery_missing_property_returns_null()
+        {
+            JsonXmlCore.JsonQuery("{\"a\":1}", "b").Should().BeNull();
+        }
+
+        [Fact] public void JsonQuery_array_index_oob_returns_null()
+        {
+            JsonXmlCore.JsonQuery("[1,2]", "[5]").Should().BeNull();
+        }
+
+        [Fact] public void JsonQuery_array_index()
+        {
+            var r = JsonXmlCore.JsonQuery("{\"items\":[10,20,30]}", "items[1]");
+            r.Should().Be(20L);
+        }
+
+        [Fact] public void JsonValidate_whitespace_only()
+        {
+            // Empty/whitespace is not valid JSON
+            JsonXmlCore.JsonValidate("   ").Should().BeFalse();
+        }
+
+        [Fact] public void JsonPrettify_preserves_structure()
+        {
+            // After prettify, the string should still be parseable back
+            var pretty = JsonXmlCore.JsonPrettify("[{\"a\":1}]");
+            JsonXmlCore.JsonValidate(pretty).Should().BeTrue();
+        }
+
+        [Fact] public void XmlToTable_missing_child_element()
+        {
+            var xml = "<r><n><a>1</a></n><n><a>2</a><b>x</b></n></r>";
+            var r = JsonXmlCore.XmlToTable(xml);
+            r!.GetLength(0).Should().Be(3);  // header + 2 rows
+            r!.GetLength(1).Should().Be(2);  // a, b
+        }
     }
 
     // Python ref: pivot→pandas.pivot_table, groupby→pandas.groupby
