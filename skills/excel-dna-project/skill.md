@@ -10,41 +10,142 @@ disable-model-invocation: true
 
 ```
 src/
-├── Foundation/         共享基础设施（InputNormalizer, ElementWiseMapper, OutputWrapper, FilterUtils, ArrayOperations, ComparisonUtils, DictOperations, ExcelEmpty, ExcelError）
-├── Analytics/          分析引擎（Stats, Linalg, Regression, PhyChem）+ Excel-DNA 加载项
-└── DataToolkit/        数据工具箱（String, DateTime, Regex, JSON/XML, Pivot, SQL, FileSystem, Array, DictSet）+ 加载项
+├── Foundation/      InputNormalizer, ElementWiseMapper, OutputWrapper,
+│                    FilterUtils, ArrayOperations, ComparisonUtils, DictOperations,
+│                    ExcelEmpty, ExcelError
+├── Analytics/       StatsCore, LinalgCore, RegressionCore, PhyChemCore
+│                    + StatsUdf, LinalgUdf, RegressionUdf, PhyChemUdf
+│                    + Analytics-AddIn (.xll 产出)
+└── DataToolkit/     StringCore, DateTimeCore, RegexCore, JsonXmlCore, PivotCore,
+                     SqlCore, FileSystemCore, ArrayCore, DictSetCore, RangeExportCore
+                     + 各 Udf 类 + DataToolkit-AddIn (.xll 产出)
 
 tests/
-├── Foundation.Tests/   ArrayOperations, ComparisonUtils, DictOperations, ElementWiseMapper, FilterUtils, InputNormalizer, OutputWrapper
-├── Analytics.Tests/    Stats, Linalg, Regression, PhyChem 的 Core + UDF 双重测试 + Python 交叉验证
-└── DataToolkit.Tests/  DataToolkit 的 Core + UDF 双重测试 + PythonCrossValidationTests
+├── Foundation.Tests/
+├── Analytics.Tests/    Core + UDF 双重测试 + Python 交叉验证
+└── DataToolkit.Tests/  Core + UDF 双重测试 + PythonCrossValidationTests
 
 docs/
-├── api-reference.md    214 UDF 完整签名与说明（数字的唯一来源）
-└── user-guide.md       安装与使用指南
-CONTEXT.md              领域术语表（项目根目录）
+├── api-reference.md   214 UDF 签名（数字的唯一信源）
+└── user-guide.md      安装与使用指南
+CONTEXT.md             领域术语表
 ```
 
-## 全量测试
+## 架构
 
-三轮命令，缺一不可：
+```
+UDF (public static, [ExcelFunction]) → Excel-DNA 入口
+  ↓ MapOver / MapOverMulti / V()
+Core (internal static, 纯逻辑)       → 零 Excel 依赖
+  ↓ 依赖
+Foundation (InputNormalizer, ElementWiseMapper, OutputWrapper, …)
+```
+
+### MapOver 选型
+
+| 场景 | 用什么 | 形状 | 错误处理 |
+|------|--------|------|----------|
+| 单参数，保持输入形状 | `MapOver<TIn,TOut>` | 标量→标量，1D→1D，2D→2D | null/error/empty 透传 |
+| 单参数，强制 1D 输出 | `MapOverFlat<TIn,TOut>` | 始终 `object[]` | null/error/empty 透传 |
+| 2-3 参数，广播 | `MapOverMulti<T1,T2,TOut>` | 标量广播到数组尺寸 | 尺寸不匹配→`ExcelError.Value` |
+
+部分统计 UDF（CVP/CV/PEAR/SPR/T1/T2）绕过 MapOver，用 `V()`/`M()` 直接调 Core。尺寸不匹配→`NaN`（非 ExcelError），`V(null)`→空数组→`NaN`。
+
+### UDF 模板
+
+```csharp
+[ExcelFunction(Name = "CATEGORY.NAME", Description = "一句话说明")]
+public static object UDF_CAT_NAME(object input)
+    => OutputWrapper.WrapError(() =>
+        ElementWiseMapper.MapOver<TIn, TOut>(input, SomeCore.Method));
+```
+
+每 UDF 约 5 行。Core 方法为 `internal static`。
+
+---
+
+## 预防规则
+
+### 1. 静默传播阻断
+
+WrapError 只捕获**异常**，不捕获 NaN/Inf/null/default!。依赖 IEEE 754 传播 = bug。
+
+```csharp
+// ❌ tss=0 → 0/0=NaN → 静默返回
+double r2 = 1.0 - sse / tss;
+
+// ✅ 显式 guard → 抛异常 → WrapError → #VALUE!
+if (Math.Abs(tss) < 1e-15)
+    throw new ArgumentException("Total sum of squares is zero.");
+double r2 = 1.0 - sse / tss;
+```
+
+```csharp
+// ❌ 转换失败返回 default!（null/0），WrapError 不触发
+catch { return default!; }
+
+// ✅ 致命异常穿透
+catch (Exception ex) when (ex is not OutOfMemoryException
+    and not StackOverflowException) { return default!; }
+```
+
+```csharp
+// ❌ 分母为零 → Infinity 静默返回
+return n * r * t / v;
+
+// ✅ 匹配模块风格显式返回 NaN
+return v == 0 ? double.NaN : n * r * t / v;
+```
+
+### 2. 防御完整性
+
+安全机制必须覆盖模块内**所有**相关方法。新方法 → 对照同模块已有方法补齐防护。
+
+```csharp
+// ❌ FileExists/GetFileSize/FolderExists 漏了 ValidatePath
+internal static bool FileExists(string p) => File.Exists(p);
+
+// ✅ 对照 ReadTextFile/WriteTextFile/DeleteFile 等补齐
+internal static bool FileExists(string p) { ValidatePath(p); return File.Exists(p); }
+```
+
+| 机制 | 检查方式 |
+|------|----------|
+| Sandbox | `grep "ValidatePath"` vs `grep "internal static"` |
+| Regex 超时 | 所有 `Regex.Match/Replace/IsMatch` 带 `TimeSpan` |
+| SQL 参数化 | 无字符串拼接 SQL |
+
+### 3. 异常过滤器统一
+
+裸 `catch{}` = bug。模板：
+
+```csharp
+// 通用
+catch (Exception ex) when (ex is not OutOfMemoryException
+    and not StackOverflowException)
+
+// COM interop（InputNormalizer.TryExtractComRangeValue）
+catch (Exception ex) when (ex is not OutOfMemoryException
+    and not StackOverflowException and not AccessViolationException)
+```
+
+自检：`grep -rn "catch\s*{" src/ --include="*.cs" | grep -v obj/` → 必须返回空。
+
+---
+
+## 测试
+
+### 全量测试（必须）
 
 ```bash
-# ① 全量单元测试（含内联 Python 对照，除豁免外期望值均源自 scipy/numpy）
-dotnet test
-
-# ② Excel 数据源交叉验证 — 从 Cross_Validation_vs_Python.xlsx 加载真实数据，
-#    与 Python scipy/numpy 输出逐项对照（方法名含 CrossVal_ + PythonCrossValidationTests）
-dotnet test --filter "CrossVal|PythonCrossValidation"
-
-# ③ Debug + Release 双配置 DLL/XLL 打包构建
-dotnet build -c Debug && dotnet build -c Release
+dotnet test                                         # ① 全量单元测试
+dotnet test --filter "CrossVal|PythonCrossValidation"  # ② 交叉验证
+dotnet build -c Debug && dotnet build -c Release     # ③ 双目标打包
 ```
 
-数值精度 1e-10。豁免：FS.*（POSIX 差异）、RANGE.*（无标准输出格式），标记 `// No Python ref:`。
-数据源：`tests/TestData/Cross_Validation_vs_Python.xlsx`。
+精度 1e-10。豁免：FS.*（POSIX 差异）、RANGE.*（无标准输出格式），标记 `// No Python ref:`。
 
-## Build & Test
+### 快捷命令
 
 ```bash
 dotnet build && dotnet test
@@ -52,146 +153,54 @@ dotnet test --filter ClassName
 dotnet test --no-build -v q
 ```
 
-xUnit [Fact] + FluentAssertions 6.12.0。
+### 测试模式
 
-## 架构
+xUnit `[Fact]` + FluentAssertions 6.12.0。每 Core 方法覆盖：正常路径 + 退化输入（空/null/零/单元素/全等值/边界值）。UDF 层测试覆盖：Core guard → `WrapError` → `ExcelError.Value` 链路。
 
-UDF -> InputNormalizer -> ElementWiseMapper/MapOver -> Core -> OutputWrapper -> Excel
-
-### MapOver 系列
-- MapOver<TIn,TOut>: 保持形状，null/error/empty 透传
-- MapOverFlat<TIn,TOut>: 始终返回 object[]，即使标量输入
-- MapOverMulti: 广播，null 首参→ExcelEmpty，尺寸不匹配→ExcelError
-
-### V()/M() vs MapOverMulti
-CVP/CV/PEAR/SPR/T1/T2 用 V() 直接调 Core：尺寸不匹配→NaN，V(null)→空数组→NaN，MathNet 异常→WrapError→ExcelError.Value
-
-### UDF 包装示例
 ```csharp
-[ExcelFunction(Name = "STR.REVERSE")]
-public static object UDF_STR_REV(object t)
-    => OutputWrapper.WrapError(() =>
-        ElementWiseMapper.MapOver<string, string>(t, StringCore.ReverseString));
-```
-
-## InputNormalizer
-- NormalizeTo1D(null) → new object[0]
-- NormalizeTo2D(null) → null
-- ToDoubles() 静默过滤非数值
-- ToDateTime() OLE 纪元 1899-12-30
-
-## UDF 测试
-UDF 返回 object，断言前需转型。每方法覆盖：null、空、error 透传、数组、多参数尺寸不匹配。
-```csharp
-[Fact]
-public void UDF_STAT_MEAN_Basic()
+// Core 层
+[Fact] public void FitOLS_constant_y_throws()
 {
-    var result = (double)StatsUdf.UDF_STAT_MEAN(new double[] { 1.0, 2.0, 3.0 });
-    result.Should().BeApproximately(2.0, 1e-9);
+    var act = () => RegressionCore.FitOLS(X, new[] { 5.0, 5, 5 });
+    act.Should().Throw<ArgumentException>().WithMessage("*constant*");
+}
+
+// UDF 层
+[Fact] public void OLS_constant_y_returns_error()
+{
+    RegressionUdf.UDF_REGRESS_OLS(X, new[] { 5.0, 5, 5 })
+        .Should().Be(ExcelError.Value);
 }
 ```
 
-## 预防规则（来自 9+ 轮审查的反复模式）
+---
 
-### 1. 静默传播阻断
+## 参考
 
-WrapError 只捕获**异常**，不捕获 NaN/Inf/null/default!。依赖 IEEE 754 传播 = bug。
+### InputNormalizer
 
-```csharp
-// ❌ 错误：tss=0 时静默产生 NaN，WrapError 不触发
-double r2 = 1.0 - sse / tss;
+| 方法 | 行为 |
+|------|------|
+| `NormalizeTo1D(null)` | `new object[0]` |
+| `NormalizeTo2D(null)` | `null` |
+| `ToDouble` 非数值 | `NaN` |
+| `ToLong` 非数值 | `0` |
+| `ToBool` 非数值 | `false` |
+| `ToDateTime` 非数值 | `DateTime.MinValue` |
+| `ToDateTime` 数值 | OLE 日期（纪元 1899-12-30） |
 
-// ✅ 正确：显式 guard，抛异常让 WrapError → #VALUE!
-if (Math.Abs(tss) < 1e-15)
-    throw new ArgumentException("Total sum of squares is zero.");
-double r2 = 1.0 - sse / tss;
+### 已知限制
 
+- **MathNet 5.0**：Solve 奇异矩阵可能不抛异常（RegressionCore 已加显式 guard 兜底）；QR 不支持宽矩阵 m<n（已用零填充方阵提取子矩阵）
+- **FileSystem 测试**：依赖真实文件系统，沙箱测试通过 `[Collection("Sandbox")]` 序列化
+- **双 TFM**：net48 用 `System.Data.SQLite`，net8.0 用 `Microsoft.Data.Sqlite`；IsoWeek 在 net48 手工实现
 
-// ❌ 错误：转换失败返回 default!，WrapError 不触发
-catch { return default!; }
+### 历史修复
 
-// ✅ 正确：至少让致命异常穿透
-catch (Exception ex) when (ex is not OutOfMemoryException
-    and not StackOverflowException) { return default!; }
+**正确性**：StdevP/CovarianceP MathNet 5.0 破性变更 · LU P 矩阵排列循环 · QR 宽矩阵零填充 · Stats.Mode O(n²)→O(n) · PhyChem LB 常数精度 · DateDiff 闰年 DayOfYear→Month/Day · ValidatePath "." 规范化 · RegressionCore 除零 guard ×5
 
+**安全**：FileSystem 沙箱 FileExists/FolderExists/GetFileSize 补齐 · Regex 全局 Timeout · 全项目 18 处裸 catch → when 过滤器 · IdealGasLaw 零分母 guard
 
-// ❌ 错误：分母为零产生 Infinity
-return n * r * t / v;  // v 可能为 0
+**性能**：StringCore.RandomString ThreadLocal/Random.Shared · SqlCore 列类型推断扫描前 10 行 · RemoveChars StringBuilder 单趟
 
-// ✅ 正确：匹配模块风格返回 NaN
-return v == 0 ? double.NaN : n * r * t / v;
-```
-
-### 2. 防御完整性
-
-安全机制必须覆盖模块内**所有**相关方法，禁止遗漏。
-
-```csharp
-// ❌ 错误：FileExists/FolderExists/GetFileSize 忘了加 ValidatePath
-//         其他 I/O 方法都有，唯独这 3 个漏了 → 沙箱旁路
-internal static bool FileExists(string p) => File.Exists(p);
-internal static bool FolderExists(string p) => Directory.Exists(p);
-
-// ✅ 正确：对照同模块其他方法补齐防护
-internal static bool FileExists(string p) { ValidatePath(p); return File.Exists(p); }
-internal static bool FolderExists(string p) { ValidatePath(p); return Directory.Exists(p); }
-
-
-// 自检命令：对比模块内防护调用 vs 方法列表
-// grep "ValidatePath" src/DataToolkit/FileSystemCore.cs  # 防护调用
-// grep "internal static" src/DataToolkit/FileSystemCore.cs  # 全部方法
-// → 每个接受路径参数的方法都应有 ValidatePath 调用
-```
-
-### 3. 异常过滤器统一
-
-裸 `catch{}` = bug。必须加 `when` 过滤器让 OOM/StackOverflow 穿透。
-
-```csharp
-// ❌ 错误：吞掉一切异常，包括 OOM
-try { return JsonDocument.Parse(json); return true; }
-catch { return false; }
-
-// ✅ 正确：致命异常穿透
-try { return JsonDocument.Parse(json); return true; }
-catch (Exception ex) when (ex is not OutOfMemoryException
-    and not StackOverflowException) { return false; }
-
-
-// COM interop 场景：追加 AccessViolationException
-catch (Exception ex) when (ex is not OutOfMemoryException
-    and not StackOverflowException and not AccessViolationException)
-
-
-// 构建前自检：
-// grep -rn "catch\s*{" src/ --include="*.cs" | grep -v obj/
-// → 必须返回空
-```
-
-## 已知限制 & InternalsVisibleTo
-Analytics → Analytics.Tests, DataToolkit.Tests / DataToolkit → DataToolkit.Tests / Foundation 为 public
-- TryExtractComRangeValue：需 COM Excel Range 对象
-- Solve 奇异矩阵：MathNet 5.0 可能不抛异常
-- GasToSTP 无效单位：走 default 分支
-- FileSystem UDF：依赖真实文件系统，部分测试需特定环境
-- MathNet 5.0 QR 不支持宽矩阵 (m < n)，采用零填充方阵后提取子矩阵
-- FilterPasses 比较运算符使用类型感知 Compare（与 VBA 语义一致）
-
-## 历史修复
-- StdevP/CovarianceP/Covariance：MathNet 5.0 破性变更（样本→总体协方差）
-- IsoYear/IsoWeekNum：net48 无 System.Globalization.ISOWeek，手工 polyfill
-- Coalesce：null 与空字符串统一处理
-- Lu P 矩阵：排列循环 > 2 时行交换 bug，改为逐元素赋值 P[i,perm[i]]=1.0
-- Qr 宽矩阵：零填充法支持 m < n 的 QR 分解
-- Stats.Mode：O(n²) GroupBy→O(n) Dictionary，委托 StatsCore.Mode
-- PhyChem 便捷 UDF：C_TO_F 等委托 PhyChemCore 消除公式重复
-- PhyChem LB 常数：453.592→453.59237（国际标准 lb=0.45359237 kg）
-- StringCore.RandomString：static Random→ThreadLocal<Random>/Random.Shared（多线程安全）
-- SqlCore.CreateTable：列类型推断单行→扫描前10行；列名去重追加 _2/_3 后缀
-- ArrayOperations.IsNumericValue：新增数值字符串识别，与 ComparisonUtils.IsNumeric 统一
-- DateDiff 年差：DayOfYear→Month/Day 比较，修复闰年跨年偏差
-- ValidatePath：追加分隔符再 StartsWith，修复 "." 路径误判越界
-- RegressionCore 除零：FitOLS/FitRidge tss≈0 guard + df≤0 guard + AnovaOneWay k<2 guard + FactorImportance n<2 guard
-- FileSystemCore 沙箱：FileExists/GetFileSize/FolderExists 补 ValidatePath；FileSystem测试竞态用 xUnit Collection 序列化
-- 异常过滤器统一（P0/P1/P2）：全项目 18 处裸 catch{} → `when` 过滤器；IdealGasLaw 零分母 guard
-- DataToolkit XLL 打包：增量构建残留 .dna 污染 → CleanupDnaAfterBuild 目标
+**构建**：多目标 net8.0+net48 · DataToolkit .dna 双模板 · CleanupDnaAfterBuild 防增量污染 · SandboxRoot 并行测试 xUnit Collection 序列化
