@@ -32,8 +32,8 @@
 
 ```
 UDF (public static, [ExcelFunction])  →  Excel-DNA 入口
-  ↓ 调用
-Core (internal static, 纯逻辑)         →  零 Excel 依赖，100% 单元测试
+  ↓ MapOver/MapOverMulti/V() 分发
+Core (internal static, 纯逻辑)         →  零 Excel 依赖
   ↓ 依赖
 Foundation (共享工具)                   →  InputNormalizer, ElementWiseMapper, OutputWrapper
 ```

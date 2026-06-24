@@ -32,9 +32,9 @@ namespace ExcelVbaLibraries.Analytics
             ["Bk"]=247.07,["Cf"]=251.08,["Es"]=252.08,["Fm"]=257.10,
         };
 
-        private static readonly Regex ElemRx = new(@"([A-Z][a-z]?)(\d*)", RegexOptions.Compiled);
-        private static readonly Regex ParenRx = new(@"\(([^()]+)\)(\d*)", RegexOptions.Compiled);
-        private static readonly Regex BrackRx = new(@"\[([^\[\]]+)\](\d*)", RegexOptions.Compiled);
+        private static readonly Regex ElemRx = new(@"([A-Z][a-z]?)(\d*)", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
+        private static readonly Regex ParenRx = new(@"\(([^()]+)\)(\d*)", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
+        private static readonly Regex BrackRx = new(@"\[([^\[\]]+)\](\d*)", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
 
         /// <summary>
         /// Compute molecular weight from a chemical formula string.

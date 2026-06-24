@@ -191,9 +191,15 @@ xUnit `[Fact]` + FluentAssertions 6.12.0。每 Core 方法覆盖：正常路径 
 
 ### 已知限制
 
-- **MathNet 5.0**：Solve 奇异矩阵可能不抛异常（RegressionCore 已加显式 guard 兜底）；QR 不支持宽矩阵 m<n（已用零填充方阵提取子矩阵）
+- **MathNet 5.0.0**：QR 不支持宽矩阵 m<n → 已用零填充方阵提取子矩阵
 - **FileSystem 测试**：依赖真实文件系统，沙箱测试通过 `[Collection("Sandbox")]` 序列化
-- **双 TFM**：net48 用 `System.Data.SQLite`，net8.0 用 `Microsoft.Data.Sqlite`；IsoWeek 在 net48 手工实现
+- **双 TFM 差异**：net48 用 `System.Data.SQLite`，net8.0 用 `Microsoft.Data.Sqlite`；IsoWeek 在 net48 手工 polyfill
+
+### 已解决的限制
+
+- MathNet Solve 奇异矩阵可能不抛异常 → RegressionCore 已加显式 guard
+- 全项目裸 catch{} 吞致命异常 → 已统一加 when 过滤器
+- FileSystem FileExists/FolderExists 沙箱旁路 → 已补 ValidatePath
 
 ### 历史修复
 

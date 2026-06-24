@@ -7,7 +7,7 @@
 **Foundation** — 零依赖基础层。提供 InputNormalizer、ElementWiseMapper、OutputWrapper、ExcelEmpty/ExcelError 哨兵。被 Analytics 和 DataToolkit 引用。
 _Avoid_: 基础层、工具层、Utils
 
-**Analytics** — 统计/回归/线性代数/物理化学。依赖 MathNet.Numerics 5.0 + Foundation。产出 Analytics.xll。
+**Analytics** — 统计/回归/线性代数/物理化学。依赖 MathNet.Numerics 5.0.0 + Foundation。产出 Analytics.xll。
 _Avoid_: 统计模块、分析层
 
 **DataToolkit** — 字符串/日期/正则/JSON/XML/SQL/文件/数组/字典/透视/范围导出。依赖 Foundation（net48 额外依赖 System.Data.SQLite.Core + System.Text.Json）。产出 DataToolkit.xll。

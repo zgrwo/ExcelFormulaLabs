@@ -17,7 +17,7 @@ namespace ExcelVbaLibraries.DataToolkit
         { var a = t.ToCharArray(); Array.Reverse(a); return new string(a); }
 
         internal static string NormalizeWhitespace(string t) =>
-            Regex.Replace(t.Trim(), @"\s+", " ");
+            Regex.Replace(t.Trim(), @"\s+", " ", RegexOptions.None, TimeSpan.FromSeconds(5));
 
         internal static string ToTitleCase(string t) =>
             CultureInfo.InvariantCulture.TextInfo.ToTitleCase(t.ToLowerInvariant());
