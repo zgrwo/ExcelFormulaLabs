@@ -41,6 +41,10 @@ Foundation (共享工具)                   →  InputNormalizer, ElementWiseMap
 
 ## 构建
 
+快速构建（日常开发循环）：
+
 ```bash
 dotnet restore && dotnet build && dotnet test
 ```
+
+全量测试（4 轮）命令见 skill。`-c Release` 生成分发用 .xll。

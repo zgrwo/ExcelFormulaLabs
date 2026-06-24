@@ -156,7 +156,7 @@
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
 | `DT.ISOWEEK` | (date) | `long` | ISO 8601 周数（1-53） |
-| `DT.WEEKDAY` | (date) | `long` | 星期几（Sun=0, Sat=6） |
+| `DT.WEEKDAY` | (date) | `long` | 星期几（Sun=1, Sat=7，对标 VBA Weekday） |
 | `DT.WEEKDAYISO` | (date) | `long` | 星期几 ISO（Mon=1, Sun=7） |
 | `DT.WEEKDAYNAME` | (date) | `string` | 英文星期名（"Monday" 等） |
 | `DT.SOW` | (date, sd) | `double` | 所在周的第一天。sd 默认 1=周一，0=周日（Excel 日期值） |
@@ -197,7 +197,7 @@
 | `REGEX.SPLIT` | (input, pattern, ic, n) | `string[]` | 按正则分隔符拆分。n=0/省略=全部（默认），n>0=最多拆 n 次（得 n+1 段） |
 | `REGEX.GROUPS` | (input, pattern, ic) | `object[2,n]` | 捕获组。row0=组名, row1=值。`[0]`=完整匹配 |
 | `REGEX.ESCAPE` | (literal) | `string` | 转义正则特殊字符 |
-| `REGEX.ISMATCH` | (input, pattern) | `bool` | 区分大小写匹配（REGEX.TEST ic=true 的别名） |
+| `REGEX.ISMATCH` | (input, pattern) | `bool` | 不区分大小写匹配（REGEX.TEST ic=true 的别名） |
 
 ---
 
