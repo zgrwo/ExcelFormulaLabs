@@ -96,7 +96,8 @@ namespace ExcelVbaLibraries.Foundation
                     RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
                     TimeSpan.FromSeconds(5));
             }
-            catch
+            catch (Exception ex) when (ex is not OutOfMemoryException
+                and not StackOverflowException)
             {
                 return false;  // Invalid pattern → silent false (VBA behaviour)
             }

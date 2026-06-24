@@ -250,7 +250,8 @@ namespace ExcelVbaLibraries.Foundation
                 return (T)Convert.ChangeType(value, targetType,
                     System.Globalization.CultureInfo.InvariantCulture);
             }
-            catch { return default!; }
+            catch (Exception ex) when (ex is not OutOfMemoryException
+                and not StackOverflowException) { return default!; }
         }
 
         // ── Array helpers ─────────────────────────────────────────────────

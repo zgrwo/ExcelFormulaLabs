@@ -19,7 +19,7 @@ namespace ExcelVbaLibraries.DataToolkit
         { using var d=JsonDocument.Parse(json); return Q(d.RootElement,path); }
 
         internal static bool JsonValidate(string json)
-        { try{using var _=JsonDocument.Parse(json);return true;}catch{return false;} }
+        { try{using var _=JsonDocument.Parse(json);return true;}catch(Exception ex) when(ex is not OutOfMemoryException and not StackOverflowException){return false;} }
 
         internal static string JsonPrettify(string json)
         { using var d=JsonDocument.Parse(json); return JsonSerializer.Serialize(d,new JsonSerializerOptions{WriteIndented=true}); }
@@ -46,12 +46,12 @@ namespace ExcelVbaLibraries.DataToolkit
 
         // ── XML ────────────────────────────────────────────────────────────
         internal static string[] XmlXPath(string xml, string xpath)
-        { try{var d=XDocument.Parse(xml);return d.XPathSelectElements(xpath).Select(e=>e.Value).ToArray();}catch{return Array.Empty<string>();} }
+        { try{var d=XDocument.Parse(xml);return d.XPathSelectElements(xpath).Select(e=>e.Value).ToArray();}catch(Exception ex) when(ex is not OutOfMemoryException and not StackOverflowException){return Array.Empty<string>();} }
 
         internal static object[,]? XmlToTable(string xml, string? rowPath=null)
-        { try{var d=XDocument.Parse(xml);var rows=rowPath!=null?d.XPathSelectElements(rowPath):d.Root?.Elements()??Enumerable.Empty<XElement>();var rl=rows.ToList();if(rl.Count==0)return null;var cn=rl.SelectMany(r=>r.Elements()).Select(e=>e.Name.LocalName).Distinct().ToArray();var rt=new object[rl.Count+1,cn.Length];for(int c=0;c<cn.Length;c++)rt[0,c]=cn[c];for(int i=0;i<rl.Count;i++){var row=rl[i];for(int c=0;c<cn.Length;c++){var el=row.Element(cn[c]);rt[i+1,c]=el!=null?(object?)el.Value??ExcelEmpty.Value:ExcelEmpty.Value;}}return rt;}catch{return null;} }
+        { try{var d=XDocument.Parse(xml);var rows=rowPath!=null?d.XPathSelectElements(rowPath):d.Root?.Elements()??Enumerable.Empty<XElement>();var rl=rows.ToList();if(rl.Count==0)return null;var cn=rl.SelectMany(r=>r.Elements()).Select(e=>e.Name.LocalName).Distinct().ToArray();var rt=new object[rl.Count+1,cn.Length];for(int c=0;c<cn.Length;c++)rt[0,c]=cn[c];for(int i=0;i<rl.Count;i++){var row=rl[i];for(int c=0;c<cn.Length;c++){var el=row.Element(cn[c]);rt[i+1,c]=el!=null?(object?)el.Value??ExcelEmpty.Value:ExcelEmpty.Value;}}return rt;}catch(Exception ex) when(ex is not OutOfMemoryException and not StackOverflowException){return null;} }
 
         internal static bool XmlValidate(string xml)
-        { try{XDocument.Parse(xml);return true;}catch{return false;} }
+        { try{XDocument.Parse(xml);return true;}catch(Exception ex) when(ex is not OutOfMemoryException and not StackOverflowException){return false;} }
     }
 }
