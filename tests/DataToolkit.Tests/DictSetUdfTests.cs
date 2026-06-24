@@ -14,14 +14,17 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         // DICT.INTERSECT
         [Fact] public void Intersect_basic() { var r=(object[])DictSetUdf.UDF_DICT_INTER(new object[]{1,2,3},new object[]{2,3,4}); r.Should().Equal(2,3); }
         [Fact] public void Intersect_null_both() { var r=(object[])DictSetUdf.UDF_DICT_INTER(null!,null!); r.Should().BeEmpty(); }
+        [Fact] public void Intersect_case_insensitive() { var r=(object[])DictSetUdf.UDF_DICT_INTER(new object[]{"Hello","World"},new object[]{"hello","WORLD"}); r.Should().Equal("Hello","World"); }
 
         // DICT.UNION
         [Fact] public void Union_basic() { var r=(object[])DictSetUdf.UDF_DICT_UNION(new object[]{1,2},new object[]{2,3}); r.Should().Equal(1,2,3); }
         [Fact] public void Union_null_both() { var r=(object[])DictSetUdf.UDF_DICT_UNION(null!,null!); r.Should().BeEmpty(); }
+        [Fact] public void Union_case_insensitive() { var r=(object[])DictSetUdf.UDF_DICT_UNION(new object[]{"Hello"},new object[]{"hello"}); r.Should().Equal("Hello"); }
 
         // DICT.EXCEPT
         [Fact] public void Except_basic() { var r=(object[])DictSetUdf.UDF_DICT_EXCEPT(new object[]{1,2,3,4},new object[]{2,4}); r.Should().Equal(1,3); }
         [Fact] public void Except_null_both() { var r=(object[])DictSetUdf.UDF_DICT_EXCEPT(null!,null!); r.Should().BeEmpty(); }
+        [Fact] public void Except_case_insensitive() { var r=(object[])DictSetUdf.UDF_DICT_EXCEPT(new object[]{"Hello","World"},new object[]{"hello"}); r.Should().Equal("World"); }
 
         // DICT.DICT
         [Fact] public void Dict_basic() { var r=(object[,])DictSetUdf.UDF_DICT_DICT(new object[]{"k1","k2"},new object[]{10,20}); r[0,0].Should().Be("k1"); r[0,1].Should().Be(10); r[1,0].Should().Be("k2"); r[1,1].Should().Be(20); }

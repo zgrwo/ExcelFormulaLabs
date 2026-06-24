@@ -221,6 +221,13 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
             var r = PivotCore.Pivot(d, 0, 1, 2, "COUNT");
             r[1, 1].Should().Be(2L);  // A,X appears twice
         }
+        [Fact] public void Pivot_empty_cells_are_ExcelEmpty()
+        {
+            var d = new object[,] { { "K", "P", "V" }, { "A", "X", 10 }, { "B", "Y", 20 } };
+            var r = PivotCore.Pivot(d, 0, 1, 2);
+            r[1, 1].Should().Be(10.0);                          // A,X has data
+            r[2, 1].Should().Be(ExcelVbaLibraries.Foundation.ExcelEmpty.Value); // B,X no data → empty
+        }
 
         // =====================================================================
         // EDGE CASE TESTS — PIVOT
