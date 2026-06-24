@@ -53,6 +53,12 @@ public void UDF_STAT_MEAN_Basic()
 }
 ```
 
+## 预防规则（来自 9+ 轮审查的反复模式）
+
+1. **静默传播阻断**：NaN/Inf/null/default! 不得静默返回。WrapError 只捕获异常。
+2. **防御完整性**：安全机制（ValidatePath/Regex Timeout/SQL参数化）须覆盖模块所有方法。
+3. **异常过滤器**：裸 `catch{}` = bug，须 `when (ex is not OOM and not StackOverflow)`。
+
 ## 已知限制 & InternalsVisibleTo
 Analytics → Analytics.Tests, DataToolkit.Tests / DataToolkit → DataToolkit.Tests / Foundation 为 public
 - TryExtractComRangeValue：需 COM Excel Range 对象
@@ -74,3 +80,9 @@ Analytics → Analytics.Tests, DataToolkit.Tests / DataToolkit → DataToolkit.T
 - StringCore.RandomString：static Random→ThreadLocal<Random>/Random.Shared（多线程安全）
 - SqlCore.CreateTable：列类型推断单行→扫描前10行；列名去重追加 _2/_3 后缀
 - ArrayOperations.IsNumericValue：新增数值字符串识别，与 ComparisonUtils.IsNumeric 统一
+- DateDiff 年差：DayOfYear→Month/Day 比较，修复闰年跨年偏差
+- ValidatePath：追加分隔符再 StartsWith，修复 "." 路径误判越界
+- RegressionCore 除零：FitOLS/FitRidge tss≈0 guard + df≤0 guard + AnovaOneWay k<2 guard + FactorImportance n<2 guard
+- FileSystemCore 沙箱：FileExists/GetFileSize/FolderExists 补 ValidatePath；FileSystem测试竞态用 xUnit Collection 序列化
+- 异常过滤器统一（P0/P1/P2）：全项目 18 处裸 catch{} → `when` 过滤器；IdealGasLaw 零分母 guard
+- DataToolkit XLL 打包：增量构建残留 .dna 污染 → CleanupDnaAfterBuild 目标
