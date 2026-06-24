@@ -117,6 +117,27 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
             JsonXmlCore.JsonValidate(pretty).Should().BeTrue();
         }
 
+        // Infinity/NaN guard (ElmNumber: 对齐 RangeExportCore.JsonVal，防 IEEE 754 极值进入 Excel)
+        [Fact] public void JsonParse_infinity_returns_null()
+        {
+            var r = JsonXmlCore.JsonParse("1e999");
+            r.Should().BeNull();  // Infinity → null
+        }
+        [Fact] public void JsonParse_negative_infinity_returns_null()
+        {
+            var r = JsonXmlCore.JsonParse("-1e999");
+            r.Should().BeNull();  // -Infinity → null
+        }
+        [Fact] public void JsonParse_infinity_in_array_returns_null_element()
+        {
+            var r = JsonXmlCore.JsonParse("[1, 1e999, 3]");
+            r.Should().BeAssignableTo<object[]>();
+            var arr = (object[])r!;
+            arr[0].Should().Be(1L);
+            arr[1].Should().BeNull();  // Infinity element → null
+            arr[2].Should().Be(3L);
+        }
+
         [Fact] public void XmlToTable_missing_child_element()
         {
             var xml = "<r><n><a>1</a></n><n><a>2</a><b>x</b></n></r>";

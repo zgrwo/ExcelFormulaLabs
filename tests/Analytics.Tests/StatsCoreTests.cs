@@ -438,5 +438,13 @@ namespace ExcelVbaLibraries.Analytics.Tests
             var act = () => StatsCore.Spearman(Two, new[] { 1.0 });
             act.Should().Throw<ArgumentException>().WithMessage("*length*");
         }
+
+        // Sign — NaN/Inf explicit guard (防错原则1: Core 层显式 guard，不依赖 Math.Sign 抛异常)
+        [Fact] public void Sign_positive() => StatsCore.Sign(3.14).Should().Be(1);
+        [Fact] public void Sign_negative() => StatsCore.Sign(-2.5).Should().Be(-1);
+        [Fact] public void Sign_zero() => StatsCore.Sign(0.0).Should().Be(0);
+        [Fact] public void Sign_NaN_returns_zero() => StatsCore.Sign(double.NaN).Should().Be(0);
+        [Fact] public void Sign_PositiveInfinity() => StatsCore.Sign(double.PositiveInfinity).Should().Be(1);
+        [Fact] public void Sign_NegativeInfinity() => StatsCore.Sign(double.NegativeInfinity).Should().Be(-1);
     }
 }
