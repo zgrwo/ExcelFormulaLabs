@@ -55,9 +55,15 @@ namespace ExcelVbaLibraries.Analytics.Tests
 
         [Fact] public void FitWLS_negative_weight_throws()
         {
-            // Guard added in round 2 — verify it rejects negative weights
+            // Guard rejects negative/NaN weights
             var act = () => RegressionCore.FitWLS(X, y, new[] { 1.0, -0.5, 2.0 });
-            act.Should().Throw<ArgumentException>().WithMessage("*negative*");
+            act.Should().Throw<ArgumentException>().WithMessage("*invalid*");
+        }
+
+        [Fact] public void FitWLS_nan_weight_throws()
+        {
+            var act = () => RegressionCore.FitWLS(X, y, new[] { 1.0, double.NaN, 2.0 });
+            act.Should().Throw<ArgumentException>().WithMessage("*invalid*");
         }
 
         [Fact] public void FitRidge_lambda_zero_approximates_OLS()

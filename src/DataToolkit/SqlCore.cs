@@ -15,13 +15,15 @@ namespace ExcelVbaLibraries.DataToolkit
 {
     internal static class SqlCore
     {
+        private const int SqlTimeoutSeconds = 30;
+
         internal static object[,]? SqlQuery(object[,] range, string sql, Dictionary<string, object[,]>? extra = null)
         {
             using var conn = new SqlConn("Data Source=:memory:");
             conn.Open();
             CreateTable(conn, "data", range);
             if (extra != null) foreach (var kv in extra) CreateTable(conn, kv.Key, kv.Value);
-            using var cmd = conn.CreateCommand(); cmd.CommandText = sql;
+            using var cmd = conn.CreateCommand(); cmd.CommandText = sql; cmd.CommandTimeout = SqlTimeoutSeconds;
             using var reader = cmd.ExecuteReader();
             int cols = reader.FieldCount; var rows = new List<object[]>(); var hdr = new object[cols];
             for (int i = 0; i < cols; i++) hdr[i] = reader.GetName(i); rows.Add(hdr);
@@ -32,6 +34,7 @@ namespace ExcelVbaLibraries.DataToolkit
         private static void CreateTable(SqlConn conn, string name, object[,] data)
         {
             int rows = data.GetLength(0), cols = data.GetLength(1); if (rows == 0) return;
+            name = Sanitize(name, 0);  // table name gets the same sanitisation as column names
             var names = new string[cols]; var types = new string[cols];
             var usedNames = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
             for (int c = 0; c < cols; c++)
@@ -55,10 +58,10 @@ namespace ExcelVbaLibraries.DataToolkit
                 types[c] = hasReal ? "REAL" : hasInt ? "INTEGER" : "TEXT";
             }
             var parts = new string[cols]; for (int c = 0; c < cols; c++) parts[c] = $"\"{names[c]}\" {types[c]}";
-            using var create = conn.CreateCommand(); create.CommandText = $"CREATE TABLE \"{name}\" ({string.Join(",", parts)})"; create.ExecuteNonQuery();
+            using var create = conn.CreateCommand(); create.CommandText = $"CREATE TABLE \"{name}\" ({string.Join(",", parts)})"; create.CommandTimeout = SqlTimeoutSeconds; create.ExecuteNonQuery();
             using var tx = conn.BeginTransaction();
             var ph = new string[cols]; for (int c = 0; c < cols; c++) ph[c] = $"@p{c}";
-            using var ins = conn.CreateCommand(); ins.CommandText = $"INSERT INTO \"{name}\" VALUES ({string.Join(",", ph)})";
+            using var ins = conn.CreateCommand(); ins.CommandText = $"INSERT INTO \"{name}\" VALUES ({string.Join(",", ph)})"; ins.CommandTimeout = SqlTimeoutSeconds;
             for (int c = 0; c < cols; c++) ins.Parameters.Add(new SqlParam($"@p{c}", types[c] == "INTEGER" ? System.Data.DbType.Int64 : types[c] == "REAL" ? System.Data.DbType.Double : System.Data.DbType.String));
             for (int r = 1; r < rows; r++) { for (int c = 0; c < cols; c++) { object v = data[r, c]; ins.Parameters[$"@p{c}"].Value = (v == null || v is DBNull || ReferenceEquals(v, ExcelEmpty.Value) || v is ExcelError) ? DBNull.Value : v; } ins.ExecuteNonQuery(); }
             tx.Commit();
