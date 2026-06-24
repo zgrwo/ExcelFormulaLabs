@@ -39,6 +39,6 @@ namespace ExcelVbaLibraries.Analytics
         [ExcelFunction(Name="STATS.LN", Description="Element-wise natural logarithm")] public static object UDF_STAT_LN(object d)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOver<double,double>(d,Math.Log));
         [ExcelFunction(Name="STATS.LOG10", Description="Element-wise base-10 logarithm")] public static object UDF_STAT_LOG10(object d)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOver<double,double>(d,Math.Log10));
         [ExcelFunction(Name="STATS.EXP", Description="Element-wise exponential (e^x)")] public static object UDF_STAT_EXP(object d)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOver<double,double>(d,Math.Exp));
-        [ExcelFunction(Name="STATS.SIGN", Description="Element-wise sign: -1, 0, or 1")] public static object UDF_STAT_SGN(object d)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOver<double,long>(d,x=>(long)Math.Sign(x)));
+        [ExcelFunction(Name="STATS.SIGN", Description="Element-wise sign: -1, 0, or 1")] public static object UDF_STAT_SGN(object d)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOver<double,long>(d,StatsCore.Sign));
     }
 }

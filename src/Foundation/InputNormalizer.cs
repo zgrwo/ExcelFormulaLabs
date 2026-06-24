@@ -149,6 +149,14 @@ namespace ExcelVbaLibraries.Foundation
         /// Matches VBA VariantKit.IsNumericCell: rejects Empty, Boolean, Date, Error,
         /// and empty/whitespace strings. Accepts numeric types and numeric-looking strings.
         /// </summary>
+        /// <remarks>
+        /// This is the most restrictive of the three IsNumeric variants in the codebase.
+        /// It explicitly rejects <c>bool</c> and <c>DateTime</c> because VBA treats them as
+        /// distinct non-numeric subtypes for cell-type probing. For sort/comparison purposes
+        /// where bool→1.0 and DateTime→OLE Date are acceptable, see
+        /// <see cref="ComparisonUtils"/> (private IsNumeric) and
+        /// <see cref="ArrayOperations"/> (private IsNumericValue).
+        /// </remarks>
         public static bool IsNumericCell(object? value)
         {
             if (value == null) return false;

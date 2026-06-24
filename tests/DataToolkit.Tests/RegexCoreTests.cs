@@ -13,9 +13,25 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void Test_nomatch() => RegexCore.RegexTest("abc",@"\d+").Should().BeFalse();   // Python re: None
         [Fact] public void Count() => RegexCore.RegexCount("a1b2c3",@"\d").Should().Be(3);           // Python re: len(findall)
         [Fact] public void Match() => RegexCore.RegexMatch("abc123",@"\d+").Should().Be("123");       // Python re: .group()
+        [Fact] public void Match_2nd() => RegexCore.RegexMatch("a1 b2 c3",@"\d+",n:2).Should().Be("2"); // 2nd match
+        [Fact] public void Match_3rd() => RegexCore.RegexMatch("a1 b2 c3",@"\d+",n:3).Should().Be("3"); // 3rd match
+        [Fact] public void Match_last() => RegexCore.RegexMatch("a1 b2 c3",@"\d+",n:-1).Should().Be("3"); // last match
+        [Fact] public void Match_2nd_last() => RegexCore.RegexMatch("a1 b2 c3",@"\d+",n:-2).Should().Be("2"); // 2nd from last
+        [Fact] public void Match_n0_defaults_to_first() => RegexCore.RegexMatch("abc123",@"\d+",n:0).Should().Be("123"); // n=0 → default 1
+        [Fact] public void Match_n_exceeds_count() => RegexCore.RegexMatch("a1 b2",@"\d+",n:5).Should().Be(""); // out of range
+        [Fact] public void Match_neg_n_exceeds_count() => RegexCore.RegexMatch("a1 b2",@"\d+",n:-5).Should().Be(""); // out of range from end
         [Fact] public void MatchAll() => RegexCore.RegexMatchAll("a1 b2 c3",@"\d+").Should().Equal("1","2","3"); // Python re: findall
-        [Fact] public void Replace() => RegexCore.RegexReplace("abc123","\\d","X").Should().Be("abcXXX");     // Python re: sub
-        [Fact] public void Split() => RegexCore.RegexSplit("a,b;c","[,;]").Should().Equal("a","b","c");      // Python re: split
+        [Fact] public void Replace() => RegexCore.RegexReplace("abc123","\\d","X").Should().Be("abcXXX");     // Python re: sub (all)
+        [Fact] public void Replace_1st() => RegexCore.RegexReplace("a1b2c3","\\d","X",n:1).Should().Be("aXb2c3"); // replace 1st only
+        [Fact] public void Replace_2nd() => RegexCore.RegexReplace("a1b2c3","\\d","X",n:2).Should().Be("a1bXc3"); // replace 2nd
+        [Fact] public void Replace_last() => RegexCore.RegexReplace("a1b2c3","\\d","X",n:-1).Should().Be("a1b2cX"); // replace last
+        [Fact] public void Replace_2nd_last() => RegexCore.RegexReplace("a1b2c3","\\d","X",n:-2).Should().Be("a1bXc3"); // replace 2nd from last
+        [Fact] public void Replace_n0_all() => RegexCore.RegexReplace("a1b2c3","\\d","X",n:0).Should().Be("aXbXcX"); // n=0 → all
+        [Fact] public void Replace_n_exceeds_noop() => RegexCore.RegexReplace("a1b2","\\d","X",n:5).Should().Be("a1b2"); // out of range → unchanged
+        [Fact] public void Split() => RegexCore.RegexSplit("a,b;c","[,;]").Should().Equal("a","b","c");      // Python re: split (all)
+        [Fact] public void Split_n1() => RegexCore.RegexSplit("a,b,c,d",",",n:1).Should().Equal("a","b,c,d"); // split once
+        [Fact] public void Split_n2() => RegexCore.RegexSplit("a,b,c,d",",",n:2).Should().Equal("a","b","c,d"); // split twice
+        [Fact] public void Split_n0_all() => RegexCore.RegexSplit("a,b,c",",",n:0).Should().Equal("a","b","c"); // n=0 → all
         [Fact] public void Groups() => RegexCore.RegexCaptureGroups("Name: John, Age: 30",@"Name: (\w+), Age: (\d+)").Should().Equal("Name: John, Age: 30","John","30"); // Python re: groups()
         [Fact] public void Escape() => RegexCore.RegexEscape("a.b(c)").Should().Be(@"a\.b\(c\)");             // Python re: escape
 

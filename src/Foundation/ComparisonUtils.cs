@@ -255,6 +255,13 @@ namespace ExcelVbaLibraries.Foundation
         /// or a numeric string). Does NOT return true for bool, DateTime, or null.
         /// Equivalent to VBA's IsNumeric function.
         /// </summary>
+        /// <remarks>
+        /// Unlike <see cref="InputNormalizer.IsNumericCell"/>, this variant does not
+        /// explicitly reject <c>bool</c> and <c>DateTime</c> — callers
+        /// (<see cref="ValuesEqual"/>, <see cref="CompareSameGroup"/>) have already
+        /// handled those types before reaching this method, so the extra guards are
+        /// unnecessary here.
+        /// </remarks>
         private static bool IsNumeric(object value)
         {
             if (value == null) return false;

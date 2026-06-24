@@ -131,6 +131,27 @@ catch (Exception ex) when (ex is not OutOfMemoryException
 
 自检：`grep -rn "catch\s*{" src/ --include="*.cs" | grep -v obj/` → 必须返回空。
 
+### 4. 重载不回退
+
+旧方法 delegate 到新增重载时，默认/常见路径的**性能**必须保持原有水平。新重载增加通用性时，不能把旧方法的优化快路径退化到通用慢路径。
+
+```csharp
+// ❌ 旧 RegexMatch 用 Regex.Match() 只扫第一个匹配即返回
+//    新版 delegate 到 RegexMatch(i,p,1,ic)，内部用 Regex.Matches() 扫全部匹配
+internal static string RegexMatch(string i, string p, bool ic=true)
+    => RegexMatch(i, p, 1, ic);  // 若新版内无 n==1 快路径 → O(n) 回退
+
+// ✅ 新版对默认值 n=1 保留 Regex.Match() 优化快路径
+internal static string RegexMatch(string i, string p, long n, bool ic=true)
+{
+    if (n == 1) { var m = Regex.Match(i, p, F(ic), Timeout); return m.Success ? m.Value : ""; }
+    var mc = Regex.Matches(i, p, F(ic), Timeout); // 仅 n≠1 走全扫描
+    ...
+}
+```
+
+自检：新增重载时，走一遍默认参数路径，确认底层 API 与旧版一致（`Match()` vs `Matches()`、`O(1)` vs `O(n)`、`foreach` lazy vs `.Count` 全评估）。
+
 ---
 
 ## 测试
@@ -208,6 +229,6 @@ xUnit `[Fact]` + FluentAssertions 6.12.0。每 Core 方法覆盖：正常路径 
 
 **安全**：FileSystem 沙箱 FileExists/FolderExists/GetFileSize 补齐 · Regex 全局 Timeout · 全项目 18 处裸 catch → when 过滤器 · IdealGasLaw 零分母 guard
 
-**性能**：StringCore.RandomString ThreadLocal/Random.Shared · SqlCore 列类型推断扫描前 10 行 · RemoveChars StringBuilder 单趟
+**性能**：StringCore.RandomString ThreadLocal/Random.Shared · SqlCore 列类型推断扫描前 10 行 · RemoveChars StringBuilder 单趟 · RegexMatch/Replace n=1 保留 Match() 快路径（防 delegate→Matches() 回退）
 
 **构建**：多目标 net8.0+net48 · DataToolkit .dna 双模板 · CleanupDnaAfterBuild 防增量污染 · SandboxRoot 并行测试 xUnit Collection 序列化

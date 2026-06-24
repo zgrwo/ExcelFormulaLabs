@@ -191,10 +191,10 @@
 |------|------|------|------|
 | `REGEX.TEST` | (input, pattern, ic) | `bool` | 是否匹配正则 |
 | `REGEX.COUNT` | (input, pattern, ic) | `long` | 非重叠匹配次数 |
-| `REGEX.MATCH` | (input, pattern, ic) | `string` | 第一个匹配子串，无匹配返回 `""` |
+| `REGEX.MATCH` | (input, pattern, ic, n) | `string` | 第 n 个匹配子串。n=1（默认）=第一个，n=-1=最后一个，无匹配或越界返回 `""` |
 | `REGEX.MATCHALL` | (input, pattern, ic) | `string[]` | 所有正则匹配为数组 |
-| `REGEX.REPLACE` | (input, pattern, replacement, ic) | `string` | 替换所有正则匹配 |
-| `REGEX.SPLIT` | (input, pattern, ic) | `string[]` | 按正则分隔符拆分 |
+| `REGEX.REPLACE` | (input, pattern, replacement, ic, n) | `string` | 替换第 n 个正则匹配。n=0/省略=全部（默认），n=1=第一个，n=-1=最后一个 |
+| `REGEX.SPLIT` | (input, pattern, ic, n) | `string[]` | 按正则分隔符拆分。n=0/省略=全部（默认），n>0=最多拆 n 次（得 n+1 段） |
 | `REGEX.GROUPS` | (input, pattern, ic) | `object[2,n]` | 捕获组。row0=组名, row1=值。`[0]`=完整匹配 |
 | `REGEX.ESCAPE` | (literal) | `string` | 转义正则特殊字符 |
 | `REGEX.ISMATCH` | (input, pattern) | `bool` | 区分大小写匹配（REGEX.TEST ic=true 的别名） |

@@ -294,7 +294,9 @@ namespace ExcelVbaLibraries.Foundation
         }
 
         /// <summary>Returns true for numeric primitive types and numeric strings.
-        /// Consistent with ComparisonUtils.IsNumeric for cross-module behaviour.</summary>
+        /// Consistent with ComparisonUtils.IsNumeric for cross-module behaviour.
+        /// Unlike InputNormalizer.IsNumericCell, this accepts bool (→1.0) and
+        /// DateTime (→OLE Date) because sorting treats them as rankable numeric values.</summary>
         private static bool IsNumericValue<T>(T value) =>
             value is int || value is long || value is float || value is double
             || value is decimal || value is short || value is byte

@@ -54,6 +54,9 @@ namespace ExcelVbaLibraries.Analytics
         internal static double Sum(double[] d) { var r = d.Sum(); return double.IsInfinity(r) ? double.NaN : r; }
         internal static double Product(double[] d) { if (d.Length == 0) return 0.0; var r = d.Aggregate(1.0, (a, x) => a * x); return double.IsInfinity(r) ? double.NaN : r; }
 
+        /// <summary>Sign of a numeric value. NaN → 0 (explicit guard; Math.Sign would throw for NaN).</summary>
+        internal static long Sign(double x) => double.IsNaN(x) ? 0 : Math.Sign(x);
+
         /// <summary>Most frequent value. Single-pass O(n) with Dictionary.
         /// Returns NaN for empty input or when all values are unique (matches Excel MODE #N/A).
         /// On ties, returns the smallest value (matches scipy.stats.mode and Excel MODE.SNGL).</summary>

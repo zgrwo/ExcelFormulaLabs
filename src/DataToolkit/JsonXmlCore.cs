@@ -39,7 +39,17 @@ namespace ExcelVbaLibraries.DataToolkit
         }
 
         private static object? Elm(JsonElement e)=>e.ValueKind switch
-        { JsonValueKind.Null=>null,JsonValueKind.True=>true,JsonValueKind.False=>false,JsonValueKind.String=>e.GetString(),JsonValueKind.Number=>e.TryGetInt64(out long l)?l:e.GetDouble(),JsonValueKind.Array=>e.EnumerateArray().Select(Elm).ToArray(),JsonValueKind.Object=>e.EnumerateObject().ToDictionary(p=>p.Name,p=>Elm(p.Value)),_=>e.GetRawText() };
+        { JsonValueKind.Null=>null,JsonValueKind.True=>true,JsonValueKind.False=>false,JsonValueKind.String=>e.GetString(),JsonValueKind.Number=>ElmNumber(e),JsonValueKind.Array=>e.EnumerateArray().Select(Elm).ToArray(),JsonValueKind.Object=>e.EnumerateObject().ToDictionary(p=>p.Name,p=>Elm(p.Value)),_=>e.GetRawText() };
+
+        private static object? ElmNumber(JsonElement e)
+        {
+            if (e.TryGetInt64(out long l)) return l;
+            double d = e.GetDouble();
+            // Guard against IEEE 754 Infinity/NaN from extreme JSON numbers (e.g. 1e999).
+            // Aligns with RangeExportCore.JsonVal which returns "null" for these.
+            if (double.IsNaN(d) || double.IsInfinity(d)) return null;
+            return d;
+        }
 
         private static object? Q(JsonElement e,string p)
         { foreach(var s in p.Split('.')){int b=s.IndexOf('[');string k=b>=0?s.Substring(0,b):s; if(!string.IsNullOrEmpty(k)&&e.ValueKind==JsonValueKind.Object){ if(e.TryGetProperty(k,out JsonElement c))e=c;else return null; } if(b>=0&&e.ValueKind==JsonValueKind.Array){ if(int.TryParse(s.Substring(b+1,s.Length-b-2),out int ix)&&ix<e.GetArrayLength())e=e[ix];else return null; } } return Elm(e); }

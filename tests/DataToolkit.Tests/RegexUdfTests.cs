@@ -19,6 +19,10 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
 
         // REGEX.MATCH
         [Fact] public void Match_first() => ((string)RegexUdf.UDF_RX_MATCH("abc123def","\\d+",true)).Should().Be("123");
+        [Fact] public void Match_2nd() => ((string)RegexUdf.UDF_RX_MATCH("a1b2c3","\\d+",true,2)).Should().Be("2");
+        [Fact] public void Match_last() => ((string)RegexUdf.UDF_RX_MATCH("a1b2c3","\\d+",true,-1)).Should().Be("3");
+        [Fact] public void Match_2nd_last() => ((string)RegexUdf.UDF_RX_MATCH("a1b2c3","\\d+",true,-2)).Should().Be("2");
+        [Fact] public void Match_n_exceeds() => ((string)RegexUdf.UDF_RX_MATCH("a1b2","\\d+",true,5)).Should().Be("");
         [Fact] public void Match_no_match() => ((string)RegexUdf.UDF_RX_MATCH("abc","\\d+",true)).Should().Be("");
         [Fact] public void Match_invalid_pattern() => RegexUdf.UDF_RX_MATCH("abc","[",true).Should().Be(ExcelError.Value);
 
@@ -29,11 +33,16 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
 
         // REGEX.REPLACE
         [Fact] public void Replace_basic() => ((string)RegexUdf.UDF_RX_REPL("abc123def","\\d+","#",true)).Should().Be("abc#def");
+        [Fact] public void Replace_1st() => ((string)RegexUdf.UDF_RX_REPL("a1b2c3","\\d","X",true,1)).Should().Be("aXb2c3");
+        [Fact] public void Replace_last() => ((string)RegexUdf.UDF_RX_REPL("a1b2c3","\\d","X",true,-1)).Should().Be("a1b2cX");
+        [Fact] public void Replace_n_exceeds() => ((string)RegexUdf.UDF_RX_REPL("a1b2","\\d","X",true,5)).Should().Be("a1b2");
         [Fact] public void Replace_no_match() => ((string)RegexUdf.UDF_RX_REPL("abc","\\d+","#",true)).Should().Be("abc");
         [Fact] public void Replace_invalid_pattern() => RegexUdf.UDF_RX_REPL("abc","[","#",true).Should().Be(ExcelError.Value);
 
         // REGEX.SPLIT
         [Fact] public void Split_basic() { var r=(object[])RegexUdf.UDF_RX_SPLIT("a,b,c",",",true); r.Should().Equal("a","b","c"); }
+        [Fact] public void Split_n1() { var r=(object[])RegexUdf.UDF_RX_SPLIT("a,b,c,d",",",true,1); r.Should().Equal("a","b,c,d"); }
+        [Fact] public void Split_n2() { var r=(object[])RegexUdf.UDF_RX_SPLIT("a,b,c,d",",",true,2); r.Should().Equal("a","b","c,d"); }
         [Fact] public void Split_no_separator() { var r=(object[])RegexUdf.UDF_RX_SPLIT("abc",",",true); r.Should().Equal("abc"); }
         [Fact] public void Split_invalid_pattern() => RegexUdf.UDF_RX_SPLIT("abc","[",true).Should().Be(ExcelError.Value);
 
