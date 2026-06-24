@@ -19,5 +19,20 @@ namespace ExcelVbaLibraries.DataToolkit
         internal static long Count(object[] a) => a.Length;
         internal static bool Contains(object[] a, object v) => ArrayOperations.IndexOf(a,v)>=0;
         internal static object[] CollectNumeric(object[,] data, int rows, int cols, out string[] names, bool header = true) { var ci=ArrayOperations.CollectNumericColumns(data,rows,cols,out names,header); return ci.Select(i=>(object)(long)i).ToArray(); }
+
+        internal static object[] Shuffle(object[] a)
+        {
+            var r = new object[a.Length]; Array.Copy(a, r, a.Length);
+#if NET8_0_OR_GREATER
+            var rng = System.Random.Shared;
+#else
+            var rng = ThreadLocalRng.Value!;
+#endif
+            for (int i = r.Length - 1; i > 0; i--) { int j = rng.Next(i + 1); var t = r[i]; r[i] = r[j]; r[j] = t; }
+            return r;
+        }
+#if !NET8_0_OR_GREATER
+        private static readonly System.Threading.ThreadLocal<System.Random> ThreadLocalRng = new(() => new System.Random());
+#endif
     }
 }

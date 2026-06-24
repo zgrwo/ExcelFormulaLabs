@@ -28,16 +28,7 @@ namespace ExcelVbaLibraries.DataToolkit
         [ExcelFunction(Name="ARR.CONTAINS", Description="Returns TRUE if value exists in array")] public static object UDF_ARR_CONTAINS(object a,object v)=>OutputWrapper.WrapError(()=>(object)ArrayCore.Contains(A(a),v));
         [ExcelFunction(Name="ARR.TOSET", Description="Return unique values (alias for ARR.UNIQUE)")] public static object UDF_ARR_TOSET(object a)=>OutputWrapper.WrapError(()=>ArrayCore.Unique(A(a)));
         [ExcelFunction(Name="ARR.FILL", Description="Create array of length n filled with value v")] public static object UDF_ARR_FILL(object v,object n)=>OutputWrapper.WrapError(()=>{long c=InputNormalizer.ToLong(n);var r=new object[c];for(int i=0;i<c;i++)r[i]=v;return r;});
-        [ExcelFunction(Name="ARR.RANGE", Description="Generate numeric sequence from s to e by step")] public static object UDF_ARR_RANGE(object s,object e,object step)=>OutputWrapper.WrapError(()=>{double st=InputNormalizer.ToDouble(s),en=InputNormalizer.ToDouble(e),sp=InputNormalizer.ToDouble(step);if(sp<=0)sp=1;var r=new List<object>();for(double x=st;x<=en;x+=sp)r.Add(x);return r.ToArray();});
-        [ExcelFunction(Name="ARR.SHUFFLE", Description="Randomly shuffle array elements (Fisher-Yates)")] public static object UDF_ARR_SHUFFLE(object a)=>OutputWrapper.WrapError(()=>{var r=A(a);
-#if NET8_0_OR_GREATER
-var rng=System.Random.Shared;
-#else
-var rng=ThreadLocalRng.Value;
-#endif
-for(int i=r.Length-1;i>0;i--){int j=rng.Next(i+1);var t=r[i];r[i]=r[j];r[j]=t;}return r;});
-#if !NET8_0_OR_GREATER
-private static readonly System.Threading.ThreadLocal<System.Random> ThreadLocalRng = new(()=>new System.Random());
-#endif
+        [ExcelFunction(Name="ARR.RANGE", Description="Generate numeric sequence from s to e by step")] public static object UDF_ARR_RANGE(object s,object e,object step)=>OutputWrapper.WrapError(()=>{double st=InputNormalizer.ToDouble(s),en=InputNormalizer.ToDouble(e),sp=InputNormalizer.ToDouble(step);if(sp<=0)sp=1;int n=(int)System.Math.Round((en-st)/sp)+1;if(n<1)n=1;if(n>100000)n=100000;var r=new List<object>(n);for(int i=0;i<n;i++)r.Add(st+i*sp);return r.ToArray();});
+        [ExcelFunction(Name="ARR.SHUFFLE", Description="Randomly shuffle array elements (Fisher-Yates)")] public static object UDF_ARR_SHUFFLE(object a)=>OutputWrapper.WrapError(()=>ArrayCore.Shuffle(A(a)));
     }
 }

@@ -32,7 +32,7 @@ namespace ExcelVbaLibraries.DataToolkit
         { var set = new System.Collections.Generic.HashSet<char>(chars); var sb = new System.Text.StringBuilder(t.Length); foreach (char c in t) if (!set.Contains(c)) sb.Append(c); return sb.ToString(); }
 
         internal static string KeepChars(string t, string keep)
-        { var sb = new StringBuilder(); foreach (char c in t) if (keep.Contains(c)) sb.Append(c); return sb.ToString(); }
+        { var set = new System.Collections.Generic.HashSet<char>(keep); var sb = new StringBuilder(); foreach (char c in t) if (set.Contains(c)) sb.Append(c); return sb.ToString(); }
 
         internal static string PadLeft(string t, int len, char pad = ' ')
         { if (t.Length >= len) return t; return new string(pad, len - t.Length) + t; }
@@ -65,7 +65,7 @@ namespace ExcelVbaLibraries.DataToolkit
         { var w=t.Split((char[])null!,StringSplitOptions.RemoveEmptyEntries); return n>0&&n<=w.Length?w[n-1]:""; }
 
         internal static string CommonPrefix(string a, string b, bool cs=true)
-        { int i=0; while(i<a.Length&&i<b.Length&&string.Equals(a[i].ToString(),b[i].ToString(),cs?StringComparison.Ordinal:StringComparison.OrdinalIgnoreCase))i++; return a.Substring(0,i); }
+        { int i=0; while(i<a.Length&&i<b.Length&&(cs?a[i]==b[i]:char.ToUpperInvariant(a[i])==char.ToUpperInvariant(b[i])))i++; return a.Substring(0,i); }
 
         internal static string TextJoin(string d, bool skip, string[] v)
         { return string.Join(d, skip?v.Where(x=>!string.IsNullOrEmpty(x)):v); }
