@@ -138,9 +138,10 @@ catch (Exception ex) when (ex is not OutOfMemoryException
 ### 全量测试（必须）
 
 ```bash
-dotnet test                                         # ① 全量单元测试
-dotnet test --filter "CrossVal|PythonCrossValidation"  # ② 交叉验证
-dotnet build -c Debug && dotnet build -c Release     # ③ 双目标打包
+bash scripts/verify-docs.sh                          # ① 文档一致性验证
+dotnet test                                         # ② 全量单元测试
+dotnet test --filter "CrossVal|PythonCrossValidation"  # ③ 交叉验证
+dotnet build -c Debug && dotnet build -c Release     # ④ 双目标打包
 ```
 
 精度 1e-10。豁免：FS.*（POSIX 差异）、RANGE.*（无标准输出格式），标记 `// No Python ref:`。
