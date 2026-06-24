@@ -125,15 +125,13 @@ namespace ExcelVbaLibraries.Analytics
 
         internal static double Pearson(double[] a, double[] b)
         {
-            if (a.Length != b.Length)
-                throw new ArgumentException($"Arrays must have the same length (got {a.Length} and {b.Length}).");
+            if (a.Length != b.Length || a.Length < 2) return double.NaN;
             return Correlation.Pearson(a, b);
         }
 
         internal static double Spearman(double[] a, double[] b)
         {
-            if (a.Length != b.Length)
-                throw new ArgumentException($"Arrays must have the same length (got {a.Length} and {b.Length}).");
+            if (a.Length != b.Length || a.Length < 2) return double.NaN;
             return Correlation.Spearman(a, b);
         }
 

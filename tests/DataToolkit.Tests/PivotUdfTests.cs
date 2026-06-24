@@ -58,33 +58,33 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void Unpivot_row_count()
         {
             var r = (object[,])PivotUdf.UDF_PIVOT_UNPIVOT(Data, new int[] { 0 }, new int[] { 1, 2 });
-            r.GetLength(0).Should().Be(8);
+            r.GetLength(0).Should().Be(6);  // 3 data rows × 2 value cols (header skipped)
         }
         [Fact] public void Unpivot_id_column_present()
         {
             var r = (object[,])PivotUdf.UDF_PIVOT_UNPIVOT(Data, new int[] { 0 }, new int[] { 1, 2 });
-            r[0, 0].Should().Be("Dept");
+            r[0, 0].Should().Be("A");    // first data row (header skipped)
             r[2, 0].Should().Be("A");
         }
         [Fact] public void Unpivot_value_headers()
         {
             var r = (object[,])PivotUdf.UDF_PIVOT_UNPIVOT(Data, new int[] { 0 }, new int[] { 1, 2 });
-            r[3, 0].Should().Be("A");
-            r[3, 1].Should().Be("Sales");
-            r[3, 2].Should().Be(100.0);
+            r[1, 0].Should().Be("A");
+            r[1, 1].Should().Be("Sales");
+            r[1, 2].Should().Be(100.0);
         }
         [Fact] public void Unpivot_single_value_col()
         {
             var r = (object[,])PivotUdf.UDF_PIVOT_UNPIVOT(Data, new int[] { 0 }, new int[] { 2 });
             r.GetLength(1).Should().Be(3);
-            r.GetLength(0).Should().Be(4);
+            r.GetLength(0).Should().Be(3);  // 3 data rows × 1 value col (header skipped)
         }
         [Fact] public void Unpivot_null_data() => PivotUdf.UDF_PIVOT_UNPIVOT(null!, new int[] { 0 }, new int[] { 1 }).Should().Be(ExcelError.Value);
         [Fact] public void Unpivot_two_id_cols()
         {
             var r = (object[,])PivotUdf.UDF_PIVOT_UNPIVOT(Data, new int[] { 0, 1 }, new int[] { 2 });
             r.GetLength(1).Should().Be(4);
-            r.GetLength(0).Should().Be(4);
+            r.GetLength(0).Should().Be(3);  // 3 data rows × 1 value col (header skipped)
         }
 
         // ══════════════════════════════════════════════════════════════════

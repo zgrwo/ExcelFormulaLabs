@@ -77,6 +77,8 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void Padl_zero_length() => StringUdf.UDF_STR_PADL("abc", 0, "0").Should().Be("abc");
         [Fact] public void Padl_space_pad() => StringUdf.UDF_STR_PADL("hi", 5, " ").Should().Be("   hi");
         [Fact] public void Padl_null_text() => StringUdf.UDF_STR_PADL(null!, 5, "0").Should().BeNull();
+        [Fact] public void Padl_null_pad_defaults_to_space() => ((string)StringUdf.UDF_STR_PADL("hi", 5, null!)).Should().Be("   hi");
+        [Fact] public void Padl_empty_pad_defaults_to_space() => ((string)StringUdf.UDF_STR_PADL("hi", 5, "")).Should().Be("   hi");
         [Fact] public void Padl_array() { var r=(object[])StringUdf.UDF_STR_PADL(new object[]{"1","22"}, 3, "0"); r.Should().Equal("001","022"); }
 
         // ══════════════════════════════════════════════════════════════════
@@ -88,6 +90,8 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void Padr_zero_length() => StringUdf.UDF_STR_PADR("abc", 0, "0").Should().Be("abc");
         [Fact] public void Padr_space_pad() => StringUdf.UDF_STR_PADR("hi", 5, " ").Should().Be("hi   ");
         [Fact] public void Padr_null_text() => StringUdf.UDF_STR_PADR(null!, 5, "0").Should().BeNull();
+        [Fact] public void Padr_null_pad_defaults_to_space() => ((string)StringUdf.UDF_STR_PADR("hi", 5, null!)).Should().Be("hi   ");
+        [Fact] public void Padr_empty_pad_defaults_to_space() => ((string)StringUdf.UDF_STR_PADR("hi", 5, "")).Should().Be("hi   ");
         [Fact] public void Padr_array() { var r=(object[])StringUdf.UDF_STR_PADR(new object[]{"1","22"}, 3, "0"); r.Should().Equal("100","220"); }
 
         // ══════════════════════════════════════════════════════════════════

@@ -187,9 +187,6 @@ namespace ExcelVbaLibraries.Foundation
         // ─────────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Safe conversion to string. Error/Null/Empty → "".
-        /// </summary>
-        /// <summary>
         /// Detect Excel-DNA's <c>ExcelMissing.Value</c> sentinel without a hard
         /// assembly reference. When a user omits an optional UDF argument in the
         /// formula bar, Excel-DNA passes this sentinel; treating it as missing
@@ -201,6 +198,9 @@ namespace ExcelVbaLibraries.Foundation
                 && value.GetType().FullName == "ExcelDna.Integration.ExcelMissing";
         }
 
+        /// <summary>
+        /// Safe conversion to string. Error/Null/Empty → "".
+        /// </summary>
         public static string ToString(object? value)
         {
             if (value == null || value is DBNull || IsExcelMissing(value)) return "";

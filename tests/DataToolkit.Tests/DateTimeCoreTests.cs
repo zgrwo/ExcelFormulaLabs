@@ -147,6 +147,10 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
             DateTimeCore.DateDiff("Y", new DateTime(2020, 12, 31), new DateTime(2025, 1, 1)).Should().Be(4);
         }
 
+        [Fact] public void DateDiff_weeks()
+        {
+            DateTimeCore.DateDiff("W", new DateTime(2025, 1, 1), new DateTime(2025, 1, 15)).Should().Be(2);  // 14 days = 2 weeks
+        }
         [Fact] public void DateDiff_unknown_unit()
         {
             DateTimeCore.DateDiff("HOUR", new DateTime(2025, 1, 1), new DateTime(2025, 1, 10)).Should().Be(0);

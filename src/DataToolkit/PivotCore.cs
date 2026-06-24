@@ -43,7 +43,7 @@ namespace ExcelVbaLibraries.DataToolkit
                 throw new ArgumentException("Column index out of range.");
             int rows = data.GetLength(0); int nId = idCols.Length;
             var result = new List<object[]>();
-            for (int r = 0; r < rows; r++) { var ids = idCols.Select(c => data[r, c]).ToArray(); foreach (int vc in valueCols) result.Add(ids.Concat(new[] { data[0, vc], data[r, vc] }).ToArray()); }
+            for (int r = 1; r < rows; r++) { var ids = idCols.Select(c => data[r, c]).ToArray(); foreach (int vc in valueCols) result.Add(ids.Concat(new[] { data[0, vc], data[r, vc] }).ToArray()); }
             var outArr = new object[result.Count, nId + 2];
             for (int i = 0; i < result.Count; i++) for (int j = 0; j < result[i].Length; j++) outArr[i, j] = result[i][j];
             return outArr;

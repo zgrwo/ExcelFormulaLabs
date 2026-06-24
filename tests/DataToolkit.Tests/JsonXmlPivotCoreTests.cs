@@ -161,7 +161,7 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         {
             var d = new object[,] { { "ID", "Q1", "Q2" }, { "A", 10, 20 }, { "B", 30, 40 } };
             var r = PivotCore.Unpivot(d, new[] { 0 }, new[] { 1, 2 });
-            r.GetLength(0).Should().Be(6);
+            r.GetLength(0).Should().Be(4);  // 2 data rows × 2 value cols (header row skipped)
         }
         [Fact] public void GroupBy_SUM()
         {
@@ -266,7 +266,7 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         {
             var d = new object[,] { { "ID", "V1" }, { "A", 10 }, { "B", 20 } };
             var r = PivotCore.Unpivot(d, new[] { 0 }, new[] { 1 });
-            r.GetLength(0).Should().Be(3);  // 3 rows (all rows unpivoted including header)
+            r.GetLength(0).Should().Be(2);  // 2 data rows × 1 value col (header row skipped)
             r.GetLength(1).Should().Be(3);  // ID + header + value
         }
 
@@ -274,7 +274,7 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         {
             var d = new object[,] { { "ID1", "ID2", "Q1", "Q2" }, { "A", "X", 10, 20 }, { "B", "Y", 30, 40 } };
             var r = PivotCore.Unpivot(d, new[] { 0, 1 }, new[] { 2, 3 });
-            r.GetLength(0).Should().Be(6);  // 3 rows × 2 value columns (all rows unpivoted)
+            r.GetLength(0).Should().Be(4);  // 2 data rows × 2 value cols (header row skipped)
             r.GetLength(1).Should().Be(4);  // ID1 + ID2 + header + value
         }
 
@@ -282,7 +282,7 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         {
             var d = new object[,] { { "V1", "V2" }, { 10, 20 }, { 30, 40 } };
             var r = PivotCore.Unpivot(d, new int[0], new[] { 0, 1 });
-            r.GetLength(0).Should().Be(6);  // 3 rows × 2 values (all rows unpivoted)
+            r.GetLength(0).Should().Be(4);  // 2 data rows × 2 value cols (header row skipped)
         }
 
         // =====================================================================

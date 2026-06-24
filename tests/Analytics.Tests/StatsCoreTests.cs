@@ -428,16 +428,10 @@ namespace ExcelVbaLibraries.Analytics.Tests
         // =====================================================================
 
         [Fact] public void Pearson_length_mismatch()
-        {
-            var act = () => StatsCore.Pearson(Two, new[] { 1.0 });
-            act.Should().Throw<ArgumentException>().WithMessage("*length*");
-        }
+            => double.IsNaN(StatsCore.Pearson(Two, new[] { 1.0 })).Should().BeTrue();
 
         [Fact] public void Spearman_length_mismatch()
-        {
-            var act = () => StatsCore.Spearman(Two, new[] { 1.0 });
-            act.Should().Throw<ArgumentException>().WithMessage("*length*");
-        }
+            => double.IsNaN(StatsCore.Spearman(Two, new[] { 1.0 })).Should().BeTrue();
 
         // Sign — NaN/Inf explicit guard (防错原则1: Core 层显式 guard，不依赖 Math.Sign 抛异常)
         [Fact] public void Sign_positive() => StatsCore.Sign(3.14).Should().Be(1);
