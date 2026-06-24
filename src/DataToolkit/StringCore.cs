@@ -13,11 +13,17 @@ namespace ExcelVbaLibraries.DataToolkit
     /// <summary>String manipulation: encoding, validation, distance, UUID, URL, formatting. Ported from StringUtils.bas.</summary>
     internal static class StringCore
     {
+        private static readonly Regex WhitespaceRx = new(@"\s+", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
+        private static readonly Regex HtmlTagRx = new(@"<[^>]+>", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
+
         internal static string ReverseString(string t)
         { var a = t.ToCharArray(); Array.Reverse(a); return new string(a); }
 
         internal static string NormalizeWhitespace(string t) =>
-            Regex.Replace(t.Trim(), @"\s+", " ", RegexOptions.None, TimeSpan.FromSeconds(5));
+            WhitespaceRx.Replace(t.Trim(), " ");
+
+        internal static string StripHtml(string t) =>
+            HtmlTagRx.Replace(t, "");
 
         internal static string ToTitleCase(string t) =>
             CultureInfo.InvariantCulture.TextInfo.ToTitleCase(t.ToLowerInvariant());

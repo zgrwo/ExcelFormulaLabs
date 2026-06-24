@@ -209,6 +209,38 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
             json.Should().Contain("1234567890123");
         }
 
+        [Fact]
+        public void ToJson_float_values()
+        {
+            var data = new object[,] { { "Val" }, { 1.5f } };
+            var json = RangeExportCore.RangeToJson(data);
+            json.Should().Contain("1.5");              // float → JSON number, InvariantCulture
+        }
+
+        [Fact]
+        public void ToJson_decimal_values()
+        {
+            var data = new object[,] { { "Val" }, { 1.23m } };
+            var json = RangeExportCore.RangeToJson(data);
+            json.Should().Contain("1.23");             // decimal → JSON number, InvariantCulture
+        }
+
+        [Fact]
+        public void ToJson_positive_infinity_outputs_null()
+        {
+            var data = new object[,] { { "Val" }, { double.PositiveInfinity } };
+            var json = RangeExportCore.RangeToJson(data);
+            json.Should().Contain("null");             // +Infinity → "null" (per IEEE 754 guard)
+        }
+
+        [Fact]
+        public void ToJson_negative_infinity_outputs_null()
+        {
+            var data = new object[,] { { "Val" }, { double.NegativeInfinity } };
+            var json = RangeExportCore.RangeToJson(data);
+            json.Should().Contain("null");             // -Infinity → "null" (per IEEE 754 guard)
+        }
+
         // ─────────────────────────────────────────────────────────────
         // RangeToMarkdown
         // ─────────────────────────────────────────────────────────────
