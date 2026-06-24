@@ -93,9 +93,80 @@ public void UDF_STAT_MEAN_Basic()
 
 ## 预防规则（来自 9+ 轮审查的反复模式）
 
-1. **静默传播阻断**：NaN/Inf/null/default! 不得静默返回。WrapError 只捕获异常。
-2. **防御完整性**：安全机制（ValidatePath/Regex Timeout/SQL参数化）须覆盖模块所有方法。
-3. **异常过滤器**：裸 `catch{}` = bug，须 `when (ex is not OOM and not StackOverflow)`。
+### 1. 静默传播阻断
+
+WrapError 只捕获**异常**，不捕获 NaN/Inf/null/default!。依赖 IEEE 754 传播 = bug。
+
+```csharp
+// ❌ 错误：tss=0 时静默产生 NaN，WrapError 不触发
+double r2 = 1.0 - sse / tss;
+
+// ✅ 正确：显式 guard，抛异常让 WrapError → #VALUE!
+if (Math.Abs(tss) < 1e-15)
+    throw new ArgumentException("Total sum of squares is zero.");
+double r2 = 1.0 - sse / tss;
+
+
+// ❌ 错误：转换失败返回 default!，WrapError 不触发
+catch { return default!; }
+
+// ✅ 正确：至少让致命异常穿透
+catch (Exception ex) when (ex is not OutOfMemoryException
+    and not StackOverflowException) { return default!; }
+
+
+// ❌ 错误：分母为零产生 Infinity
+return n * r * t / v;  // v 可能为 0
+
+// ✅ 正确：匹配模块风格返回 NaN
+return v == 0 ? double.NaN : n * r * t / v;
+```
+
+### 2. 防御完整性
+
+安全机制必须覆盖模块内**所有**相关方法，禁止遗漏。
+
+```csharp
+// ❌ 错误：FileExists/FolderExists/GetFileSize 忘了加 ValidatePath
+//         其他 I/O 方法都有，唯独这 3 个漏了 → 沙箱旁路
+internal static bool FileExists(string p) => File.Exists(p);
+internal static bool FolderExists(string p) => Directory.Exists(p);
+
+// ✅ 正确：对照同模块其他方法补齐防护
+internal static bool FileExists(string p) { ValidatePath(p); return File.Exists(p); }
+internal static bool FolderExists(string p) { ValidatePath(p); return Directory.Exists(p); }
+
+
+// 自检命令：对比模块内防护调用 vs 方法列表
+// grep "ValidatePath" src/DataToolkit/FileSystemCore.cs  # 防护调用
+// grep "internal static" src/DataToolkit/FileSystemCore.cs  # 全部方法
+// → 每个接受路径参数的方法都应有 ValidatePath 调用
+```
+
+### 3. 异常过滤器统一
+
+裸 `catch{}` = bug。必须加 `when` 过滤器让 OOM/StackOverflow 穿透。
+
+```csharp
+// ❌ 错误：吞掉一切异常，包括 OOM
+try { return JsonDocument.Parse(json); return true; }
+catch { return false; }
+
+// ✅ 正确：致命异常穿透
+try { return JsonDocument.Parse(json); return true; }
+catch (Exception ex) when (ex is not OutOfMemoryException
+    and not StackOverflowException) { return false; }
+
+
+// COM interop 场景：追加 AccessViolationException
+catch (Exception ex) when (ex is not OutOfMemoryException
+    and not StackOverflowException and not AccessViolationException)
+
+
+// 构建前自检：
+// grep -rn "catch\s*{" src/ --include="*.cs" | grep -v obj/
+// → 必须返回空
+```
 
 ## 已知限制 & InternalsVisibleTo
 Analytics → Analytics.Tests, DataToolkit.Tests / DataToolkit → DataToolkit.Tests / Foundation 为 public
