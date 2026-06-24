@@ -1,4 +1,4 @@
-<DnaLibrary Name="DataToolkit Add-In" RuntimeVersion="v8">
+<DnaLibrary Name="DataToolkit Add-In" RuntimeVersion="v8" ExplicitRegistration="true">
   <ExternalLibrary Path="DataToolkit.dll" Pack="true" />
   <ExternalLibrary Path="Foundation.dll" Pack="true" />
   <ExternalLibrary Path="Microsoft.Data.Sqlite.dll" Pack="true" />

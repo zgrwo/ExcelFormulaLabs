@@ -1,4 +1,4 @@
-<DnaLibrary Name="Analytics Add-In (.NET Framework)" RuntimeVersion="v4.0">
+<DnaLibrary Name="Analytics Add-In (.NET Framework)" RuntimeVersion="v4.0" ExplicitRegistration="true">
   <ExternalLibrary Path="Analytics.dll" Pack="true" />
   <ExternalLibrary Path="Foundation.dll" Pack="true" />
   <ExternalLibrary Path="MathNet.Numerics.dll" Pack="true" />
