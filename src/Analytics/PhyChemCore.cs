@@ -165,10 +165,10 @@ namespace ExcelVbaLibraries.Analytics
         {
             int missing = (p.HasValue?0:1)+(v.HasValue?0:1)+(n.HasValue?0:1)+(t.HasValue?0:1);
             if (missing != 1) return double.NaN;
-            if (!p.HasValue) return n!.Value * r * t!.Value / v!.Value;
-            if (!v.HasValue) return n!.Value * r * t!.Value / p.Value;
-            if (!n.HasValue) return p.Value * v!.Value / (r * t!.Value);
-            return p.Value * v!.Value / (n!.Value * r);
+            if (!p.HasValue) return v!.Value == 0 ? double.NaN : n!.Value * r * t!.Value / v!.Value;
+            if (!v.HasValue) return p.Value == 0 ? double.NaN : n!.Value * r * t!.Value / p.Value;
+            if (!n.HasValue) return t!.Value == 0 ? double.NaN : p.Value * v!.Value / (r * t!.Value);
+            return n!.Value == 0 ? double.NaN : p.Value * v!.Value / (n!.Value * r);
         }
 
         internal static double GasToSTP(double vol, double temp, double press,

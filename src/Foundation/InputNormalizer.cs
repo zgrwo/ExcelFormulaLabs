@@ -71,7 +71,8 @@ namespace ExcelVbaLibraries.Foundation
                     dynamic areas = dyn.Areas;
                     // If we get here, it's very likely a Range
                 }
-                catch
+                catch (Exception ex) when (ex is not OutOfMemoryException
+                    and not StackOverflowException and not AccessViolationException)
                 {
                     // No .Areas property → not a Range
                     return false;
@@ -89,19 +90,22 @@ namespace ExcelVbaLibraries.Foundation
                         if (dyn.Areas.Count > 1)
                             value = dyn.Areas[1].Value;
                     }
-                    catch
+                    catch (Exception ex) when (ex is not OutOfMemoryException
+                        and not StackOverflowException and not AccessViolationException)
                     {
                         // Single area or Areas not enumerable — fine, use .Value
                     }
 
                     return true;
                 }
-                catch
+                catch (Exception ex) when (ex is not OutOfMemoryException
+                    and not StackOverflowException and not AccessViolationException)
                 {
                     return false;
                 }
             }
-            catch
+            catch (Exception ex) when (ex is not OutOfMemoryException
+                and not StackOverflowException and not AccessViolationException)
             {
                 return false;
             }
@@ -220,7 +224,8 @@ namespace ExcelVbaLibraries.Foundation
                 return double.NaN;
             }
             try { return Convert.ToDouble(value, CultureInfo.InvariantCulture); }
-            catch { return double.NaN; }
+            catch (Exception ex) when (ex is not OutOfMemoryException
+                and not StackOverflowException) { return double.NaN; }
         }
 
         /// <summary>
@@ -245,7 +250,8 @@ namespace ExcelVbaLibraries.Foundation
                 return 0;
             }
             try { return Convert.ToInt64(value, CultureInfo.InvariantCulture); }
-            catch { return 0; }
+            catch (Exception ex) when (ex is not OutOfMemoryException
+                and not StackOverflowException) { return 0; }
         }
 
         /// <summary>
@@ -272,7 +278,8 @@ namespace ExcelVbaLibraries.Foundation
                 return false;
             }
             try { return Convert.ToBoolean(value, CultureInfo.InvariantCulture); }
-            catch { return false; }
+            catch (Exception ex) when (ex is not OutOfMemoryException
+                and not StackOverflowException) { return false; }
         }
 
         /// <summary>
@@ -288,7 +295,8 @@ namespace ExcelVbaLibraries.Foundation
             if (value is double d && d > 0)
             {
                 try { return new DateTime(1899, 12, 30).AddDays(d); }
-                catch { return DateTime.MinValue; }
+                catch (Exception ex) when (ex is not OutOfMemoryException
+                    and not StackOverflowException) { return DateTime.MinValue; }
             }
             if (value is string s)
             {
@@ -298,7 +306,8 @@ namespace ExcelVbaLibraries.Foundation
                 return DateTime.MinValue;
             }
             try { return Convert.ToDateTime(value, CultureInfo.InvariantCulture); }
-            catch { return DateTime.MinValue; }
+            catch (Exception ex) when (ex is not OutOfMemoryException
+                and not StackOverflowException) { return DateTime.MinValue; }
         }
 
         // ─────────────────────────────────────────────────────────────────
