@@ -58,11 +58,11 @@ namespace ExcelVbaLibraries.Analytics
             => OutputWrapper.WrapError(() => LinalgCore.MatMul(M(A), M(B)));
 
         [ExcelFunction(Name = "LINALG.TRANSPOSE", Description = "Transpose.")]
-        public static object UDF_LINALG_TRANSPOSE(object d)
+        public static object UDF_LINALG_TRANSPOSE([ExcelArgument(Name="array", Description="A range or 2D array")] object d)
             => OutputWrapper.WrapError(() => LinalgCore.Transpose(M(d)));
 
         [ExcelFunction(Name = "LINALG.TRACE", Description = "Trace.")]
-        public static object UDF_LINALG_TRACE(object d)
+        public static object UDF_LINALG_TRACE([ExcelArgument(Name="array", Description="A range or 2D array")] object d)
             => OutputWrapper.WrapError(() => LinalgCore.Trace(M(d)));
     }
 }
