@@ -7,15 +7,15 @@ namespace ExcelVbaLibraries.DataToolkit
     public static class SqlUdf
     {
         [ExcelFunction(Name = "SQL.QUERY", Description = "Execute SQL on a range. Table = 'data'. First row = headers. Example: SELECT Name, SUM(Amount) FROM data GROUP BY Name")]
-        public static object UDF_SQL_QUERY([ExcelArgument("data")] object data, [ExcelArgument("sql")] object sql)
+        public static object UDF_SQL_QUERY([ExcelArgument("source_range")] object data, [ExcelArgument("sql_query")] object sql)
             => OutputWrapper.WrapError(() => SqlCore.SqlQuery(InputNormalizer.NormalizeTo2D(data)!, InputNormalizer.ToString(sql))!);
 
         [ExcelFunction(Name = "SQL.JOIN", Description = "SQL with 2 tables 'data' + 'extra'. Example: SELECT a.*, b.x FROM data a JOIN extra b ON a.ID=b.ID")]
-        public static object UDF_SQL_JOIN([ExcelArgument("data")] object data, [ExcelArgument("extra")] object extra, [ExcelArgument("sql")] object sql)
+        public static object UDF_SQL_JOIN([ExcelArgument("source_range")] object data, [ExcelArgument("join_table")] object extra, [ExcelArgument("sql_query")] object sql)
             => OutputWrapper.WrapError(() => { var t = new Dictionary<string, object[,]> { ["extra"] = InputNormalizer.NormalizeTo2D(extra)! }; return SqlCore.SqlQuery(InputNormalizer.NormalizeTo2D(data)!, InputNormalizer.ToString(sql), t)!; });
 
         [ExcelFunction(Name = "SQL.QUERY3", Description = "SQL with 3 tables 'data','b','c'.")]
-        public static object UDF_SQL_QUERY3([ExcelArgument("a")] object a, [ExcelArgument("b")] object b, [ExcelArgument("c")] object c, [ExcelArgument("sql")] object sql)
+        public static object UDF_SQL_QUERY3([ExcelArgument("table1")] object a, [ExcelArgument("table2")] object b, [ExcelArgument("table3")] object c, [ExcelArgument("sql_query")] object sql)
             => OutputWrapper.WrapError(() => { var t = new Dictionary<string, object[,]> { ["b"] = InputNormalizer.NormalizeTo2D(b)!, ["c"] = InputNormalizer.NormalizeTo2D(c)! }; return SqlCore.SqlQuery(InputNormalizer.NormalizeTo2D(a)!, InputNormalizer.ToString(sql), t)!; });
     }
 }
