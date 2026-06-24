@@ -24,7 +24,7 @@
 - **异常过滤器统一**：所有 catch 块须加 `when` 过滤器。裸 `catch{}` 视为 bug。模板：`catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)`，COM interop 加 `and not AccessViolationException`。构建前自检：`grep -rn "catch\s*{" src/` 须返回空。历史：STR.FORMAT (a477475)、全项目18处 (3493cfe)。
 - **缺陷处理**：发现缺陷 → 复核并追踪根因 → 写入 memory 或记录改进计划。
 - **Git**：push 前须用户明确同意。禁止推送 src/tests 外的文件/文件夹。
-- **文档**：信息只在一处定义，其余链接引用。数字仅存 api-reference.md。
+- **文档**：信息只在一处定义，其余链接引用。数字以 api-reference.md 为准（UDF 数量、函数签名等权威定义唯一信源）。用户文档可引用展示，但维护以 api-reference.md 为准。
 - **验证**：修改函数前用 CodeGraph 检查调用者（blast radius），修改后用 CodeGraph 验证一致性。如 skill 或 CodeGraph 冲突，优先 CodeGraph。
 - **全量测试** = ①全量单元测试 ②Excel 交叉验证 ③Debug+Release DLL/XLL 双目标打包。具体命令与精度要求见 `/excel-dna-project` skill。
 

@@ -158,6 +158,9 @@ namespace ExcelVbaLibraries.Analytics
             for (int i = 0; i < k; i++) ssW += groups[i].Sum(x => Math.Pow(x - means[i], 2));
 
             double dfB = k - 1, dfW = totalN - k;
+            if (dfW <= 0)
+                throw new ArgumentException(
+                    $"ANOVA requires at least 2 observations per group (df_within={dfW}).");
             double msB = ssB / dfB, msW = ssW / dfW;
             double f = msB / msW;
             double p = FDistPValue(f, dfB, dfW);

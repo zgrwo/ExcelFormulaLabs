@@ -91,6 +91,13 @@ namespace ExcelVbaLibraries.Analytics.Tests
             act.Should().Throw<ArgumentException>().WithMessage("*degrees of freedom*");
         }
 
+        [Fact] public void AnovaOneWay_single_obs_per_group_throws()
+        {
+            // dfW=0 when each group has exactly 1 observation (P1 guard)
+            var act = () => RegressionCore.AnovaOneWay(new[] { new[] { 1.0 }, new[] { 2.0 } });
+            act.Should().Throw<ArgumentException>().WithMessage("*observations per group*");
+        }
+
         [Fact] public void FitRidge_constant_y_throws()
         {
             // tss=0 → constant response (P0 guard)

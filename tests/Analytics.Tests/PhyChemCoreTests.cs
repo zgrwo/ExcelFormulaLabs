@@ -22,6 +22,7 @@ namespace ExcelVbaLibraries.Analytics.Tests
         [Fact] public void GasToSTP() => PhyChemCore.GasToSTP(22.4,0,1,"C","atm").Should().BeApproximately(22.4,0.01);
         [Fact] public void MolecularWeight_hydrate() => PhyChemCore.MolecularWeight("CuSO4.5H2O").Should().BeApproximately(249.69, 0.1);
         [Fact] public void GasToSTP_no_vUnit() => PhyChemCore.GasToSTP(22.4, 0, 1).Should().BeApproximately(22.4, 0.01);
+        [Fact] public void GasToSTP_invalid_unit_returns_NaN() => PhyChemCore.GasToSTP(22.4, 0, 1, "XX").Should().Be(double.NaN);
 
         // =====================================================================
         // EDGE CASE & INPUT VALIDATION TESTS
@@ -88,8 +89,8 @@ namespace ExcelVbaLibraries.Analytics.Tests
 
         [Fact] public void GasToSTP_zero_temperature_K()
         {
-            // t=0K → division by zero → ∞
-            double.IsInfinity(PhyChemCore.GasToSTP(22.4, 0, 1, "K", "atm")).Should().BeTrue();
+            // t=0K → division by zero → now guarded to NaN (P1 fix)
+            PhyChemCore.GasToSTP(22.4, 0, 1, "K", "atm").Should().Be(double.NaN);
         }
     }
 }
