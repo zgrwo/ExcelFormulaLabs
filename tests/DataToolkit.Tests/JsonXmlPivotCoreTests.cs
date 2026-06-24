@@ -203,11 +203,23 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
             var act = () => PivotCore.Unpivot(d, new[] { 0 }, new[] { 5 });
             act.Should().Throw<ArgumentException>();
         }
-        [Fact] public void Pivot_unknown_agg_defaults_to_min()
+        [Fact] public void Pivot_unknown_agg_defaults_to_sum()
         {
             var d = new object[,] { { "K", "P", "V" }, { "A", "X", 10 }, { "A", "X", 5 } };
             var r = PivotCore.Pivot(d, 0, 1, 2, "UNKNOWN");
-            r[1, 1].Should().Be(5.0);  // MIN is the fallback
+            r[1, 1].Should().Be(15.0);  // unknown → SUM
+        }
+        [Fact] public void Pivot_AVG_aggregation()
+        {
+            var d = new object[,] { { "K", "P", "V" }, { "A", "X", 10 }, { "A", "X", 20 } };
+            var r = PivotCore.Pivot(d, 0, 1, 2, "AVG");
+            r[1, 1].Should().Be(15.0);  // (10+20)/2
+        }
+        [Fact] public void Pivot_COUNT_aggregation()
+        {
+            var d = new object[,] { { "K", "P", "V" }, { "A", "X", 10 }, { "A", "X", 20 }, { "A", "Y", 5 } };
+            var r = PivotCore.Pivot(d, 0, 1, 2, "COUNT");
+            r[1, 1].Should().Be(2L);  // A,X appears twice
         }
 
         // =====================================================================

@@ -13,6 +13,7 @@ namespace ExcelVbaLibraries.DataToolkit
             agg = agg.ToUpperInvariant();
             int rows = data.GetLength(0);
             var map = new Dictionary<(string k, string p), double>();
+            var cnt = new Dictionary<(string k, string p), long>(); // for AVG/COUNT
             var keySet = new HashSet<string>(); var keyList = new List<string>();
             var pivotSet = new HashSet<string>(); var pivotList = new List<string>();
             for (int r = 0; r < rows; r++)
@@ -24,15 +25,24 @@ namespace ExcelVbaLibraries.DataToolkit
                 if (keySet.Add(k)) keyList.Add(k);
                 if (pivotSet.Add(p)) pivotList.Add(p);
                 var kv = (k, p);
-                map[kv] = map.TryGetValue(kv, out double ex)
-                    ? (agg == "SUM" ? ex + v : agg == "MAX" ? Math.Max(ex, v) : Math.Min(ex, v))
-                    : v;
+                if (map.TryGetValue(kv, out double ex))
+                {
+                    cnt[kv] = cnt[kv] + 1;
+                    map[kv] = agg switch { "MAX" => Math.Max(ex, v), "MIN" => Math.Min(ex, v), _ => ex + v };
+                }
+                else { map[kv] = v; cnt[kv] = 1; }
             }
             var keys = keyList; var pivots = pivotList;
             var result = new object[keys.Count + 1, pivots.Count + 1];
             result[0, 0] = "Key \\ Pivot";
             for (int c = 0; c < pivots.Count; c++) result[0, c + 1] = pivots[c];
-            for (int r = 0; r < keys.Count; r++) { result[r + 1, 0] = keys[r]; for (int c = 0; c < pivots.Count; c++) result[r + 1, c + 1] = map.TryGetValue((keys[r], pivots[c]), out double v) ? v : 0.0; }
+            for (int r = 0; r < keys.Count; r++) { result[r + 1, 0] = keys[r]; for (int c = 0; c < pivots.Count; c++)
+            {
+                var kv = (keys[r], pivots[c]);
+                result[r + 1, c + 1] = map.TryGetValue(kv, out double v)
+                    ? (agg == "AVG" ? v / cnt[kv] : agg == "COUNT" ? cnt[kv] : v)
+                    : 0.0;
+            } }
             return result;
         }
 
@@ -58,13 +68,13 @@ namespace ExcelVbaLibraries.DataToolkit
             for (int r = 0; r < rows; r++)
             {
                 var gk = gCols.Select(c => InputNormalizer.ToString(data[r, c])).ToArray();
-                string gks = string.Join("|", gk); double v = InputNormalizer.ToDouble(data[r, aCol]);
+                string gks = string.Join("\x1F", gk); double v = InputNormalizer.ToDouble(data[r, aCol]);
                 if (double.IsNaN(v)) continue;
                 if (groups.TryGetValue(gks, out var ex)) groups[gks] = agg switch { "SUM" => (ex.val + v, ex.cnt + 1), "MAX" => (Math.Max(ex.val, v), ex.cnt + 1), "MIN" => (Math.Min(ex.val, v), ex.cnt + 1), "COUNT" => (0, ex.cnt + 1), "AVG" => (ex.val + v, ex.cnt + 1), _ => (ex.val + v, ex.cnt + 1) };
                 else { groups[gks] = (v, 1); if (seen.Add(gks)) keyNames.Add(gk); }
             }
             var result = new object[keyNames.Count, nG + 1];
-            for (int i = 0; i < keyNames.Count; i++) { for (int j = 0; j < nG; j++) result[i, j] = keyNames[i][j]; var (val, cnt) = groups[string.Join("|", keyNames[i])]; result[i, nG] = agg == "COUNT" ? cnt : (agg == "AVG" ? val / cnt : val); }
+            for (int i = 0; i < keyNames.Count; i++) { for (int j = 0; j < nG; j++) result[i, j] = keyNames[i][j]; var (val, cnt) = groups[string.Join("\x1F", keyNames[i])]; result[i, nG] = agg == "COUNT" ? cnt : (agg == "AVG" ? val / cnt : val); }
             return result;
         }
 
