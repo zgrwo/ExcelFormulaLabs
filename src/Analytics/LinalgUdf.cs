@@ -46,8 +46,8 @@ namespace ExcelVbaLibraries.Analytics
             => OutputWrapper.WrapError(() => LinalgCore.ConditionNumber(M(d)));
 
         [ExcelFunction(Name = "LINALG.RANK", Description = "Numerical rank (default tol=1e-10).")]
-        public static object UDF_LINALG_RANK([ExcelArgument(Name="array", Description="A range or 2D array")] object d, [Optional, ExcelArgument(Name="tolerance", Description="Tolerance threshold for numerical rank detection; default 1e-10")] object tol)
-            => OutputWrapper.WrapError(() => (long)LinalgCore.Rank(M(d), tol is ExcelDna.Integration.ExcelMissing ? 1e-10 : InputNormalizer.ToDouble(tol)));
+        public static object UDF_LINALG_RANK([ExcelArgument(Name="array", Description="A range or 2D array")] object d, [ExcelArgument(Name="tolerance", Description="Tolerance threshold for numerical rank detection; default 1e-10")] object tol=null)
+            => OutputWrapper.WrapError(() => (long)LinalgCore.Rank(M(d), tol==null||tol is ExcelDna.Integration.ExcelMissing?1e-10:InputNormalizer.ToDouble(tol)));
 
         [ExcelFunction(Name = "LINALG.IDENTITY", Description = "Identity matrix.")]
         public static object UDF_LINALG_IDENTITY([ExcelArgument(Name="size", Description="The matrix dimension, e.g. 3 for a 3x3 identity matrix")] object n)
