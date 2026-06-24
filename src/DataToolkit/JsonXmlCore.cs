@@ -44,11 +44,21 @@ namespace ExcelVbaLibraries.DataToolkit
         private static object? ElmNumber(JsonElement e)
         {
             if (e.TryGetInt64(out long l)) return l;
-            double d = e.GetDouble();
-            // Guard against IEEE 754 Infinity/NaN from extreme JSON numbers (e.g. 1e999).
-            // Aligns with RangeExportCore.JsonVal which returns "null" for these.
-            if (double.IsNaN(d) || double.IsInfinity(d)) return null;
-            return d;
+            try
+            {
+                double d = e.GetDouble();
+                // Guard against IEEE 754 Infinity/NaN from extreme JSON numbers (e.g. 1e999).
+                // Aligns with RangeExportCore.JsonVal which returns "null" for these.
+                if (double.IsNaN(d) || double.IsInfinity(d)) return null;
+                return d;
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException
+                and not StackOverflowException)
+            {
+                // net48 System.Text.Json (NuGet) throws FormatException for overflow values
+                // like 1e999; net8 built-in returns Infinity. Both → null.
+                return null;
+            }
         }
 
         private static object? Q(JsonElement e,string p)
