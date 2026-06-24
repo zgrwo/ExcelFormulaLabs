@@ -5,8 +5,17 @@ using Xunit;
 
 namespace ExcelVbaLibraries.DataToolkit.Tests
 {
+    // SandboxRoot is a public static field shared across all FileSystem tests.
+    // Serialize both FileSystemCoreTests and FileSystemUdfTests to prevent
+    // parallel tests from seeing a concurrently mutated SandboxRoot.
+    [CollectionDefinition("Sandbox", DisableParallelization = false)]
+    public class SandboxCollection { }
+
+    [Collection("Sandbox")]
     public class FileSystemCoreTests
     {
+        private static readonly object _sandboxLock = new();
+
         // Original tests
         [Fact] public void PathCombine() => FileSystemCore.PathCombine("C:\\a","b.txt").Should().Be("C:\\a\\b.txt");
         [Fact] public void GetFileName() => FileSystemCore.GetFileName("C:\\a\\b.txt").Should().Be("b.txt");
@@ -199,48 +208,102 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
 
         [Fact] public void Sandbox_null_root_allows_access()
         {
-            // SandboxRoot=null → sandbox disabled → all paths allowed
-            FileSystemCore.SandboxRoot = null;
-            var act = () => FileSystemCore.ValidatePath(@"C:\any\path");
-            act.Should().NotThrow();
+            lock (_sandboxLock)
+            {
+                // SandboxRoot=null → sandbox disabled → all paths allowed
+                FileSystemCore.SandboxRoot = null;
+                var act = () => FileSystemCore.ValidatePath(@"C:\any\path");
+                act.Should().NotThrow();
+            }
         }
 
         [Fact] public void Sandbox_path_exactly_equals_root()
         {
-            var tmp = FileSystemCore.GetTempPath();
-            FileSystemCore.SandboxRoot = tmp;
-            try
+            lock (_sandboxLock)
             {
-                // Path exactly matching the sandbox root should be allowed
-                var act = () => FileSystemCore.ValidatePath(tmp);
-                act.Should().NotThrow();
+                var tmp = FileSystemCore.GetTempPath();
+                FileSystemCore.SandboxRoot = tmp;
+                try
+                {
+                    var act = () => FileSystemCore.ValidatePath(tmp);
+                    act.Should().NotThrow();
+                }
+                finally { FileSystemCore.SandboxRoot = null; }
             }
-            finally { FileSystemCore.SandboxRoot = null; }
         }
 
         [Fact] public void Sandbox_empty_string_root()
         {
-            // Empty SandboxRoot should allow all access (no constraint)
-            try
+            lock (_sandboxLock)
             {
-                FileSystemCore.SandboxRoot = "";
-                var act = () => FileSystemCore.ValidatePath(@"C:\temp");
-                act.Should().NotThrow();
+                try
+                {
+                    FileSystemCore.SandboxRoot = "";
+                    var act = () => FileSystemCore.ValidatePath(@"C:\temp");
+                    act.Should().NotThrow();
+                }
+                finally { FileSystemCore.SandboxRoot = null; }
             }
-            finally { FileSystemCore.SandboxRoot = null; }
         }
 
         [Fact] public void ValidatePath_normalized_same()
         {
-            var tmp = FileSystemCore.GetTempPath();
-            FileSystemCore.SandboxRoot = tmp;
-            try
+            lock (_sandboxLock)
             {
-                // Path with "." normalizes to parent itself → should match root
-                var act = () => FileSystemCore.ValidatePath(tmp + System.IO.Path.DirectorySeparatorChar + ".");
-                act.Should().NotThrow();
+                var tmp = FileSystemCore.GetTempPath();
+                FileSystemCore.SandboxRoot = tmp;
+                try
+                {
+                    var act = () => FileSystemCore.ValidatePath(tmp + System.IO.Path.DirectorySeparatorChar + ".");
+                    act.Should().NotThrow();
+                }
+                finally { FileSystemCore.SandboxRoot = null; }
             }
-            finally { FileSystemCore.SandboxRoot = null; }
+        }
+
+        [Fact] public void Sandbox_FileExists_outside_root_throws()
+        {
+            lock (_sandboxLock)
+            {
+                var tmp = FileSystemCore.GetTempPath();
+                FileSystemCore.SandboxRoot = tmp;
+                try
+                {
+                    var act = () => FileSystemCore.FileExists(@"C:\Windows\System32\kernel32.dll");
+                    act.Should().Throw<UnauthorizedAccessException>().WithMessage("*outside*sandbox*");
+                }
+                finally { FileSystemCore.SandboxRoot = null; }
+            }
+        }
+
+        [Fact] public void Sandbox_GetFileSize_outside_root_throws()
+        {
+            lock (_sandboxLock)
+            {
+                var tmp = FileSystemCore.GetTempPath();
+                FileSystemCore.SandboxRoot = tmp;
+                try
+                {
+                    var act = () => FileSystemCore.GetFileSize(@"C:\Windows\notepad.exe");
+                    act.Should().Throw<UnauthorizedAccessException>().WithMessage("*outside*sandbox*");
+                }
+                finally { FileSystemCore.SandboxRoot = null; }
+            }
+        }
+
+        [Fact] public void Sandbox_FolderExists_outside_root_throws()
+        {
+            lock (_sandboxLock)
+            {
+                var tmp = FileSystemCore.GetTempPath();
+                FileSystemCore.SandboxRoot = tmp;
+                try
+                {
+                    var act = () => FileSystemCore.FolderExists(@"C:\Windows\System32");
+                    act.Should().Throw<UnauthorizedAccessException>().WithMessage("*outside*sandbox*");
+                }
+                finally { FileSystemCore.SandboxRoot = null; }
+            }
         }
     }
 }

@@ -4,6 +4,7 @@ using FluentAssertions;
 using Xunit;
 namespace ExcelVbaLibraries.DataToolkit.Tests
 {
+    [Collection("Sandbox")]
     public class FileSystemUdfTests
     {
         [Fact] public void Norm_relative() => ((string)FileSystemUdf.UDF_FS_NORM(".")).Should().NotBeNullOrEmpty();

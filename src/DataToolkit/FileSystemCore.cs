@@ -39,8 +39,8 @@ namespace ExcelVbaLibraries.DataToolkit
         internal static string GetExtension(string p) => Path.GetExtension(p);
         internal static string GetFolderPath(string p) => Path.GetDirectoryName(p) ?? "";
         internal static bool IsPathValid(string p) { if(string.IsNullOrEmpty(p))return false; if(p.IndexOfAny(System.IO.Path.GetInvalidPathChars())>=0)return false; try{Path.GetFullPath(p);return true;}catch{return false;} }
-        internal static bool FileExists(string p) => File.Exists(p);
-        internal static long GetFileSize(string p) => File.Exists(p) ? new FileInfo(p).Length : -1;
+        internal static bool FileExists(string p) { ValidatePath(p); return File.Exists(p); }
+        internal static long GetFileSize(string p) { ValidatePath(p); return File.Exists(p) ? new FileInfo(p).Length : -1; }
         internal static string ReadTextFile(string p, Encoding? e = null) { ValidatePath(p); return File.ReadAllText(p, e ?? Encoding.UTF8); }
         internal static string[] ReadAllLines(string p, Encoding? e = null) { ValidatePath(p); return File.ReadAllLines(p, e ?? Encoding.UTF8); }
         internal static bool WriteTextFile(string p, string c, Encoding? e = null) { ValidatePath(p); File.WriteAllText(p, c, e ?? Encoding.UTF8); return true; }
@@ -48,7 +48,7 @@ namespace ExcelVbaLibraries.DataToolkit
         internal static bool DeleteFile(string p) { ValidatePath(p); if (File.Exists(p)) File.Delete(p); return true; }
         internal static bool CopyFile(string s, string d, bool o = false) { ValidatePath(s); ValidatePath(d); File.Copy(s, d, o); return true; }
         internal static bool MoveFile(string s, string d) { ValidatePath(s); ValidatePath(d); File.Move(s, d); return true; }
-        internal static bool FolderExists(string p) => Directory.Exists(p);
+        internal static bool FolderExists(string p) { ValidatePath(p); return Directory.Exists(p); }
         internal static bool EnsureFolder(string p) { ValidatePath(p); if (!Directory.Exists(p)) Directory.CreateDirectory(p); return true; }
         internal static string[] ListFiles(string p, string pat = "*") { ValidatePath(p); return Directory.GetFiles(p, pat); }
         internal static string[] ListFolders(string p, string pat = "*") { ValidatePath(p); return Directory.GetDirectories(p, pat); }

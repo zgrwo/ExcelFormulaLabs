@@ -69,9 +69,43 @@ namespace ExcelVbaLibraries.Analytics.Tests
 
         [Fact] public void AnovaOneWay_single_group()
         {
-            // Single group → df_between=0 → degenerate ANOVA
-            var a = RegressionCore.AnovaOneWay(new[] { new[] { 1.0, 2, 3, 4 } });
-            ((double)a["f_stat"]).Should().Be(double.NaN);  // division by zero
+            // Single group → df_between=0 → now throws (guard added in P0 audit)
+            var act = () => RegressionCore.AnovaOneWay(new[] { new[] { 1.0, 2, 3, 4 } });
+            act.Should().Throw<ArgumentException>().WithMessage("*at least 2 groups*");
+        }
+
+        [Fact] public void FitOLS_constant_y_throws()
+        {
+            // tss=0 → constant response → R² undefined (P0 guard)
+            var constY = new double[] { 5, 5, 5 };
+            var act = () => RegressionCore.FitOLS(X, constY);
+            act.Should().Throw<ArgumentException>().WithMessage("*constant*");
+        }
+
+        [Fact] public void FitOLS_saturated_throws()
+        {
+            // n=p → df=0 → SE undefined (P0 guard)
+            var satX = new double[,] { { 1, 2 }, { 3, 4 } };
+            var satY = new double[] { 5, 6 };
+            var act = () => RegressionCore.FitOLS(satX, satY);
+            act.Should().Throw<ArgumentException>().WithMessage("*degrees of freedom*");
+        }
+
+        [Fact] public void FitRidge_constant_y_throws()
+        {
+            // tss=0 → constant response (P0 guard)
+            var constY = new double[] { 5, 5, 5 };
+            var act = () => RegressionCore.FitRidge(X, constY, 0.1);
+            act.Should().Throw<ArgumentException>().WithMessage("*constant*");
+        }
+
+        [Fact] public void FactorImportance_single_observation_throws()
+        {
+            // n=1 → sd undefined → can't standardize (P0 guard)
+            var singleX = new double[,] { { 1, 5 } };
+            var singleY = new double[] { 7 };
+            var act = () => RegressionCore.FactorImportance(singleX, singleY);
+            act.Should().Throw<ArgumentException>().WithMessage("*at least 2 observations*");
         }
 
         [Fact] public void FactorImportance_constant_column()

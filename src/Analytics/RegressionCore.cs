@@ -35,10 +35,15 @@ namespace ExcelVbaLibraries.Analytics
             var residuals = vecY - fitted;
             double sse = residuals.DotProduct(residuals);
             double tss = vecY.DotProduct(vecY) - Math.Pow(vecY.Sum(), 2) / n;
+            if (Math.Abs(tss) < 1e-15)
+                throw new ArgumentException(
+                    "Cannot fit OLS: total sum of squares is zero (constant response variable y).");
             double r2 = 1.0 - sse / tss;
-            double adjR2 = 1.0 - (1.0 - r2) * (n - 1) / (n - p);
-
             int df = n - p;
+            if (df <= 0)
+                throw new ArgumentException(
+                    $"Cannot compute standard errors: degrees of freedom is {df} (n={n}, p={p}). Need n > p.");
+            double adjR2 = 1.0 - (1.0 - r2) * (n - 1) / (double)df;
             double sigma2 = sse / df;
             var XtXInv = XtX.Inverse();
             var se = new double[p];
@@ -110,6 +115,9 @@ namespace ExcelVbaLibraries.Analytics
             var residuals = vecY - fitted;
             double sse = residuals.DotProduct(residuals);
             double tss = vecY.DotProduct(vecY) - Math.Pow(vecY.Sum(), 2) / n;
+            if (Math.Abs(tss) < 1e-15)
+                throw new ArgumentException(
+                    "Cannot fit Ridge: total sum of squares is zero (constant response variable y).");
 
             return new Dictionary<string, object>
             {
@@ -136,6 +144,9 @@ namespace ExcelVbaLibraries.Analytics
         internal static Dictionary<string, object> AnovaOneWay(double[][] groups)
         {
             int k = groups.Length;
+            if (k < 2)
+                throw new ArgumentException(
+                    "ANOVA requires at least 2 groups.");
             var means = groups.Select(g => g.Average()).ToArray();
             var counts = groups.Select(g => (long)g.Length).ToArray();
             double grand = groups.SelectMany(g => g).Average();
@@ -171,6 +182,9 @@ namespace ExcelVbaLibraries.Analytics
         internal static int[] FactorImportance(double[,] X, double[] y)
         {
             int n = X.GetLength(0), p = X.GetLength(1);
+            if (n < 2)
+                throw new ArgumentException(
+                    "Factor importance requires at least 2 observations.");
             var Xs = new double[n, p];
             for (int j = 0; j < p; j++)
             {
