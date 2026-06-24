@@ -179,7 +179,7 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
 
         [Fact] public void Semester_june()
         {
-            DateTimeCore.Semester(new DateTime(2024, 6, 30)).Should().Be(2);
+            DateTimeCore.Semester(new DateTime(2024, 6, 30)).Should().Be(1);
         }
     }
 }
