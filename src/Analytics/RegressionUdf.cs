@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using ExcelDna.Integration;
 using ExcelVbaLibraries.Foundation;
 
@@ -22,7 +23,7 @@ namespace ExcelVbaLibraries.Analytics
 
         [ExcelFunction(Name = "REGRESS.RIDGE",
           Description = "Ridge regression (L2 regularization, default lambda=1.0). Returns 2xn: coefficients, sse, r_squared, residuals, fitted_values, lambda, n, df. No se/t/p values (inference invalid under regularization).")]
-        public static object UDF_REGRESS_RIDGE([ExcelArgument(Name="known_y", Description="The Y variable range (dependent variable)")] object X, [ExcelArgument(Name="known_x", Description="The X variable range (independent variables)")] object y, [ExcelArgument(Name="lambda", Description="Regularization parameter; default is 1.0")] object lambda)
+        public static object UDF_REGRESS_RIDGE([ExcelArgument(Name="known_y", Description="The Y variable range (dependent variable)")] object X, [ExcelArgument(Name="known_x", Description="The X variable range (independent variables)")] object y, [Optional, ExcelArgument(Name="lambda", Description="Regularization parameter; default is 1.0")] object lambda)
             => OutputWrapper.WrapError(() => Dict2Row(RegressionCore.FitRidge(M(X), V(y), lambda is ExcelDna.Integration.ExcelMissing ? 1.0 : InputNormalizer.ToDouble(lambda))));
 
         [ExcelFunction(Name = "REGRESS.ANOVA1",
