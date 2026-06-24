@@ -6,7 +6,7 @@ namespace ExcelVbaLibraries.Analytics
 {
     public static class StatsUdf
     {
-        private static double[] V([ExcelArgument(Name="number1", Description="A range or array of numeric values")] object d)=>AnalyticsHelpers.PrepV(d);
+        private static double[] V(object d)=>AnalyticsHelpers.PrepV(d);
         [ExcelFunction(Name="STATS.MEAN", Description="Arithmetic mean of a numeric array")] public static object UDF_STAT_MEAN([ExcelArgument(Name="number1", Description="A range or array of numeric values")] object d)=>OutputWrapper.WrapError(()=>(object)StatsCore.Mean(V(d)));
         [ExcelFunction(Name="STATS.GEOMEAN", Description="Geometric mean of a positive numeric array")] public static object UDF_STAT_GEO([ExcelArgument(Name="number1", Description="A range or array of numeric values")] object d)=>OutputWrapper.WrapError(()=>(object)StatsCore.GeometricMean(V(d)));
         [ExcelFunction(Name="STATS.HARMEAN", Description="Harmonic mean of a positive numeric array")] public static object UDF_STAT_HAR([ExcelArgument(Name="number1", Description="A range or array of numeric values")] object d)=>OutputWrapper.WrapError(()=>(object)StatsCore.HarmonicMean(V(d)));

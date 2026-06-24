@@ -5,8 +5,8 @@ namespace ExcelVbaLibraries.Analytics
 {
     public static class LinalgUdf
     {
-        private static double[,] M([ExcelArgument(Name="array", Description="A range or 2D array")] object d) => AnalyticsHelpers.PrepM(d);
-        private static double[] V([ExcelArgument(Name="array", Description="A range or 2D array")] object d) => AnalyticsHelpers.PrepV(d);
+        private static double[,] M(object d) => AnalyticsHelpers.PrepM(d);
+        private static double[] V(object d) => AnalyticsHelpers.PrepV(d);
 
         [ExcelFunction(Name = "LINALG.SVD", Description = "SVD: A = U*diag(S)*Vt. Returns 1x3 horizontal array {U matrix, S vector, Vt matrix}.")]
         public static object UDF_LINALG_SVD([ExcelArgument(Name="array", Description="A range or 2D array")] object d)
