@@ -45,9 +45,9 @@
     <PackageReference Include="System.Text.Json" Version="8.0.4" />
   </ItemGroup>
 
-  <!-- Generate correct .dna from templates per target. The DNA file lives in
-       the project root and is shared across inner builds; delete stale copies
-       and recopy the TFM-correct template before ExcelDnaBuild processes it. -->
+  <!-- Generate correct .dna from templates per target before ExcelDnaBuild,
+       then clean up afterward. The generated DNA file is shared across inner
+       builds; a stale file on disk can poison incremental builds. -->
   <Target Name="GenerateDnaFromTemplate" BeforeTargets="ExcelDnaBuild">
     <Delete Files="DataToolkit-AddIn.dna" />
     <Copy Condition="'$(TargetFramework)' == 'net8.0-windows'"
@@ -56,6 +56,9 @@
     <Copy Condition="'$(TargetFramework)' == 'net48'"
           SourceFiles="DataToolkit-AddIn-net48.dna.tpl"
           DestinationFiles="DataToolkit-AddIn.dna" />
+  </Target>
+  <Target Name="CleanupDnaAfterBuild" AfterTargets="ExcelDnaPack">
+    <Delete Files="DataToolkit-AddIn.dna" />
   </Target>
 
 </Project>
