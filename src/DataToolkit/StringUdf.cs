@@ -1,5 +1,4 @@
 using System.Linq;
-using System.Runtime.InteropServices;
 using ExcelDna.Integration;
 using ExcelVbaLibraries.Foundation;
 

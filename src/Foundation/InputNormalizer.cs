@@ -448,21 +448,27 @@ namespace ExcelVbaLibraries.Foundation
             if (count == 0)
                 return Array.Empty<double>();
 
-            // Extract — use the same predicate as the count loop so the two
-            // loops agree; IsNumericCell accepts "NaN"/"Infinity" strings
-            // (double.TryParse returns true) but ToDouble returns NaN for
-            // those, which would skip the element and leave default 0.0 in
-            // the result array.
+            // Extract — use the same predicate as the count loop, then
+            // additionally filter NaN/Infinity from the result array.
+            // IsNumericCell accepts "NaN"/"Infinity" strings (double.TryParse
+            // returns true) but ToDouble returns NaN/Infinity for those.
             var result = new double[count];
             int idx = 0;
             for (int i = 0; i < flat.Length; i++)
             {
                 if (IsNumericCell(flat[i]))
                 {
-                    result[idx] = ToDouble(flat[i]);
-                    idx++;
+                    double val = ToDouble(flat[i]);
+                    if (!double.IsNaN(val) && !double.IsInfinity(val))
+                    {
+                        result[idx] = val;
+                        idx++;
+                    }
                 }
             }
+            // Trim excess slots if NaN/Infinity elements were filtered
+            if (idx < count)
+                Array.Resize(ref result, idx);
 
             return result;
         }

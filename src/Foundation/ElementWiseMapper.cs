@@ -251,7 +251,7 @@ namespace ExcelVbaLibraries.Foundation
                     System.Globalization.CultureInfo.InvariantCulture);
             }
             catch (Exception ex) when (ex is not OutOfMemoryException
-                and not StackOverflowException) { return default!; }
+                and not StackOverflowException) { return typeof(T) == typeof(double) ? (T)(object)double.NaN : default!; }
         }
 
         // ── Array helpers ─────────────────────────────────────────────────
