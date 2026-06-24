@@ -4,7 +4,7 @@
 
 ## 层（Layer）
 
-**Foundation** — 零依赖基础层。提供 InputNormalizer、ElementWiseMapper、OutputWrapper、ExcelEmpty/ExcelError 哨兵。被 Analytics 和 DataToolkit 引用。
+**Foundation** — 零依赖基础层。提供 InputNormalizer、ElementWiseMapper、OutputWrapper、ExcelEmpty/ExcelError 哨兵，以及 FilterUtils、ArrayOperations、ComparisonUtils、DictOperations 等共享工具。被 Analytics 和 DataToolkit 引用。
 _Avoid_: 基础层、工具层、Utils
 
 **Analytics** — 统计/回归/线性代数/物理化学。依赖 MathNet.Numerics 5.0.0 + Foundation。产出 Analytics.xll。

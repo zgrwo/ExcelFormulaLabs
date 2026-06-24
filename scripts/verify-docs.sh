@@ -24,7 +24,7 @@ grep -q 'RangeExport' skills/excel-dna-project/skill.md && check "skill.md Range
 
 # 4. 架构术语现代性
 grep -q 'MapOver' skills/excel-dna-project/skill.md && check "skill.md MapOver术语" "OK" || check "skill.md MapOver术语" "缺失"
-grep -q 'ElementWiseMapper' docs/user-guide.md && check "user-guide 旧术语ElementWiseMapper" "应改为MapOver" || check "user-guide 术语现代性" "OK"
+grep -q 'ElementWiseMapper' docs/user-guide.md && check "user-guide 内部类名ElementWiseMapper" "用户文档应使用MapOver而非内部类名" || check "user-guide 无内部实现细节" "OK"
 
 # 5. 版本号匹配（CONTEXT.md vs csproj）
 DOC_VER=$(grep -oP 'MathNet\.Numerics\s+\K[0-9.]+' CONTEXT.md 2>/dev/null || echo "?")
