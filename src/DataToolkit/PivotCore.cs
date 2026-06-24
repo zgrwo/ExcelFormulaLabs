@@ -41,7 +41,7 @@ namespace ExcelVbaLibraries.DataToolkit
                 var kv = (keys[r], pivots[c]);
                 result[r + 1, c + 1] = map.TryGetValue(kv, out double v)
                     ? (agg == "AVG" ? v / cnt[kv] : agg == "COUNT" ? cnt[kv] : v)
-                    : 0.0;
+                    : ExcelVbaLibraries.Foundation.ExcelEmpty.Value;
             } }
             return result;
         }

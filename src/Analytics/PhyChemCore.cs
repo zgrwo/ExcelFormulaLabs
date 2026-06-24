@@ -90,7 +90,7 @@ namespace ExcelVbaLibraries.Analytics
             });
 
         private static int ParseCount(string s) =>
-            string.IsNullOrEmpty(s) ? 1 : int.Parse(s);
+            string.IsNullOrEmpty(s) ? 1 : int.TryParse(s, out int n) ? n : 1;
 
         internal static double ConvertTemperature(double v, string from, string to)
         {
