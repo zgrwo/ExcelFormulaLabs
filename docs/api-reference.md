@@ -321,7 +321,7 @@
 | `RANGE.TOHTML` | (data, hdrs, css) | `string` | 导出为 HTML 表格 |
 | `RANGE.TOJSON` | (data, hdrs, pretty) | `string` | 导出为 JSON |
 | `RANGE.TOMD` | (data, hdrs) | `string` | 导出为 Markdown 表格 |
-| `RANGE.TOCSV` | (data, delim, quote) | `string` | 导出为 CSV（自定义分隔符） |
+| `RANGE.TOCSV` | (data, delim, quote) | `string` | 导出为 CSV（自定义分隔符与字段引用） |
 | `RANGE.TOCSVTAB` | (data) | `string` | 导出为 TSV（制表符分隔） |
 | `RANGE.TOCSVSEMI` | (data) | `string` | 导出为分号分隔 CSV |
 | `RANGE.TRANSPOSE` | (data) | `object[,]` | 行列转置 |

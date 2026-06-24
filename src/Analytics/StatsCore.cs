@@ -90,7 +90,7 @@ namespace ExcelVbaLibraries.Analytics
         /// R7 matches Python numpy/scipy default ('linear' interpolation).
         /// Change to R8 (MathNet/Median), R6 (SPSS), R5 (Hydrology), etc. via QuantileDefinition enum.
         /// </summary>
-        internal static QuantileDefinition DefaultQuantileDefinition = QuantileDefinition.R7;
+        internal static readonly QuantileDefinition DefaultQuantileDefinition = QuantileDefinition.R7;
 
         /// <summary>Descriptive summary: [n, mean, stdev, min, q1, median, q3, max, iqr].
         /// Respects <see cref="DefaultQuantileDefinition"/>.</summary>
