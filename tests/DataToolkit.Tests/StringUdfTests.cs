@@ -342,7 +342,7 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void Coal_primary_whitespace() => StringUdf.UDF_STR_COAL("   ", "fallback").Should().Be("   ");
 
         // ══════════════════════════════════════════════════════════════════
-        //  STR.FORMAT  (MapOverMulti<string,string,string>)
+        //  STR.FORMAT  (MapOverMulti<object,string,string>)
         // ══════════════════════════════════════════════════════════════════
         [Fact] public void Fmt_invalid_format() => StringUdf.UDF_STR_FMT("hello", "XYZ").Should().Be("hello");
         [Fact] public void Fmt_empty_value() => StringUdf.UDF_STR_FMT("", "D4").Should().Be("");
@@ -387,11 +387,18 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void Isne_null() => StringUdf.UDF_STR_ISNE(null!).Should().BeNull();
         [Fact] public void Isne_array() { var r=(object[])StringUdf.UDF_STR_ISNE(new object[]{"","hello",null}); ((bool)r[0]).Should().BeTrue(); ((bool)r[1]).Should().BeFalse(); r[2].Should().BeNull(); }
 
-        // STR.FORMAT does not yet support standard numeric format strings; passes through as-is.
-        [Fact] public void Fmt_unsupported_format_passthrough() => StringUdf.UDF_STR_FMT("42", "D4").Should().Be("42");
+        // STR.FORMAT strings ignore numeric-only format specifiers (e.g. "D4" on string → passthrough).
+        [Fact] public void Fmt_string_ignore_d4() => StringUdf.UDF_STR_FMT("42", "D4").Should().Be("42");
         [Fact] public void Fmt_null_value() => StringUdf.UDF_STR_FMT(null!, "D4").Should().Be(ExcelEmpty.Value);
         [Fact] public void Fmt_currency_passthrough() => StringUdf.UDF_STR_FMT("100", "C").Should().Be("100");
         [Fact] public void Fmt_array() { var r=(object[])StringUdf.UDF_STR_FMT(new object[]{"42","100"}, "D4"); ((string)r[0]).Should().Be("42"); ((string)r[1]).Should().Be("100"); }
+        // Numeric format specifiers now work with actual numeric types (double/int)
+        [Fact] public void Fmt_double_N2() => StringUdf.UDF_STR_FMT(123.456, "N2").Should().Be("123.46");
+        [Fact] public void Fmt_double_P0() => StringUdf.UDF_STR_FMT(0.25, "P0").Should().Be("25%");
+        [Fact] public void Fmt_double_C() => ((string)StringUdf.UDF_STR_FMT(1234.5, "C")).Should().Contain("1,234.50");
+        [Fact] public void Fmt_int_D4() => StringUdf.UDF_STR_FMT(42, "D4").Should().Be("0042");
+        [Fact] public void Fmt_composite_format() => StringUdf.UDF_STR_FMT("world", "{0} hello").Should().Be("world hello");
+        [Fact] public void Fmt_double_incompatible_format() => StringUdf.UDF_STR_FMT(42.0, "D4").Should().Be("42");  // D4 is integral-only, falls back to ToString
 
         [Fact] public void Coal_primary_null() => StringUdf.UDF_STR_COAL(null!, "fallback").Should().Be(ExcelEmpty.Value);
         [Fact] public void Coal_both_null() => StringUdf.UDF_STR_COAL(null!, null!).Should().Be(ExcelEmpty.Value);

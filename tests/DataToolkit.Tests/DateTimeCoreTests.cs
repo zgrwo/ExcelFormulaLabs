@@ -153,7 +153,8 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         }
         [Fact] public void DateDiff_unknown_unit()
         {
-            DateTimeCore.DateDiff("HOUR", new DateTime(2025, 1, 1), new DateTime(2025, 1, 10)).Should().Be(0);
+            var act = () => DateTimeCore.DateDiff("HOUR", new DateTime(2025, 1, 1), new DateTime(2025, 1, 10));
+            act.Should().Throw<ArgumentException>().WithMessage("*HOUR*");
         }
 
         [Fact] public void NextWorkday_thursday()

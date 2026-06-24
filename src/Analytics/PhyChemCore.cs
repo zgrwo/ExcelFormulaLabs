@@ -89,8 +89,16 @@ namespace ExcelVbaLibraries.Analytics
                 return c > 1 ? $"{el}{c}" : el;
             });
 
-        private static int ParseCount(string s) =>
-            string.IsNullOrEmpty(s) ? 1 : int.TryParse(s, out int n) ? n : 1;
+        private static int ParseCount(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return 1;
+            // Try int first for the common case; fall back to long for overflow detection
+            if (int.TryParse(s, out int n)) return n;
+            if (long.TryParse(s, out long big))
+                throw new ArgumentException(
+                    $"Subscript '{s}' is too large. The maximum supported subscript is {int.MaxValue}.");
+            return 1; // non-numeric → treat as 1 (e.g. malformed token)
+        }
 
         internal static double ConvertTemperature(double v, string from, string to)
         {

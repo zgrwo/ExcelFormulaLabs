@@ -248,14 +248,14 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void DateDiff_months() => ((long)DateTimeUdf.UDF_DT_DDIFF("M", OA(2024, 1, 1), OA(2024, 6, 1))).Should().Be(5);
         [Fact] public void DateDiff_years() => ((long)DateTimeUdf.UDF_DT_DDIFF("Y", OA(2020, 1, 1), OA(2024, 1, 1))).Should().Be(4);
         [Fact] public void DateDiff_same_date() => ((long)DateTimeUdf.UDF_DT_DDIFF("D", OA(2024, 6, 15), OA(2024, 6, 15))).Should().Be(0);
-        [Fact] public void DateDiff_invalid_unit() => ((long)DateTimeUdf.UDF_DT_DDIFF("INVALID", OA(2024, 1, 1), OA(2024, 1, 10))).Should().Be(0);
+        [Fact] public void DateDiff_invalid_unit() => DateTimeUdf.UDF_DT_DDIFF("INVALID", OA(2024, 1, 1), OA(2024, 1, 10)).Should().Be(ExcelError.Value);
 
         // ══════════════════════════════════════════════════════════════════
         // Edge-case / corrected tests
         // ══════════════════════════════════════════════════════════════════
 
         [Fact] public void UnixTs_epoch() { var ts=(double)DateTimeUdf.UDF_DT_UXTS(OA(1970,1,1)); Math.Abs(ts).Should().BeLessThan(86400); }
-        [Fact] public void DateDiff_null_unit() => ((long)DateTimeUdf.UDF_DT_DDIFF(null!, OA(2024,1,1), OA(2024,1,10))).Should().Be(0);
+        [Fact] public void DateDiff_null_unit() => DateTimeUdf.UDF_DT_DDIFF(null!, OA(2024,1,1), OA(2024,1,10)).Should().Be(ExcelError.Value);
         [Fact] public void AddWkd_zero() => ((double)DateTimeUdf.UDF_DT_AWKD(OA(2024,6,17), 0)).Should().Be(OA(2024,6,17));
     }
 }

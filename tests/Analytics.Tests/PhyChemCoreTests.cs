@@ -1,3 +1,4 @@
+using System;
 using ExcelVbaLibraries.Analytics;
 using FluentAssertions;
 using Xunit;
@@ -21,7 +22,7 @@ namespace ExcelVbaLibraries.Analytics.Tests
         [Fact] public void IdealGasLaw_NaN_if_2_missing() => PhyChemCore.IdealGasLaw(p:1,v:22.4).Should().Be(double.NaN);
         [Fact] public void GasToSTP() => PhyChemCore.GasToSTP(22.4,0,1,"C","atm").Should().BeApproximately(22.4,0.01);
         [Fact] public void MolecularWeight_hydrate() => PhyChemCore.MolecularWeight("CuSO4.5H2O").Should().BeApproximately(249.69, 0.1);
-        [Fact] public void MolecularWeight_overflow_count_does_not_crash() { var v=PhyChemCore.MolecularWeight("C9999999999H2"); v.Should().NotBe(double.NaN); } // overflow→TryParse fallback=1, C*1+H*2≈14
+        [Fact] public void MolecularWeight_overflow_count_throws() { var act = ()=>PhyChemCore.MolecularWeight("C9999999999H2"); act.Should().Throw<ArgumentException>().WithMessage("*9999999999*"); }
         [Fact] public void GasToSTP_no_vUnit() => PhyChemCore.GasToSTP(22.4, 0, 1).Should().BeApproximately(22.4, 0.01);
         [Fact] public void GasToSTP_invalid_unit_returns_NaN() => PhyChemCore.GasToSTP(22.4, 0, 1, "XX").Should().Be(double.NaN);
 

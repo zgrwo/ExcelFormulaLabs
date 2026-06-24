@@ -87,6 +87,35 @@ namespace ExcelVbaLibraries.DataToolkit
         internal static string Base64Encode(string t)=>Convert.ToBase64String(Encoding.UTF8.GetBytes(t));
         internal static string Base64Decode(string t)=>Encoding.UTF8.GetString(Convert.FromBase64String(t));
 
+        /// <summary>
+        /// Format a value using a .NET format string or specifier.
+        /// For numeric/DateTime values, standard format specifiers (e.g. "D4", "P0", "yyyy-MM-dd")
+        /// are applied directly so they work correctly.
+        /// If <paramref name="fmt"/> already contains '{' it is used as a composite format string verbatim;
+        /// otherwise it is wrapped as "{0:fmt}".
+        /// </summary>
+        internal static string FormatValue(object? value, string fmt)
+        {
+            if (string.IsNullOrEmpty(fmt)) return value?.ToString() ?? "";
+            string fs = fmt.Contains('{') ? fmt : $"{{0:{fmt}}}";
+            try
+            {
+                if (value is double d) return string.Format(fs, d);
+                if (value is int i) return string.Format(fs, i);
+                if (value is long l) return string.Format(fs, l);
+                if (value is float f) return string.Format(fs, f);
+                if (value is decimal m) return string.Format(fs, m);
+                if (value is DateTime dt) return string.Format(fs, dt);
+                return string.Format(fs, value);
+            }
+            catch (FormatException)
+            {
+                // Format specifier incompatible with the value's runtime type
+                // (e.g. "D4" applied to a double from Excel). Return the raw value.
+                return value?.ToString() ?? "";
+            }
+        }
+
         internal static string UUID()=>Guid.NewGuid().ToString();
 #if NET8_0_OR_GREATER
         internal static string RandomString(long len=8,string? cs=null)

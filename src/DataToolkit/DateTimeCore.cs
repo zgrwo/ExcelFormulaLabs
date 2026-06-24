@@ -52,6 +52,13 @@ namespace ExcelVbaLibraries.DataToolkit
         internal static long DaysInMonth(long y, long m) => DateTime.DaysInMonth((int)y, (int)m);
         internal static double UnixTimestamp(DateTime d) => (d.ToUniversalTime() - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds;
         internal static DateTime FromUnixTimestamp(double ts) => new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(ts).ToLocalTime();
-        internal static long DateDiff(string u, DateTime d1, DateTime d2) => u.ToUpperInvariant() switch { "D" or "DAY" => (long)(d2 - d1).TotalDays, "M" or "MONTH" => ((d2.Year - d1.Year) * 12 + d2.Month - d1.Month), "Y" or "YEAR" => d2.Year - d1.Year - (d2.Month < d1.Month || (d2.Month == d1.Month && d2.Day < d1.Day) ? 1 : 0), "W" or "WEEK" => (long)(d2 - d1).TotalDays / 7, _ => 0 };
+        internal static long DateDiff(string u, DateTime d1, DateTime d2) => u.ToUpperInvariant() switch
+        {
+            "D" or "DAY" => (long)(d2 - d1).TotalDays,
+            "M" or "MONTH" => (d2.Year - d1.Year) * 12 + d2.Month - d1.Month,
+            "Y" or "YEAR" => d2.Year - d1.Year - (d2.Month < d1.Month || (d2.Month == d1.Month && d2.Day < d1.Day) ? 1 : 0),
+            "W" or "WEEK" => (long)(d2 - d1).TotalDays / 7,
+            _ => throw new ArgumentException($"Unknown date unit '{u}'. Supported units: D (days), M (months), Y (years), W (weeks).")
+        };
     }
 }

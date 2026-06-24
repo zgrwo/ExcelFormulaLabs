@@ -68,14 +68,22 @@ namespace ExcelVbaLibraries.DataToolkit
             for (int r = 0; r < rows; r++)
             {
                 var gk = gCols.Select(c => InputNormalizer.ToString(data[r, c])).ToArray();
-                string gks = string.Join("\x1F", gk); double v = InputNormalizer.ToDouble(data[r, aCol]);
+                string gks = MakeCompoundKey(gk); double v = InputNormalizer.ToDouble(data[r, aCol]);
                 if (double.IsNaN(v)) continue;
                 if (groups.TryGetValue(gks, out var ex)) groups[gks] = agg switch { "SUM" => (ex.val + v, ex.cnt + 1), "MAX" => (Math.Max(ex.val, v), ex.cnt + 1), "MIN" => (Math.Min(ex.val, v), ex.cnt + 1), "COUNT" => (0, ex.cnt + 1), "AVG" => (ex.val + v, ex.cnt + 1), _ => (ex.val + v, ex.cnt + 1) };
                 else { groups[gks] = (v, 1); if (seen.Add(gks)) keyNames.Add(gk); }
             }
             var result = new object[keyNames.Count, nG + 1];
-            for (int i = 0; i < keyNames.Count; i++) { for (int j = 0; j < nG; j++) result[i, j] = keyNames[i][j]; var (val, cnt) = groups[string.Join("\x1F", keyNames[i])]; result[i, nG] = agg == "COUNT" ? cnt : (agg == "AVG" ? val / cnt : val); }
+            for (int i = 0; i < keyNames.Count; i++) { for (int j = 0; j < nG; j++) result[i, j] = keyNames[i][j]; var (val, cnt) = groups[MakeCompoundKey(keyNames[i])]; result[i, nG] = agg == "COUNT" ? cnt : (agg == "AVG" ? val / cnt : val); }
             return result;
+        }
+
+        /// <summary>Build a collision-free compound key from segments using length-prefix encoding.</summary>
+        private static string MakeCompoundKey(object[] parts)
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var p in parts) { var s = InputNormalizer.ToString(p); sb.Append(s.Length); sb.Append(':'); sb.Append(s); }
+            return sb.ToString();
         }
 
         internal static object[,] CrossJoin(object[,] a, object[,] b)
