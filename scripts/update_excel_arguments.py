@@ -105,7 +105,10 @@ for fpath in sorted(ROOT.glob("src/**/*Udf.cs")):
         new_parts = []
         for cp, an in zip(csharp_params, new_names):
             desc = PARAM_DESC.get(an, "The {} argument".format(an.replace("_", " ")))
-            new_parts.append('[ExcelArgument(Name="{}", Description="{}")] {}'.format(an, desc, cp))
+            # Wrap optional params (=null) with [...] in display name
+        is_optional = '=null' in cp or '=null!' in cp
+        display_name = '[{}]'.format(an) if is_optional else an
+        new_parts.append('[ExcelArgument(Name="{}", Description="{}")] {}'.format(display_name, desc, cp))
         old_sig = "(" + raw_params + ")"
         new_sig = "(" + ", ".join(new_parts) + ")"
         updated = updated.replace(old_sig, new_sig, 1)
