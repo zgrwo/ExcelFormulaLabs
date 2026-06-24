@@ -97,6 +97,19 @@ namespace ExcelVbaLibraries.Analytics.Tests
         // Sign: array
         [Fact] public void Sign_array() { var r=(object[])StatsUdf.UDF_STAT_SGN(new object[]{5.0,-2.0,0.0}); r.Should().Equal(1L,-1L,0L); }
 
+        // ── Error path: null/empty/degenerate inputs ──
+        // V-based UDFs: empty/null → NaN (matching scipy convention)
+        [Fact] public void Mean_null() => ((double)StatsUdf.UDF_STAT_MEAN(null!)).Should().Be(double.NaN);
+        [Fact] public void Mean_empty() => ((double)StatsUdf.UDF_STAT_MEAN(new double[0])).Should().Be(double.NaN);
+        [Fact] public void Median_null() => ((double)StatsUdf.UDF_STAT_MED(null!)).Should().Be(double.NaN);
+        [Fact] public void Stdev_null() => ((double)StatsUdf.UDF_STAT_STD(null!)).Should().Be(double.NaN);
+        [Fact] public void Stdev_insufficient_data() => ((double)StatsUdf.UDF_STAT_STD(new double[]{42})).Should().Be(double.NaN);
+        [Fact] public void Min_null() => ((double)StatsUdf.UDF_STAT_MIN(null!)).Should().Be(double.NaN);
+        [Fact] public void Variance_null() => ((double)StatsUdf.UDF_STAT_VAR(null!)).Should().Be(double.NaN);
+
+        // ZScore: constant data → #VALUE!
+        [Fact] public void ZScore_constant_returns_error() => StatsUdf.UDF_STAT_ZS(new double[]{5,5,5}).Should().Be(ExcelError.Value);
+
         // Multi-arg edge cases: V() passes directly to Core (NOT MapOverMulti). Mismatch/null -> NaN.
         [Fact] public void Cvp_mismatch() => ((double)StatsUdf.UDF_STAT_CVP(X, new double[]{1.0,2})).Should().Be(double.NaN);
         [Fact] public void Cv_mismatch() => ((double)StatsUdf.UDF_STAT_CV(X, new double[]{1.0,2})).Should().Be(double.NaN);
