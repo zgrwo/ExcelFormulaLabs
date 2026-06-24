@@ -70,5 +70,28 @@ namespace ExcelVbaLibraries.Analytics.Tests
             c[1].Should().BeApproximately(3.0, 1e-8);
         }
         [Fact] public void Rsq_is_one_for_perfect_fit() => ((double)RegressionUdf.UDF_REGRESS_RSQ(X, y)).Should().BeApproximately(1.0, 1e-10);
+
+        // ── P0 guard UDF-level: WrapError → #VALUE! ──
+        [Fact] public void OLS_constant_y_returns_error()
+        {
+            var constY = new double[] { 5, 5, 5 };
+            RegressionUdf.UDF_REGRESS_OLS(X, constY).Should().Be(ExcelError.Value);
+        }
+        [Fact] public void Ridge_constant_y_returns_error()
+        {
+            var constY = new double[] { 5, 5, 5 };
+            RegressionUdf.UDF_REGRESS_RIDGE(X, constY, 0.1).Should().Be(ExcelError.Value);
+        }
+        [Fact] public void Anova1_single_group_returns_error()
+        {
+            RegressionUdf.UDF_REGRESS_ANOVA1(new double[,] { { 1 }, { 2 }, { 3 } })
+                .Should().Be(ExcelError.Value);
+        }
+        [Fact] public void FactorImportance_single_row_returns_error()
+        {
+            var singleX = new double[,] { { 1, 5 } };
+            var singleY = new double[] { 7 };
+            RegressionUdf.UDF_REGRESS_FACTORIMP(singleX, singleY).Should().Be(ExcelError.Value);
+        }
     }
 }

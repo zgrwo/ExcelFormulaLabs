@@ -4,6 +4,9 @@ using FluentAssertions;
 using Xunit;
 namespace ExcelVbaLibraries.DataToolkit.Tests
 {
+    // In the Sandbox collection with FileSystemCoreTests because several UDFs
+    // (FS.DELDIR, FS.FSIZE, etc.) call Core methods that check SandboxRoot.
+    // Serialization prevents parallel-sandbox-mutation race conditions.
     [Collection("Sandbox")]
     public class FileSystemUdfTests
     {
