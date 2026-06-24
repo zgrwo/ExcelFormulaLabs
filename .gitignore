@@ -9,3 +9,4 @@ obj/
 TestResults/
 src/**/Analytics-AddIn.dna
 src/**/DataToolkit-AddIn.dna
+__pycache__/
