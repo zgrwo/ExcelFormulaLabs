@@ -97,8 +97,12 @@ namespace ExcelVbaLibraries.Foundation
         {
             if (value is string s) return s;
             if (value is double d) return d.ToString("G17", System.Globalization.CultureInfo.InvariantCulture);
+            if (value is float f) return ((double)f).ToString("G17", System.Globalization.CultureInfo.InvariantCulture);
+            if (value is decimal m) return ((double)m).ToString("G17", System.Globalization.CultureInfo.InvariantCulture);
             if (value is int i) return i.ToString(System.Globalization.CultureInfo.InvariantCulture);
             if (value is long l) return l.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (value is short s16) return s16.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (value is byte b8) return b8.ToString(System.Globalization.CultureInfo.InvariantCulture);
             if (value is DateTime dt) return dt.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
             if (value is bool b) return b ? "TRUE" : "FALSE";
             return Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? "";

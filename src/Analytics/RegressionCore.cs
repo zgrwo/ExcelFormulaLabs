@@ -67,13 +67,17 @@ namespace ExcelVbaLibraries.Analytics
         }
 
         /// <summary>
-        /// Weighted Least Squares regression. Transforms X and y by sqrt(w)
-        /// then delegates to FitOLS. For heteroskedastic data.
+        /// Weighted Least Squares regression. Minimises Σ wᵢ(yᵢ - xᵢβ)².
+        /// Computes coefficients via sqrt(w)-transformed OLS (standard approach),
+        /// then reports residuals and fitted values on the original (unweighted)
+        /// scale so they are directly comparable to the input y.
         /// Used by REGRESS.WLS.
         /// </summary>
         /// <returns>
         /// Same keys as FitOLS: coefficients, sse, r_squared, adj_r_squared,
         /// residuals, fitted_values, standard_errors, t_stats, p_values, n, df.
+        /// SSE and R² are on the weighted scale (matching Python statsmodels);
+        /// residuals and fitted_values are on the original scale.
         /// </returns>
         internal static Dictionary<string, object> FitWLS(double[,] X, double[] y, double[] w)
         {
@@ -89,7 +93,24 @@ namespace ExcelVbaLibraries.Analytics
                 for (int j = 0; j < p; j++) Xw[i, j] = X[i, j] * sw;
                 yw[i] = y[i] * sw;
             }
-            return FitOLS(Xw, yw);
+            // Coefficients, SE, t-stats, p-values are correct from the weighted fit.
+            // SSE and R² are on the weighted scale (consistent with Python statsmodels).
+            var result = FitOLS(Xw, yw);
+            // Override residuals and fitted_values to ORIGINAL scale so they are
+            // comparable to the user's input y (matching Python statsmodels behaviour).
+            var beta = (double[])result["coefficients"];
+            double[] fittedOrig = new double[n];
+            double[] residualsOrig = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                double fit = 0;
+                for (int j = 0; j < p; j++) fit += X[i, j] * beta[j];
+                fittedOrig[i] = fit;
+                residualsOrig[i] = y[i] - fit;
+            }
+            result["fitted_values"] = fittedOrig;
+            result["residuals"] = residualsOrig;
+            return result;
         }
 
         /// <summary>

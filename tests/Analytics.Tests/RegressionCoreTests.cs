@@ -18,6 +18,20 @@ namespace ExcelVbaLibraries.Analytics.Tests
         [Fact] public void FitWLS_equal_weights() { var o=RegressionCore.FitOLS(X,y); var w=RegressionCore.FitWLS(X,y,new[]{1.0,1,1}); var oc=(double[])o["coefficients"]; var wc=(double[])w["coefficients"]; oc[0].Should().BeApproximately(wc[0],1e-10); oc[1].Should().BeApproximately(wc[1],1e-10); }
         // WLS with unequal weights: verify keys exist and coefficients are finite
         [Fact] public void FitWLS_unequal_weights() { var w=RegressionCore.FitWLS(X,y,new[]{1.0,5,1}); w.Should().ContainKeys("coefficients","sse","r_squared"); var c=(double[])w["coefficients"]; c[0].Should().NotBe(double.NaN); c[1].Should().NotBe(double.NaN); }
+        // WLS residuals must be on the ORIGINAL scale (comparable to input y), not the weighted scale.
+        // Verify: fitted_values + residuals = original y (element-wise).
+        [Fact] public void FitWLS_residuals_on_original_scale()
+        {
+            var Xwls = new double[,] { { 1, 1 }, { 1, 2 }, { 1, 3 }, { 1, 4 }, { 1, 5 } };
+            var ywls = new double[] { 2.1, 3.8, 5.2, 7.1, 8.9 };
+            var wwls = new double[] { 1.0, 2.0, 1.0, 0.5, 3.0 };
+            var r = RegressionCore.FitWLS(Xwls, ywls, wwls);
+            var fitted = (double[])r["fitted_values"];
+            var resid = (double[])r["residuals"];
+            // y = fitted + residual (element-wise, on original scale)
+            for (int i = 0; i < ywls.Length; i++)
+                (fitted[i] + resid[i]).Should().BeApproximately(ywls[i], 1e-10);
+        }
         // FactorImportance returns |t-stat| sorted indices; test with 2 meaningful features
         private static readonly double[,] Xf = {{1,1,3},{1,2,1},{1,3,4},{1,4,1},{1,5,6}};
         private static readonly double[] yf = {4,5,10,11,16};

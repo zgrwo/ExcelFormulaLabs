@@ -433,6 +433,22 @@ namespace ExcelVbaLibraries.Analytics.Tests
         [Fact] public void Spearman_length_mismatch()
             => double.IsNaN(StatsCore.Spearman(Two, new[] { 1.0 })).Should().BeTrue();
 
+        // =====================================================================
+        // TStatPValue DEFENCE-IN-DEPTH (H3: guard degenerate df/t before BetaRegularized)
+        // =====================================================================
+
+        [Fact] public void TStatPValue_df_zero_returns_NaN()
+            => double.IsNaN(StatsCore.TStatPValue(1.0, 0)).Should().BeTrue();
+
+        [Fact] public void TStatPValue_df_negative_returns_NaN()
+            => double.IsNaN(StatsCore.TStatPValue(1.0, -1)).Should().BeTrue();
+
+        [Fact] public void TStatPValue_t_NaN_returns_NaN()
+            => double.IsNaN(StatsCore.TStatPValue(double.NaN, 5)).Should().BeTrue();
+
+        [Fact] public void TStatPValue_t_Infinity_returns_NaN()
+            => double.IsNaN(StatsCore.TStatPValue(double.PositiveInfinity, 5)).Should().BeTrue();
+
         // Sign — NaN/Inf explicit guard (防错原则1: Core 层显式 guard，不依赖 Math.Sign 抛异常)
         [Fact] public void Sign_positive() => StatsCore.Sign(3.14).Should().Be(1);
         [Fact] public void Sign_negative() => StatsCore.Sign(-2.5).Should().Be(-1);

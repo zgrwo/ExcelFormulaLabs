@@ -1,6 +1,7 @@
 using System;
 using ExcelVbaLibraries.DataToolkit;
 using FluentAssertions;
+#pragma warning disable CS8625 // null literal for core null-input testing
 using Xunit;
 
 namespace ExcelVbaLibraries.DataToolkit.Tests

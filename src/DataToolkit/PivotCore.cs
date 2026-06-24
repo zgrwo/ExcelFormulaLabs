@@ -28,7 +28,7 @@ namespace ExcelVbaLibraries.DataToolkit
                 if (map.TryGetValue(kv, out double ex))
                 {
                     cnt[kv] = cnt[kv] + 1;
-                    map[kv] = agg switch { "MAX" => Math.Max(ex, v), "MIN" => Math.Min(ex, v), _ => ex + v };
+                    map[kv] = agg switch { "MAX" => Math.Max(ex, v), "MIN" => Math.Min(ex, v), "SUM" or "AVG" or "COUNT" => ex + v, _ => throw new ArgumentException($"Unknown aggregation '{agg}'. Supported: SUM, AVG, COUNT, MAX, MIN.") };
                 }
                 else { map[kv] = v; cnt[kv] = 1; }
             }
@@ -70,7 +70,7 @@ namespace ExcelVbaLibraries.DataToolkit
                 var gk = gCols.Select(c => InputNormalizer.ToString(data[r, c])).ToArray();
                 string gks = MakeCompoundKey(gk); double v = InputNormalizer.ToDouble(data[r, aCol]);
                 if (double.IsNaN(v)) continue;
-                if (groups.TryGetValue(gks, out var ex)) groups[gks] = agg switch { "SUM" => (ex.val + v, ex.cnt + 1), "MAX" => (Math.Max(ex.val, v), ex.cnt + 1), "MIN" => (Math.Min(ex.val, v), ex.cnt + 1), "COUNT" => (0, ex.cnt + 1), "AVG" => (ex.val + v, ex.cnt + 1), _ => (ex.val + v, ex.cnt + 1) };
+                if (groups.TryGetValue(gks, out var ex)) groups[gks] = agg switch { "SUM" => (ex.val + v, ex.cnt + 1), "MAX" => (Math.Max(ex.val, v), ex.cnt + 1), "MIN" => (Math.Min(ex.val, v), ex.cnt + 1), "COUNT" => (0, ex.cnt + 1), "AVG" => (ex.val + v, ex.cnt + 1), _ => throw new ArgumentException($"Unknown aggregation '{agg}'. Supported: SUM, AVG, COUNT, MAX, MIN.") };
                 else { groups[gks] = (v, 1); if (seen.Add(gks)) keyNames.Add(gk); }
             }
             var result = new object[keyNames.Count, nG + 1];

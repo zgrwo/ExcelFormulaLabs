@@ -203,11 +203,11 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
             var act = () => PivotCore.Unpivot(d, new[] { 0 }, new[] { 5 });
             act.Should().Throw<ArgumentException>();
         }
-        [Fact] public void Pivot_unknown_agg_defaults_to_sum()
+        [Fact] public void Pivot_unknown_agg_throws()
         {
             var d = new object[,] { { "K", "P", "V" }, { "A", "X", 10 }, { "A", "X", 5 } };
-            var r = PivotCore.Pivot(d, 0, 1, 2, "UNKNOWN");
-            r[1, 1].Should().Be(15.0);  // unknown → SUM
+            var act = () => PivotCore.Pivot(d, 0, 1, 2, "UNKNOWN");
+            act.Should().Throw<ArgumentException>().WithMessage("*Unknown aggregation*");
         }
         [Fact] public void Pivot_AVG_aggregation()
         {
@@ -333,11 +333,11 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
             r[1, 1].Should().Be(30.0);
         }
 
-        [Fact] public void GroupBy_unknown_agg_defaults_to_sum()
+        [Fact] public void GroupBy_unknown_agg_throws()
         {
             var d = new object[,] { { "G", "V" }, { "A", 10 }, { "A", 20 } };
-            var r = PivotCore.GroupBy(d, new[] { 0 }, 1, "UNKNOWN");
-            r[0, 1].Should().Be(30.0);  // defaults to SUM
+            var act = () => PivotCore.GroupBy(d, new[] { 0 }, 1, "UNKNOWN");
+            act.Should().Throw<ArgumentException>().WithMessage("*Unknown aggregation*");
         }
 
         [Fact] public void GroupBy_multiple_group_columns()

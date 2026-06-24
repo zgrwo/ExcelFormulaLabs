@@ -186,9 +186,13 @@ namespace ExcelVbaLibraries.Analytics
             return d.Select(x => (x - m) / sd).ToArray();
         }
 
-        /// <summary>Two-tailed p-value from t-statistic using Beta regularised.</summary>
+        /// <summary>Two-tailed p-value from t-statistic using Beta regularised.
+        /// Returns NaN for degenerate inputs (df ≤ 0, NaN, ±∞) as a defence-in-depth
+        /// measure — current callers already guard these, but future callers may not.</summary>
         internal static double TStatPValue(double t, double df)
         {
+            if (df <= 0 || double.IsNaN(t) || double.IsNaN(df) || double.IsInfinity(t) || double.IsInfinity(df))
+                return double.NaN;
             double x = df / (df + t * t);
             return MathNet.Numerics.SpecialFunctions.BetaRegularized(df / 2.0, 0.5, x);
         }
