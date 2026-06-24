@@ -6,6 +6,44 @@ disable-model-invocation: true
 
 # SKILL.md
 
+## 项目结构
+
+```
+src/
+├── Foundation/         共享基础设施（InputNormalizer, ElementWiseMapper, OutputWrapper, FilterUtils, ArrayOperations, ComparisonUtils, DictOperations, ExcelEmpty, ExcelError）
+├── Analytics/          分析引擎（Stats, Linalg, Regression, PhyChem）+ Excel-DNA 加载项
+└── DataToolkit/        数据工具箱（String, DateTime, Regex, JSON/XML, Pivot, SQL, FileSystem, Array, DictSet）+ 加载项
+
+tests/
+├── Foundation.Tests/   ArrayOperations, ComparisonUtils, DictOperations, ElementWiseMapper, FilterUtils, InputNormalizer, OutputWrapper
+├── Analytics.Tests/    Stats, Linalg, Regression, PhyChem 的 Core + UDF 双重测试 + Python 交叉验证
+└── DataToolkit.Tests/  DataToolkit 的 Core + UDF 双重测试 + PythonCrossValidationTests
+
+docs/
+├── api-reference.md    214 UDF 完整签名与说明（数字的唯一来源）
+└── user-guide.md       安装与使用指南
+CONTEXT.md              领域术语表（项目根目录）
+```
+
+## 全量测试
+
+三轮命令，缺一不可：
+
+```bash
+# ① 全量单元测试（含内联 Python 对照，除豁免外期望值均源自 scipy/numpy）
+dotnet test
+
+# ② Excel 数据源交叉验证 — 从 Cross_Validation_vs_Python.xlsx 加载真实数据，
+#    与 Python scipy/numpy 输出逐项对照（方法名含 CrossVal_ + PythonCrossValidationTests）
+dotnet test --filter "CrossVal|PythonCrossValidation"
+
+# ③ Debug + Release 双配置 DLL/XLL 打包构建
+dotnet build -c Debug && dotnet build -c Release
+```
+
+数值精度 1e-10。豁免：FS.*（POSIX 差异）、RANGE.*（无标准输出格式），标记 `// No Python ref:`。
+数据源：`tests/TestData/Cross_Validation_vs_Python.xlsx`。
+
 ## Build & Test
 
 ```bash
