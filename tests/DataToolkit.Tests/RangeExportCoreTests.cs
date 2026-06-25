@@ -122,8 +122,8 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         public void ToJson_no_header_uses_colN_keys()
         {
             var json = RangeExportCore.RangeToJson(BasicData, hasHeader: false);
-            json.Should().Contain("\"col0\"");
-            json.Should().Contain("\"col1\"");
+            json.Should().Contain("\"Col1\"");
+            json.Should().Contain("\"Col2\"");
             // All 3 rows are data when hasHeader=false, so "Name" IS a data value
             json.Should().Contain("\"Name\"");       // first row cell 0 as data
         }
