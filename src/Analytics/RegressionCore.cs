@@ -217,7 +217,12 @@ namespace ExcelVbaLibraries.Analytics
                 mean /= n;
                 for (int i = 0; i < n; i++) { double d = X[i, j] - mean; sd += d * d; }
                 sd = Math.Sqrt(sd / (n - 1));
-                if (sd < 1e-12) sd = 1;
+                if (sd < 1e-12)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[FactorImportance] Column {j} has zero variance (constant); ranked least important.");
+                    sd = 1;
+                }
                 for (int i = 0; i < n; i++) Xs[i, j] = (X[i, j] - mean) / sd;
             }
             var result = FitOLS(Xs, y);

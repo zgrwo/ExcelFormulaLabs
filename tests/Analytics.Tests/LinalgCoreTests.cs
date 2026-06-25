@@ -170,5 +170,103 @@ namespace ExcelVbaLibraries.Analytics.Tests
             Ap.GetLength(0).Should().Be(3);
             Ap.GetLength(1).Should().Be(2);
         }
+
+        // =====================================================================
+        // DECOMPOSITION CACHE TESTS — verify cached accessors match direct
+        // =====================================================================
+
+        [Fact] public void CachedSvdU_equals_direct_Svd_U()
+        {
+            var cached = LinalgCore.SvdU(B);
+            var direct = LinalgCore.Svd(B).U;
+            DiffFro(cached, direct).Should().BeApproximately(0.0, 1e-10);
+        }
+        [Fact] public void CachedSvdS_equals_direct_Svd_S()
+        {
+            var cached = LinalgCore.SvdS(B);
+            var direct = LinalgCore.Svd(B).S;
+            for (int i = 0; i < direct.Length; i++)
+                cached[i].Should().BeApproximately(direct[i], 1e-10);
+        }
+        [Fact] public void CachedSvdVt_equals_direct_Svd_Vt()
+        {
+            var cached = LinalgCore.SvdVt(B);
+            var direct = LinalgCore.Svd(B).Vt;
+            DiffFro(cached, direct).Should().BeApproximately(0.0, 1e-10);
+        }
+        [Fact] public void CachedQrQ_equals_direct_Qr_Q()
+        {
+            var cached = LinalgCore.QrQ(B);
+            var direct = LinalgCore.Qr(B).Q;
+            DiffFro(cached, direct).Should().BeApproximately(0.0, 1e-10);
+        }
+        [Fact] public void CachedQrR_equals_direct_Qr_R()
+        {
+            var cached = LinalgCore.QrR(B);
+            var direct = LinalgCore.Qr(B).R;
+            DiffFro(cached, direct).Should().BeApproximately(0.0, 1e-10);
+        }
+        [Fact] public void CachedLuL_equals_direct_Lu_L()
+        {
+            var cached = LinalgCore.LuL(B);
+            var direct = LinalgCore.Lu(B).L;
+            DiffFro(cached, direct).Should().BeApproximately(0.0, 1e-10);
+        }
+        [Fact] public void CachedLuU_equals_direct_Lu_U()
+        {
+            var cached = LinalgCore.LuU(B);
+            var direct = LinalgCore.Lu(B).U;
+            DiffFro(cached, direct).Should().BeApproximately(0.0, 1e-10);
+        }
+        [Fact] public void CachedLuP_equals_direct_Lu_P()
+        {
+            var cached = LinalgCore.LuP(B);
+            var direct = LinalgCore.Lu(B).P;
+            DiffFro(cached, direct).Should().BeApproximately(0.0, 1e-10);
+        }
+
+        // ── LRU eviction: 9 matrices → oldest evicted, not all cleared ──
+        [Fact] public void Cache_evicts_oldest_not_all()
+        {
+            var mats = new double[9][,];
+            for (int k = 0; k < 9; k++)
+                mats[k] = new double[,] { { 1.0 + k * 1e-6, 2.0 }, { 3.0, 4.0 } };
+
+            // Fill cache with mats 0-7 (8 entries)
+            for (int k = 0; k < 8; k++) LinalgCore.SvdU(mats[k]);
+
+            // Touch mat 0 → moves to end of LRU
+            LinalgCore.SvdU(mats[0]);
+
+            // Request mat 8 → evicts mat 1 (oldest after touch), not mat 0
+            LinalgCore.SvdU(mats[8]);
+
+            // mat 0 should still be cached (immediate hit, not recomputed)
+            var r0 = LinalgCore.SvdU(mats[0]);
+            r0[0, 0].Should().BeApproximately(
+                LinalgCore.Svd(mats[0]).U[0, 0], 1e-10);
+        }
+
+        // ── EnsureSymmetric NaN/Infinity rejection ──
+        [Fact] public void Eigenvalues_NaN_matrix_throws()
+        {
+            var m = new double[,] { { double.NaN, 1 }, { 1, 1 } };
+            var act = () => LinalgCore.Eigenvalues(m);
+            act.Should().Throw<ArgumentException>().WithMessage("*NaN*");
+        }
+
+        [Fact] public void Eigenvalues_Infinity_matrix_throws()
+        {
+            var m = new double[,] { { 1.0, 1 }, { 1, double.PositiveInfinity } };
+            var act = () => LinalgCore.Eigenvalues(m);
+            act.Should().Throw<ArgumentException>().WithMessage("*Infinity*");
+        }
+
+        [Fact] public void Eigen_NaN_matrix_throws()
+        {
+            var m = new double[,] { { double.NaN, 2 }, { 2, 1 } };
+            var act = () => LinalgCore.Eigen(m);
+            act.Should().Throw<ArgumentException>().WithMessage("*NaN*");
+        }
     }
 }

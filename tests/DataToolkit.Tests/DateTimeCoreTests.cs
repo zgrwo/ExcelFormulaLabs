@@ -186,5 +186,25 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         {
             DateTimeCore.Semester(new DateTime(2024, 6, 30)).Should().Be(1);
         }
+
+        // =====================================================================
+        // AssertValidDate — MinValue rejection on ALL date methods
+        // =====================================================================
+        private static void AssertMinValueThrows(Action act)
+            => act.Should().Throw<ArgumentException>().WithMessage("*Invalid date*");
+
+        [Fact] public void IsoWeekNum_MinValue_throws() => AssertMinValueThrows(() => DateTimeCore.IsoWeekNum(DateTime.MinValue));
+        [Fact] public void IsoYear_MinValue_throws() => AssertMinValueThrows(() => DateTimeCore.IsoYear(DateTime.MinValue));
+        [Fact] public void Weekday_MinValue_throws() => AssertMinValueThrows(() => DateTimeCore.Weekday(DateTime.MinValue));
+        [Fact] public void WeekdayISO_MinValue_throws() => AssertMinValueThrows(() => DateTimeCore.WeekdayISO(DateTime.MinValue));
+        [Fact] public void WeekdayName_MinValue_throws() => AssertMinValueThrows(() => DateTimeCore.WeekdayName(DateTime.MinValue));
+        [Fact] public void IsWeekend_MinValue_throws() => AssertMinValueThrows(() => DateTimeCore.IsWeekend(DateTime.MinValue));
+        [Fact] public void Quarter_MinValue_throws() => AssertMinValueThrows(() => DateTimeCore.Quarter(DateTime.MinValue));
+        [Fact] public void Semester_MinValue_throws() => AssertMinValueThrows(() => DateTimeCore.Semester(DateTime.MinValue));
+        [Fact] public void DayOfYear_MinValue_throws() => AssertMinValueThrows(() => DateTimeCore.DayOfYear(DateTime.MinValue));
+        [Fact] public void UnixTimestamp_MinValue_throws() => AssertMinValueThrows(() => DateTimeCore.UnixTimestamp(DateTime.MinValue));
+        // Regression: methods that already had guards before this change
+        [Fact] public void StartOfWeek_MinValue_throws() => AssertMinValueThrows(() => DateTimeCore.StartOfWeek(DateTime.MinValue));
+        [Fact] public void EndOfMonth_MinValue_throws() => AssertMinValueThrows(() => DateTimeCore.EndOfMonth(DateTime.MinValue));
     }
 }

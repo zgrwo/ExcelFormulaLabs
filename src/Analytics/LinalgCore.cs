@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Factorization;
@@ -12,6 +13,72 @@ namespace ExcelVbaLibraries.Analytics
     /// </summary>
     internal static class LinalgCore
     {
+        /// <summary>
+        /// Lightweight decomposition cache. Avoids recomputing SVD/QR/LU
+        /// when individual matrix accessors (SVD_U, SVD_S, SVD_VT, etc.)
+        /// are called consecutively with the same input in Excel.
+        /// Thread-safe; max 8 entries with LRU eviction.
+        /// </summary>
+        private static class DecompCache
+        {
+            private static readonly Dictionary<string, object> Store = new();
+            private static readonly List<string> LruOrder = new(); // most-recently-used at end
+            private static readonly object Lock = new();
+            private const int MaxEntries = 8;
+
+            internal static T GetOrAdd<T>(string key, Func<T> factory)
+            {
+                lock (Lock)
+                {
+                    if (Store.TryGetValue(key, out var existing))
+                    {
+                        // Touch: move to end of LRU list
+                        LruOrder.Remove(key);
+                        LruOrder.Add(key);
+                        return (T)existing;
+                    }
+
+                    if (Store.Count >= MaxEntries)
+                    {
+                        // Evict least-recently-used single entry
+                        var oldest = LruOrder[0];
+                        Store.Remove(oldest);
+                        LruOrder.RemoveAt(0);
+                    }
+
+                    var result = factory();
+                    Store[key] = result!;
+                    LruOrder.Add(key);
+                    return result;
+                }
+            }
+
+            /// <summary>Content-based hash of a 2D double array.
+            /// Hashes every element for correctness — the decomposition cost
+            /// (SVD/LU/QR) dominates by orders of magnitude, so full hashing
+            /// has negligible overhead.</summary>
+            internal static string MatrixHash(double[,] m)
+            {
+                int rows = m.GetLength(0), cols = m.GetLength(1);
+                unchecked
+                {
+                    int hash = 17;
+                    hash = hash * 31 + rows;
+                    hash = hash * 31 + cols;
+                    for (int r = 0; r < rows; r++)
+                    {
+                        for (int c = 0; c < cols; c++)
+                        {
+                            long bits = BitConverter.DoubleToInt64Bits(m[r, c]);
+                            hash = hash * 31 + (int)(bits ^ (bits >> 32));
+                        }
+                    }
+                    // Append dimensions to disambiguate same-hash different-shape matrices
+                    return $"{hash:X8}_{rows}x{cols}";
+                }
+            }
+        }
+
         internal static (double[,] U, double[] S, double[,] Vt) Svd(double[,] m)
         {
             var A = Matrix<double>.Build.DenseOfArray(m);
@@ -110,11 +177,25 @@ namespace ExcelVbaLibraries.Analytics
             if (n != m.GetLength(1))
                 throw new ArgumentException($"Eigenvalue decomposition requires a square matrix (got {n}×{m.GetLength(1)}).");
             for (int i = 0; i < n; i++)
+            {
+                // Check diagonal element for NaN/Inf (off-diagonal checked in inner loop)
+                if (double.IsNaN(m[i, i]) || double.IsInfinity(m[i, i]))
+                    throw new ArgumentException(
+                        $"Matrix contains NaN or Infinity on diagonal at [{i},{i}]. " +
+                        "Eigenvalue decomposition requires finite values.");
                 for (int j = i + 1; j < n; j++)
+                {
+                    if (double.IsNaN(m[i, j]) || double.IsInfinity(m[i, j]) ||
+                        double.IsNaN(m[j, i]) || double.IsInfinity(m[j, i]))
+                        throw new ArgumentException(
+                            $"Matrix contains NaN or Infinity at [{i},{j}] or [{j},{i}]. " +
+                            "Eigenvalue decomposition requires finite values.");
                     if (Math.Abs(m[i, j] - m[j, i]) > 1e-8)
                         throw new ArgumentException(
                             $"Matrix is not symmetric: |m[{i},{j}] − m[{j},{i}]| = {Math.Abs(m[i, j] - m[j, i]):E2} > 1e-8. " +
                             "Eigenvalue decomposition (Evd) requires a symmetric matrix.");
+                }
+            }
         }
 
         internal static double ConditionNumber(double[,] m) =>
@@ -144,5 +225,58 @@ namespace ExcelVbaLibraries.Analytics
 
         internal static double Trace(double[,] m) =>
             Matrix<double>.Build.DenseOfArray(m).Trace();
+
+        // ── Cached decomposition accessors ──────────────────────────
+        // Each returns one component of a decomposition. The full result
+        // is cached on first access so consecutive calls (e.g. SVD_U +
+        // SVD_S + SVD_VT in Excel) only compute the decomposition once.
+
+        internal static double[,] SvdU(double[,] m)
+        {
+            var key = DecompCache.MatrixHash(m);
+            return DecompCache.GetOrAdd("svd:" + key, () => Svd(m)).U;
+        }
+
+        internal static double[] SvdS(double[,] m)
+        {
+            var key = DecompCache.MatrixHash(m);
+            return DecompCache.GetOrAdd("svd:" + key, () => Svd(m)).S;
+        }
+
+        internal static double[,] SvdVt(double[,] m)
+        {
+            var key = DecompCache.MatrixHash(m);
+            return DecompCache.GetOrAdd("svd:" + key, () => Svd(m)).Vt;
+        }
+
+        internal static double[,] QrQ(double[,] m)
+        {
+            var key = DecompCache.MatrixHash(m);
+            return DecompCache.GetOrAdd("qr:" + key, () => Qr(m)).Q;
+        }
+
+        internal static double[,] QrR(double[,] m)
+        {
+            var key = DecompCache.MatrixHash(m);
+            return DecompCache.GetOrAdd("qr:" + key, () => Qr(m)).R;
+        }
+
+        internal static double[,] LuL(double[,] m)
+        {
+            var key = DecompCache.MatrixHash(m);
+            return DecompCache.GetOrAdd("lu:" + key, () => Lu(m)).L;
+        }
+
+        internal static double[,] LuU(double[,] m)
+        {
+            var key = DecompCache.MatrixHash(m);
+            return DecompCache.GetOrAdd("lu:" + key, () => Lu(m)).U;
+        }
+
+        internal static double[,] LuP(double[,] m)
+        {
+            var key = DecompCache.MatrixHash(m);
+            return DecompCache.GetOrAdd("lu:" + key, () => Lu(m)).P;
+        }
     }
 }

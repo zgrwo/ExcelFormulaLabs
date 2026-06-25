@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
 using ExcelVbaLibraries.Foundation;
@@ -65,13 +67,28 @@ namespace ExcelVbaLibraries.DataToolkit
         { foreach(var s in p.Split('.')){int b=s.IndexOf('[');string k=b>=0?s.Substring(0,b):s; if(!string.IsNullOrEmpty(k)&&e.ValueKind==JsonValueKind.Object){ if(e.TryGetProperty(k,out JsonElement c))e=c;else return null; } if(b>=0&&e.ValueKind==JsonValueKind.Array){ if(int.TryParse(s.Substring(b+1,s.Length-b-2),out int ix)&&ix<e.GetArrayLength())e=e[ix];else return null; } } return Elm(e); }
 
         // ── XML ────────────────────────────────────────────────────────────
+
+        /// <summary>Secure XmlReader settings: no DTD, no external entities.</summary>
+        private static readonly XmlReaderSettings SecureXmlSettings = new()
+        {
+            DtdProcessing = DtdProcessing.Prohibit,
+            XmlResolver = null,
+            MaxCharactersFromEntities = 0,
+        };
+
+        private static XDocument ParseXmlSafe(string xml)
+        {
+            using var reader = XmlReader.Create(new StringReader(xml), SecureXmlSettings);
+            return XDocument.Load(reader);
+        }
+
         internal static string[] XmlXPath(string xml, string xpath)
-        { try{var d=XDocument.Parse(xml);return d.XPathSelectElements(xpath).Select(e=>e.Value).ToArray();}catch(Exception ex) when(ex is not OutOfMemoryException and not StackOverflowException){return Array.Empty<string>();} }
+        { try{var d=ParseXmlSafe(xml);return d.XPathSelectElements(xpath).Select(e=>e.Value).ToArray();}catch(Exception ex) when(ex is not OutOfMemoryException and not StackOverflowException){return Array.Empty<string>();} }
 
         internal static object[,]? XmlToTable(string xml, string? rowPath=null)
-        { try{var d=XDocument.Parse(xml);var rows=rowPath!=null?d.XPathSelectElements(rowPath):d.Root?.Elements()??Enumerable.Empty<XElement>();var rl=rows.ToList();if(rl.Count==0)return null;var cn=rl.SelectMany(r=>r.Elements()).Select(e=>e.Name.LocalName).Distinct().ToArray();var rt=new object[rl.Count+1,cn.Length];for(int c=0;c<cn.Length;c++)rt[0,c]=cn[c];for(int i=0;i<rl.Count;i++){var row=rl[i];for(int c=0;c<cn.Length;c++){var el=row.Element(cn[c]);rt[i+1,c]=el!=null?(object?)el.Value??ExcelEmpty.Value:ExcelEmpty.Value;}}return rt;}catch(Exception ex) when(ex is not OutOfMemoryException and not StackOverflowException){return null;} }
+        { try{var d=ParseXmlSafe(xml);var rows=rowPath!=null?d.XPathSelectElements(rowPath):d.Root?.Elements()??Enumerable.Empty<XElement>();var rl=rows.ToList();if(rl.Count==0)return null;var cn=rl.SelectMany(r=>r.Elements()).Select(e=>e.Name.LocalName).Distinct().ToArray();var rt=new object[rl.Count+1,cn.Length];for(int c=0;c<cn.Length;c++)rt[0,c]=cn[c];for(int i=0;i<rl.Count;i++){var row=rl[i];for(int c=0;c<cn.Length;c++){var el=row.Element(cn[c]);rt[i+1,c]=el!=null?(object?)el.Value??ExcelEmpty.Value:ExcelEmpty.Value;}}return rt;}catch(Exception ex) when(ex is not OutOfMemoryException and not StackOverflowException){return null;} }
 
         internal static bool XmlValidate(string xml)
-        { try{XDocument.Parse(xml);return true;}catch(Exception ex) when(ex is not OutOfMemoryException and not StackOverflowException){return false;} }
+        { try{ParseXmlSafe(xml);return true;}catch(Exception ex) when(ex is not OutOfMemoryException and not StackOverflowException){return false;} }
     }
 }

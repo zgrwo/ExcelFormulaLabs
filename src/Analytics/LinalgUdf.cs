@@ -8,21 +8,49 @@ namespace ExcelVbaLibraries.Analytics
         private static double[,] M(object d) => AnalyticsHelpers.PrepM(d);
         private static double[] V(object d) => AnalyticsHelpers.PrepV(d);
 
-        [ExcelFunction(Name = "LINALG.SVD", Description = "SVD: A = U*diag(S)*Vt. Returns 1x3 horizontal array {U matrix, S vector, Vt matrix}.")]
-        public static object UDF_LINALG_SVD([ExcelArgument(Name="array", Description="A range or 2D array")] object d)
-            => OutputWrapper.WrapError(() => { var (U,S,Vt)=LinalgCore.Svd(M(d)); return new object[]{U,S,Vt}; });
+        // ── SVD (split into 3 individual UDFs) ──────────────────────
+
+        [ExcelFunction(Name = "LINALG.SVD_U", Description = "SVD left singular vectors (U matrix). A = U*diag(S)*Vt.")]
+        public static object UDF_LINALG_SVD_U([ExcelArgument(Name="array", Description="A range or 2D array")] object d)
+            => OutputWrapper.WrapError(() => LinalgCore.SvdU(M(d)));
+
+        [ExcelFunction(Name = "LINALG.SVD_S", Description = "SVD singular values (S vector). Sorted descending.")]
+        public static object UDF_LINALG_SVD_S([ExcelArgument(Name="array", Description="A range or 2D array")] object d)
+            => OutputWrapper.WrapError(() => LinalgCore.SvdS(M(d)));
+
+        [ExcelFunction(Name = "LINALG.SVD_VT", Description = "SVD right singular vectors transposed (Vt matrix). A = U*diag(S)*Vt.")]
+        public static object UDF_LINALG_SVD_VT([ExcelArgument(Name="array", Description="A range or 2D array")] object d)
+            => OutputWrapper.WrapError(() => LinalgCore.SvdVt(M(d)));
+
+        // ── QR (split into 2 individual UDFs) ───────────────────────
+
+        [ExcelFunction(Name = "LINALG.QR_Q", Description = "QR decomposition orthogonal matrix Q. A = Q*R.")]
+        public static object UDF_LINALG_QR_Q([ExcelArgument(Name="array", Description="A range or 2D array")] object d)
+            => OutputWrapper.WrapError(() => LinalgCore.QrQ(M(d)));
+
+        [ExcelFunction(Name = "LINALG.QR_R", Description = "QR decomposition upper-triangular matrix R. A = Q*R.")]
+        public static object UDF_LINALG_QR_R([ExcelArgument(Name="array", Description="A range or 2D array")] object d)
+            => OutputWrapper.WrapError(() => LinalgCore.QrR(M(d)));
+
+        // ── LU (split into 3 individual UDFs) ───────────────────────
+
+        [ExcelFunction(Name = "LINALG.LU_L", Description = "LU decomposition lower-triangular matrix L. PA = LU.")]
+        public static object UDF_LINALG_LU_L([ExcelArgument(Name="array", Description="A range or 2D array")] object d)
+            => OutputWrapper.WrapError(() => LinalgCore.LuL(M(d)));
+
+        [ExcelFunction(Name = "LINALG.LU_U", Description = "LU decomposition upper-triangular matrix U. PA = LU.")]
+        public static object UDF_LINALG_LU_U([ExcelArgument(Name="array", Description="A range or 2D array")] object d)
+            => OutputWrapper.WrapError(() => LinalgCore.LuU(M(d)));
+
+        [ExcelFunction(Name = "LINALG.LU_P", Description = "LU decomposition permutation matrix P. PA = LU.")]
+        public static object UDF_LINALG_LU_P([ExcelArgument(Name="array", Description="A range or 2D array")] object d)
+            => OutputWrapper.WrapError(() => LinalgCore.LuP(M(d)));
+
+        // ── Other LINALG functions ──────────────────────────────────
 
         [ExcelFunction(Name = "LINALG.PINV", Description = "Moore-Penrose pseudo-inverse.")]
         public static object UDF_LINALG_PINV([ExcelArgument(Name="array", Description="A range or 2D array")] object d)
             => OutputWrapper.WrapError(() => LinalgCore.PseudoInverse(M(d)));
-
-        [ExcelFunction(Name = "LINALG.QR", Description = "QR: A = Q*R. Returns 1x2 horizontal array {Q matrix, R upper-triangular matrix}.")]
-        public static object UDF_LINALG_QR([ExcelArgument(Name="array", Description="A range or 2D array")] object d)
-            => OutputWrapper.WrapError(() => { var (Q,R)=LinalgCore.Qr(M(d)); return new[]{Q,R}; });
-
-        [ExcelFunction(Name = "LINALG.LU", Description = "LU: PA = LU with partial pivoting. Returns 1x3 horizontal array {L lower-triangular, U upper-triangular, P permutation matrix}.")]
-        public static object UDF_LINALG_LU([ExcelArgument(Name="array", Description="A range or 2D array")] object d)
-            => OutputWrapper.WrapError(() => { var (L,U,P)=LinalgCore.Lu(M(d)); return new[]{L,U,P}; });
 
         [ExcelFunction(Name = "LINALG.DET", Description = "Determinant.")]
         public static object UDF_LINALG_DET([ExcelArgument(Name="array", Description="A range or 2D array")] object d)

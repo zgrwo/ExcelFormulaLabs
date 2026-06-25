@@ -73,7 +73,23 @@ namespace ExcelVbaLibraries.Foundation
 
         // ── Diagnostics ──────────────────────────────────────────────────
 
-        /// <summary>Human-readable representation, e.g. "#ERR(2015)" for #VALUE!.</summary>
-        public override string ToString() => $"#ERR({Code})";
+        /// <summary>
+        /// Excel error name for this error code (e.g. "#VALUE!", "#N/A").
+        /// Returns <c>"#ERR({Code})"</c> for unknown error codes.
+        /// </summary>
+        public string ErrorName => Code switch
+        {
+            2000 => "#NULL!",
+            2007 => "#DIV/0!",
+            2015 => "#VALUE!",
+            2023 => "#REF!",
+            2029 => "#NAME?",
+            2036 => "#NUM!",
+            2042 => "#N/A",
+            _    => $"#ERR({Code})"
+        };
+
+        /// <summary>Human-readable representation, e.g. "#VALUE!" for error 2015.</summary>
+        public override string ToString() => ErrorName;
     }
 }

@@ -474,7 +474,7 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         {
             var data = new object[,] { { "A", "B" }, { 1, 2 } };
             var act = () => RangeExportCore.SelectColumns(data, new[] { 5 });
-            act.Should().Throw<IndexOutOfRangeException>();
+            act.Should().Throw<ArgumentException>().WithMessage("*Column index*");
         }
 
         // ─────────────────────────────────────────────────────────────
@@ -526,7 +526,7 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         {
             var data = new object[,] { { "A", "B" }, { 1, 2 } };
             var act = () => RangeExportCore.SelectRows(data, new[] { 10 });
-            act.Should().Throw<IndexOutOfRangeException>();
+            act.Should().Throw<ArgumentException>().WithMessage("*Row index*");
         }
     }
 }

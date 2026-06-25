@@ -65,7 +65,7 @@ namespace ExcelVbaLibraries.DataToolkit
             agg = agg.ToUpperInvariant();
             int rows = data.GetLength(0), nG = gCols.Length;
             var groups = new Dictionary<string, (double val, long cnt)>();
-            var keyNames = new List<object[]>(); var seen = new HashSet<string>();
+            var keyNames = new List<string[]>(); var seen = new HashSet<string>();
             for (int r = 0; r < rows; r++)
             {
                 var gk = gCols.Select(c => InputNormalizer.ToString(data[r, c])).ToArray();
@@ -75,19 +75,36 @@ namespace ExcelVbaLibraries.DataToolkit
                 else { groups[gks] = (v, 1); if (seen.Add(gks)) keyNames.Add(gk); }
             }
             var result = new object[keyNames.Count, nG + 1];
-            for (int i = 0; i < keyNames.Count; i++) { for (int j = 0; j < nG; j++) result[i, j] = keyNames[i][j]; var (val, cnt) = groups[MakeCompoundKey(keyNames[i])]; result[i, nG] = agg == "COUNT" ? cnt : (agg == "AVG" ? val / cnt : val); }
+            for (int i = 0; i < keyNames.Count; i++) { var kn = keyNames[i]; for (int j = 0; j < nG; j++) result[i, j] = kn[j]; var (val, cnt) = groups[MakeCompoundKey(kn)]; result[i, nG] = agg == "COUNT" ? cnt : (agg == "AVG" ? val / cnt : val); }
             return result;
         }
 
-        /// <summary>Build a collision-free compound key from segments using length-prefix encoding.</summary>
-        private static string MakeCompoundKey(object[] parts)
+        /// <summary>Build a collision-free compound key from already-stringified segments using length-prefix encoding.</summary>
+        private static string MakeCompoundKey(string[] parts)
         {
             var sb = new System.Text.StringBuilder();
-            foreach (var p in parts) { var s = InputNormalizer.ToString(p); sb.Append(s.Length); sb.Append(':'); sb.Append(s); }
+            foreach (var s in parts) { sb.Append(s.Length); sb.Append(':'); sb.Append(s); }
             return sb.ToString();
         }
 
         internal static object[,] CrossJoin(object[,] a, object[,] b)
-        { int ra = a.GetLength(0), ca = a.GetLength(1), rb = b.GetLength(0), cb = b.GetLength(1); var r = new object[ra * rb, ca + cb]; for (int i = 0; i < ra; i++) for (int j = 0; j < rb; j++) { int dr = i * rb + j; for (int c = 0; c < ca; c++) r[dr, c] = a[i, c]; for (int c = 0; c < cb; c++) r[dr, ca + c] = b[j, c]; } return r; }
+        {
+            int ra = a.GetLength(0), ca = a.GetLength(1), rb = b.GetLength(0), cb = b.GetLength(1);
+            const int maxCells = 1_000_000;
+            long totalCells = (long)ra * rb * (ca + cb);
+            if (totalCells > maxCells)
+                throw new ArgumentException(
+                    $"Cross join would produce {ra * rb:N0} rows × {ca + cb} cols = {totalCells:N0} cells. " +
+                    $"Maximum is {maxCells:N0} cells. Reduce input size or use a join condition instead.");
+            var r = new object[ra * rb, ca + cb];
+            for (int i = 0; i < ra; i++)
+                for (int j = 0; j < rb; j++)
+                {
+                    int dr = i * rb + j;
+                    for (int c = 0; c < ca; c++) r[dr, c] = a[i, c];
+                    for (int c = 0; c < cb; c++) r[dr, ca + c] = b[j, c];
+                }
+            return r;
+        }
     }
 }

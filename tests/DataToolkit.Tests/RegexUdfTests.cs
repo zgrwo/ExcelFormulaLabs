@@ -46,9 +46,20 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void Split_no_separator() { var r=(object[])RegexUdf.UDF_RX_SPLIT("abc",",",true); r.Should().Equal("abc"); }
         [Fact] public void Split_invalid_pattern() => RegexUdf.UDF_RX_SPLIT("abc","[",true).Should().Be(ExcelError.Value);
 
-        // REGEX.GROUPS
-        [Fact] public void Groups_basic() { var r=(object[])RegexUdf.UDF_RX_GRP("John:30","(\\w+):(\\d+)",true); r.Should().Equal("John:30","John","30"); }
-        [Fact] public void Groups_no_match() { var r=(object[])RegexUdf.UDF_RX_GRP("abc","(\\d+)",true); r.Should().BeEmpty(); }
+        // REGEX.GROUPS (returns object[2,n]: row0=group names, row1=values)
+        [Fact] public void Groups_basic() {
+            var r = (object[,])RegexUdf.UDF_RX_GRP("John:30",@"(\w+):(\d+)",true);
+            r.GetLength(0).Should().Be(2);
+            r.GetLength(1).Should().Be(3);
+            r[1,0].Should().Be("John:30");
+            r[1,1].Should().Be("John");
+            r[1,2].Should().Be("30");
+        }
+        [Fact] public void Groups_no_match() {
+            var r = (object[,])RegexUdf.UDF_RX_GRP("abc",@"(\d+)",true);
+            r.GetLength(0).Should().Be(0);
+            r.GetLength(1).Should().Be(0);
+        }
         [Fact] public void Groups_invalid_pattern() => RegexUdf.UDF_RX_GRP("abc","[",true).Should().Be(ExcelError.Value);
 
         // REGEX.ESCAPE

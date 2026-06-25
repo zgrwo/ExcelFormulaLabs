@@ -1,6 +1,6 @@
 # API 参考
 
-> **214 个 UDF 函数**的完整签名，按 14 个模块组织。使用指南见 [user-guide.md](user-guide.md)。
+> **219 个 UDF 函数**的完整签名，按 14 个模块组织。使用指南见 [user-guide.md](user-guide.md)。
 
 ---
 
@@ -58,9 +58,14 @@
 | `LINALG.RANK` | (array, tolerance) | `long` | 数值秩（默认容差 1e-10） |
 | `LINALG.COND` | (array) | `double` | 条件数（2-范数） |
 | `LINALG.EIGEN` | (array) | `double[]` | 特征值。要求对称矩阵，非对称输入返回错误 |
-| `LINALG.SVD` | (array) | `1×3 {U, S, Vt}` | 奇异值分解 A = U·diag(S)·Vt。返回水平数组：第1个 U 矩阵，第2个 S 向量，第3个 Vt 矩阵 |
-| `LINALG.QR` | (array) | `1×2 {Q, R}` | QR 分解 A = Q·R。返回：第1个 Q，第2个 R 上三角 |
-| `LINALG.LU` | (array) | `1×3 {L, U, P}` | LU 分解 PA = LU（部分主元）。返回：第1个 L 下三角，第2个 U 上三角，第3个 P 置换矩阵 |
+| `LINALG.SVD_U` | (array) | `double[,]` | SVD 左奇异向量矩阵 U。A = U·diag(S)·Vt |
+| `LINALG.SVD_S` | (array) | `double[]` | SVD 奇异值向量 S（降序排列） |
+| `LINALG.SVD_VT` | (array) | `double[,]` | SVD 右奇异向量转置 Vt。A = U·diag(S)·Vt |
+| `LINALG.QR_Q` | (array) | `double[,]` | QR 分解正交矩阵 Q。A = Q·R |
+| `LINALG.QR_R` | (array) | `double[,]` | QR 分解上三角矩阵 R。A = Q·R |
+| `LINALG.LU_L` | (array) | `double[,]` | LU 分解下三角矩阵 L。PA = LU |
+| `LINALG.LU_U` | (array) | `double[,]` | LU 分解上三角矩阵 U。PA = LU |
+| `LINALG.LU_P` | (array) | `double[,]` | LU 分解置换矩阵 P。PA = LU |
 | `LINALG.PINV` | (array) | `double[,]` | Moore-Penrose 伪逆 |
 | `LINALG.CHOLESKY` | (array) | `double[,]` | Cholesky 分解 |
 | `LINALG.IDENTITY` | (size) | `double[,]` | 生成 n×n 单位矩阵 |
@@ -69,14 +74,14 @@
 
 ## REGRESS.* -- 回归分析
 
-> 返回 2×n 表格（row0 = 字段名, row1 = 值）。统计解读：**p < 0.05 = 显著**，**R² 越接近 1 拟合越好**。
+> 返回 N×(maxLen+1) 纵向报告表（col0 = 字段名, col1.. = 标量值或数组展开）。统计解读：**p < 0.05 = 显著**，**R² 越接近 1 拟合越好**。
 
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
-| `REGRESS.OLS` | (known_y, known_x) | `object[2,11]` | **普通最小二乘法**。对标 Excel LINEST。返回：`coefficients`(系数)、`sse`(残差平方和)、`r_squared`(R²)、`adj_r_squared`(调整R²)、`residuals`(残差)、`fitted_values`(拟合值)、`standard_errors`(标准误)、`t_stats`(t值)、`p_values`(p值)、`n`(样本量)、`df`(自由度)。`p<0.05` 该系数显著。 |
-| `REGRESS.WLS` | (known_y, known_x, weights) | `object[2,11]` | **加权最小二乘法**（异方差数据）。返回同 OLS 的 11 个字段。 |
-| `REGRESS.RIDGE` | (known_y, known_x, lambda) | `object[2,8]` | **岭回归**（L2 正则化，防过拟合）。λ 默认 1.0。返回：`coefficients`、`sse`、`r_squared`、`residuals`、`fitted_values`、`lambda`(惩罚参数)、`n`、`df`。**不返回**标准误/t值/p值（正则化下推断无效）。 |
-| `REGRESS.ANOVA1` | (input_range) | `object[2,12]` | **单因素方差分析**。数据按列分组（每列一组）。返回：`ss_between`(组间平方和)、`ss_within`(组内平方和)、`ss_total`、`df_between`、`df_within`、`df_total`、`ms_between`、`ms_within`、`f_stat`(F值)、`p_value`(p值)、`group_means`(各组均值)、`group_counts`(各组样本量)。`p<0.05` = 至少有一组均值显著不同。 |
+| `REGRESS.OLS` | (known_y, known_x) | `object[11,?]` | **普通最小二乘法**。对标 Excel LINEST。返回 11 行报告：`coefficients`(系数)、`sse`(残差平方和)、`r_squared`(R²)、`adj_r_squared`(调整R²)、`residuals`(残差)、`fitted_values`(拟合值)、`standard_errors`(标准误)、`t_stats`(t值)、`p_values`(p值)、`n`(样本量)、`df`(自由度)。数组字段横向展开到多列。`p<0.05` 该系数显著。 |
+| `REGRESS.WLS` | (known_y, known_x, weights) | `object[11,?]` | **加权最小二乘法**（异方差数据）。返回同 OLS 的 11 行报告。 |
+| `REGRESS.RIDGE` | (known_y, known_x, lambda) | `object[8,?]` | **岭回归**（L2 正则化，防过拟合）。λ 默认 1.0。返回 8 行：`coefficients`、`sse`、`r_squared`、`residuals`、`fitted_values`、`lambda`(惩罚参数)、`n`、`df`。**不返回**标准误/t值/p值（正则化下推断无效）。 |
+| `REGRESS.ANOVA1` | (input_range) | `object[12,?]` | **单因素方差分析**。数据按列分组（每列一组）。返回 12 行：`ss_between`(组间平方和)、`ss_within`(组内平方和)、`ss_total`、`df_between`、`df_within`、`df_total`、`ms_between`、`ms_within`、`f_stat`(F值)、`p_value`(p值)、`group_means`(各组均值)、`group_counts`(各组样本量)。数组字段横向展开到多列。`p<0.05` = 至少有一组均值显著不同。 |
 | `REGRESS.FACTORIMP` | (known_y, known_x) | `long[]` | **因子重要性排名**。按标准化后的 \|t\| 降序排列，返回 0-based 列索引数组。 |
 | `REGRESS.COEF` | (known_y, known_x) | `double[]` | OLS 回归系数向量（仅 beta）。 |
 | `REGRESS.RSQ` | (known_y, known_x) | `double` | OLS 决定系数 R²。范围 0-1，1 = 完美拟合。 |

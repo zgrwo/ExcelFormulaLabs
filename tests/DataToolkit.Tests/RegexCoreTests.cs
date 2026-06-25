@@ -32,7 +32,14 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void Split_n1() => RegexCore.RegexSplit("a,b,c,d",",",n:1).Should().Equal("a","b,c,d"); // split once
         [Fact] public void Split_n2() => RegexCore.RegexSplit("a,b,c,d",",",n:2).Should().Equal("a","b","c,d"); // split twice
         [Fact] public void Split_n0_all() => RegexCore.RegexSplit("a,b,c",",",n:0).Should().Equal("a","b","c"); // n=0 → all
-        [Fact] public void Groups() => RegexCore.RegexCaptureGroups("Name: John, Age: 30",@"Name: (\w+), Age: (\d+)").Should().Equal("Name: John, Age: 30","John","30"); // Python re: groups()
+        [Fact] public void Groups() {
+            var r = RegexCore.RegexCaptureGroups("Name: John, Age: 30",@"Name: (\w+), Age: (\d+)");
+            r.GetLength(0).Should().Be(2);
+            r.GetLength(1).Should().Be(3);
+            r[1,0].Should().Be("Name: John, Age: 30");
+            r[1,1].Should().Be("John");
+            r[1,2].Should().Be("30");
+        }
         [Fact] public void Escape() => RegexCore.RegexEscape("a.b(c)").Should().Be(@"a\.b\(c\)");             // Python re: escape
 
         // =====================================================================
@@ -54,8 +61,9 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
 
         [Fact] public void RegexCaptureGroups_no_match_returns_empty()
         {
-            // Python re: re.search(r'(\d+)', 'abc') → None → no groups
-            RegexCore.RegexCaptureGroups("abc", @"(\d+)").Should().BeEmpty();
+            var r = RegexCore.RegexCaptureGroups("abc", @"(\d+)");
+            r.GetLength(0).Should().Be(0);
+            r.GetLength(1).Should().Be(0);
         }
 
         [Fact] public void RegexCount_no_match_returns_zero()
@@ -120,9 +128,13 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
 
         [Fact] public void RegexCaptureGroups_multiple_groups()
         {
-            // Python re: re.search(r'(\d{4})-(\d{2})-(\d{2})', '2024-03-15').groups() → ('2024','03','15')
             var r = RegexCore.RegexCaptureGroups("2024-03-15", @"(\d{4})-(\d{2})-(\d{2})");
-            r.Should().Equal("2024-03-15", "2024", "03", "15");
+            r.GetLength(0).Should().Be(2);
+            r.GetLength(1).Should().Be(4);
+            r[1, 0].Should().Be("2024-03-15");
+            r[1, 1].Should().Be("2024");
+            r[1, 2].Should().Be("03");
+            r[1, 3].Should().Be("15");
         }
 
         [Fact] public void RegexSplit_multiple_delimiters()

@@ -6,6 +6,14 @@ using ExcelVbaLibraries.Foundation;
 namespace ExcelVbaLibraries.DataToolkit
 {
     /// <summary>File I/O and path operations. Ported from FileSystemUtils.bas.</summary>
+    /// <remarks>
+    /// <b>Return value convention:</b> I/O methods (Write, Delete, Copy, Move,
+    /// EnsureFolder, etc.) return <c>true</c> on success and throw on failure.
+    /// The <c>true</c> return is for callers that need a boolean; the UDF layer
+    /// relies on <see cref="Foundation.OutputWrapper.WrapError"/> to convert
+    /// exceptions to <c>#VALUE!</c>, so the return value is not user-visible
+    /// in Excel.
+    /// </remarks>
     internal static class FileSystemCore
     {
         /// <summary>

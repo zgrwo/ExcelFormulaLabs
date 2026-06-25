@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Encodings.Web;
@@ -42,8 +43,30 @@ namespace ExcelVbaLibraries.DataToolkit
         { int rows = data.GetLength(0), cols = data.GetLength(1); var sb = new StringBuilder(); for (int r = 0; r < rows; r++) { for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(delim); string v = InputNormalizer.ToString(data[r, c]); if (quote && (v.Contains(delim) || v.Contains("\"") || v.Contains("\n"))) v = "\"" + v.Replace("\"", "\"\"") + "\""; sb.Append(v); } sb.AppendLine(); } return sb.ToString(); }
 
         internal static object[,] Transpose(object[,] d) { int r = d.GetLength(0), c = d.GetLength(1); var t = new object[c, r]; for (int i = 0; i < r; i++) for (int j = 0; j < c; j++) t[j, i] = d[i, j]; return t; }
-        internal static object[,] SelectColumns(object[,] d, int[] ci) { int r = d.GetLength(0); var t = new object[r, ci.Length]; for (int i = 0; i < r; i++) for (int j = 0; j < ci.Length; j++) t[i, j] = d[i, ci[j]]; return t; }
-        internal static object[,] SelectRows(object[,] d, int[] ri) { int c = d.GetLength(1); var t = new object[ri.Length, c]; for (int i = 0; i < ri.Length; i++) for (int j = 0; j < c; j++) t[i, j] = d[ri[i], j]; return t; }
+        internal static object[,] SelectColumns(object[,] d, int[] ci)
+        {
+            int cols = d.GetLength(1);
+            if (ci.Any(j => j < 0 || j >= cols))
+                throw new ArgumentException($"Column index out of range. Valid range: 0..{cols - 1}.");
+            int r = d.GetLength(0);
+            var t = new object[r, ci.Length];
+            for (int i = 0; i < r; i++)
+                for (int j = 0; j < ci.Length; j++)
+                    t[i, j] = d[i, ci[j]];
+            return t;
+        }
+        internal static object[,] SelectRows(object[,] d, int[] ri)
+        {
+            int rows = d.GetLength(0);
+            if (ri.Any(j => j < 0 || j >= rows))
+                throw new ArgumentException($"Row index out of range. Valid range: 0..{rows - 1}.");
+            int c = d.GetLength(1);
+            var t = new object[ri.Length, c];
+            for (int i = 0; i < ri.Length; i++)
+                for (int j = 0; j < c; j++)
+                    t[i, j] = d[ri[i], j];
+            return t;
+        }
 
         private static string JsonVal(object? v) { if (v == null || v is DBNull) return "null"; if (ReferenceEquals(v, ExcelEmpty.Value)) return "null"; if (v is string s) return $"\"{JsonEncodedText.Encode(s, JavaScriptEncoder.Default).Value}\""; if (v is bool b) return b ? "true" : "false"; if (v is double d && (double.IsNaN(d) || double.IsInfinity(d))) return "null"; if (v is long l) return l.ToString(); if (v is int i) return i.ToString(); if (v is float f) return f.ToString(System.Globalization.CultureInfo.InvariantCulture); if (v is decimal m) return m.ToString(System.Globalization.CultureInfo.InvariantCulture); return $"\"{JsonEncodedText.Encode(InputNormalizer.ToString(v), JavaScriptEncoder.Default).Value}\""; }
     }

@@ -181,6 +181,13 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
             var b = new object[,] { { "x" }, { "y" } };
             PivotCore.CrossJoin(a, b).GetLength(0).Should().Be(0);
         }
+        [Fact] public void CrossJoin_exceeds_limit_throws()
+        {
+            var a = new object[2000, 1];
+            var b = new object[500, 1];
+            var act = () => PivotCore.CrossJoin(a, b);
+            act.Should().Throw<ArgumentException>().WithMessage("*Cross join*");
+        }
         [Fact] public void GroupBy_lowercase_agg()
         {
             var d = new object[,] { { "G", "V" }, { "A", 10 }, { "A", 20 }, { "B", 30 } };

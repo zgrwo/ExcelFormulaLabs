@@ -2,11 +2,11 @@
 
 ## 概述
 
-Excel VBA Libraries 是一个基于 .NET 的 Excel-DNA 加载项，将原 VBA 函数库完整移植到 C# 平台。提供 **214 个工作表函数 (UDF)**（数量以 [api-reference.md](api-reference.md) 为准），按功能划分为 **14 个类别**，涵盖统计、线性代数、回归、物理化学、字符串、日期时间、正则表达式、数组、字典/集合、JSON/XML、数据透视、文件系统、SQL 查询和范围导出等常用领域。
+Excel VBA Libraries 是一个基于 .NET 的 Excel-DNA 加载项，将原 VBA 函数库完整移植到 C# 平台。提供 **219 个工作表函数 (UDF)**（数量以 [api-reference.md](api-reference.md) 为准），按功能划分为 **14 个类别**，涵盖统计、线性代数、回归、物理化学、字符串、日期时间、正则表达式、数组、字典/集合、JSON/XML、数据透视、文件系统、SQL 查询和范围导出等常用领域。
 
 所有函数均支持数组公式（自动），错误值（`#VALUE!`）和空白单元格（`ExcelEmpty`）在传输过程中自动透传过滤。
 
-214 个函数分为 14 个类别。完整列表和签名见 **[API 参考](api-reference.md)**。
+219 个函数分为 14 个类别。完整列表和签名见 **[API 参考](api-reference.md)**。
 
 ## 安装
 

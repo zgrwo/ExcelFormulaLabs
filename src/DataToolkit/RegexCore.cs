@@ -82,9 +82,30 @@ namespace ExcelVbaLibraries.DataToolkit
             result.Add(i.Substring(pos));
             return result.ToArray();
         }
-        internal static string[] RegexCaptureGroups(string i, string p, bool ic=true)
-        { var m=Regex.Match(i,p,F(ic),Timeout); if(!m.Success)return Array.Empty<string>(); var r=new string[m.Groups.Count]; for(int j=0;j<m.Groups.Count;j++)r[j]=m.Groups[j].Value; return r; }
+        /// <summary>
+        /// Capture groups from first regex match.
+        /// Returns object[2,n]: row0 = group names (integer strings for unnamed groups,
+        /// or actual names for named groups like (?&lt;year&gt;\d{4})), row1 = captured values.
+        /// [0] = full match. Returns empty 0×0 array on no match.
+        /// </summary>
+        internal static object[,] RegexCaptureGroups(string i, string p, bool ic=true)
+        {
+            var m = Regex.Match(i, p, FC(ic), Timeout);
+            if (!m.Success) return new object[0, 0];
+            var r = new object[2, m.Groups.Count];
+            for (int j = 0; j < m.Groups.Count; j++)
+            {
+                r[0, j] = m.Groups[j].Name;
+                r[1, j] = m.Groups[j].Value;
+            }
+            return r;
+        }
         internal static string RegexEscape(string l) => Regex.Escape(l);
-        private static RegexOptions F(bool ic) => (ic?RegexOptions.IgnoreCase:RegexOptions.None)|RegexOptions.CultureInvariant;
+        private static RegexOptions F(bool ic) =>
+            (ic ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture;
+
+        /// <summary>Regex options WITH capture groups — only for RegexCaptureGroups.</summary>
+        private static RegexOptions FC(bool ic) =>
+            (ic ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.CultureInvariant;
     }
 }

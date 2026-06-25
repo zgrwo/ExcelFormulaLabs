@@ -26,7 +26,7 @@ tests/
 └── DataToolkit.Tests/  Core + UDF 双重测试 + PythonCrossValidationTests
 
 docs/
-├── api-reference.md   214 UDF 签名（数字的唯一信源）
+├── api-reference.md   219 UDF 签名（数字的唯一信源）
 └── user-guide.md      安装与使用指南
 CONTEXT.md             领域术语表
 ```
@@ -51,16 +51,96 @@ Foundation (InputNormalizer, ElementWiseMapper, OutputWrapper, …)
 
 部分统计 UDF（CVP/CV/PEAR/SPR/T1/T2）绕过 MapOver，用 `V()`/`M()` 直接调 Core。尺寸不匹配→`NaN`（非 ExcelError），`V(null)`→空数组→`NaN`。
 
-### UDF 模板
+### UDF 声明规范
+
+所有 UDF 遵循统一声明模式。219 个函数覆盖 6 种调度变体，以下是完整模板。
+
+#### 基础模板（单参数 MapOver）
 
 ```csharp
-[ExcelFunction(Name = "CATEGORY.NAME", Description = "一句话说明")]
-public static object UDF_CAT_NAME(object input)
-    => OutputWrapper.WrapError(() =>
-        ElementWiseMapper.MapOver<TIn, TOut>(input, SomeCore.Method));
+[ExcelFunction(Name = "CATEGORY.NAME", Description = "一句话英文说明。")]
+public static object UDF_CAT_NAME(
+    [ExcelArgument(Name = "param_name", Description = "What this parameter is.")]
+    object input
+) => OutputWrapper.WrapError(() =>
+    ElementWiseMapper.MapOver<TIn, TOut>(input, SomeCore.Method));
 ```
 
-每 UDF 约 5 行。Core 方法为 `internal static`。
+#### 完整声明要素
+
+| 要素 | 要求 | 示例 |
+|------|------|------|
+| `[ExcelFunction]` Name | `CATEGORY.NAME` — 大写类别前缀，点号分隔 | `STR.REVERSE`, `LINALG.SVD_U` |
+| `[ExcelFunction]` Description | 一句英文，描述函数做什么 | `"Reverse a text string."` |
+| 返回类型 | **始终** `object`（Excel 可消费） | — |
+| `[ExcelArgument]` Name | `snake_case`，Excel IntelliSense 显示 | `num_chars`, `match_case` |
+| `[ExcelArgument]` Description | 英文短语，解释参数含义 | `"Number of characters to generate."` |
+| 错误包装 | `OutputWrapper.WrapError(...)` 包裹所有逻辑 | 异常 → `#VALUE!` |
+| 方法名 | `UDF_<CATEGORY>_<SHORTNAME>` | `UDF_STR_REV`, `UDF_RX_MATCH` |
+
+#### 可选参数
+
+```csharp
+[ExcelArgument(Name = "[param_name]", Description = "...")]
+//                  ^            ^
+//          方括号标记 IntelliSense 视觉提示  方括号标记 IntelliSense 视觉提示
+object param = null   // ← 默认值 null，由 InputNormalizer 处理
+```
+
+- Name 以 `[` `]` 包裹 → Excel 函数向导显示为可选
+- 默认值统一 `= null`（不用 `ExcelMissing` — InputNormalizer 通过反射检测）
+- Core 层接收已转换的类型（`long`/`bool`/`string`），不接收 `object`
+
+#### 6 种调度模式
+
+```csharp
+// ① 标准 MapOver — 单参数，保持输入形状
+=> OutputWrapper.WrapError(() =>
+    ElementWiseMapper.MapOver<string, string>(input, StringCore.ReverseString));
+
+// ② MapOverFlat — 单参数，强制 1D 输出
+=> OutputWrapper.WrapError(() =>
+    ElementWiseMapper.MapOverFlat<string, string>(input, StringCore.SomeMethod));
+
+// ③ MapOverMulti — 2-3 参数广播，尺寸不匹配 → ExcelError.Value
+=> OutputWrapper.WrapError(() =>
+    ElementWiseMapper.MapOverMulti<string, string, bool>(t, p,
+        (text, prefix) => StringCore.StartsWithStr(text, prefix)));
+
+// ④ Analytics: M()/V()/D() — 矩阵/向量/2D 准备 + 直接 Core 调用
+private static double[,] M(object d) => AnalyticsHelpers.PrepM(d);
+private static double[] V(object d) => AnalyticsHelpers.PrepV(d);
+private static object[,] D(object d) => InputNormalizer.NormalizeTo2D(d)!;
+// 用法:
+=> OutputWrapper.WrapError(() => LinalgCore.Determinant(M(data)));
+
+// ⑤ 标量 UDF（无 MapOver）— 零或极少参数
+=> OutputWrapper.WrapError(() => StringCore.UUID());
+
+// ⑥ 自定义调度 — 绕过 MapOver，手动处理数组展开
+// 仅 STATS.CVP/COVAR/PEAR/SPR/TTEST1/TTEST2 使用
+=> OutputWrapper.WrapError(() => {
+    var x = V(input1); var y = V(input2);
+    if (x.Length != y.Length) return double.NaN;
+    return StatsCore.CovarianceP(x, y);
+});
+```
+
+#### 描述编写规范
+
+| 位置 | 语言 | 规范 |
+|------|------|------|
+| `[ExcelFunction]` Description | **英文** | 动词开头，≤80 字符，以句号结尾 |
+| `[ExcelArgument]` Description | **英文** | 名词短语，描述参数含义 |
+| api-reference.md 说明 | **中文** | 用户面向文档，可包含对标 Excel 函数信息 |
+
+```csharp
+// ✅
+[ExcelFunction(Name = "STR.REVERSE", Description = "Reverse a text string.")]
+
+// ❌ — 描述不应含中文、不应含参数细节
+[ExcelFunction(Name = "STR.REVERSE", Description = "反转字符串，逐字符反转")]
+```
 
 ---
 

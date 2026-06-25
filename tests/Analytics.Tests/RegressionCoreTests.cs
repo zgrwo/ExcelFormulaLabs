@@ -137,7 +137,7 @@ namespace ExcelVbaLibraries.Analytics.Tests
 
         [Fact] public void FactorImportance_constant_column()
         {
-            // Column with zero variance → sd<1e-12 guard → normalized to 1
+            // Column with zero variance → sd<1e-12 guard → logged + normalized to 1
             // Should not throw and should return valid rankings
             var constX = new double[,] { { 1, 5 }, { 1, 2 }, { 1, 3 }, { 1, 4 }, { 1, 6 } };
             var r = RegressionCore.FactorImportance(constX, yf);

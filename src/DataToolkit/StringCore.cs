@@ -108,22 +108,27 @@ namespace ExcelVbaLibraries.DataToolkit
                 if (value is DateTime dt) return string.Format(fs, dt);
                 return string.Format(fs, value);
             }
-            catch (FormatException)
+            catch (Exception ex) when (ex is not OutOfMemoryException
+                and not StackOverflowException)
             {
                 // Format specifier incompatible with the value's runtime type
                 // (e.g. "D4" applied to a double from Excel). Return the raw value.
+                System.Diagnostics.Debug.WriteLine(
+                    $"[FormatValue] Failed to format '{value?.GetType().Name}' with '{fmt}': {ex.Message}");
                 return value?.ToString() ?? "";
             }
         }
 
         internal static string UUID()=>Guid.NewGuid().ToString();
+        private const string DefaultCharset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
 #if NET8_0_OR_GREATER
-        internal static string RandomString(long len=8,string? cs=null)
-        { cs??="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"; var sb=new StringBuilder((int)len); for(int i=0;i<len;i++)sb.Append(cs[Random.Shared.Next(cs.Length)]); return sb.ToString(); }
+        internal static string RandomString(long len=8, string? cs=null)
+        { if (string.IsNullOrEmpty(cs)) cs = DefaultCharset; var sb = new StringBuilder((int)len); for (int i = 0; i < len; i++) sb.Append(cs[Random.Shared.Next(cs.Length)]); return sb.ToString(); }
 #else
         private static readonly ThreadLocal<Random> _rng = new(() => new Random());
-        internal static string RandomString(long len=8,string? cs=null)
-        { cs??="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"; var sb=new StringBuilder((int)len); var r=_rng.Value!; for(int i=0;i<len;i++)sb.Append(cs[r.Next(cs.Length)]); return sb.ToString(); }
+        internal static string RandomString(long len=8, string? cs=null)
+        { if (string.IsNullOrEmpty(cs)) cs = DefaultCharset; var sb = new StringBuilder((int)len); var r = _rng.Value!; for (int i = 0; i < len; i++) sb.Append(cs[r.Next(cs.Length)]); return sb.ToString(); }
 #endif
 
         internal static bool IsNullOrEmptyStr(string? t)=>string.IsNullOrEmpty(t);

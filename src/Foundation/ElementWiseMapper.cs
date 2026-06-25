@@ -251,7 +251,12 @@ namespace ExcelVbaLibraries.Foundation
                     System.Globalization.CultureInfo.InvariantCulture);
             }
             catch (Exception ex) when (ex is not OutOfMemoryException
-                and not StackOverflowException) { return typeof(T) == typeof(double) ? (T)(object)double.NaN : default!; }
+                and not StackOverflowException)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[ConvertValue] Failed to convert '{value?.GetType().Name}' to '{typeof(T).Name}': {ex.Message}");
+                return typeof(T) == typeof(double) ? (T)(object)double.NaN : default!;
+            }
         }
 
         // ── Array helpers ─────────────────────────────────────────────────
