@@ -265,6 +265,9 @@ namespace ExcelVbaLibraries.Foundation
         internal static bool IsNumeric(object? value)
         {
             if (value == null) return false;
+            // Numeric types (incl. double.NaN/Inf): pass through. Convert.ToDouble + IEEE 754
+            // comparison handles NaN correctly (NaN ≠ NaN in Math.Abs check).
+            // String "NaN"/"Infinity" are rejected — non-finite strings should never compare as numbers.
             if (value is int || value is long || value is float || value is double
                 || value is decimal || value is short || value is byte
                 || value is sbyte || value is ushort || value is uint || value is ulong)
