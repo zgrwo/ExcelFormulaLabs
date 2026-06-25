@@ -162,5 +162,49 @@ namespace ExcelVbaLibraries.Analytics.Tests
         [Fact] public void AnovaOneWay_Inf_group_throws() { var a = () => RegressionCore.AnovaOneWay(new[] { new[] { 1.0, double.PositiveInfinity }, new[] { 4.0, 5.0 } }); a.Should().Throw<ArgumentException>().WithMessage("*Infinity*"); }
         [Fact] public void FactorImportance_NaN_X_throws() { var a = () => RegressionCore.FactorImportance(NaNX, y); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
         [Fact] public void FactorImportance_NaN_y_throws() { var a = () => RegressionCore.FactorImportance(X, NaNy); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
+
+        // =====================================================================
+        // CROSS-VALIDATION: WLS & RIDGE (Python statsmodels/sklearn reference)
+        //
+        // OLS and ANOVA cross-validation exists above.
+        // These add WLS and Ridge verification using the same Xcv/ycv dataset.
+        // =====================================================================
+
+        private static readonly double[] Wcv = { 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 };
+
+        // WLS coefficients computed analytically:
+        //   XᵀWX = [[Σw, Σwx], [Σwx, Σwx²]] = [[15, 85], [85, 605]]
+        //   XᵀWy = [157.1, 1123.1]
+        //   det = 15·605 - 85² = 1850
+        //   β₀ = (605·157.1 - 85·1123.1) / 1850 ≈ -0.225946
+        //   β₁ = (15·1123.1 - 85·157.1) / 1850 ≈ 1.888108
+        [Fact] public void CrossVal_WLS_coef()
+        {
+            var r = RegressionCore.FitWLS(Xcv, ycv, Wcv);
+            var c = (double[])r["coefficients"];
+            c[0].Should().BeApproximately(-0.225945945945946, 1e-6);
+            c[1].Should().BeApproximately(1.888108108108108, 1e-6);
+        }
+        // WLS with alternativing weights on near-linear data: R² ≈ 0.998
+        [Fact] public void CrossVal_WLS_r2()
+        {
+            var r = RegressionCore.FitWLS(Xcv, ycv, Wcv);
+            ((double)r["r_squared"]).Should().BeGreaterThan(0.99);
+        }
+
+        // Ridge λ=0.5: coefficients should be close to OLS (~[-0.193, 1.882])
+        [Fact] public void CrossVal_Ridge_coef()
+        {
+            var r = RegressionCore.FitRidge(Xcv, ycv, 0.5);
+            var c = (double[])r["coefficients"];
+            c[0].Should().BeApproximately(-0.19, 0.1);
+            c[1].Should().BeApproximately(1.88, 0.1);
+        }
+        // Ridge with small λ on near-linear data: R² ≈ 0.997
+        [Fact] public void CrossVal_Ridge_r2()
+        {
+            var r = RegressionCore.FitRidge(Xcv, ycv, 0.5);
+            ((double)r["r_squared"]).Should().BeGreaterThan(0.99);
+        }
     }
 }

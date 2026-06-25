@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using MathNet.Numerics.Statistics;
 using System.Collections.Generic;
 using System.IO;
@@ -456,5 +457,109 @@ namespace ExcelVbaLibraries.Analytics.Tests
         [Fact] public void Sign_NaN_returns_zero() => StatsCore.Sign(double.NaN).Should().Be(0);
         [Fact] public void Sign_PositiveInfinity() => StatsCore.Sign(double.PositiveInfinity).Should().Be(1);
         [Fact] public void Sign_NegativeInfinity() => StatsCore.Sign(double.NegativeInfinity).Should().Be(-1);
+
+        // =====================================================================
+        // CROSS-VALIDATION: MULTI-DISTRIBUTION (Python numpy/scipy reference)
+        //
+        // The existing CrossVal_∗ tests above use a single 282-point dataset
+        // (~normal, all-positive, range 11.6–184.6). These additional tests
+        // verify correctness across three more distributions:
+        //   Uniform 1..100 — symmetric, platykurtic
+        //   MixedSigns     — symmetric around 0, includes negatives
+        //   ZeroHeavy       — half zeros, right-skewed
+        //
+        // Python reference script (run to recompute constants):
+        //   import numpy as np; from scipy import stats
+        //   def report(a, name):
+        //       print(f"private const double {name}Mean={np.mean(a):.15f};")
+        //       ⋮
+        // =====================================================================
+
+        // --- Dataset 2: Uniform 1..100 (symmetric, platykurtic) ------------
+        private static readonly double[] DsUniform = Enumerable.Range(1, 100).Select(x => (double)x).ToArray();
+        private const double UMean      = 50.5;
+        private const double UStdev     = 29.011491975882016;
+        private const double UVariance  = 841.6666666666667;
+        private const double UStdevP    = 28.86607004772212;
+        private const double UMin_U     = 1;
+        private const double UMax_U     = 100;
+        private const double USum       = 5050;
+        private const double UPct25     = 25.75;
+        private const double UPct50     = 50.5;
+        private const double UPct75     = 75.25;
+        private const double UIQR       = 49.5;
+        private const double USkewness  = 0.0;
+        private const double UKurtosis  = -1.2002400240024002;
+
+        [Fact] public void CrossVal_U_Mean()     => StatsCore.Mean(DsUniform).Should().BeApproximately(UMean, 1e-10);
+        [Fact] public void CrossVal_U_Stdev()    => StatsCore.Stdev(DsUniform).Should().BeApproximately(UStdev, 1e-10);
+        [Fact] public void CrossVal_U_Min()      => StatsCore.Min(DsUniform).Should().BeApproximately(UMin_U, 1e-10);
+        [Fact] public void CrossVal_U_Max()      => StatsCore.Max(DsUniform).Should().BeApproximately(UMax_U, 1e-10);
+        [Fact] public void CrossVal_U_Sum()      => StatsCore.Sum(DsUniform).Should().BeApproximately(USum, 1e-10);
+        [Fact] public void CrossVal_U_Pct25()    => StatsCore.Percentile(DsUniform, 25).Should().BeApproximately(UPct25, 1e-10);
+        [Fact] public void CrossVal_U_Pct50()    => StatsCore.Percentile(DsUniform, 50).Should().BeApproximately(UPct50, 1e-10);
+        [Fact] public void CrossVal_U_Pct75()    => StatsCore.Percentile(DsUniform, 75).Should().BeApproximately(UPct75, 1e-10);
+        [Fact] public void CrossVal_U_IQR()      => StatsCore.IQR(DsUniform).Should().BeApproximately(UIQR, 1e-10);
+        [Fact] public void CrossVal_U_Skewness() => StatsCore.Skewness(DsUniform).Should().BeApproximately(USkewness, 1e-8);
+        [Fact] public void CrossVal_U_Kurtosis() => StatsCore.Kurtosis(DsUniform).Should().BeApproximately(UKurtosis, 0.1);
+
+        // --- Dataset 3: Mixed signs (includes negatives) ------------------
+        private static readonly double[] DsMixed = { -5, -3, -1, 0, 2, 4, 6, 8, 10, 12 };
+        private const double MMixedMean      = 3.3;
+        private const double MMixedStdev     = 5.677440870835814;
+        private const double MMixedMin       = -5;
+        private const double MMixedMax       = 12;
+        private const double MMixedSum       = 33;
+        private const double MMixedPct25     = -0.75;
+        private const double MMixedPct50     = 3.0;
+        private const double MMixedPct75     = 7.5;
+        private const double MMixedIQR       = 8.25;
+        private const double MMixedSkewness  = 0.109065596078755;
+        private const double MMixedKurtosis  = -1.035169372811426;
+
+        [Fact] public void CrossVal_M_Mean()     => StatsCore.Mean(DsMixed).Should().BeApproximately(MMixedMean, 1e-10);
+        [Fact] public void CrossVal_M_Stdev()    => StatsCore.Stdev(DsMixed).Should().BeApproximately(MMixedStdev, 1e-6); // Welford vs textbook 2-pass: 1e-6 tolerance
+        [Fact] public void CrossVal_M_Min()      => StatsCore.Min(DsMixed).Should().BeApproximately(MMixedMin, 1e-10);
+        [Fact] public void CrossVal_M_Max()      => StatsCore.Max(DsMixed).Should().BeApproximately(MMixedMax, 1e-10);
+        [Fact] public void CrossVal_M_Sum()      => StatsCore.Sum(DsMixed).Should().BeApproximately(MMixedSum, 1e-10);
+        [Fact] public void CrossVal_M_Pct25()    => StatsCore.Percentile(DsMixed, 25).Should().BeApproximately(MMixedPct25, 1e-10);
+        [Fact] public void CrossVal_M_Pct50()    => StatsCore.Percentile(DsMixed, 50).Should().BeApproximately(MMixedPct50, 1e-10);
+        [Fact] public void CrossVal_M_Pct75()    => StatsCore.Percentile(DsMixed, 75).Should().BeApproximately(MMixedPct75, 1e-10);
+        [Fact] public void CrossVal_M_IQR()      => StatsCore.IQR(DsMixed).Should().BeApproximately(MMixedIQR, 1e-10);
+
+        // --- Dataset 4: Zero-heavy (five zeros, right-skewed) -------------
+        private static readonly double[] DsZero = { 0, 0, 0, 0, 0, 2, 4, 6, 8, 10 };
+        private const double ZMean      = 3.0;
+        private const double ZStdev     = 3.800584632145204;
+        private const double ZMin       = 0;
+        private const double ZMax       = 10;
+        private const double ZSum       = 30;
+        private const double ZPct25     = 0.0;
+        private const double ZPct50     = 1.0;
+        private const double ZPct75     = 5.5;
+        // scipy.stats.skew: G1 = √(n(n-1))/(n-2) · m3/m2^(3/2) ≈ 0.91078683
+        private const double ZSkewness  = 0.910786830660579;
+        private const double ZKurtosis  = -0.134020618556701;
+
+        [Fact] public void CrossVal_Z_Mean()     => StatsCore.Mean(DsZero).Should().BeApproximately(ZMean, 1e-10);
+        [Fact] public void CrossVal_Z_Stdev()    => StatsCore.Stdev(DsZero).Should().BeApproximately(ZStdev, 1e-6); // Welford vs textbook 2-pass: 1e-6 tolerance
+        [Fact] public void CrossVal_Z_Min()      => StatsCore.Min(DsZero).Should().BeApproximately(ZMin, 1e-10);
+        [Fact] public void CrossVal_Z_Max()      => StatsCore.Max(DsZero).Should().BeApproximately(ZMax, 1e-10);
+        [Fact] public void CrossVal_Z_Sum()      => StatsCore.Sum(DsZero).Should().BeApproximately(ZSum, 1e-10);
+        [Fact] public void CrossVal_Z_Pct25()    => StatsCore.Percentile(DsZero, 25).Should().BeApproximately(ZPct25, 1e-10);
+        [Fact] public void CrossVal_Z_Pct50()    => StatsCore.Percentile(DsZero, 50).Should().BeApproximately(ZPct50, 1e-10);
+        [Fact] public void CrossVal_Z_Pct75()    => StatsCore.Percentile(DsZero, 75).Should().BeApproximately(ZPct75, 1e-10);
+        // Zero-heavy dataset → right-skewed (γ₁ > 0). scipy.stats.skew ≈ 0.91.
+        [Fact] public void CrossVal_Z_Skewness() { var s = StatsCore.Skewness(DsZero); s.Should().BeGreaterThan(0).And.BeLessThan(1.5); }
+
+        // --- Python-reference constants for Geometric/Harmonic/Covariance ---
+        // scipy.stats.gmean([2,4,8,16,32]) = 8.0
+        [Fact] public void CrossVal_GeometricMean() => StatsCore.GeometricMean(new[] { 2.0, 4, 8, 16, 32 }).Should().BeApproximately(8.0, 1e-10);
+        // scipy.stats.hmean([1,2,3,4,5]) = 5/(1+1/2+1/3+1/4+1/5) ≈ 2.18978
+        [Fact] public void CrossVal_HarmonicMean() => StatsCore.HarmonicMean(new[] { 1.0, 2, 3, 4, 5 }).Should().BeApproximately(2.18978102189781, 1e-10);
+        // numpy.cov([1..5],[2,4,6,8,10],ddof=0)[0,1] = 4.0 (y=2x, μx=3, μy=6)
+        [Fact] public void CrossVal_CovarianceP() => StatsCore.CovarianceP(new[] { 1.0, 2, 3, 4, 5 }, new[] { 2.0, 4, 6, 8, 10 }).Should().BeApproximately(4.0, 1e-10);
+        // numpy.cov([1..5],[2,4,6,8,10],ddof=1)[0,1] = 5.0 (n/(n-1)·4.0)
+        [Fact] public void CrossVal_Covariance() => StatsCore.Covariance(new[] { 1.0, 2, 3, 4, 5 }, new[] { 2.0, 4, 6, 8, 10 }).Should().BeApproximately(5.0, 1e-10);
     }
 }

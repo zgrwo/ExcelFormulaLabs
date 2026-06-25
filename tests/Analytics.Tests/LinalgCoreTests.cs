@@ -298,6 +298,36 @@ namespace ExcelVbaLibraries.Analytics.Tests
         [Fact] public void QrQ_NaN_throws() { var a = () => LinalgCore.QrQ(NaNM); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
         [Fact] public void LuL_NaN_throws() { var a = () => LinalgCore.LuL(NaNM); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
 
+        // =====================================================================
+        // PYTHON CROSS-VALIDATION (numpy.linalg / scipy.linalg reference)
+        //
+        // Tests above use self-consistency (A ≈ Q·R, PA ≈ LU).
+        // These tests add INDEPENDENT verification against known reference
+        // values — identity, diagonal, and SPD matrices whose decompositions
+        // are known analytically and verified against numpy/scipy output.
+        // =====================================================================
+
+        private static readonly double[,] I3 = { { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 } };
+        private static readonly double[,] Diag3 = { { 2, 0, 0 }, { 0, 3, 0 }, { 0, 0, 5 } };
+        private static readonly double[,] SPD2 = { { 4, 2 }, { 2, 3 } };
+
+        [Fact] public void CrossVal_SVD_Identity() { var (_, S, _) = LinalgCore.Svd(I3); S.Should().AllSatisfy(v => v.Should().BeApproximately(1.0, 1e-10)); }
+        [Fact] public void CrossVal_SVD_Diagonal() { var (_, S, _) = LinalgCore.Svd(Diag3); var s = S.OrderByDescending(v => v).ToArray(); s[0].Should().BeApproximately(5.0, 1e-10); s[1].Should().BeApproximately(3.0, 1e-10); s[2].Should().BeApproximately(2.0, 1e-10); }
+        [Fact] public void CrossVal_QR_Identity() { var (Q, R) = LinalgCore.Qr(I3); DiffFro(I3, LinalgCore.MatMul(Q, R)).Should().BeApproximately(0.0, 1e-10); }
+        [Fact] public void CrossVal_Cholesky_SPD() { var L = LinalgCore.Cholesky(SPD2); L[0, 0].Should().BeApproximately(2.0, 1e-10); L[1, 0].Should().BeApproximately(1.0, 1e-10); L[0, 1].Should().BeApproximately(0.0, 1e-10); L[1, 1].Should().BeApproximately(1.414213562373095, 1e-10); }
+        [Fact] public void CrossVal_Det_Identity() => LinalgCore.Determinant(I3).Should().BeApproximately(1.0, 1e-10);
+        [Fact] public void CrossVal_Det_Diagonal() => LinalgCore.Determinant(Diag3).Should().BeApproximately(30.0, 1e-10);
+        [Fact] public void CrossVal_Det_SPD() => LinalgCore.Determinant(SPD2).Should().BeApproximately(8.0, 1e-10);
+        [Fact] public void CrossVal_Solve_Identity() { var x = LinalgCore.Solve(I3, new[] { 3.0, 5, 7 }); x[0].Should().BeApproximately(3.0, 1e-10); x[1].Should().BeApproximately(5.0, 1e-10); x[2].Should().BeApproximately(7.0, 1e-10); }
+        [Fact] public void CrossVal_Solve_Diagonal() { var x = LinalgCore.Solve(Diag3, new[] { 2.0, 6, 10 }); x[0].Should().BeApproximately(1.0, 1e-10); x[1].Should().BeApproximately(2.0, 1e-10); x[2].Should().BeApproximately(2.0, 1e-10); }
+        [Fact] public void CrossVal_Solve_SPD() { var x = LinalgCore.Solve(SPD2, new[] { 10.0, 11 }); x[0].Should().BeApproximately(1.0, 1e-10); x[1].Should().BeApproximately(3.0, 1e-10); }
+        [Fact] public void CrossVal_Eigenvalues_Symmetric() { var v = LinalgCore.Eigenvalues(new double[,] { { 2, -1, 0 }, { -1, 2, -1 }, { 0, -1, 2 } }); var s = v.OrderBy(x => x).ToArray(); s[0].Should().BeApproximately(0.585786437626905, 1e-8); s[1].Should().BeApproximately(2.0, 1e-10); s[2].Should().BeApproximately(3.414213562373095, 1e-8); }
+        [Fact] public void CrossVal_Cond_Identity() => LinalgCore.ConditionNumber(I3).Should().BeApproximately(1.0, 1e-10);
+        [Fact] public void CrossVal_Cond_Diagonal() => LinalgCore.ConditionNumber(Diag3).Should().BeApproximately(2.5, 1e-10);
+        [Fact] public void CrossVal_Trace_Diagonal() => LinalgCore.Trace(Diag3).Should().BeApproximately(10.0, 1e-10);
+        [Fact] public void CrossVal_NormFrobenius_Diagonal() => LinalgCore.NormFrobenius(Diag3).Should().BeApproximately(6.164414002968976, 1e-10);
+        [Fact] public void CrossVal_Pinv_Diagonal() { var Ap = LinalgCore.PseudoInverse(Diag3); Ap[0, 0].Should().BeApproximately(0.5, 1e-10); Ap[1, 1].Should().BeApproximately(1.0 / 3.0, 1e-10); Ap[2, 2].Should().BeApproximately(0.2, 1e-10); }
+
         private static readonly double[,] NaNM = { { double.NaN, 1 }, { 1, 1 } };
         private static readonly double[,] InfM = { { 1.0, 1 }, { 1, double.PositiveInfinity } };
         private static readonly double[,] I2 = { { 1, 0 }, { 0, 1 } };
