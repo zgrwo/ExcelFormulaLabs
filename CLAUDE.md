@@ -22,7 +22,13 @@
 - **防错三原则**（详细 ❌/✅ 示例见 skill）：
   1. 静默传播阻断 — NaN/Inf/null/default! 须显式 guard，WrapError 不兜底
   2. 防御完整性 — 安全机制（ValidatePath/Regex Timeout/SQL 参数化）须覆盖模块所有方法
-  3. 异常过滤器统一 — 裸 `catch{}` = bug，须加 `when` 过滤器；自检 `grep -rn "catch\s*{" src/` 须返回空
+  3. 异常过滤器统一 — 裸 `catch{}` = bug，须加 `when` 过滤器；自检 `grep -rn "catch\s*{" src/` 须返回空。`catch (Exception ex) when` 过滤器须统一排除 `OutOfMemoryException`、`StackOverflowException`、`AccessViolationException`。
+- **InputNormalizer 转换哨兵契约** — 所有 `ToXxx` 方法遵循 L1-L4：
+  - **L1 必须守卫**：类型转换前显式检查 `double.IsNaN(d)` / `double.IsInfinity(d)`，绝不依赖 CLR 未定义转换行为（如 `(long)NaN`）。违反 = bug。
+  - **L2 哨兵定义**：不可转换值返回类型对应的零值哨兵，语义为「此单元格不参与计算」：`double`→NaN、`long`→0、`int`→0、`bool`→false、`DateTime`→MinValue、`string`→""。
+  - **L3 Excel 信号**：null / DBNull / ExcelEmpty / ExcelError / ExcelMissing → 返回哨兵（语义：「无有效值，跳过」）。已正确实现。
+  - **L4 已知取舍**：long/bool 的哨兵（0/false）与真实值不可区分。这是「保持简单 + 不抛异常」的已知取舍。依赖方不应依赖「0/false 表示错误」的语义。若需区分，调用方自行在转换前检查 `IsNumericCell`。
+  - **L5 ConvertValue 边界**：`ElementWiseMapper.ConvertValue<T>` 是最后的类型转换边界。6 种已知类型委托给 `InputNormalizer.ToXxx`。未知类型的 `Convert.ChangeType` 失败时：`double`→NaN，其他类型**必须 `throw`**（绝不返回 `default(T)` 静默替代），由 `WrapError` 转为 `#VALUE!`。
 - **缺陷处理**：发现缺陷 → 复核并追踪根因 → 写入 memory 或记录改进计划。
 - **Git**：push 前须用户明确同意。禁止推送 src/tests 外的文件/文件夹。
 - **文档**：信息只在一处定义，其余链接引用。数字以 api-reference.md 为准。

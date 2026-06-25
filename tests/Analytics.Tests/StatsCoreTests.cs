@@ -163,7 +163,7 @@ namespace ExcelVbaLibraries.Analytics.Tests
             StatsCore.TTestTwoSample(Empty, Empty).Should().Be(double.NaN);
 
         [Fact] public void Product_empty() =>
-            StatsCore.Product(Empty).Should().Be(0.0);
+            StatsCore.Product(Empty).Should().Be(1.0);
         [Fact] public void Sum_overflow_returns_NaN() { var d = new[] { double.MaxValue, double.MaxValue }; double.IsNaN(StatsCore.Sum(d)).Should().BeTrue(); }
         [Fact] public void Product_overflow_returns_NaN() { var d = new[] { double.MaxValue, 2.0 }; double.IsNaN(StatsCore.Product(d)).Should().BeTrue(); }
 

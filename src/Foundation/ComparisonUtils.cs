@@ -64,7 +64,7 @@ namespace ExcelVbaLibraries.Foundation
             if (a is bool boolA && b is bool boolB)
                 return boolA == boolB;
             if (a is bool || b is bool)
-                return false;  // VBA: Boolean True ≠ numeric -1
+                return false;  // Boolean ≠ numeric (VBA treats True = -1, but C# is stricter)
 
             // 5. Both Dates
             if (a is DateTime dtA && b is DateTime dtB)
@@ -262,7 +262,7 @@ namespace ExcelVbaLibraries.Foundation
         /// handled those types before reaching this method, so the extra guards are
         /// unnecessary here.
         /// </remarks>
-        private static bool IsNumeric(object value)
+        internal static bool IsNumeric(object? value)
         {
             if (value == null) return false;
             if (value is int || value is long || value is float || value is double
@@ -271,7 +271,8 @@ namespace ExcelVbaLibraries.Foundation
                 return true;
             if (value is string s && s.Trim().Length > 0)
                 return double.TryParse(s, NumberStyles.Float | NumberStyles.AllowThousands,
-                    CultureInfo.InvariantCulture, out _);
+                    CultureInfo.InvariantCulture, out double val)
+                    && !double.IsNaN(val) && !double.IsInfinity(val);
             return false;
         }
     }

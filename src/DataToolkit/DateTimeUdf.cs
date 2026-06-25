@@ -6,7 +6,7 @@ namespace ExcelVbaLibraries.DataToolkit
 {
     public static class DateTimeUdf
     {
-        private static DateTime D(object d)=>DateTime.FromOADate(InputNormalizer.ToDouble(d));
+        private static DateTime D(object d){double v=InputNormalizer.ToDouble(d);if(double.IsNaN(v))throw new ArgumentException("Cannot convert NaN to date");return DateTime.FromOADate(v);}
         [ExcelFunction(Name="DT.ISOWEEK", Description="ISO 8601 week number (1-53) from an Excel date")] public static object UDF_DT_ISOW([ExcelArgument(Name="serial_number", Description="An Excel date serial number")] object d)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOver<double,long>(d,x=>DateTimeCore.IsoWeekNum(D(x))));
         [ExcelFunction(Name="DT.WEEKDAY", Description="Day of week as number (Sunday=1, Saturday=7, matches VBA Weekday)")] public static object UDF_DT_WKD([ExcelArgument(Name="serial_number", Description="An Excel date serial number")] object d)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOver<double,long>(d,x=>DateTimeCore.Weekday(D(x))));
         [ExcelFunction(Name="DT.WEEKDAYISO", Description="Day of week as ISO number (Monday=1, Sunday=7)")] public static object UDF_DT_WKDISO([ExcelArgument(Name="serial_number", Description="An Excel date serial number")] object d)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOver<double,long>(d,x=>DateTimeCore.WeekdayISO(D(x))));

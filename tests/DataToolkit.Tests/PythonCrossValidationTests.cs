@@ -13,7 +13,11 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
     /// Cross-module integration tests verifying that multiple toolkit modules
     /// compose correctly in end-to-end data-processing pipelines.
     /// </summary>
-    public class PythonCrossValidationTests
+    /// <summary>
+    /// Integration pipeline tests: C# module composition (String→Stats, Array→Stats, etc.).
+    /// Not cross-validated against Python — see StatsCoreTests for Python-verified constants.
+    /// </summary>
+    public class IntegrationPipelineTests
     {
         // ═══════════════════════════════════════════════════════════════════
         // 1. String-to-Stats Pipeline

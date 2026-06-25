@@ -97,7 +97,8 @@ namespace ExcelVbaLibraries.Foundation
                     TimeSpan.FromSeconds(5));
             }
             catch (Exception ex) when (ex is not OutOfMemoryException
-                and not StackOverflowException)
+                and not StackOverflowException
+                and not AccessViolationException)
             {
                 return false;  // Invalid pattern → silent false (VBA behaviour)
             }

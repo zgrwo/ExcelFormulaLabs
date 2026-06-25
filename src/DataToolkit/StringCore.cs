@@ -109,7 +109,8 @@ namespace ExcelVbaLibraries.DataToolkit
                 return string.Format(fs, value);
             }
             catch (Exception ex) when (ex is not OutOfMemoryException
-                and not StackOverflowException)
+                and not StackOverflowException
+                and not AccessViolationException)
             {
                 // Format specifier incompatible with the value's runtime type
                 // (e.g. "D4" applied to a double from Excel). Return the raw value.

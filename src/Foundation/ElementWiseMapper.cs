@@ -167,7 +167,8 @@ namespace ExcelVbaLibraries.Foundation
         private static object MapSingleCell<TInput, TOutput>(
             object cell, Func<TInput, TOutput> mapper)
         {
-            if (cell == null || cell is DBNull) return cell!;
+            if (cell == null) return cell!;
+            if (cell is DBNull) return ExcelEmpty.Value;
             if (ReferenceEquals(cell, ExcelEmpty.Value)) return ExcelEmpty.Value;
             if (cell is ExcelError) return cell;
 
@@ -179,8 +180,10 @@ namespace ExcelVbaLibraries.Foundation
         {
             if (cell1 is ExcelError) return cell1;
             if (cell2 is ExcelError) return cell2;
-            if (cell1 == null || cell1 is DBNull) return cell1!;
-            if (cell2 == null || cell2 is DBNull) return cell2!;
+            if (cell1 == null) return cell1!;
+            if (cell2 == null) return cell2!;
+            if (cell1 is DBNull) return ExcelEmpty.Value;
+            if (cell2 is DBNull) return ExcelEmpty.Value;
             if (ReferenceEquals(cell1, ExcelEmpty.Value)) return ExcelEmpty.Value;
             if (ReferenceEquals(cell2, ExcelEmpty.Value)) return ExcelEmpty.Value;
 
@@ -196,9 +199,12 @@ namespace ExcelVbaLibraries.Foundation
             if (cell1 is ExcelError) return cell1;
             if (cell2 is ExcelError) return cell2;
             if (cell3 is ExcelError) return cell3;
-            if (cell1 == null || cell1 is DBNull) return cell1!;
-            if (cell2 == null || cell2 is DBNull) return cell2!;
-            if (cell3 == null || cell3 is DBNull) return cell3!;
+            if (cell1 == null) return cell1!;
+            if (cell2 == null) return cell2!;
+            if (cell3 == null) return cell3!;
+            if (cell1 is DBNull) return ExcelEmpty.Value;
+            if (cell2 is DBNull) return ExcelEmpty.Value;
+            if (cell3 is DBNull) return ExcelEmpty.Value;
             if (ReferenceEquals(cell1, ExcelEmpty.Value)) return ExcelEmpty.Value;
             if (ReferenceEquals(cell2, ExcelEmpty.Value)) return ExcelEmpty.Value;
             if (ReferenceEquals(cell3, ExcelEmpty.Value)) return ExcelEmpty.Value;
@@ -251,11 +257,13 @@ namespace ExcelVbaLibraries.Foundation
                     System.Globalization.CultureInfo.InvariantCulture);
             }
             catch (Exception ex) when (ex is not OutOfMemoryException
-                and not StackOverflowException)
+                and not StackOverflowException
+                and not AccessViolationException)
             {
                 System.Diagnostics.Debug.WriteLine(
                     $"[ConvertValue] Failed to convert '{value?.GetType().Name}' to '{typeof(T).Name}': {ex.Message}");
-                return typeof(T) == typeof(double) ? (T)(object)double.NaN : default!;
+                if (typeof(T) == typeof(double)) return (T)(object)double.NaN;
+                throw; // re-throw for non-double types: WrapError → #VALUE!
             }
         }
 

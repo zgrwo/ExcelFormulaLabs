@@ -219,7 +219,7 @@ namespace ExcelVbaLibraries.Analytics
                 sd = Math.Sqrt(sd / (n - 1));
                 if (sd < 1e-12)
                 {
-                    System.Diagnostics.Debug.WriteLine(
+                    System.Diagnostics.Trace.WriteLine(
                         $"[FactorImportance] Column {j} has zero variance (constant); ranked least important.");
                     sd = 1;
                 }

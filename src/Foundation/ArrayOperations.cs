@@ -124,8 +124,8 @@ namespace ExcelVbaLibraries.Foundation
 
         private static int CompareNumeric<T>(T a, T b)
         {
-            bool aNum = IsNumericValue(a);
-            bool bNum = IsNumericValue(b);
+            bool aNum = ComparisonUtils.IsNumeric(a);
+            bool bNum = ComparisonUtils.IsNumeric(b);
             if (!aNum && !bNum) return 0;
             if (!aNum) return 1;
             if (!bNum) return -1;
@@ -292,18 +292,6 @@ namespace ExcelVbaLibraries.Foundation
         {
             T tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
         }
-
-        /// <summary>Returns true for numeric primitive types and numeric strings.
-        /// Consistent with ComparisonUtils.IsNumeric for cross-module behaviour.
-        /// Unlike InputNormalizer.IsNumericCell, this accepts bool (→1.0) and
-        /// DateTime (→OLE Date) because sorting treats them as rankable numeric values.</summary>
-        private static bool IsNumericValue<T>(T value) =>
-            value is int || value is long || value is float || value is double
-            || value is decimal || value is short || value is byte
-            || value is sbyte || value is ushort || value is uint || value is ulong
-            || (value is string s && s.Trim().Length > 0
-                && double.TryParse(s, NumberStyles.Float | NumberStyles.AllowThousands,
-                    CultureInfo.InvariantCulture, out _));
 
         // ─────────────────────────────────────────────────────────────────
         // CollectNumericColumns

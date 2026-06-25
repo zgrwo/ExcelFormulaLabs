@@ -83,7 +83,8 @@ namespace ExcelVbaLibraries.Foundation
             Dictionary<string, object>? b,
             bool overwrite = false)
         {
-            var result = Create();
+            var result = new Dictionary<string, object>(
+                a?.Comparer ?? b?.Comparer ?? StringComparer.OrdinalIgnoreCase);
             if (a != null)
                 foreach (var kvp in a) result[kvp.Key] = kvp.Value;
             if (b != null)

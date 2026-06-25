@@ -46,7 +46,7 @@ namespace ExcelVbaLibraries.DataToolkit
         internal static string GetBaseName(string p) => Path.GetFileNameWithoutExtension(p);
         internal static string GetExtension(string p) => Path.GetExtension(p);
         internal static string GetFolderPath(string p) => Path.GetDirectoryName(p) ?? "";
-        internal static bool IsPathValid(string p) { if(string.IsNullOrEmpty(p))return false; if(p.IndexOfAny(System.IO.Path.GetInvalidPathChars())>=0)return false; try{Path.GetFullPath(p);return true;}catch(Exception ex) when(ex is not OutOfMemoryException and not StackOverflowException){return false;} }
+        internal static bool IsPathValid(string p) { if(string.IsNullOrEmpty(p))return false; if(p.IndexOfAny(System.IO.Path.GetInvalidPathChars())>=0)return false; try{Path.GetFullPath(p);return true;}catch(Exception ex) when(ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException){return false;} }
         internal static bool FileExists(string p) { ValidatePath(p); return File.Exists(p); }
         internal static long GetFileSize(string p) { ValidatePath(p); return File.Exists(p) ? new FileInfo(p).Length : -1; }
         internal static string ReadTextFile(string p, Encoding? e = null) { ValidatePath(p); return File.ReadAllText(p, e ?? Encoding.UTF8); }

@@ -26,7 +26,7 @@ namespace ExcelVbaLibraries.DataToolkit
             int startRow = hasHeader ? 1 : 0;
             string[]? headers = null;
             if (hasHeader && rows > 0) { headers = new string[cols]; for (int c = 0; c < cols; c++) headers[c] = InputNormalizer.ToString(data[0, c]); }
-            for (int r = startRow; r < rows; r++) { if (r > startRow) sb.Append(',').Append(nl); sb.Append(sp).Append('{'); for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(',').Append(' '); string key = headers != null ? $"\"{JsonEncodedText.Encode(headers[c], JavaScriptEncoder.Default).Value}\"" : $"\"col{c}\""; sb.Append(key).Append(": "); sb.Append(JsonVal(data[r, c])); } sb.Append('}'); }
+            for (int r = startRow; r < rows; r++) { if (r > startRow) sb.Append(',').Append(nl); sb.Append(sp).Append('{'); for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(',').Append(' '); string key = headers != null ? $"\"{JsonEncodedText.Encode(headers[c], JavaScriptEncoder.Default).Value}\"" : $"\"Col{c + 1}\""; sb.Append(key).Append(": "); sb.Append(JsonVal(data[r, c])); } sb.Append('}'); }
             sb.Append(nl).Append(']'); return sb.ToString();
         }
 

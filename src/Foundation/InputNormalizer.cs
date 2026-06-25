@@ -154,8 +154,8 @@ namespace ExcelVbaLibraries.Foundation
         /// It explicitly rejects <c>bool</c> and <c>DateTime</c> because VBA treats them as
         /// distinct non-numeric subtypes for cell-type probing. For sort/comparison purposes
         /// where bool→1.0 and DateTime→OLE Date are acceptable, see
-        /// <see cref="ComparisonUtils"/> (private IsNumeric) and
-        /// <see cref="ArrayOperations"/> (private IsNumericValue).
+        /// <see cref="ComparisonUtils.IsNumeric"/> (internal, shared with
+        /// <see cref="ArrayOperations"/>).
         /// </remarks>
         public static bool IsNumericCell(object? value)
         {
@@ -233,7 +233,8 @@ namespace ExcelVbaLibraries.Foundation
             }
             try { return Convert.ToDouble(value, CultureInfo.InvariantCulture); }
             catch (Exception ex) when (ex is not OutOfMemoryException
-                and not StackOverflowException) { return double.NaN; }
+                and not StackOverflowException
+                and not AccessViolationException) { return double.NaN; }
         }
 
         /// <summary>
@@ -246,7 +247,11 @@ namespace ExcelVbaLibraries.Foundation
             if (value is ExcelError) return 0;
             if (value is long l) return l;
             if (value is int i) return i;
-            if (value is double d) return (long)Math.Round(d);
+            if (value is double d)
+            {
+                if (double.IsNaN(d) || double.IsInfinity(d)) return 0; // L1 NaN/Inf guard
+                return (long)Math.Round(d);
+            }
             if (value is string s)
             {
                 if (long.TryParse(s, NumberStyles.Integer | NumberStyles.AllowThousands,
@@ -254,12 +259,16 @@ namespace ExcelVbaLibraries.Foundation
                     return result;
                 if (double.TryParse(s, NumberStyles.Float | NumberStyles.AllowThousands,
                     CultureInfo.InvariantCulture, out double dVal))
+                {
+                    if (double.IsNaN(dVal) || double.IsInfinity(dVal)) return 0; // L1 NaN/Inf guard
                     return (long)Math.Round(dVal);
+                }
                 return 0;
             }
             try { return Convert.ToInt64(value, CultureInfo.InvariantCulture); }
             catch (Exception ex) when (ex is not OutOfMemoryException
-                and not StackOverflowException) { return 0; }
+                and not StackOverflowException
+                and not AccessViolationException) { return 0; }
         }
 
         /// <summary>
@@ -272,7 +281,7 @@ namespace ExcelVbaLibraries.Foundation
             if (ReferenceEquals(value, ExcelEmpty.Value)) return false;
             if (value is ExcelError) return false;
             if (value is bool b) return b;
-            if (value is double d) return d != 0.0;
+            if (value is double d) return double.IsNaN(d) ? false : d != 0.0; // L1 NaN guard
             if (value is int i) return i != 0;
             if (value is long l) return l != 0;
             if (value is string s)
@@ -287,7 +296,8 @@ namespace ExcelVbaLibraries.Foundation
             }
             try { return Convert.ToBoolean(value, CultureInfo.InvariantCulture); }
             catch (Exception ex) when (ex is not OutOfMemoryException
-                and not StackOverflowException) { return false; }
+                and not StackOverflowException
+                and not AccessViolationException) { return false; }
         }
 
         /// <summary>
@@ -300,11 +310,12 @@ namespace ExcelVbaLibraries.Foundation
             if (ReferenceEquals(value, ExcelEmpty.Value)) return DateTime.MinValue;
             if (value is ExcelError) return DateTime.MinValue;
             if (value is DateTime dt) return dt;
-            if (value is double d && d > 0)
+            if (value is double d && d > 0 && !double.IsNaN(d) && !double.IsInfinity(d))
             {
                 try { return new DateTime(1899, 12, 30).AddDays(d); }
                 catch (Exception ex) when (ex is not OutOfMemoryException
-                    and not StackOverflowException) { return DateTime.MinValue; }
+                    and not StackOverflowException
+                    and not AccessViolationException) { return DateTime.MinValue; }
             }
             if (value is string s)
             {
@@ -315,7 +326,8 @@ namespace ExcelVbaLibraries.Foundation
             }
             try { return Convert.ToDateTime(value, CultureInfo.InvariantCulture); }
             catch (Exception ex) when (ex is not OutOfMemoryException
-                and not StackOverflowException) { return DateTime.MinValue; }
+                and not StackOverflowException
+                and not AccessViolationException) { return DateTime.MinValue; }
         }
 
         // ─────────────────────────────────────────────────────────────────
