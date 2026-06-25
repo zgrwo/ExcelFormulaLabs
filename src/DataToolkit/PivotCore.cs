@@ -8,15 +8,16 @@ namespace ExcelVbaLibraries.DataToolkit
     /// <summary>Pivot, unpivot, grouping, cross join. Ported from PivotUtils.bas.</summary>
     internal static class PivotCore
     {
-        internal static object[,] Pivot(object[,] data, int keyCol, int pivotCol, int valueCol, string agg = "SUM")
+        internal static object[,] Pivot(object[,] data, int keyCol, int pivotCol, int valueCol, string agg = "SUM", bool hasHeaders = true)
         {
             agg = agg.ToUpperInvariant();
             int rows = data.GetLength(0);
+            int startRow = hasHeaders ? 1 : 0;
             var map = new Dictionary<(string k, string p), double>();
             var cnt = new Dictionary<(string k, string p), long>(); // for AVG/COUNT
             var keySet = new HashSet<string>(); var keyList = new List<string>();
             var pivotSet = new HashSet<string>(); var pivotList = new List<string>();
-            for (int r = 0; r < rows; r++)
+            for (int r = startRow; r < rows; r++)
             {
                 string k = InputNormalizer.ToString(data[r, keyCol]);
                 string p = InputNormalizer.ToString(data[r, pivotCol]);
@@ -60,13 +61,14 @@ namespace ExcelVbaLibraries.DataToolkit
             return outArr;
         }
 
-        internal static object[,] GroupBy(object[,] data, int[] gCols, int aCol, string agg = "SUM")
+        internal static object[,] GroupBy(object[,] data, int[] gCols, int aCol, string agg = "SUM", bool hasHeaders = true)
         {
             agg = agg.ToUpperInvariant();
             int rows = data.GetLength(0), nG = gCols.Length;
+            int startRow = hasHeaders ? 1 : 0;
             var groups = new Dictionary<string, (double val, long cnt)>();
             var keyNames = new List<string[]>(); var seen = new HashSet<string>();
-            for (int r = 0; r < rows; r++)
+            for (int r = startRow; r < rows; r++)
             {
                 var gk = gCols.Select(c => InputNormalizer.ToString(data[r, c])).ToArray();
                 string gks = MakeCompoundKey(gk); double v = InputNormalizer.ToDouble(data[r, aCol]);

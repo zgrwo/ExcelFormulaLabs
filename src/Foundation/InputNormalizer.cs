@@ -192,7 +192,7 @@ namespace ExcelVbaLibraries.Foundation
         /// formula bar, Excel-DNA passes this sentinel; treating it as missing
         /// prevents garbage like the type name leaking into computation results.
         /// </summary>
-        private static bool IsExcelMissing(object? value)
+        internal static bool IsExcelMissing(object? value)
         {
             return value != null
                 && value.GetType().FullName == "ExcelDna.Integration.ExcelMissing";

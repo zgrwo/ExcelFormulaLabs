@@ -91,8 +91,20 @@ namespace ExcelVbaLibraries.Analytics.Tests
 
         [Fact] public void GasToSTP_zero_temperature_K()
         {
-            // t=0K → division by zero → now guarded to NaN (P1 fix)
             PhyChemCore.GasToSTP(22.4, 0, 1, "K", "atm").Should().Be(double.NaN);
         }
+
+        // ═══════════════ NaN/Inf guard tests (防错原则1) ═══════════════
+
+        [Fact] public void ConvertTemperature_NaN_returns_NaN() => PhyChemCore.ConvertTemperature(double.NaN, "C", "F").Should().Be(double.NaN);
+        [Fact] public void ConvertTemperature_Inf_returns_NaN() => PhyChemCore.ConvertTemperature(double.PositiveInfinity, "C", "F").Should().Be(double.NaN);
+        [Fact] public void ConvertPressure_NaN_returns_NaN() => PhyChemCore.ConvertPressure(double.NaN, "atm", "Pa").Should().Be(double.NaN);
+        [Fact] public void ConvertPressure_Inf_returns_NaN() => PhyChemCore.ConvertPressure(double.PositiveInfinity, "atm", "Pa").Should().Be(double.NaN);
+        [Fact] public void ConvertVolume_NaN_returns_NaN() => PhyChemCore.ConvertVolume(double.NaN, "L", "mL").Should().Be(double.NaN);
+        [Fact] public void ConvertVolume_Inf_returns_NaN() => PhyChemCore.ConvertVolume(double.PositiveInfinity, "L", "mL").Should().Be(double.NaN);
+        [Fact] public void ConvertMass_NaN_returns_NaN() => PhyChemCore.ConvertMass(double.NaN, "kg", "g").Should().Be(double.NaN);
+        [Fact] public void ConvertMass_Inf_returns_NaN() => PhyChemCore.ConvertMass(double.PositiveInfinity, "kg", "g").Should().Be(double.NaN);
+        [Fact] public void IdealGasLaw_NaN_pressure_returns_NaN() => PhyChemCore.IdealGasLaw(p: double.NaN, v: 22.4, n: 1).Should().Be(double.NaN);
+        [Fact] public void IdealGasLaw_Infinity_volume_returns_NaN() => PhyChemCore.IdealGasLaw(p: 1, v: double.PositiveInfinity, n: 1).Should().Be(double.NaN);
     }
 }

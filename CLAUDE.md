@@ -23,6 +23,11 @@
   1. 静默传播阻断 — NaN/Inf/null/default! 须显式 guard，WrapError 不兜底
   2. 防御完整性 — 安全机制（ValidatePath/Regex Timeout/SQL 参数化）须覆盖模块所有方法
   3. 异常过滤器统一 — 裸 `catch{}` = bug，须加 `when` 过滤器；自检 `grep -rn "catch\s*{" src/` 须返回空。`catch (Exception ex) when` 过滤器须统一排除 `OutOfMemoryException`、`StackOverflowException`、`AccessViolationException`。
+- **Core 层表格方法表头行契约** — 所有接受二维表格 `object[,]` 的 Core 方法，必须包含 `bool hasHeaders = true` 参数：
+  - 默认 `hasHeaders=true`：跳过第一行（表头），与 Excel 用户习惯一致。
+  - `Unpivot` / `RangeToJson` / `RangeToMarkdown` 等需要表头文本的方法：`r=0` 读取表头文本（不参与计算），数据从 `r=1` 开始。
+  - `CrossJoin` 等不涉及表头语义的方法豁免。
+  - **禁止**同模块内部分方法含表头、部分不含的行为不一致（如 Pivot `r=0` vs Unpivot `r=1` 的历史问题）。
 - **InputNormalizer 转换哨兵契约** — 所有 `ToXxx` 方法遵循 L1-L4：
   - **L1 必须守卫**：类型转换前显式检查 `double.IsNaN(d)` / `double.IsInfinity(d)`，绝不依赖 CLR 未定义转换行为（如 `(long)NaN`）。违反 = bug。
   - **L2 哨兵定义**：不可转换值返回类型对应的零值哨兵，语义为「此单元格不参与计算」：`double`→NaN、`long`→0、`int`→0、`bool`→false、`DateTime`→MinValue、`string`→""。

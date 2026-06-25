@@ -81,6 +81,7 @@ namespace ExcelVbaLibraries.Analytics
 
         internal static (double[,] U, double[] S, double[,] Vt) Svd(double[,] m)
         {
+            NumericGuard.AgainstNonFinite(m);
             var A = Matrix<double>.Build.DenseOfArray(m);
             var svd = A.Svd(computeVectors: true);
             int rows = A.RowCount, cols = A.ColumnCount, k = Math.Min(rows, cols);
@@ -91,12 +92,14 @@ namespace ExcelVbaLibraries.Analytics
 
         internal static double[,] PseudoInverse(double[,] m)
         {
+            NumericGuard.AgainstNonFinite(m);
             var A = Matrix<double>.Build.DenseOfArray(m);
             return A.PseudoInverse().ToArray();
         }
 
         internal static (double[,] Q, double[,] R) Qr(double[,] m)
         {
+            NumericGuard.AgainstNonFinite(m);
             int rows = m.GetLength(0), cols = m.GetLength(1);
             if (rows >= cols)
             {
@@ -127,6 +130,7 @@ namespace ExcelVbaLibraries.Analytics
 
         internal static (double[,] L, double[,] U, double[,] P) Lu(double[,] m)
         {
+            NumericGuard.AgainstNonFinite(m);
             var A = Matrix<double>.Build.DenseOfArray(m);
             var lu = A.LU();
             // perm[i] = row index of original A that ends up at row i of the permuted matrix.
@@ -139,14 +143,25 @@ namespace ExcelVbaLibraries.Analytics
             return (lu.L.ToArray(), lu.U.ToArray(), P.ToArray());
         }
 
-        internal static double Determinant(double[,] m) =>
-            Matrix<double>.Build.DenseOfArray(m).Determinant();
+        internal static double Determinant(double[,] m)
+        {
+            NumericGuard.AgainstNonFinite(m);
+            return Matrix<double>.Build.DenseOfArray(m).Determinant();
+        }
 
-        internal static double[] Solve(double[,] A, double[] b) =>
-            Matrix<double>.Build.DenseOfArray(A).Solve(Vector<double>.Build.Dense(b)).ToArray();
+        internal static double[] Solve(double[,] A, double[] b)
+        {
+            NumericGuard.AgainstNonFinite(A);
+            if (b.Any(v => double.IsNaN(v) || double.IsInfinity(v)))
+                throw new ArgumentException("Right-hand side vector contains NaN or Infinity. Solve requires finite values.");
+            return Matrix<double>.Build.DenseOfArray(A).Solve(Vector<double>.Build.Dense(b)).ToArray();
+        }
 
-        internal static double[,] Cholesky(double[,] m) =>
-            Matrix<double>.Build.DenseOfArray(m).Cholesky().Factor.ToArray();
+        internal static double[,] Cholesky(double[,] m)
+        {
+            NumericGuard.AgainstNonFinite(m);
+            return Matrix<double>.Build.DenseOfArray(m).Cholesky().Factor.ToArray();
+        }
 
         /// <summary>
         /// Real eigenvalues via symmetric eigenvalue decomposition (Evd).
@@ -176,20 +191,11 @@ namespace ExcelVbaLibraries.Analytics
             int n = m.GetLength(0);
             if (n != m.GetLength(1))
                 throw new ArgumentException($"Eigenvalue decomposition requires a square matrix (got {n}×{m.GetLength(1)}).");
+            NumericGuard.AgainstNonFinite(m); // Replaces inline NaN/Inf scan
             for (int i = 0; i < n; i++)
             {
-                // Check diagonal element for NaN/Inf (off-diagonal checked in inner loop)
-                if (double.IsNaN(m[i, i]) || double.IsInfinity(m[i, i]))
-                    throw new ArgumentException(
-                        $"Matrix contains NaN or Infinity on diagonal at [{i},{i}]. " +
-                        "Eigenvalue decomposition requires finite values.");
                 for (int j = i + 1; j < n; j++)
                 {
-                    if (double.IsNaN(m[i, j]) || double.IsInfinity(m[i, j]) ||
-                        double.IsNaN(m[j, i]) || double.IsInfinity(m[j, i]))
-                        throw new ArgumentException(
-                            $"Matrix contains NaN or Infinity at [{i},{j}] or [{j},{i}]. " +
-                            "Eigenvalue decomposition requires finite values.");
                     if (Math.Abs(m[i, j] - m[j, i]) > 1e-8)
                         throw new ArgumentException(
                             $"Matrix is not symmetric: |m[{i},{j}] − m[{j},{i}]| = {Math.Abs(m[i, j] - m[j, i]):E2} > 1e-8. " +
@@ -198,18 +204,25 @@ namespace ExcelVbaLibraries.Analytics
             }
         }
 
-        internal static double ConditionNumber(double[,] m) =>
-            Matrix<double>.Build.DenseOfArray(m).ConditionNumber();
+        internal static double ConditionNumber(double[,] m)
+        {
+            NumericGuard.AgainstNonFinite(m);
+            return Matrix<double>.Build.DenseOfArray(m).ConditionNumber();
+        }
 
         internal static int Rank(double[,] m, double tol = 1e-10)
         {
+            NumericGuard.AgainstNonFinite(m);
             var A = Matrix<double>.Build.DenseOfArray(m);
             var svd = A.Svd(computeVectors: false);
             return svd.S.Count(s => s > tol);
         }
 
-        internal static double NormFrobenius(double[,] m) =>
-            Matrix<double>.Build.DenseOfArray(m).FrobeniusNorm();
+        internal static double NormFrobenius(double[,] m)
+        {
+            NumericGuard.AgainstNonFinite(m);
+            return Matrix<double>.Build.DenseOfArray(m).FrobeniusNorm();
+        }
 
         internal static double[,] Identity(int n) =>
             Matrix<double>.Build.DenseIdentity(n).ToArray();
@@ -217,14 +230,24 @@ namespace ExcelVbaLibraries.Analytics
         internal static double[,] Diagonal(double[] v) =>
             Matrix<double>.Build.DenseOfDiagonalArray(v).ToArray();
 
-        internal static double[,] MatMul(double[,] A, double[,] B) =>
-            (Matrix<double>.Build.DenseOfArray(A) * Matrix<double>.Build.DenseOfArray(B)).ToArray();
+        internal static double[,] MatMul(double[,] A, double[,] B)
+        {
+            NumericGuard.AgainstNonFinite(A);
+            NumericGuard.AgainstNonFinite(B);
+            return (Matrix<double>.Build.DenseOfArray(A) * Matrix<double>.Build.DenseOfArray(B)).ToArray();
+        }
 
-        internal static double[,] Transpose(double[,] m) =>
-            Matrix<double>.Build.DenseOfArray(m).Transpose().ToArray();
+        internal static double[,] Transpose(double[,] m)
+        {
+            NumericGuard.AgainstNonFinite(m);
+            return Matrix<double>.Build.DenseOfArray(m).Transpose().ToArray();
+        }
 
-        internal static double Trace(double[,] m) =>
-            Matrix<double>.Build.DenseOfArray(m).Trace();
+        internal static double Trace(double[,] m)
+        {
+            NumericGuard.AgainstNonFinite(m);
+            return Matrix<double>.Build.DenseOfArray(m).Trace();
+        }
 
         // ── Cached decomposition accessors ──────────────────────────
         // Each returns one component of a decomposition. The full result

@@ -44,13 +44,19 @@ namespace ExcelVbaLibraries.Analytics
         /// Ca[Fe[(CN)6]2]3 may produce incorrect results because bracket/paren
         /// expansion is sequential, not iterative.
         /// </summary>
-        internal static double MolecularWeight(string formula)
+        internal static double MolecularWeight(string formula) => MolecularWeight(formula, 0);
+
+        private static double MolecularWeight(string formula, int depth)
         {
+            const int maxDepth = 100; // Guard against stack overflow from pathological hydrate chains
+            if (depth > maxDepth)
+                throw new ArgumentException(
+                    $"Formula nesting depth exceeds {maxDepth}. The formula may be malformed or contain too many hydrate segments.");
             if (string.IsNullOrWhiteSpace(formula)) return double.NaN;
             if (formula.Contains("."))
             {
                 string[] parts = formula.Split('.');
-                double total = MolecularWeight(parts[0]);
+                double total = MolecularWeight(parts[0], depth + 1);
                 if (double.IsNaN(total)) return double.NaN;
                 for (int i = 1; i < parts.Length; i++)
                 {
@@ -59,7 +65,7 @@ namespace ExcelVbaLibraries.Analytics
                     while (j < p.Length && char.IsDigit(p[j])) { coeff = coeff * 10 + (p[j] - '0'); j++; }
                     if (coeff == 0) coeff = 1;
                     string sub = p.Substring(j);
-                    double pm = MolecularWeight(sub);
+                    double pm = MolecularWeight(sub, depth + 1);
                     if (double.IsNaN(pm)) return double.NaN;
                     total += coeff * pm;
                 }
@@ -102,6 +108,7 @@ namespace ExcelVbaLibraries.Analytics
 
         internal static double ConvertTemperature(double v, string from, string to)
         {
+            if (double.IsNaN(v) || double.IsInfinity(v)) return double.NaN;
             double k = from.ToUpperInvariant() switch
             {
                 "C" or "CELSIUS" => v + 273.15,
@@ -121,6 +128,7 @@ namespace ExcelVbaLibraries.Analytics
 
         internal static double ConvertPressure(double v, string from, string to)
         {
+            if (double.IsNaN(v) || double.IsInfinity(v)) return double.NaN;
             double pa = from.ToUpperInvariant() switch
             {
                 "ATM" => v * 101325, "PA" or "PASCAL" => v, "KPA" => v * 1000,
@@ -138,6 +146,7 @@ namespace ExcelVbaLibraries.Analytics
 
         internal static double ConvertVolume(double v, string from, string to)
         {
+            if (double.IsNaN(v) || double.IsInfinity(v)) return double.NaN;
             double l = from.ToUpperInvariant() switch
             {
                 "L" or "LITER" => v, "ML" => v / 1000.0, "M3" => v * 1000,
@@ -154,6 +163,7 @@ namespace ExcelVbaLibraries.Analytics
 
         internal static double ConvertMass(double v, string from, string to)
         {
+            if (double.IsNaN(v) || double.IsInfinity(v)) return double.NaN;
             double g = from.ToUpperInvariant() switch
             {
                 "KG" => v * 1000, "G" or "GRAM" => v, "MG" => v / 1000.0,
@@ -171,6 +181,12 @@ namespace ExcelVbaLibraries.Analytics
         internal static double IdealGasLaw(double? p = null, double? v = null,
             double? n = null, double? t = null, double r = 0.082057)
         {
+            // Reject NaN/Inf in supplied parameters (防错原则1)
+            if (p.HasValue && (double.IsNaN(p.Value) || double.IsInfinity(p.Value))) return double.NaN;
+            if (v.HasValue && (double.IsNaN(v.Value) || double.IsInfinity(v.Value))) return double.NaN;
+            if (n.HasValue && (double.IsNaN(n.Value) || double.IsInfinity(n.Value))) return double.NaN;
+            if (t.HasValue && (double.IsNaN(t.Value) || double.IsInfinity(t.Value))) return double.NaN;
+            if (double.IsNaN(r) || double.IsInfinity(r)) return double.NaN;
             int missing = (p.HasValue?0:1)+(v.HasValue?0:1)+(n.HasValue?0:1)+(t.HasValue?0:1);
             if (missing != 1) return double.NaN;
             if (!p.HasValue) return v!.Value == 0 ? double.NaN : n!.Value * r * t!.Value / v!.Value;

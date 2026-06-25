@@ -119,5 +119,26 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
             StringCore.CountSubstring("aaa", "a").Should().Be(3);
             StringCore.CountSubstring("aaaa", "aa").Should().Be(2);
         }
+
+        [Fact] public void Levenshtein_identical() => StringCore.LevenshteinDistance("abc", "abc").Should().Be(0);
+        [Fact] public void Levenshtein_insertion() => StringCore.LevenshteinDistance("abc", "abcd").Should().Be(1);
+        [Fact] public void Soundex_same_sounding() => StringCore.Soundex("Robert").Should().Be(StringCore.Soundex("Rupert"));
+        [Fact] public void Soundex_different() => StringCore.Soundex("abc").Should().NotBe(StringCore.Soundex("xyz"));
+        [Fact] public void HtmlEncode_all_entities() => StringCore.HtmlEncode("<&\">").Should().Contain("&lt;").And.Contain("&amp;");
+        [Fact] public void CommonPrefix_no_match() => StringCore.CommonPrefix("abc", "xyz").Should().Be("");
+        [Fact] public void CommonPrefix_case_insensitive() => StringCore.CommonPrefix("Hello", "HELP", false).Should().Be("Hel");
+        [Fact] public void LeftOf_not_found() => StringCore.LeftOf("hello", ",").Should().Be("hello");
+        [Fact] public void RightOf_not_found() => StringCore.RightOf("hello", ",").Should().Be("hello");
+        [Fact] public void ExtractBetween_inclusive() => StringCore.ExtractBetween("[hello]", "[", "]", 1, true).Should().Be("[hello]");
+        [Fact] public void Reverse_null_safe() => StringCore.ReverseString(null!).Should().Be("");
+        [Fact] public void HtmlEncode_null_safe() => StringCore.HtmlEncode(null!).Should().Be("");
+        [Fact] public void HtmlDecode_null_safe() => StringCore.HtmlDecode(null!).Should().Be("");
+        [Fact] public void UrlEncode_null_safe() => StringCore.UrlEncode(null!).Should().Be("");
+        [Fact] public void Base64Encode_null_safe() => StringCore.Base64Encode(null!).Should().Be("");
+        [Fact] public void NthWord_negative() => StringCore.NthWord("a b c", -1).Should().Be("");
+        [Fact] public void ExtractBetween_nth_occurrence() => StringCore.ExtractBetween("a(b)(c)", "(", ")", 2).Should().Be("c");
+        [Fact] public void NormalizeWs_null_safe() => StringCore.NormalizeWhitespace(null!).Should().Be("");
+        [Fact] public void PadLeft_overflow() => StringCore.PadLeft("hello", 3).Should().Be("hello");
+        [Fact] public void PadRight_overflow() => StringCore.PadRight("hello", 3).Should().Be("hello");
     }
 }

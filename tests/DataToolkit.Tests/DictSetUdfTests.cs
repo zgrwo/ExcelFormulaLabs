@@ -41,5 +41,15 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         // DICT.VALUES
         [Fact] public void Values_basic() { var r=(object[])DictSetUdf.UDF_DICT_VALS(new object[,]{{"a",1},{"b",2}}); r.Should().Equal(1,2); }
         [Fact] public void Values_null() => DictSetUdf.UDF_DICT_VALS(null!).Should().Be(ExcelError.Value);
+        // Edge cases
+        [Fact] public void Frequency_empty() { var r=(object[,])DictSetUdf.UDF_DICT_FREQ(new object[0]); r.GetLength(0).Should().Be(0); }
+        [Fact] public void Intersect_empty() { var r=(object[])DictSetUdf.UDF_DICT_INTER(new object[0], new object[]{1,2}); r.Should().BeEmpty(); }
+        [Fact] public void Union_empty() { var r=(object[])DictSetUdf.UDF_DICT_UNION(new object[0], new object[]{1}); r.Should().Equal(1); }
+        [Fact] public void Except_empty_first() { var r=(object[])DictSetUdf.UDF_DICT_EXCEPT(new object[0], new object[]{1,2}); r.Should().BeEmpty(); }
+        [Fact] public void Dict_mismatched_lengths() { var r=(object[,])DictSetUdf.UDF_DICT_DICT(new object[]{"k1","k2"},new object[]{10}); r.GetLength(0).Should().Be(1); }
+        [Fact] public void Keys_empty_table() { var r=(object[])DictSetUdf.UDF_DICT_KEYS(new object[0,0]); r.Should().BeEmpty(); }
+        [Fact] public void Count_empty_table() => ((long)DictSetUdf.UDF_DICT_COUNT(new object[0,0])).Should().Be(0);
+        // FREQUENCY(NA): not a MapOver UDF — error cell preserved as raw value in output
+        [Fact] public void Frequency_NA_preserves_error_key() { var r = (object[,])DictSetUdf.UDF_DICT_FREQ(ExcelError.NA); r.GetLength(0).Should().Be(1); r[0, 0].Should().Be(ExcelError.NA); r[0, 1].Should().Be(1L); }
     }
 }

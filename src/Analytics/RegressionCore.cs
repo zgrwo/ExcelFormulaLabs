@@ -23,6 +23,7 @@ namespace ExcelVbaLibraries.Analytics
         /// </returns>
         internal static Dictionary<string, object> FitOLS(double[,] X, double[] y)
         {
+            NumericGuard.AgainstNonFinite(X, y);
             int n = X.GetLength(0), p = X.GetLength(1);
             var matX = Matrix<double>.Build.DenseOfArray(X);
             var vecY = Vector<double>.Build.Dense(y);
@@ -81,10 +82,12 @@ namespace ExcelVbaLibraries.Analytics
         /// </returns>
         internal static Dictionary<string, object> FitWLS(double[,] X, double[] y, double[] w)
         {
+            NumericGuard.AgainstNonFinite(X, y);
             int n = X.GetLength(0), p = X.GetLength(1);
-            // Reject negative/NaN weights — Sqrt produces NaN which would silently propagate
+            // Reject negative/NaN/Infinity weights — Sqrt produces NaN/Inf which would silently propagate
             for (int i = 0; i < w.Length; i++)
-                if (w[i] < 0 || double.IsNaN(w[i])) throw new ArgumentException($"Weight at index {i} is invalid ({w[i]}). All weights must be >= 0 and non-NaN.");
+                if (w[i] < 0 || double.IsNaN(w[i]) || double.IsInfinity(w[i]))
+                    throw new ArgumentException($"Weight at index {i} is invalid ({w[i]}). All weights must be >= 0 and finite.");
             var Xw = new double[n, p];
             var yw = new double[n];
             for (int i = 0; i < n; i++)
@@ -125,6 +128,9 @@ namespace ExcelVbaLibraries.Analytics
         /// </returns>
         internal static Dictionary<string, object> FitRidge(double[,] X, double[] y, double lambda = 1.0)
         {
+            NumericGuard.AgainstNonFinite(X, y);
+            if (double.IsNaN(lambda) || double.IsInfinity(lambda))
+                throw new ArgumentException($"Lambda must be a finite value (got {lambda}).");
             int n = X.GetLength(0), p = X.GetLength(1);
             var matX = Matrix<double>.Build.DenseOfArray(X);
             var vecY = Vector<double>.Build.Dense(y);
@@ -168,6 +174,12 @@ namespace ExcelVbaLibraries.Analytics
             if (k < 2)
                 throw new ArgumentException(
                     "ANOVA requires at least 2 groups.");
+            // Reject NaN/Inf in group data (防错原则1: avoid silent NaN propagation in means/SS)
+            for (int i = 0; i < k; i++)
+                for (int j = 0; j < groups[i].Length; j++)
+                    if (double.IsNaN(groups[i][j]) || double.IsInfinity(groups[i][j]))
+                        throw new ArgumentException(
+                            $"Group {i} contains {(double.IsNaN(groups[i][j]) ? "NaN" : "Infinity")} at index {j}. ANOVA requires finite values.");
             var means = groups.Select(g => g.Average()).ToArray();
             var counts = groups.Select(g => (long)g.Length).ToArray();
             double grand = groups.SelectMany(g => g).Average();
@@ -205,6 +217,7 @@ namespace ExcelVbaLibraries.Analytics
         /// <returns>Column indices sorted most-to-least important.</returns>
         internal static int[] FactorImportance(double[,] X, double[] y)
         {
+            NumericGuard.AgainstNonFinite(X, y);
             int n = X.GetLength(0), p = X.GetLength(1);
             if (n < 2)
                 throw new ArgumentException(

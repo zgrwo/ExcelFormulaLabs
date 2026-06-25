@@ -239,5 +239,11 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void Shuffle_empty() { var r=(object[])ArrayUdf.UDF_ARR_SHUFFLE(new object[0]); r.Should().BeEmpty(); }
         [Fact] public void Shuffle_null() { var r=(object[])ArrayUdf.UDF_ARR_SHUFFLE(null!); r.Should().BeEmpty(); }
         [Fact] public void Shuffle_strings() { var r=(object[])ArrayUdf.UDF_ARR_SHUFFLE(new object[]{"a","b","c","d"}); r.Should().HaveCount(4); r.Should().BeEquivalentTo(new object[]{"a","b","c","d"}); }
+        [Fact] public void Shuffle_changes_order()
+        {
+            var input = new object[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+            var result = (object[])ArrayUdf.UDF_ARR_SHUFFLE(input);
+            result.Should().NotBeEquivalentTo(input, o => o.WithStrictOrdering());
+        }
     }
 }

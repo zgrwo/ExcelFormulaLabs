@@ -137,12 +137,30 @@ namespace ExcelVbaLibraries.Analytics.Tests
 
         [Fact] public void FactorImportance_constant_column()
         {
-            // Column with zero variance → sd<1e-12 guard → logged + normalized to 1
-            // Should not throw and should return valid rankings
             var constX = new double[,] { { 1, 5 }, { 1, 2 }, { 1, 3 }, { 1, 4 }, { 1, 6 } };
             var r = RegressionCore.FactorImportance(constX, yf);
             r.Length.Should().Be(2);
             r.Should().OnlyHaveUniqueItems();
         }
+
+        // ═══════════════════ NaN/Inf guard tests (防错原则1) ═══════════════════
+
+        private static readonly double[,] NaNX = { { double.NaN, 1 }, { 1, 2 }, { 1, 3 } };
+        private static readonly double[,] InfX = { { double.PositiveInfinity, 1 }, { 1, 2 }, { 1, 3 } };
+        private static readonly double[] NaNy = { double.NaN, 2, 3 };
+        private static readonly double[] Infy = { double.PositiveInfinity, 2, 3 };
+
+        [Fact] public void FitOLS_NaN_X_throws() { var a = () => RegressionCore.FitOLS(NaNX, y); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
+        [Fact] public void FitOLS_Inf_X_throws() { var a = () => RegressionCore.FitOLS(InfX, y); a.Should().Throw<ArgumentException>().WithMessage("*Infinity*"); }
+        [Fact] public void FitOLS_NaN_y_throws() { var a = () => RegressionCore.FitOLS(X, NaNy); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
+        [Fact] public void FitWLS_NaN_X_throws() { var a = () => RegressionCore.FitWLS(NaNX, y, new[] { 1.0, 1, 1 }); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
+        [Fact] public void FitWLS_Infinity_weight_throws() { var a = () => RegressionCore.FitWLS(X, y, new[] { 1.0, double.PositiveInfinity, 1 }); a.Should().Throw<ArgumentException>().WithMessage("*invalid*"); }
+        [Fact] public void FitRidge_NaN_X_throws() { var a = () => RegressionCore.FitRidge(NaNX, y); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
+        [Fact] public void FitRidge_NaN_lambda_throws() { var a = () => RegressionCore.FitRidge(X, y, double.NaN); a.Should().Throw<ArgumentException>().WithMessage("*Lambda*"); }
+        [Fact] public void FitRidge_Infinity_lambda_throws() { var a = () => RegressionCore.FitRidge(X, y, double.PositiveInfinity); a.Should().Throw<ArgumentException>().WithMessage("*Lambda*"); }
+        [Fact] public void AnovaOneWay_NaN_group_throws() { var a = () => RegressionCore.AnovaOneWay(new[] { new[] { double.NaN, 2.0, 3.0 }, new[] { 4.0, 5.0 } }); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
+        [Fact] public void AnovaOneWay_Inf_group_throws() { var a = () => RegressionCore.AnovaOneWay(new[] { new[] { 1.0, double.PositiveInfinity }, new[] { 4.0, 5.0 } }); a.Should().Throw<ArgumentException>().WithMessage("*Infinity*"); }
+        [Fact] public void FactorImportance_NaN_X_throws() { var a = () => RegressionCore.FactorImportance(NaNX, y); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
+        [Fact] public void FactorImportance_NaN_y_throws() { var a = () => RegressionCore.FactorImportance(X, NaNy); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
     }
 }

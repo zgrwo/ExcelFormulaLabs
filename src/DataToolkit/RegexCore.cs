@@ -102,10 +102,10 @@ namespace ExcelVbaLibraries.DataToolkit
         }
         internal static string RegexEscape(string l) => Regex.Escape(l);
         private static RegexOptions F(bool ic) =>
-            (ic ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture;
+            (ic ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture | RegexOptions.Compiled;
 
         /// <summary>Regex options WITH capture groups — only for RegexCaptureGroups.</summary>
         private static RegexOptions FC(bool ic) =>
-            (ic ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.CultureInvariant;
+            (ic ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.CultureInvariant | RegexOptions.Compiled;
     }
 }

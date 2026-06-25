@@ -13,7 +13,7 @@
 | 文件 | 包含的函数 |
 |------|----------|
 | `Analytics-AddIn-packed.xll` | 统计 · 回归 · 线性代数 · 物理化学 |
-| `DataToolkit-AddIn-packed.xll` | 字符串 · 日期 · 正则 · JSON · SQL · 数组 · 文件 |
+| `DataToolkit-AddIn-packed.xll` | 字符串 · 日期 · 正则 · JSON/XML · SQL · 数组 · 字典 · 透视 · 范围导出 · 文件 |
 
 > 两个可以同时加载，也可以只用你需要的。64 位 Excel 选 `64-packed`，32 位选 `packed`。
 

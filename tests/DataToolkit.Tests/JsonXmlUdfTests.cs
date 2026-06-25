@@ -65,5 +65,10 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void XmlToTable_with_rowpath() { var r=(object[,])JsonXmlUdf.UDF_XML_TOTABLE("<root><a><x>1</x><y>2</y></a><a><x>3</x></a></root>","//a"); r.GetLength(0).Should().Be(3); }
         [Fact] public void XmlToTable_invalid() => JsonXmlUdf.UDF_XML_TOTABLE("<bad>","//r").Should().NotBeOfType<object[,]>();
         [Fact] public void XmlToTable_empty() => JsonXmlUdf.UDF_XML_TOTABLE("","//r").Should().NotBeOfType<object[,]>();
+        // Null / error / array edge cases
+        [Fact] public void JsonQuery_null_json() => JsonXmlUdf.UDF_JSON_QUERY(null!, "a").Should().Be(ExcelError.Value);
+        [Fact] public void JsonToTable_null_input() => JsonXmlUdf.UDF_JSON_TOTABLE(null!).Should().Be(ExcelError.Value);
+        [Fact] public void XmlXPath_null_input() => ((object[])JsonXmlUdf.UDF_XML_XPATH(null!, "//x")).Should().BeEmpty();
+        [Fact] public void XmlValidate_null_input() => ((bool)JsonXmlUdf.UDF_XML_VALIDATE(null!)).Should().BeFalse();
     }
 }

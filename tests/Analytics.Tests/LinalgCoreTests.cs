@@ -268,5 +268,38 @@ namespace ExcelVbaLibraries.Analytics.Tests
             var act = () => LinalgCore.Eigen(m);
             act.Should().Throw<ArgumentException>().WithMessage("*NaN*");
         }
+
+        // ════════════════════════════════════════════════════════════════
+        // NaN/Inf guard tests — ValidateMatrixFinite on ALL public methods
+        // ════════════════════════════════════════════════════════════════
+
+        [Fact] public void Svd_NaN_throws() { var a = () => LinalgCore.Svd(NaNM); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
+        [Fact] public void Svd_Infinity_throws() { var a = () => LinalgCore.Svd(InfM); a.Should().Throw<ArgumentException>().WithMessage("*Infinity*"); }
+        [Fact] public void PseudoInverse_NaN_throws() { var a = () => LinalgCore.PseudoInverse(NaNM); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
+        [Fact] public void Qr_NaN_throws() { var a = () => LinalgCore.Qr(NaNM); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
+        [Fact] public void Qr_Infinity_throws() { var a = () => LinalgCore.Qr(InfM); a.Should().Throw<ArgumentException>().WithMessage("*Infinity*"); }
+        [Fact] public void Lu_NaN_throws() { var a = () => LinalgCore.Lu(NaNM); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
+        [Fact] public void Determinant_NaN_throws() { var a = () => LinalgCore.Determinant(NaNM); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
+        [Fact] public void Determinant_Infinity_throws() { var a = () => LinalgCore.Determinant(InfM); a.Should().Throw<ArgumentException>().WithMessage("*Infinity*"); }
+        [Fact] public void Solve_NaN_matrix_throws() { var a = () => LinalgCore.Solve(NaNM, new[] { 1.0, 1.0 }); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
+        [Fact] public void Solve_NaN_vector_throws() { var a = () => LinalgCore.Solve(A, new[] { double.NaN, 1.0 }); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
+        [Fact] public void Solve_Infinity_vector_throws() { var a = () => LinalgCore.Solve(A, new[] { 1.0, double.PositiveInfinity }); a.Should().Throw<ArgumentException>().WithMessage("*Infinity*"); }
+        [Fact] public void Cholesky_NaN_throws() { var a = () => LinalgCore.Cholesky(NaNM); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
+        [Fact] public void ConditionNumber_NaN_throws() { var a = () => LinalgCore.ConditionNumber(NaNM); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
+        [Fact] public void Rank_NaN_throws() { var a = () => LinalgCore.Rank(NaNM); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
+        [Fact] public void NormFrobenius_NaN_throws() { var a = () => LinalgCore.NormFrobenius(NaNM); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
+        [Fact] public void MatMul_NaN_A_throws() { var a = () => LinalgCore.MatMul(NaNM, I2); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
+        [Fact] public void MatMul_NaN_B_throws() { var a = () => LinalgCore.MatMul(I2, NaNM); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
+        [Fact] public void Transpose_NaN_throws() { var a = () => LinalgCore.Transpose(NaNM); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
+        [Fact] public void Trace_NaN_throws() { var a = () => LinalgCore.Trace(NaNM); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
+        [Fact] public void Trace_Infinity_throws() { var a = () => LinalgCore.Trace(InfM); a.Should().Throw<ArgumentException>().WithMessage("*Infinity*"); }
+        // Cache accessors delegate to guarded Svd/Qr/Lu
+        [Fact] public void SvdU_NaN_throws() { var a = () => LinalgCore.SvdU(NaNM); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
+        [Fact] public void QrQ_NaN_throws() { var a = () => LinalgCore.QrQ(NaNM); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
+        [Fact] public void LuL_NaN_throws() { var a = () => LinalgCore.LuL(NaNM); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
+
+        private static readonly double[,] NaNM = { { double.NaN, 1 }, { 1, 1 } };
+        private static readonly double[,] InfM = { { 1.0, 1 }, { 1, double.PositiveInfinity } };
+        private static readonly double[,] I2 = { { 1, 0 }, { 0, 1 } };
     }
 }

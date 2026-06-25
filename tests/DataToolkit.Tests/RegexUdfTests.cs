@@ -71,5 +71,24 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void IsMatch_true() => ((bool)RegexUdf.UDF_RX_ISMATCH("hello","hello")).Should().BeTrue();
         [Fact] public void IsMatch_false() => ((bool)RegexUdf.UDF_RX_ISMATCH("hello","\\d+")).Should().BeFalse();
         [Fact] public void IsMatch_invalid_pattern() => RegexUdf.UDF_RX_ISMATCH("hello","[").Should().Be(ExcelError.Value);
+
+        // ── Array input tests (MapOver element-wise) ─────────────────
+        [Fact] public void Test_array() { var r=(object[])RegexUdf.UDF_RX_TEST(new object[]{"ab","12","cd"},"\\d+",true); r.Should().Equal(false,true,false); }
+        [Fact] public void Count_array() { var r=(object[])RegexUdf.UDF_RX_COUNT(new object[]{"a1","b2c3","d"},"\\d+",true); r.Should().Equal(1L,2L,0L); }
+        [Fact] public void Match_array() { var r=(object[])RegexUdf.UDF_RX_MATCH(new object[]{"a1","b2","c3"},"\\d+",true); r.Should().Equal("1","2","3"); }
+        [Fact] public void Replace_array() { var r=(object[])RegexUdf.UDF_RX_REPL(new object[]{"a1","b2","c3"},"\\d","X",true); r.Should().Equal("aX","bX","cX"); }
+        [Fact] public void Escape_array() { var r=(object[])RegexUdf.UDF_RX_ESC(new object[]{"a.b","c.d"}); r.Should().Equal(@"a\.b",@"c\.d"); }
+        [Fact] public void IsMatch_array() { var r=(object[])RegexUdf.UDF_RX_ISMATCH(new object[]{"a1","bc","d2"},"\\d+"); r.Should().Equal(true,false,true); }
+
+        // MapOverMulti L100-101: NormalizeTo1D(null)→empty → returns ExcelEmpty.Value
+        [Fact] public void Test_null() => RegexUdf.UDF_RX_TEST(null!,"\\d+",true).Should().Be(ExcelEmpty.Value);
+        [Fact] public void Count_null() => RegexUdf.UDF_RX_COUNT(null!,"\\d+",true).Should().Be(ExcelEmpty.Value);
+        [Fact] public void Match_null() => RegexUdf.UDF_RX_MATCH(null!,"\\d+",true).Should().Be(ExcelEmpty.Value);
+        // MapOver (single-arg): MapSingleCell(null)→returns null
+        [Fact] public void Replace_null() => RegexUdf.UDF_RX_REPL(null!,"\\d","X",true).Should().BeNull();
+        // Direct Core call: ToString(null)→"" → regex groups on "" → empty array
+        [Fact] public void Groups_null() { var r = (object[,])RegexUdf.UDF_RX_GRP(null!,"(\\d+)",true); r.GetLength(0).Should().Be(0); }
+        [Fact] public void MatchAll_null() { var r = (string[])RegexUdf.UDF_RX_MALL(null!,"\\d+",true); r.Should().BeEmpty(); }
+        [Fact] public void Split_null() { var r = (object[])RegexUdf.UDF_RX_SPLIT(null!,",",true); r.Should().HaveCount(1); }
     }
 }

@@ -96,6 +96,42 @@ namespace ExcelVbaLibraries.Analytics.Tests
         }
         [Fact] public void Rsq_is_one_for_perfect_fit() => ((double)RegressionUdf.UDF_REGRESS_RSQ(y_test, X_test)).Should().BeApproximately(1.0, 1e-10);
 
+        // ── Report content verification ──────────────────────────────
+        [Fact] public void OLS_report_content()
+        {
+            var r = (object[,])RegressionUdf.UDF_REGRESS_OLS(y_test, X_test);
+            FindScalar(r, "sse").Should().BeApproximately(0.0, 1e-10);
+            FindScalar(r, "r_squared").Should().BeApproximately(1.0, 1e-10);
+            FindScalar(r, "adj_r_squared").Should().BeApproximately(1.0, 1e-10);
+            FindScalar(r, "n").Should().Be(3);
+            FindScalar(r, "df").Should().Be(1);
+            var resid = FindRow(r, "residuals");
+            resid.Should().HaveCount(3);
+            foreach (var v in resid) v.Should().BeApproximately(0.0, 1e-10);
+        }
+        [Fact] public void WLS_report_content()
+        {
+            var r = (object[,])RegressionUdf.UDF_REGRESS_WLS(y_test, X_test, new double[] { 1.0, 1.0, 1.0 });
+            FindScalar(r, "r_squared").Should().BeApproximately(1.0, 1e-10);
+            FindScalar(r, "n").Should().Be(3);
+            var resid = FindRow(r, "residuals");
+            foreach (var v in resid) v.Should().BeApproximately(0.0, 1e-10);
+        }
+        [Fact] public void Ridge_report_content()
+        {
+            var r = (object[,])RegressionUdf.UDF_REGRESS_RIDGE(y_test, X_test, 0.1);
+            FindScalar(r, "r_squared").Should().BeGreaterThan(0.99);
+            FindScalar(r, "lambda").Should().Be(0.1);
+        }
+        [Fact] public void Anova1_report_content()
+        {
+            var r = (object[,])RegressionUdf.UDF_REGRESS_ANOVA1(new double[,] { { 5, 8 }, { 6, 9 }, { 7, 10 } });
+            FindScalar(r, "ss_total").Should().BeGreaterThan(0);
+            FindScalar(r, "f_stat").Should().BeGreaterThan(0);
+            FindScalar(r, "p_value").Should().BeLessThan(0.05);
+            FindRow(r, "group_means").Should().HaveCount(2);
+        }
+
         // ── P0 guard UDF-level: WrapError → #VALUE! ──
         [Fact] public void OLS_constant_y_returns_error()
         {

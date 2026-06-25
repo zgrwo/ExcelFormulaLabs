@@ -21,12 +21,16 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void WorkdaysBetween() => DateTimeCore.WorkdaysBetween(new(2025,6,13),new(2025,6,17)).Should().Be(2);
         [Fact] public void Easter_2025() { var e=DateTimeCore.Easter(2025); e.Month.Should().Be(4); e.Day.Should().Be(20); }
         [Fact] public void IsLeapYear() { DateTimeCore.IsLeapYear(2024).Should().BeTrue(); DateTimeCore.IsLeapYear(2025).Should().BeFalse(); }
+        [Fact] public void IsLeapYear_century() { DateTimeCore.IsLeapYear(1900).Should().BeFalse(); DateTimeCore.IsLeapYear(2000).Should().BeTrue(); }
+        [Fact] public void Easter_2100() { var e=DateTimeCore.Easter(2100); e.Month.Should().Be(3); e.Day.Should().Be(28); }
         [Fact] public void DayOfYear() => DateTimeCore.DayOfYear(D).Should().Be(166);
         [Fact] public void DateDiff_days() => DateTimeCore.DateDiff("D",new(2025,1,1),new(2025,1,10)).Should().Be(9);
         [Fact] public void DateDiff_months() => DateTimeCore.DateDiff("M",new(2025,1,15),new(2025,6,15)).Should().Be(5);
         [Fact] public void IsoYear_2024_01_01() => DateTimeCore.IsoYear(new(2024,1,1)).Should().Be(2024);
         [Fact] public void IsoYear_2024_12_30() => DateTimeCore.IsoYear(new(2024,12,30)).Should().Be(2025);
         [Fact] public void WeekdayName_saturday() => DateTimeCore.WeekdayName(new(2024,6,15)).Should().Be("Saturday");
+        [Fact] public void WeekdayName_monday() => DateTimeCore.WeekdayName(new(2024,6,17)).Should().Be("Monday");
+        [Fact] public void WeekdayName_sunday() => DateTimeCore.WeekdayName(new(2024,6,16)).Should().Be("Sunday");
         [Fact] public void EndOfWeek_saturday_to_sunday() => DateTimeCore.EndOfWeek(new(2024,6,15)).DayOfWeek.Should().Be(DayOfWeek.Sunday);
         [Fact] public void WeekOfMonth() => DateTimeCore.WeekOfMonth(new(2024,6,15)).Should().Be(2);
         [Fact] public void AgeMonths() => DateTimeCore.AgeMonths(new(2020,1,15),new(2024,6,15)).Should().Be(53);
