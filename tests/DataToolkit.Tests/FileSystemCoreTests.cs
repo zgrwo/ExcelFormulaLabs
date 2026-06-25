@@ -279,5 +279,17 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
             }
             finally { FileSystemCore.SandboxRoot = null; }
         }
+
+        [Fact] public void Sandbox_NormalizePath_outside_root_throws()
+        {
+            var tmp = System.IO.Path.GetTempPath();
+            try
+            {
+                FileSystemCore.SandboxRoot = tmp;
+                var act = () => FileSystemCore.NormalizePath(System.IO.Path.Combine(tmp, "..", "outside.txt"));
+                act.Should().Throw<UnauthorizedAccessException>().WithMessage("*outside*sandbox*");
+            }
+            finally { FileSystemCore.SandboxRoot = null; }
+        }
     }
 }

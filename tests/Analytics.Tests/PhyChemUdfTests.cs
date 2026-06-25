@@ -325,6 +325,12 @@ namespace ExcelVbaLibraries.Analytics.Tests
             ((double)r).Should().Be(0.0);
         }
 
+        [Fact] public void Density_zero_volume()
+        {
+            var r = PhyChemUdf.UDF_PC_DEN(10.0, 0.0);
+            ((double)r).Should().Be(double.NaN); // L1 zero-denominator guard
+        }
+
         [Fact] public void Density_equal_mass_vol()
         {
             var r = PhyChemUdf.UDF_PC_DEN(7.5, 7.5);

@@ -88,6 +88,8 @@ namespace ExcelVbaLibraries.Analytics.Tests
         [Fact] public void Ln_zero() => ((double)StatsUdf.UDF_STAT_LN(0.0)).Should().Be(double.NaN); // Excel =LN(0) → #NUM! — L1 guard rejects Infinity
         [Fact] public void Ln_negative_NaN() => ((double)StatsUdf.UDF_STAT_LN(-1.0)).Should().Be(double.NaN);
         [Fact] public void Log10_one() => ((double)StatsUdf.UDF_STAT_LOG10(1.0)).Should().Be(0.0);
+        [Fact] public void Log10_zero() => ((double)StatsUdf.UDF_STAT_LOG10(0.0)).Should().Be(double.NaN); // L1 guard rejects -Infinity
+        [Fact] public void Log10_negative_NaN() => ((double)StatsUdf.UDF_STAT_LOG10(-1.0)).Should().Be(double.NaN);
         [Fact] public void Exp_one() => ((double)StatsUdf.UDF_STAT_EXP(1.0)).Should().BeApproximately(Math.E,1e-10);
         [Fact] public void Exp_negative() => ((double)StatsUdf.UDF_STAT_EXP(-10.0)).Should().BeApproximately(Math.Exp(-10),1e-10);
         [Fact] public void Exp_large_infinity() => ((double)StatsUdf.UDF_STAT_EXP(1000.0)).Should().Be(double.PositiveInfinity);

@@ -311,6 +311,16 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
             r.GetLength(0).Should().Be(4);  // 2 data rows × 2 value cols (header row skipped)
         }
 
+        [Fact] public void Unpivot_no_headers()
+        {
+            // hasHeaders=false: data starts at row 0, column names auto-generated
+            var d = new object[,] { { 10, 20 }, { 30, 40 } };
+            var r = PivotCore.Unpivot(d, new int[0], new[] { 0, 1 }, hasHeaders: false);
+            r.GetLength(0).Should().Be(4);  // 2 data rows × 2 value cols
+            r[0, 0].Should().Be("Var1");   // auto-generated name for col 0 (1-based)
+            r[1, 0].Should().Be("Var2");   // auto-generated name for col 1
+        }
+
         // =====================================================================
         // EDGE CASE TESTS — GROUPBY
         // =====================================================================
