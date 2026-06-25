@@ -1,3 +1,4 @@
+using System;
 using ExcelDna.Integration;
 using ExcelDna.IntelliSense;
 
@@ -9,7 +10,7 @@ namespace ExcelVbaLibraries.DataToolkit
         public void AutoClose()
         {
             try { IntelliSenseServer.Uninstall(); }
-            catch { /* best-effort: server may already be unloaded */ }
+            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException) { /* best-effort: server may already be unloaded */ }
         }
     }
 }
