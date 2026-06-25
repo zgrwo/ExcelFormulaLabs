@@ -28,7 +28,8 @@ public class ValuesEqualTests
     [Fact] public void Same_dates_are_equal() => ComparisonUtils.ValuesEqual(new System.DateTime(2025, 1, 15), new System.DateTime(2025, 1, 15)).Should().BeTrue();
     [Fact] public void Different_dates_are_not_equal() => ComparisonUtils.ValuesEqual(new System.DateTime(2025, 1, 15), new System.DateTime(2025, 1, 16)).Should().BeFalse();
     [Fact] public void Very_close_doubles_within_default_epsilon() => ComparisonUtils.ValuesEqual(1.0, 1.0 + 1e-15).Should().BeTrue();
-    [Fact] public void NaN_and_NaN_behavior() => ComparisonUtils.ValuesEqual(double.NaN, double.NaN).Should().BeFalse();
+    // NaN == NaN for consistency with SafeKey and search semantics (防错原则1: explicit guard over IEEE 754 default)
+    [Fact] public void NaN_and_NaN_behavior() => ComparisonUtils.ValuesEqual(double.NaN, double.NaN).Should().BeTrue();
 }
 
 public class CompareTests

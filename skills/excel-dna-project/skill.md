@@ -22,7 +22,7 @@ src/
 tests/
 ├── Foundation.Tests/
 ├── Analytics.Tests/    Core + UDF 双重测试 + Python 交叉验证
-└── DataToolkit.Tests/  Core + UDF 双重测试 + PythonCrossValidationTests
+└── DataToolkit.Tests/  Core + UDF 双重测试 + IntegrationPipelineTests
 
 docs/
 ├── api-reference.md   219 UDF 签名（数字的唯一信源）
@@ -240,7 +240,7 @@ internal static string RegexMatch(string i, string p, long n, bool ic=true)
 ```bash
 bash scripts/verify-docs.sh                          # ① 文档一致性验证
 dotnet test                                         # ② 全量单元测试
-dotnet test --filter "CrossVal|PythonCrossValidation"  # ③ 交叉验证
+dotnet test --filter "CrossVal"  # ③ 交叉验证（Analytics Python 交叉验证）
 dotnet build -c Debug && dotnet build -c Release     # ④ 双目标打包
 ```
 

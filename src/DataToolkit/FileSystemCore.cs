@@ -54,6 +54,17 @@ namespace ExcelVbaLibraries.DataToolkit
         internal static string GetBaseName(string p) => Path.GetFileNameWithoutExtension(p);
         internal static string GetExtension(string p) => Path.GetExtension(p);
         internal static string GetFolderPath(string p) => Path.GetDirectoryName(p) ?? "";
+        /// <summary>
+        /// Validates path SYNTAX only — checks for null/empty, invalid characters,
+        /// and whether <c>Path.GetFullPath</c> succeeds.
+        /// </summary>
+        /// <remarks>
+        /// This is a pure format check. It does NOT validate against <see cref="SandboxRoot"/> —
+        /// sandbox enforcement is the responsibility of individual I/O methods
+        /// (<see cref="FileExists"/>, <see cref="ReadTextFile"/>, etc.) which call
+        /// <see cref="ValidatePath"/> before accessing the file system.
+        /// Callers who need sandbox authorisation should call <see cref="ValidatePath"/> directly.
+        /// </remarks>
         internal static bool IsPathValid(string p) { if(string.IsNullOrEmpty(p))return false; if(p.IndexOfAny(System.IO.Path.GetInvalidPathChars())>=0)return false; try{Path.GetFullPath(p);return true;}catch(Exception ex) when(ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException){return false;} }
         internal static bool FileExists(string p) { ValidatePath(p); return File.Exists(p); }
         internal static long GetFileSize(string p) { ValidatePath(p); return File.Exists(p) ? new FileInfo(p).Length : -1; }

@@ -189,10 +189,26 @@ namespace ExcelVbaLibraries.Analytics
             if (double.IsNaN(r) || double.IsInfinity(r)) return double.NaN;
             int missing = (p.HasValue?0:1)+(v.HasValue?0:1)+(n.HasValue?0:1)+(t.HasValue?0:1);
             if (missing != 1) return double.NaN;
-            if (!p.HasValue) return v!.Value == 0 ? double.NaN : n!.Value * r * t!.Value / v!.Value;
-            if (!v.HasValue) return p.Value == 0 ? double.NaN : n!.Value * r * t!.Value / p.Value;
-            if (!n.HasValue) return t!.Value == 0 ? double.NaN : p.Value * v!.Value / (r * t!.Value);
-            return n!.Value == 0 ? double.NaN : p.Value * v!.Value / (n!.Value * r);
+            // Each branch handles the case where exactly one parameter is missing.
+            // The missing count above guarantees the other three have values,
+            // but we use explicit .HasValue checks (not !) for defence-in-depth (防错原则1).
+            if (!p.HasValue)
+            {
+                if (!v.HasValue || !n.HasValue || !t.HasValue) return double.NaN;
+                return v.Value == 0 ? double.NaN : n.Value * r * t.Value / v.Value;
+            }
+            if (!v.HasValue)
+            {
+                if (!p.HasValue || !n.HasValue || !t.HasValue) return double.NaN;
+                return p.Value == 0 ? double.NaN : n.Value * r * t.Value / p.Value;
+            }
+            if (!n.HasValue)
+            {
+                if (!p.HasValue || !v.HasValue || !t.HasValue) return double.NaN;
+                return t.Value == 0 ? double.NaN : p.Value * v.Value / (r * t.Value);
+            }
+            if (!p.HasValue || !v.HasValue || !n.HasValue) return double.NaN;
+            return n.Value == 0 ? double.NaN : p.Value * v.Value / (n.Value * r);
         }
 
         internal static double GasToSTP(double vol, double temp, double press,

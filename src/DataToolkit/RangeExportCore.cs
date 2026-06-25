@@ -39,9 +39,10 @@ namespace ExcelVbaLibraries.DataToolkit
             return sb.ToString();
         }
 
-        /// <param name="hasHeader">API consistency with other RangeExport methods. No behavioral effect for CSV (format has no header concept — all rows emitted as data).</param>
+        // hasHeader: when false, skips the first row. Default true emits all rows.
+        // The RANGE.TOCSV UDF always uses the default for backward compatibility.
         internal static string RangeToCsv(object[,] data, string delim = ",", bool quote = true, bool hasHeader = true)
-        { int rows = data.GetLength(0), cols = data.GetLength(1); var sb = new StringBuilder(); for (int r = 0; r < rows; r++) { for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(delim); string v = InputNormalizer.ToString(data[r, c]); if (quote && (v.Contains(delim) || v.Contains("\"") || v.Contains("\n"))) v = "\"" + v.Replace("\"", "\"\"") + "\""; sb.Append(v); } sb.AppendLine(); } return sb.ToString(); }
+        { int rows = data.GetLength(0), cols = data.GetLength(1); var sb = new StringBuilder(); int startRow = hasHeader ? 0 : 1; for (int r = startRow; r < rows; r++) { for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(delim); string v = InputNormalizer.ToString(data[r, c]); if (quote && (v.Contains(delim) || v.Contains("\"") || v.Contains("\n"))) v = "\"" + v.Replace("\"", "\"\"") + "\""; sb.Append(v); } sb.AppendLine(); } return sb.ToString(); }
 
         internal static object[,] Transpose(object[,] d) { int r = d.GetLength(0), c = d.GetLength(1); var t = new object[c, r]; for (int i = 0; i < r; i++) for (int j = 0; j < c; j++) t[j, i] = d[i, j]; return t; }
         internal static object[,] SelectColumns(object[,] d, int[] ci)

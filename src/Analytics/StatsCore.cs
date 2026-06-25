@@ -51,11 +51,21 @@ namespace ExcelVbaLibraries.Analytics
         internal static double Range(double[] d) =>
             d.Length == 0 ? double.NaN : Max(d) - Min(d);
 
+        /// <summary>
+        /// Sum of array elements. NaN/Inf input is guarded upstream by <see cref="AnalyticsHelpers.PrepV"/>
+        /// (the mandatory gateway for all STATS UDFs), so this method can rely on clean input.
+        /// Infinity result is capped to NaN to avoid propagating ±∞ into Excel cells.
+        /// </summary>
         internal static double Sum(double[] d) { if (d.Length == 0) return 0.0; var r = d.Sum(); return double.IsInfinity(r) ? double.NaN : r; }
+        /// <summary>
+        /// Product of array elements. NaN/Inf input is guarded upstream by <see cref="AnalyticsHelpers.PrepV"/>.
+        /// Infinity result is capped to NaN.
+        /// </summary>
         internal static double Product(double[] d) { if (d.Length == 0) return 1.0; var r = d.Aggregate(1.0, (a, x) => a * x); return double.IsInfinity(r) ? double.NaN : r; }
 
-        /// <summary>Sign of a numeric value. NaN → 0 (explicit guard; Math.Sign would throw for NaN).</summary>
-        internal static long Sign(double x) => double.IsNaN(x) ? 0 : Math.Sign(x);
+        /// <summary>Sign of a numeric value. NaN → 0 (explicit guard; Math.Sign would throw for NaN).
+        /// ±Infinity → ±1 (explicit guard; CLR behaviour made auditable per 防错原则1).</summary>
+        internal static long Sign(double x) => double.IsNaN(x) ? 0 : double.IsPositiveInfinity(x) ? 1 : double.IsNegativeInfinity(x) ? -1 : Math.Sign(x);
 
         /// <summary>Most frequent value. Single-pass O(n) with Dictionary.
         /// Returns NaN for empty input or when all values are unique (matches Excel MODE #N/A).

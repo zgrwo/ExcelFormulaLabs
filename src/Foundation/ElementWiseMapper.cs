@@ -95,6 +95,10 @@ namespace ExcelVbaLibraries.Foundation
             object[] flat1 = InputNormalizer.NormalizeTo1D(input1);
             object[] flat2 = InputNormalizer.NormalizeTo1D(input2);
 
+            // was2D is checked AFTER TryExtractComRangeValue (line 92-93) because
+            // COM Range extraction converts the input to its .Value (object[,] for
+            // multi-cell ranges), so the post-extraction check correctly detects
+            // both native object[,] and COM-Range-originated 2D arrays.
             bool was2D = input1 is object[,] || input2 is object[,];
 
             if (flat1.Length == 0 || flat2.Length == 0)

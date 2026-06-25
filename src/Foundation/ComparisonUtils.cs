@@ -71,10 +71,14 @@ namespace ExcelVbaLibraries.Foundation
                 return dtA == dtB;
 
             // 6. Both Numeric — epsilon comparison
+            // Note: IsNumeric returns true for double.NaN/Inf (they ARE doubles).
+            // NaN == NaN is treated as true here for consistency with SafeKey (防错原则1).
             if (IsNumeric(a!) && IsNumeric(b!))
             {
                 double dA = Convert.ToDouble(a, CultureInfo.InvariantCulture);
                 double dB = Convert.ToDouble(b, CultureInfo.InvariantCulture);
+                if (double.IsNaN(dA) && double.IsNaN(dB)) return true;
+                if (double.IsNaN(dA) || double.IsNaN(dB)) return false;
                 return Math.Abs(dA - dB) < epsilon;
             }
 
@@ -133,10 +137,14 @@ namespace ExcelVbaLibraries.Foundation
             if (a is DateTime dtA && b is DateTime dtB)
                 return dtA.CompareTo(dtB);
 
+            // Note: IsNumeric returns true for double.NaN. NaN sorts last (防错原则1).
             if (IsNumeric(a!) && IsNumeric(b!))
             {
                 double dA = Convert.ToDouble(a, CultureInfo.InvariantCulture);
                 double dB = Convert.ToDouble(b, CultureInfo.InvariantCulture);
+                if (double.IsNaN(dA) && double.IsNaN(dB)) return 0;
+                if (double.IsNaN(dA)) return 1;
+                if (double.IsNaN(dB)) return -1;
                 return dA.CompareTo(dB);
             }
 

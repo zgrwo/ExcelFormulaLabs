@@ -122,6 +122,10 @@ namespace ExcelVbaLibraries.Foundation
             };
         }
 
+        /// <summary>
+        /// Numeric comparison for sorting. NaN values sort after all finite numbers
+        /// (IEEE 754 <c>CompareTo</c> behaviour made explicit for auditability).
+        /// </summary>
         private static int CompareNumeric<T>(T a, T b)
         {
             bool aNum = ComparisonUtils.IsNumeric(a);
@@ -131,6 +135,11 @@ namespace ExcelVbaLibraries.Foundation
             if (!bNum) return -1;
             double dA = Convert.ToDouble(a, System.Globalization.CultureInfo.InvariantCulture);
             double dB = Convert.ToDouble(b, System.Globalization.CultureInfo.InvariantCulture);
+            // Explicit NaN guard (防错原则1): NaN sorts last, consistent with IEEE 754 CompareTo.
+            // IsNumeric above returns true for double.NaN (it IS a double), so NaN reaches here.
+            if (double.IsNaN(dA) && double.IsNaN(dB)) return 0;
+            if (double.IsNaN(dA)) return 1;
+            if (double.IsNaN(dB)) return -1;
             return dA.CompareTo(dB);
         }
 
@@ -186,6 +195,10 @@ namespace ExcelVbaLibraries.Foundation
                 {
                     double dA = Convert.ToDouble(array[i], System.Globalization.CultureInfo.InvariantCulture);
                     double dB = Convert.ToDouble(value, System.Globalization.CultureInfo.InvariantCulture);
+                    // Explicit NaN guard (防错原则1): NaN == NaN for search purposes,
+                    // otherwise Math.Abs(NaN - NaN) = NaN < tolerance = false → never found.
+                    if (double.IsNaN(dA) && double.IsNaN(dB)) return i;
+                    if (double.IsNaN(dA) || double.IsNaN(dB)) continue;
                     if (Math.Abs(dA - dB) < tolerance) return i;
                 }
                 else if (array[i]!.Equals(value)) return i;
