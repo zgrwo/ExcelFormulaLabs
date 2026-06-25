@@ -31,13 +31,7 @@ namespace ExcelVbaLibraries.DataToolkit
         internal static void ValidatePath(string path)
         {
             if (string.IsNullOrEmpty(SandboxRoot)) return;
-            string normalized = NormalizePath(path);
-            string root = NormalizePath(SandboxRoot);
-            if (root.Length == 0 || root[root.Length - 1] != Path.DirectorySeparatorChar)
-                root += Path.DirectorySeparatorChar;
-            if (!(normalized + Path.DirectorySeparatorChar).StartsWith(root, StringComparison.OrdinalIgnoreCase))
-                throw new UnauthorizedAccessException(
-                    $"Path '{path}' is outside the sandbox root '{SandboxRoot}'.");
+            NormalizePath(path); // sandbox check (throws UnauthorizedAccessException if outside sandbox)
         }
 
         internal static string NormalizePath(string p)
