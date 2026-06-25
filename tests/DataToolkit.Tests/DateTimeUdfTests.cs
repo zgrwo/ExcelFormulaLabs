@@ -100,7 +100,7 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void WOM_monday_anchor() => ((long)DateTimeUdf.UDF_DT_WOM(OA(2024, 6, 15), 1)).Should().Be(2);
         [Fact] public void WOM_sunday_anchor() => ((long)DateTimeUdf.UDF_DT_WOM(OA(2024, 6, 15), 0)).Should().Be(2);
         [Fact] public void WOM_first_monday() => ((long)DateTimeUdf.UDF_DT_WOM(OA(2024, 6, 3), 1)).Should().Be(1);
-        [Fact] public void WOM_null_date() => DateTimeUdf.UDF_DT_WOM(null!, 1).Should().Be(ExcelError.Value);
+        [Fact] public void WOM_null_date() => DateTimeUdf.UDF_DT_WOM(null!, 1).Should().BeNull();
 
         // ══════════════════════════════════════════════════════════════════
         //  DT.DIM  (manual — long, days-in-month)
@@ -175,7 +175,7 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void NextWkd_friday() => ((double)DateTimeUdf.UDF_DT_NWKD(OA(2024, 6, 14))).Should().Be(OA(2024, 6, 17));
         [Fact] public void NextWkd_saturday() => ((double)DateTimeUdf.UDF_DT_NWKD(OA(2024, 6, 15))).Should().Be(OA(2024, 6, 17));
         [Fact] public void NextWkd_sunday() => ((double)DateTimeUdf.UDF_DT_NWKD(OA(2024, 6, 16))).Should().Be(OA(2024, 6, 17));
-        [Fact] public void NextWkd_null() => DateTimeUdf.UDF_DT_NWKD(null!).Should().Be(ExcelError.Value);
+        [Fact] public void NextWkd_null() => DateTimeUdf.UDF_DT_NWKD(null!).Should().BeNull();
 
         // ══════════════════════════════════════════════════════════════════
         //  DT.EASTER  (manual — double, Easter Sunday OLE date)
@@ -184,7 +184,7 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void Easter_2025() => ((double)DateTimeUdf.UDF_DT_EASTER(2025)).Should().Be(OA(2025, 4, 20));
         [Fact] public void Easter_2023() => ((double)DateTimeUdf.UDF_DT_EASTER(2023)).Should().Be(OA(2023, 4, 9));
         [Fact] public void Easter_returns_date() => ((double)DateTimeUdf.UDF_DT_EASTER(2024)).Should().BeGreaterThan(0);
-        [Fact] public void Easter_null_year() => DateTimeUdf.UDF_DT_EASTER(null!).Should().Be(ExcelError.Value);
+        [Fact] public void Easter_null_year() => DateTimeUdf.UDF_DT_EASTER(null!).Should().BeNull();
 
         // ══════════════════════════════════════════════════════════════════
         //  DT.QUARTER  (MapOver<double,long>)
@@ -224,14 +224,14 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void IsLeap_2023() => ((bool)DateTimeUdf.UDF_DT_ILEAP(2023)).Should().BeFalse();
         [Fact] public void IsLeap_2000() => ((bool)DateTimeUdf.UDF_DT_ILEAP(2000)).Should().BeTrue();
         [Fact] public void IsLeap_1900() => ((bool)DateTimeUdf.UDF_DT_ILEAP(1900)).Should().BeFalse();
-        [Fact] public void IsLeap_null() => DateTimeUdf.UDF_DT_ILEAP(null!).Should().Be(ExcelError.Value);
+        [Fact] public void IsLeap_null() => DateTimeUdf.UDF_DT_ILEAP(null!).Should().BeNull();
 
         // ══════════════════════════════════════════════════════════════════
         //  DT.UNIXTS  (manual — double, Unix timestamp)
         // ══════════════════════════════════════════════════════════════════
         [Fact] public void UnixTs_2024() => ((double)DateTimeUdf.UDF_DT_UXTS(OA(2024, 6, 15))).Should().BeGreaterThan(0);
         [Fact] public void UnixTs_before_epoch() => ((double)DateTimeUdf.UDF_DT_UXTS(OA(1960, 1, 1))).Should().BeNegative();
-        [Fact] public void UnixTs_null() => DateTimeUdf.UDF_DT_UXTS(null!).Should().Be(ExcelError.Value);
+        [Fact] public void UnixTs_null() => DateTimeUdf.UDF_DT_UXTS(null!).Should().BeNull();
 
         // ══════════════════════════════════════════════════════════════════
         //  DT.FROMUNIX  (manual — double, from-Unix-timestamp OLE date)
@@ -239,7 +239,7 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void FromUnix_zero() => ((double)DateTimeUdf.UDF_DT_FUXTS(0)).Should().BeGreaterThan(0);
         [Fact] public void FromUnix_large() => ((double)DateTimeUdf.UDF_DT_FUXTS(1000000000)).Should().BeGreaterThan(0);
         [Fact] public void FromUnix_roundtrip() { var ts=DateTimeUdf.UDF_DT_UXTS(OA(2024,6,15)); var back=DateTimeUdf.UDF_DT_FUXTS(ts); ((double)back).Should().Be(OA(2024,6,15)); }
-        [Fact] public void FromUnix_null() => DateTimeUdf.UDF_DT_FUXTS(null!).Should().Be(ExcelError.Value);
+        [Fact] public void FromUnix_null() => DateTimeUdf.UDF_DT_FUXTS(null!).Should().BeNull();
 
         // ══════════════════════════════════════════════════════════════════
         //  DT.DATEDIFF  (manual — long, date-diff)
