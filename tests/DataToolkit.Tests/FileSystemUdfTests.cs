@@ -55,5 +55,48 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void Drives_not_empty() { var r=(object[])FileSystemUdf.UDF_FS_DRVS(); r.Should().NotBeEmpty(); }
         [Fact] public void Pwd_not_empty() => ((string)FileSystemUdf.UDF_FS_PWD()).Should().NotBeNullOrEmpty();
         [Fact] public void Temp_not_empty() => ((string)FileSystemUdf.UDF_FS_TEMP()).Should().NotBeNullOrEmpty();
+
+        // ── Real file I/O tests ──────────────────────────────────────
+        [Fact] public void Write_and_read_back()
+        {
+            var tmp = System.IO.Path.GetTempFileName();
+            try { ((bool)FileSystemUdf.UDF_FS_WRITE(tmp, "hello")).Should().BeTrue(); ((string)FileSystemUdf.UDF_FS_READ(tmp)).Should().Be("hello"); }
+            finally { System.IO.File.Delete(tmp); }
+        }
+        [Fact] public void Append_then_read()
+        {
+            var tmp = System.IO.Path.GetTempFileName();
+            try { FileSystemUdf.UDF_FS_WRITE(tmp, "a"); ((bool)FileSystemUdf.UDF_FS_APPEND(tmp, "b")).Should().BeTrue(); ((string)FileSystemUdf.UDF_FS_READ(tmp)).Should().Be("ab"); }
+            finally { System.IO.File.Delete(tmp); }
+        }
+        [Fact] public void Copy_and_verify()
+        {
+            var s = System.IO.Path.GetTempFileName(); var d = System.IO.Path.GetTempFileName();
+            try { System.IO.File.Delete(d); FileSystemUdf.UDF_FS_WRITE(s, "x"); ((bool)FileSystemUdf.UDF_FS_COPY(s, d)).Should().BeTrue(); ((string)FileSystemUdf.UDF_FS_READ(d)).Should().Be("x"); }
+            finally { System.IO.File.Delete(s); try { System.IO.File.Delete(d); } catch { } }
+        }
+        [Fact] public void Move_and_verify()
+        {
+            var s = System.IO.Path.GetTempFileName(); var d = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"fsm_{System.Guid.NewGuid():N}.tmp");
+            try { FileSystemUdf.UDF_FS_WRITE(s, "m"); ((bool)FileSystemUdf.UDF_FS_MOVE(s, d)).Should().BeTrue(); ((string)FileSystemUdf.UDF_FS_READ(d)).Should().Be("m"); ((bool)FileSystemUdf.UDF_FS_FEX(s)).Should().BeFalse(); }
+            finally { try { System.IO.File.Delete(s); } catch { } try { System.IO.File.Delete(d); } catch { } }
+        }
+        [Fact] public void File_exists_and_size()
+        {
+            var tmp = System.IO.Path.GetTempFileName();
+            try { FileSystemUdf.UDF_FS_WRITE(tmp, "1234567890"); ((bool)FileSystemUdf.UDF_FS_FEX(tmp)).Should().BeTrue(); var sz = (long)FileSystemUdf.UDF_FS_FSZ(tmp); sz.Should().BeGreaterThan(0); }
+            finally { System.IO.File.Delete(tmp); }
+        }
+        [Fact] public void Delete_and_verify_gone()
+        {
+            var tmp = System.IO.Path.GetTempFileName();
+            FileSystemUdf.UDF_FS_WRITE(tmp, "del"); ((bool)FileSystemUdf.UDF_FS_DEL(tmp)).Should().BeTrue(); ((bool)FileSystemUdf.UDF_FS_FEX(tmp)).Should().BeFalse();
+        }
+        [Fact] public void MkDir_and_list()
+        {
+            var d = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"fsd_{System.Guid.NewGuid():N}");
+            try { ((bool)FileSystemUdf.UDF_FS_MKDIR(d)).Should().BeTrue(); ((bool)FileSystemUdf.UDF_FS_FDEX(d)).Should().BeTrue(); ((object[])FileSystemUdf.UDF_FS_LSDIR(d, "*")).Should().BeEmpty(); }
+            finally { try { System.IO.Directory.Delete(d); } catch { } }
+        }
     }
 }

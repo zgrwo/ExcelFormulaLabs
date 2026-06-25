@@ -55,7 +55,7 @@
 | `LINALG.MATMUL` | (array1, array2) | `double[,]` | 矩阵乘法。对标 Excel MMULT |
 | `LINALG.TRANSPOSE` | (array) | `double[,]` | 矩阵转置。对标 Excel TRANSPOSE |
 | `LINALG.TRACE` | (array) | `double` | 矩阵迹（对角线元素之和） |
-| `LINALG.RANK` | (array, tolerance) | `long` | 数值秩（默认容差 1e-10） |
+| `LINALG.RANK` | (array, [tolerance]) | `long` | 数值秩（默认容差 1e-10） |
 | `LINALG.COND` | (array) | `double` | 条件数（2-范数） |
 | `LINALG.EIGEN` | (array) | `double[]` | 特征值。要求对称矩阵，非对称输入返回错误 |
 | `LINALG.SVD_U` | (array) | `double[,]` | SVD 左奇异向量矩阵 U。A = U·diag(S)·Vt |
@@ -80,7 +80,7 @@
 |------|------|------|------|
 | `REGRESS.OLS` | (known_y, known_x) | `object[11,?]` | **普通最小二乘法**。对标 Excel LINEST。返回 11 行报告：`coefficients`(系数)、`sse`(残差平方和)、`r_squared`(R²)、`adj_r_squared`(调整R²)、`residuals`(残差)、`fitted_values`(拟合值)、`standard_errors`(标准误)、`t_stats`(t值)、`p_values`(p值)、`n`(样本量)、`df`(自由度)。数组字段横向展开到多列。`p<0.05` 该系数显著。 |
 | `REGRESS.WLS` | (known_y, known_x, weights) | `object[11,?]` | **加权最小二乘法**（异方差数据）。返回同 OLS 的 11 行报告。 |
-| `REGRESS.RIDGE` | (known_y, known_x, lambda) | `object[8,?]` | **岭回归**（L2 正则化，防过拟合）。λ 默认 1.0。返回 8 行：`coefficients`、`sse`、`r_squared`、`residuals`、`fitted_values`、`lambda`(惩罚参数)、`n`、`df`。**不返回**标准误/t值/p值（正则化下推断无效）。 |
+| `REGRESS.RIDGE` | (known_y, known_x, [lambda]) | `object[8,?]` | **岭回归**（L2 正则化，防过拟合）。λ 默认 1.0。返回 8 行：`coefficients`、`sse`、`r_squared`、`residuals`、`fitted_values`、`lambda`(惩罚参数)、`n`、`df`。**不返回**标准误/t值/p值（正则化下推断无效）。 |
 | `REGRESS.ANOVA1` | (input_range) | `object[12,?]` | **单因素方差分析**。数据按列分组（每列一组）。返回 12 行：`ss_between`(组间平方和)、`ss_within`(组内平方和)、`ss_total`、`df_between`、`df_within`、`df_total`、`ms_between`、`ms_within`、`f_stat`(F值)、`p_value`(p值)、`group_means`(各组均值)、`group_counts`(各组样本量)。数组字段横向展开到多列。`p<0.05` = 至少有一组均值显著不同。 |
 | `REGRESS.FACTORIMP` | (known_y, known_x) | `long[]` | **因子重要性排名**。按标准化后的 \|t\| 降序排列，返回 0-based 列索引数组。 |
 | `REGRESS.COEF` | (known_y, known_x) | `double[]` | OLS 回归系数向量（仅 beta）。 |
@@ -122,18 +122,18 @@
 | `STR.TITLE` | (text) | `string` | 转为首字母大写（Title Case） |
 | `STR.REMOVE` | (text, old_text) | `string` | 删除 text 中所有出现在 old_text 里的字符 |
 | `STR.KEEP` | (text, keep_chars) | `string` | 仅保留 text 中出现在 keep_chars 里的字符 |
-| `STR.PADLEFT` | (text, num_chars, pad_text) | `string` | 左侧填充至指定长度 |
-| `STR.PADRIGHT` | (text, num_chars, pad_text) | `string` | 右侧填充至指定长度 |
-| `STR.TRUNCATE` | (text, num_chars, suffix) | `string` | 截断至指定长度，若截短则追加后缀（默认 `"..."`） |
-| `STR.COUNTSUB` | (text, substring, match_case) | `long` | 子串出现次数。match_case=true 区分大小写 |
-| `STR.STARTSWITH` | (text, prefix, match_case) | `bool` | 是否以指定前缀开头 |
-| `STR.ENDSWITH` | (text, suffix, match_case) | `bool` | 是否以指定后缀结尾 |
-| `STR.LEFTOF` | (text, delimiter, instance_num) | `string` | 第 instance_num 次出现的分隔符左侧内容 |
-| `STR.RIGHTOF` | (text, delimiter, instance_num) | `string` | 第 instance_num 次出现的分隔符右侧内容 |
-| `STR.EXTRACT` | (text, start_delimiter, end_delimiter, instance_num, include_delimiters) | `string` | 第 instance_num 对左右分隔符之间的内容。include_delimiters=true 含分隔符 |
-| `STR.NTHWORD` | (text, instance_num) | `string` | 第 instance_num 个空格分隔的词（1-based） |
-| `STR.COMMONPFX` | (text1, text2, match_case) | `string` | 两字符串的最长公共前缀 |
-| `STR.TEXTJOIN` | (delimiter, ignore_empty, text_array) | `string` | 用分隔符连接数组值。ignore_empty=true 跳过空值（对标 Excel TEXTJOIN） |
+| `STR.PADLEFT` | (text, num_chars, [pad_text]) | `string` | 左侧填充至指定长度 |
+| `STR.PADRIGHT` | (text, num_chars, [pad_text]) | `string` | 右侧填充至指定长度 |
+| `STR.TRUNCATE` | (text, num_chars, [suffix]) | `string` | 截断至指定长度，若截短则追加后缀（默认 `"..."`） |
+| `STR.COUNTSUB` | (text, substring, [match_case]) | `long` | 子串出现次数。match_case=true 区分大小写 |
+| `STR.STARTSWITH` | (text, prefix, [match_case]) | `bool` | 是否以指定前缀开头 |
+| `STR.ENDSWITH` | (text, suffix, [match_case]) | `bool` | 是否以指定后缀结尾 |
+| `STR.LEFTOF` | (text, delimiter, [instance_num]) | `string` | 第 instance_num 次出现的分隔符左侧内容 |
+| `STR.RIGHTOF` | (text, delimiter, [instance_num]) | `string` | 第 instance_num 次出现的分隔符右侧内容 |
+| `STR.EXTRACT` | (text, start_delimiter, end_delimiter, [instance_num], [include_delimiters]) | `string` | 第 instance_num 对左右分隔符之间的内容。include_delimiters=true 含分隔符 |
+| `STR.NTHWORD` | (text, [instance_num]) | `string` | 第 instance_num 个空格分隔的词（1-based） |
+| `STR.COMMONPFX` | (text1, text2, [match_case]) | `string` | 两字符串的最长公共前缀 |
+| `STR.TEXTJOIN` | (delimiter, [ignore_empty], text_array) | `string` | 用分隔符连接数组值。ignore_empty=true 跳过空值（对标 Excel TEXTJOIN） |
 | `STR.LEVENSHTEIN` | (text1, text2) | `long` | 编辑距离（Levenshtein distance） |
 | `STR.SOUNDEX` | (text) | `string` | Soundex 语音编码（4 字符） |
 | `STR.URLENCODE` | (text) | `string` | URL 百分号编码。对标 Excel ENCODEURL |
@@ -143,7 +143,7 @@
 | `STR.BASE64ENC` | (text) | `string` | Base64 编码（UTF-8） |
 | `STR.BASE64DEC` | (text) | `string` | Base64 解码 |
 | `STR.UUID` | () | `string` | 生成随机 UUID/GUID |
-| `STR.RNDSTR` | (num_chars, character_set) | `string` | 从字符集 character_set 随机生成长度 num_chars 的字符串 |
+| `STR.RNDSTR` | (num_chars, [character_set]) | `string` | 从字符集 character_set 随机生成长度 num_chars 的字符串（默认 A-Za-z0-9） |
 | `STR.RNDALPHA` | (num_chars) | `string` | 随机生成字母串（A-Z, a-z） |
 | `STR.RNDNUM` | (num_chars) | `string` | 随机生成数字串（0-9） |
 | `STR.ISNULLEMPTY` | (text) | `bool` | 是否为 null 或空串 |
@@ -164,15 +164,15 @@
 | `DT.WEEKDAY` | (serial_number) | `long` | 星期几（Sun=1, Sat=7，对标 VBA Weekday） |
 | `DT.WEEKDAYISO` | (serial_number) | `long` | 星期几 ISO（Mon=1, Sun=7）。对标 Excel WEEKDAY |
 | `DT.WEEKDAYNAME` | (serial_number) | `string` | 英文星期名（"Monday" 等） |
-| `DT.SOW` | (serial_number, start_day) | `double` | 所在周的第一天。start_day 默认 1=周一，0=周日（Excel 日期值） |
-| `DT.EOW` | (serial_number, start_day) | `double` | 所在周的最后一天。start_day 默认 1=周一，0=周日（Excel 日期值） |
+| `DT.SOW` | (serial_number, [start_day]) | `double` | 所在周的第一天。start_day 默认 1=周一，0=周日（Excel 日期值） |
+| `DT.EOW` | (serial_number, [start_day]) | `double` | 所在周的最后一天。start_day 默认 1=周一，0=周日（Excel 日期值） |
 | `DT.SOM` | (serial_number) | `double` | 当月第一天 |
 | `DT.EOM` | (serial_number) | `double` | 当月最后一天。对标 Excel EOMONTH |
-| `DT.WOM` | (serial_number, start_day) | `long` | 当月第几周（1-5） |
+| `DT.WOM` | (serial_number, [start_day]) | `long` | 当月第几周（1-5） |
 | `DT.DIM` | (year, month) | `long` | 指定年月的天数 |
-| `DT.AGEYEARS` | (start_date, end_date) | `long` | 周岁。end_date 默认今天。对标 Excel DATEDIF |
-| `DT.AGEMONTHS` | (start_date, end_date) | `long` | 足月数。end_date 默认今天 |
-| `DT.AGEDAYS` | (start_date, end_date) | `long` | 总天数。end_date 默认今天 |
+| `DT.AGEYEARS` | (start_date, [end_date]) | `long` | 周岁。end_date 默认今天。对标 Excel DATEDIF |
+| `DT.AGEMONTHS` | (start_date, [end_date]) | `long` | 足月数。end_date 默认今天 |
+| `DT.AGEDAYS` | (start_date, [end_date]) | `long` | 总天数。end_date 默认今天 |
 | `DT.ISWE` | (serial_number) | `bool` | 是否为周六或周日 |
 | `DT.ADDWKD` | (start_date, workdays) | `double` | 加 workdays 个工作日（跳过周末）。对标 Excel WORKDAY |
 | `DT.WKDBTWN` | (start_date, end_date) | `long` | 两个日期间的工作日数。对标 Excel NETWORKDAYS |
@@ -194,13 +194,13 @@
 
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
-| `REGEX.TEST` | (text, pattern, ignore_case) | `bool` | 是否匹配正则 |
-| `REGEX.COUNT` | (text, pattern, ignore_case) | `long` | 非重叠匹配次数 |
-| `REGEX.MATCH` | (text, pattern, ignore_case, instance_num) | `string` | 第 instance_num 个匹配子串。1=第一个（默认），-1=最后一个，无匹配或越界返回 `""` |
-| `REGEX.MATCHALL` | (text, pattern, ignore_case) | `string[]` | 所有正则匹配为数组 |
-| `REGEX.REPLACE` | (text, pattern, replacement, ignore_case, instance_num) | `string` | 替换第 instance_num 个正则匹配。0/省略=全部（默认），1=第一个，-1=最后一个 |
-| `REGEX.SPLIT` | (text, pattern, ignore_case, instance_num) | `string[]` | 按正则分隔符拆分。0/省略=全部（默认），>0=最多拆 instance_num 次（得 instance_num+1 段） |
-| `REGEX.GROUPS` | (text, pattern, ignore_case) | `object[2,n]` | 捕获组。row0=组名, row1=值。`[0]`=完整匹配 |
+| `REGEX.TEST` | (text, pattern, [ignore_case]) | `bool` | 是否匹配正则 |
+| `REGEX.COUNT` | (text, pattern, [ignore_case]) | `long` | 非重叠匹配次数 |
+| `REGEX.MATCH` | (text, pattern, [ignore_case], [instance_num]) | `string` | 第 instance_num 个匹配子串。1=第一个（默认），-1=最后一个，无匹配或越界返回 `""` |
+| `REGEX.MATCHALL` | (text, pattern, [ignore_case]) | `string[]` | 所有正则匹配为数组 |
+| `REGEX.REPLACE` | (text, pattern, replacement, [ignore_case], [instance_num]) | `string` | 替换第 instance_num 个正则匹配。0/省略=全部（默认），1=第一个，-1=最后一个 |
+| `REGEX.SPLIT` | (text, pattern, [ignore_case], [instance_num]) | `string[]` | 按正则分隔符拆分。0/省略=全部（默认），>0=最多拆 instance_num 次（得 instance_num+1 段） |
+| `REGEX.GROUPS` | (text, pattern, [ignore_case]) | `object[2,n]` | 捕获组。row0=组名, row1=值。`[0]`=完整匹配 |
 | `REGEX.ESCAPE` | (text) | `string` | 转义正则特殊字符 |
 | `REGEX.ISMATCH` | (text, pattern) | `bool` | 不区分大小写匹配（REGEX.TEST ignore_case=true 的别名） |
 
@@ -210,14 +210,14 @@
 
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
-| `ARR.SORT` | (array, sort_order, sort_mode) | `object[]` | 排序。sort_order=TRUE 升序（默认），sort_mode=`"auto"/"text"/"numeric"`。对标 Excel SORT |
+| `ARR.SORT` | (array, [sort_order], [sort_mode]) | `object[]` | 排序。sort_order=TRUE 升序（默认），sort_mode=`"auto"/"text"/"numeric"`。对标 Excel SORT |
 | `ARR.SORTASC` | (array) | `object[]` | 升序排列（自动检测类型） |
 | `ARR.SORTDESC` | (array) | `object[]` | 降序排列（自动检测类型） |
 | `ARR.SORTNUM` | (array) | `object[]` | 按数值升序排列 |
 | `ARR.SORTTEXT` | (array) | `object[]` | 按文本升序排列（不区分大小写） |
 | `ARR.UNIQUE` | (array) | `object[]` | 去重，保留首次出现顺序。对标 Excel UNIQUE |
 | `ARR.INDEXOF` | (array, lookup_value) | `long` | 值首次出现的 0-based 索引，未找到返回 -1。对标 Excel MATCH |
-| `ARR.SLICE` | (array, start_index, num_elements) | `object[]` | 从索引 start_index 起取 num_elements 个元素 |
+| `ARR.SLICE` | (array, start_index, [num_elements]) | `object[]` | 从索引 start_index 起取 num_elements 个元素 |
 | `ARR.FLATTEN` | (array) | `object[]` | 二维区域按行展为一维。对标 Excel TOROW |
 | `ARR.FILTER` | (array, criteria, comparison_operator) | `object[]` | 按比较运算符过滤：`=`, `<>`, `>`, `<`, `>=`, `<=`。对标 Excel FILTER |
 | `ARR.FILTER_EQ` | (array, criteria) | `object[]` | 筛选等于 criteria 的元素 |
@@ -268,9 +268,9 @@
 
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
-| `PIVOT.PIVOT` | (source_range, row_field, col_field, value_field, aggregation) | `object[,]` | 透视表。row_field=行标签列, col_field=列标签列, value_field=值列。aggregation=`sum/avg/count/min/max` |
+| `PIVOT.PIVOT` | (source_range, row_field, col_field, value_field, [aggregation]) | `object[,]` | 透视表。row_field=行标签列, col_field=列标签列, value_field=值列。aggregation=`sum/avg/count/min/max`（默认 SUM） |
 | `PIVOT.UNPIVOT` | (source_range, id_fields, value_fields) | `object[,]` | 逆透视：宽列转为键值行 |
-| `PIVOT.GROUPBY` | (source_range, group_fields, agg_column, aggregation) | `object[,]` | 分组聚合。group_fields=分组列号数组, agg_column=聚合列 |
+| `PIVOT.GROUPBY` | (source_range, group_fields, agg_column, [aggregation]) | `object[,]` | 分组聚合。group_fields=分组列号数组, agg_column=聚合列（默认 SUM） |
 | `PIVOT.CROSSJOIN` | (table1, table2) | `object[,]` | 笛卡尔积交叉连接 |
 
 ---
@@ -291,8 +291,8 @@
 | `FS.FSIZE` | (file_path) | `long` | 文件大小（字节） |
 | `FS.FDEXISTS` | (file_path) | `bool` | 文件夹是否存在 |
 | `FS.MKDIR` | (file_path) | `bool` | 创建文件夹（含父目录） |
-| `FS.LS` | (file_path, search_pattern) | `string[]` | 列出文件。`*` 匹配所有 |
-| `FS.LSDIR` | (file_path, search_pattern) | `string[]` | 列出子文件夹 |
+| `FS.LS` | (file_path, [search_pattern]) | `string[]` | 列出文件。`*` 匹配所有 |
+| `FS.LSDIR` | (file_path, [search_pattern]) | `string[]` | 列出子文件夹 |
 | `FS.READ` | (file_path) | `string` | 读取文本文件全部内容 |
 | `FS.WRITE` | (file_path, file_content) | `bool` | 写入文本文件（覆盖） |
 | `FS.APPEND` | (file_path, file_content) | `bool` | 追加写入文本文件 |
@@ -322,15 +322,65 @@
 
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
-| `RANGE.TOHTML` | (source_range, has_headers, css_class) | `string` | 导出为 HTML 表格 |
-| `RANGE.TOJSON` | (source_range, has_headers, pretty_print) | `string` | 导出为 JSON |
-| `RANGE.TOMD` | (source_range, has_headers) | `string` | 导出为 Markdown 表格 |
-| `RANGE.TOCSV` | (source_range, delimiter, quote_fields) | `string` | 导出为 CSV（自定义分隔符与字段引用） |
+| `RANGE.TOHTML` | (source_range, [has_headers], [css_class]) | `string` | 导出为 HTML 表格 |
+| `RANGE.TOJSON` | (source_range, [has_headers], [pretty_print]) | `string` | 导出为 JSON |
+| `RANGE.TOMD` | (source_range, [has_headers]) | `string` | 导出为 Markdown 表格 |
+| `RANGE.TOCSV` | (source_range, [delimiter], [quote_fields]) | `string` | 导出为 CSV（自定义分隔符与字段引用） |
 | `RANGE.TOCSVTAB` | (source_range) | `string` | 导出为 TSV（制表符分隔） |
 | `RANGE.TOCSVSEMI` | (source_range) | `string` | 导出为分号分隔 CSV |
 | `RANGE.TRANSPOSE` | (source_range) | `object[,]` | 行列转置。对标 Excel TRANSPOSE |
 | `RANGE.SELCOLS` | (source_range, column_indices) | `object[,]` | 选取指定列。对标 Excel CHOOSECOLS |
 | `RANGE.SELROWS` | (source_range, row_indices) | `object[,]` | 选取指定行。对标 Excel CHOOSEROWS |
+
+---
+
+## 错误参考
+
+函数在以下情况返回错误值。`#VALUE!` (= 输入/执行错误) 和 `#NUM!` (= 计算结果无定义) 的含义不同。
+
+### 通用错误
+
+| 条件 | 结果 | 影响范围 |
+|------|------|---------|
+| 参数为 null（空引用） | MapOverMulti → `Empty`，直接 Core → 视函数而定 | 全部 |
+| Excel 错误值（`#N/A`, `#DIV/0!` 等）作为输入 | MapOver → 透传原错误，直接 Core → 可能吞没 | 全部 |
+| 多数组参数尺寸不匹配 | MapOverMulti → `#VALUE!`，V() → `#NUM!` | STATS 二元函数、REGEX、STR 部分 |
+| 所有输入被过滤（全空/全错误） | `#VALUE!` 或 `NaN` | 统计类 |
+| 正则超时（5 秒） | `#VALUE!` | REGEX.* |
+| 文件路径越界（沙箱模式） | `#VALUE!` | FS.* |
+| SQL 语法错误 | `#VALUE!` | SQL.* |
+
+### 模块特定错误
+
+| 模块 | 条件 | 结果 |
+|------|------|------|
+| **STATS** | 空数组 → Mean/Median/... | `#NUM!` |
+| **STATS** | 常数数组求相关（Pearson/Spearman） | `#NUM!` |
+| **STATS** | 方差为零的 t 检验 | `#NUM!` 或 1.0 |
+| **STATS** | 几何平均含负数 | `#NUM!` |
+| **LINALG** | 矩阵含 NaN/Inf | `#VALUE!` |
+| **LINALG** | 非方阵求特征值/Cholesky | `#VALUE!` |
+| **LINALG** | 奇异矩阵求 Solve | `#VALUE!` |
+| **LINALG** | QR 宽矩阵超过 2000 列 | `#VALUE!` |
+| **REGRESS** | 常数响应变量 y（TSS=0） | `#VALUE!` |
+| **REGRESS** | n ≤ p（自由度不足） | `#VALUE!` |
+| **REGRESS** | 权重含负数/NaN/Inf | `#VALUE!` |
+| **REGRESS** | 岭回归 lambda=NaN/Inf | `#VALUE!` |
+| **REGRESS** | ANOVA 少于 2 组 | `#VALUE!` |
+| **PHYCHEM** | 分子式含未知元素 | `#NUM!` |
+| **PHYCHEM** | 未知换算单位 | `#NUM!` |
+| **PHYCHEM** | 理想气体方程待求量 ≠ 1 个 | `#NUM!` |
+| **PHYCHEM** | 理想气体方程除零 | `#NUM!` |
+| **STR** | Base64 解码非法输入 | `#VALUE!` |
+| **DT** | 非法日期值（MinValue） | `#VALUE!` |
+| **REGEX** | 非法正则表达式 | `#VALUE!` |
+| **ARR** | RANGE 超过 100,000 元素 | `#VALUE!` |
+| **PIVOT** | 不支持的聚合函数名 | `#VALUE!` |
+| **PIVOT** | CrossJoin 超过 1,000,000 单元格 | `#VALUE!` |
+| **FS** | 文件不存在 | `#VALUE!` |
+| **FS** | 路径含非法字符 | `#VALUE!` |
+
+> **提示**：`#VALUE!` 表示输入/执行错误（用户可修正输入），`#NUM!` 表示计算结果无定义（数据本身不满足数学条件）。详细行为见 [user-guide.md](user-guide.md#错误处理)。
 
 ---
 
