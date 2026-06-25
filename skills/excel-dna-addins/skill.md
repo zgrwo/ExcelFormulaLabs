@@ -1,7 +1,6 @@
 ---
 name: excel-dna-addins
 description: Excel-DNA 加载项开发全流程 — 创建、打包、测试、分发 .xll 加载项。Use when the user needs to create, review, extend, test, or troubleshoot Excel-DNA add-ins (.xll), design UDFs with [ExcelFunction], or package/sign add-ins for distribution.
-disable-model-invocation: true
 ---
 
 # Excel-DNA 加载项开发技能

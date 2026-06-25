@@ -1,7 +1,6 @@
 ---
 name: excel-dna-project
 description: 本项目编码规范与架构参考 — Foundation/Analytics/DataToolkit 模块职责、MapOver 变体行为差异、UDF 调用链、测试模式。Use when modifying code in this project, understanding module responsibilities, or writing new UDFs.
-disable-model-invocation: true
 ---
 
 # SKILL.md
