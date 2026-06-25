@@ -121,7 +121,7 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void AgeYears_leap_year_birth() => ((long)DateTimeUdf.UDF_DT_AGEY(OA(2000, 2, 29), OA(2024, 3, 1))).Should().Be(24);
         [Fact] public void AgeYears_same_year() => ((long)DateTimeUdf.UDF_DT_AGEY(OA(2024, 1, 1), OA(2024, 12, 31))).Should().Be(0);
         [Fact] public void AgeYears_null_birth() => DateTimeUdf.UDF_DT_AGEY(null!, OA(2024, 1, 1)).Should().Be(ExcelError.Value);
-        [Fact] public void AgeYears_null_ref() { var r=DateTimeUdf.UDF_DT_AGEY(OA(2000,1,1), null!); r.Should().NotBeNull(); }
+        [Fact] public void AgeYears_null_ref() { var r=DateTimeUdf.UDF_DT_AGEY(OA(2000,1,1), null!); r.Should().BeOfType<long>().Which.Should().BeGreaterOrEqualTo(0); }
 
         // ══════════════════════════════════════════════════════════════════
         //  DT.AGEMONTHS  (manual — long)
@@ -130,7 +130,7 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void AgeMonths_exact_years() => ((long)DateTimeUdf.UDF_DT_AGEM(OA(2020, 1, 1), OA(2024, 1, 1))).Should().Be(48);
         [Fact] public void AgeMonths_partial_month() => ((long)DateTimeUdf.UDF_DT_AGEM(OA(2024, 1, 15), OA(2024, 2, 1))).Should().Be(0);
         [Fact] public void AgeMonths_null_birth() => DateTimeUdf.UDF_DT_AGEM(null!, OA(2024, 1, 1)).Should().Be(ExcelError.Value);
-        [Fact] public void AgeMonths_null_ref() { var r=DateTimeUdf.UDF_DT_AGEM(OA(2024,1,1), null!); r.Should().NotBeNull(); }
+        [Fact] public void AgeMonths_null_ref() { var r=DateTimeUdf.UDF_DT_AGEM(OA(2024,1,1), null!); r.Should().BeOfType<long>().Which.Should().BeGreaterOrEqualTo(0); }
 
         // ══════════════════════════════════════════════════════════════════
         //  DT.AGEDAYS  (manual — long)
@@ -139,7 +139,7 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void AgeDays_same_day() => ((long)DateTimeUdf.UDF_DT_AGED(OA(2024, 6, 15), OA(2024, 6, 15))).Should().Be(0);
         [Fact] public void AgeDays_across_year() => ((long)DateTimeUdf.UDF_DT_AGED(OA(2023, 12, 31), OA(2024, 1, 1))).Should().Be(1);
         [Fact] public void AgeDays_null_birth() => DateTimeUdf.UDF_DT_AGED(null!, OA(2024, 1, 1)).Should().Be(ExcelError.Value);
-        [Fact] public void AgeDays_null_ref() { var r=DateTimeUdf.UDF_DT_AGED(OA(2024,1,1), null!); r.Should().NotBeNull(); }
+        [Fact] public void AgeDays_null_ref() { var r=DateTimeUdf.UDF_DT_AGED(OA(2024,1,1), null!); r.Should().BeOfType<long>().Which.Should().BeGreaterOrEqualTo(0); }
 
         // ══════════════════════════════════════════════════════════════════
         //  DT.ISWE  (MapOver<double,bool> — is-weekend)
