@@ -102,10 +102,12 @@ namespace ExcelVbaLibraries.DataToolkit
         }
         internal static string RegexEscape(string l) => Regex.Escape(l);
         private static RegexOptions F(bool ic) =>
-            (ic ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture | RegexOptions.Compiled;
+            (ic ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture;
+            // Compiled omitted: one-shot UDF calls benefit from interpretation + timeout,
+            // and the 5s Timeout already prevents ReDoS.
 
         /// <summary>Regex options WITH capture groups — only for RegexCaptureGroups.</summary>
         private static RegexOptions FC(bool ic) =>
-            (ic ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.CultureInvariant | RegexOptions.Compiled;
+            (ic ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.CultureInvariant;
     }
 }

@@ -47,15 +47,25 @@ namespace ExcelVbaLibraries.DataToolkit
             return result;
         }
 
-        internal static object[,] Unpivot(object[,] data, int[] idCols, int[] valueCols)
+        internal static object[,] Unpivot(object[,] data, int[] idCols, int[] valueCols, bool hasHeaders = true)
         {
             int cols = data.GetLength(1);
             if (idCols.Any(c => c < 0 || c >= cols) || valueCols.Any(c => c < 0 || c >= cols))
                 throw new ArgumentException("Column index out of range.");
             int rows = data.GetLength(0); int nId = idCols.Length;
-            if (rows < 2) return new object[0, 0];  // header-only or empty table
+            int dataStartRow = hasHeaders ? 1 : 0;
+            if (hasHeaders && rows < 2) return new object[0, 0];  // header-only or empty table
+            if (!hasHeaders && rows < 1) return new object[0, 0];
             var result = new List<object[]>();
-            for (int r = 1; r < rows; r++) { var ids = idCols.Select(c => data[r, c]).ToArray(); foreach (int vc in valueCols) result.Add(ids.Concat(new[] { data[0, vc], data[r, vc] }).ToArray()); }
+            for (int r = dataStartRow; r < rows; r++)
+            {
+                var ids = idCols.Select(c => data[r, c]).ToArray();
+                foreach (int vc in valueCols)
+                {
+                    var varName = hasHeaders ? data[0, vc] : $"Var{vc + 1}";
+                    result.Add(ids.Concat(new[] { varName, data[r, vc] }).ToArray());
+                }
+            }
             var outArr = new object[result.Count, nId + 2];
             for (int i = 0; i < result.Count; i++) for (int j = 0; j < result[i].Length; j++) outArr[i, j] = result[i][j];
             return outArr;

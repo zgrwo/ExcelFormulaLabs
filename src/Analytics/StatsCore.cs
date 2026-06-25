@@ -51,7 +51,7 @@ namespace ExcelVbaLibraries.Analytics
         internal static double Range(double[] d) =>
             d.Length == 0 ? double.NaN : Max(d) - Min(d);
 
-        internal static double Sum(double[] d) { var r = d.Sum(); return double.IsInfinity(r) ? double.NaN : r; }
+        internal static double Sum(double[] d) { if (d.Length == 0) return 0.0; var r = d.Sum(); return double.IsInfinity(r) ? double.NaN : r; }
         internal static double Product(double[] d) { if (d.Length == 0) return 1.0; var r = d.Aggregate(1.0, (a, x) => a * x); return double.IsInfinity(r) ? double.NaN : r; }
 
         /// <summary>Sign of a numeric value. NaN → 0 (explicit guard; Math.Sign would throw for NaN).</summary>

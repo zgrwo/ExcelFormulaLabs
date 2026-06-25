@@ -4,7 +4,7 @@ namespace ExcelVbaLibraries.Foundation
 {
     /// <summary>
     /// Element-wise mapping over scalar or array inputs — the core abstraction
-    /// that eliminates ~3000 lines of duplicated boilerplate across 233 UDF wrappers.
+    /// that eliminates ~3000 lines of duplicated boilerplate across 219 UDF wrappers.
     /// </summary>
     /// <remarks>
     /// <para>

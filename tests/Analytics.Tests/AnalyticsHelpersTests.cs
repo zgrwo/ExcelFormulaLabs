@@ -26,7 +26,7 @@ namespace ExcelVbaLibraries.Analytics.Tests
         [Fact] public void ToDoubleMatrix_Inf_throws() { var a = () => AnalyticsHelpers.ToDoubleMatrix(new object[,] { { double.PositiveInfinity, 1.0 }, { 2.0, 3.0 } }); a.Should().Throw<ArgumentException>().WithMessage("*non-numeric*"); }
         [Fact] public void PrepM_null_throws() { var a = () => AnalyticsHelpers.PrepM(null!); a.Should().Throw<ArgumentException>(); }
         [Fact] public void PrepV_NaN_throws() { var a = () => AnalyticsHelpers.PrepV(new object[] { double.NaN }); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
-        [Fact] public void PrepV_Inf_throws() { var a = () => AnalyticsHelpers.PrepV(new object[] { double.PositiveInfinity }); a.Should().Throw<ArgumentException>().WithMessage("*Infinity*"); }
+        [Fact] public void PrepV_Inf_throws() { var a = () => AnalyticsHelpers.PrepV(new object[] { double.PositiveInfinity }); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); } // ToDouble L1 guard now converts Infinity→NaN before PrepV sees it
         [Fact] public void PrepV_null_returns_empty() { var result = AnalyticsHelpers.PrepV(null!); result.Should().BeEmpty(); }
         [Fact] public void PrepM_single_element() { var r = AnalyticsHelpers.PrepM(new object[,] { { 42.0 } }); r[0, 0].Should().Be(42.0); r.GetLength(0).Should().Be(1); }
     }

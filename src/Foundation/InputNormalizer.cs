@@ -219,7 +219,7 @@ namespace ExcelVbaLibraries.Foundation
             if (value == null || value is DBNull || IsExcelMissing(value)) return double.NaN;
             if (ReferenceEquals(value, ExcelEmpty.Value)) return double.NaN;
             if (value is ExcelError) return double.NaN;
-            if (value is double d) return d;
+            if (value is double d) return (double.IsNaN(d) || double.IsInfinity(d)) ? double.NaN : d; // L1 NaN/Inf guard
             if (value is int i) return i;
             if (value is long l) return l;
             if (value is float f) return f;

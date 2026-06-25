@@ -85,7 +85,7 @@ namespace ExcelVbaLibraries.Analytics.Tests
         // Sqrt: array
         [Fact] public void Sqrt_array() { var r=(object[])StatsUdf.UDF_STAT_SQRT(new object[]{4.0,9,16}); r.Should().Equal(2.0,3.0,4.0); }
         [Fact] public void Ln_one() => ((double)StatsUdf.UDF_STAT_LN(1.0)).Should().Be(0.0);
-        [Fact] public void Ln_zero() => ((double)StatsUdf.UDF_STAT_LN(0.0)).Should().Be(double.NegativeInfinity);
+        [Fact] public void Ln_zero() => ((double)StatsUdf.UDF_STAT_LN(0.0)).Should().Be(double.NaN); // Excel =LN(0) → #NUM! — L1 guard rejects Infinity
         [Fact] public void Ln_negative_NaN() => ((double)StatsUdf.UDF_STAT_LN(-1.0)).Should().Be(double.NaN);
         [Fact] public void Log10_one() => ((double)StatsUdf.UDF_STAT_LOG10(1.0)).Should().Be(0.0);
         [Fact] public void Exp_one() => ((double)StatsUdf.UDF_STAT_EXP(1.0)).Should().BeApproximately(Math.E,1e-10);

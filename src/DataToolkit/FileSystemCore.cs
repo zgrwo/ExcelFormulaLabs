@@ -40,7 +40,21 @@ namespace ExcelVbaLibraries.DataToolkit
                     $"Path '{path}' is outside the sandbox root '{SandboxRoot}'.");
         }
 
-        internal static string NormalizePath(string p) => Path.GetFullPath(p);
+        internal static string NormalizePath(string p)
+        {
+            string normalized = Path.GetFullPath(p);
+            // Sandbox check (inline to avoid recursion: ValidatePath calls NormalizePath internally)
+            if (!string.IsNullOrEmpty(SandboxRoot))
+            {
+                string root = Path.GetFullPath(SandboxRoot);
+                if (root.Length > 0 && root[root.Length - 1] != Path.DirectorySeparatorChar)
+                    root += Path.DirectorySeparatorChar;
+                if (!(normalized + Path.DirectorySeparatorChar).StartsWith(root, StringComparison.OrdinalIgnoreCase))
+                    throw new UnauthorizedAccessException(
+                        $"Path '{p}' is outside the sandbox root '{SandboxRoot}'.");
+            }
+            return normalized;
+        }
         internal static string PathCombine(string a, string b) => Path.Combine(a, b);
         internal static string GetFileName(string p) => Path.GetFileName(p);
         internal static string GetBaseName(string p) => Path.GetFileNameWithoutExtension(p);

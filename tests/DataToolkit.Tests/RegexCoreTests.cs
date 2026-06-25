@@ -160,5 +160,29 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
             // Should not contain any unescaped regex metacharacters
             Regex.IsMatch(escaped, @"(?<!\\)[.*+?^${}()|[\\]]").Should().BeFalse();
         }
+
+        // 防错原则2: Regex timeout prevents ReDoS / catastrophic backtracking
+        [Fact] public void Catastrophic_backtracking_does_not_hang()
+        {
+            // Evil regex: (a+)+b with no 'b' suffix causes exponential backtracking.
+            // .NET's Regex.IsMatch with a timeout should throw RegexMatchTimeoutException
+            // rather than hanging the process.
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            try
+            {
+                RegexCore.RegexTest("aaaaaaaaaaaaaaaaaaaaaaaaaaaa!", "(a+)+b");
+                // If it completes (fast path / optimization), it must be within 500ms
+                sw.ElapsedMilliseconds.Should().BeLessThan(500);
+            }
+            catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+            {
+                // Timeout is the expected path for this evil pattern on 5s timeout.
+                // Verify the timeout didn't fire instantly (which would indicate a misconfiguration).
+                sw.ElapsedMilliseconds.Should().BeGreaterThan(1000,
+                    "timeout should not trigger instantly — must be a real backtracking scenario");
+            }
+            // In either case, wall-clock time must be bounded (timeout prevents infinite hang)
+            sw.ElapsedMilliseconds.Should().BeLessThan(7000, "5s timeout + 2s tolerance");
+        }
     }
 }

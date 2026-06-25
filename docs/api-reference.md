@@ -133,7 +133,7 @@
 | `STR.EXTRACT` | (text, start_delimiter, end_delimiter, [instance_num], [include_delimiters]) | `string` | 第 instance_num 对左右分隔符之间的内容。include_delimiters=true 含分隔符 |
 | `STR.NTHWORD` | (text, [instance_num]) | `string` | 第 instance_num 个空格分隔的词（1-based） |
 | `STR.COMMONPFX` | (text1, text2, [match_case]) | `string` | 两字符串的最长公共前缀 |
-| `STR.TEXTJOIN` | (delimiter, [ignore_empty], text_array) | `string` | 用分隔符连接数组值。ignore_empty=true 跳过空值（对标 Excel TEXTJOIN） |
+| `STR.TEXTJOIN` | (delimiter, ignore_empty, text_array) | `string` | 用分隔符连接数组值。ignore_empty=true 跳过空值（对标 Excel TEXTJOIN） |
 | `STR.LEVENSHTEIN` | (text1, text2) | `long` | 编辑距离（Levenshtein distance） |
 | `STR.SOUNDEX` | (text) | `string` | Soundex 语音编码（4 字符） |
 | `STR.URLENCODE` | (text) | `string` | URL 百分号编码。对标 Excel ENCODEURL |
@@ -217,7 +217,7 @@
 | `ARR.SORTTEXT` | (array) | `object[]` | 按文本升序排列（不区分大小写） |
 | `ARR.UNIQUE` | (array) | `object[]` | 去重，保留首次出现顺序。对标 Excel UNIQUE |
 | `ARR.INDEXOF` | (array, lookup_value) | `long` | 值首次出现的 0-based 索引，未找到返回 -1。对标 Excel MATCH |
-| `ARR.SLICE` | (array, start_index, [num_elements]) | `object[]` | 从索引 start_index 起取 num_elements 个元素 |
+| `ARR.SLICE` | (array, start_index, num_elements) | `object[]` | 从索引 start_index 起取 num_elements 个元素 |
 | `ARR.FLATTEN` | (array) | `object[]` | 二维区域按行展为一维。对标 Excel TOROW |
 | `ARR.FILTER` | (array, criteria, comparison_operator) | `object[]` | 按比较运算符过滤：`=`, `<>`, `>`, `<`, `>=`, `<=`。对标 Excel FILTER |
 | `ARR.FILTER_EQ` | (array, criteria) | `object[]` | 筛选等于 criteria 的元素 |
@@ -322,9 +322,9 @@
 
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
-| `RANGE.TOHTML` | (source_range, [has_headers], [css_class]) | `string` | 导出为 HTML 表格 |
-| `RANGE.TOJSON` | (source_range, [has_headers], [pretty_print]) | `string` | 导出为 JSON |
-| `RANGE.TOMD` | (source_range, [has_headers]) | `string` | 导出为 Markdown 表格 |
+| `RANGE.TOHTML` | (source_range, has_headers, [css_class]) | `string` | 导出为 HTML 表格 |
+| `RANGE.TOJSON` | (source_range, has_headers, [pretty_print]) | `string` | 导出为 JSON |
+| `RANGE.TOMD` | (source_range, has_headers) | `string` | 导出为 Markdown 表格 |
 | `RANGE.TOCSV` | (source_range, [delimiter], [quote_fields]) | `string` | 导出为 CSV（自定义分隔符与字段引用） |
 | `RANGE.TOCSVTAB` | (source_range) | `string` | 导出为 TSV（制表符分隔） |
 | `RANGE.TOCSVSEMI` | (source_range) | `string` | 导出为分号分隔 CSV |
