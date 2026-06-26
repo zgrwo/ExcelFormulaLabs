@@ -43,6 +43,8 @@
 ## 1. STATS — 描述统计
 
 > 对标 Python scipy，精度 1e-10。元素级函数（ABS/SQRT/LN/LOG10/EXP/SIGN）支持数组公式。
+>
+> **函数索引**：MEAN · GEOMEAN · HARMEAN · MEDIAN · VARP · VAR · STDEVP · STDEV · SKEW · KURT · MIN · MAX · RANGE · SUM · PRODUCT · PERCENTILE · IQR · SUMMARY · COUNT · MODE · COVARP · COVAR · PEARSON · SPEARMAN · TTEST1 · TTEST2 · ZSCORE · ABS · SQRT · LN · LOG10 · EXP · SIGN
 
 ### 示例数据集
 
@@ -515,6 +517,8 @@ eˣ。对标 Excel EXP。支持数组。
 ## 2. LINALG — 线性代数
 
 > 基于 MathNet.Numerics 5.0.0。所有矩阵函数接受二维区域输入。
+>
+> **函数索引**：DET · SOLVE · MATMUL · TRANSPOSE · TRACE · RANK · COND · EIGEN · SVD_U · SVD_S · SVD_VT · QR_Q · QR_R · LU_L · LU_U · LU_P · PINV · CHOLESKY · IDENTITY
 
 ### 示例矩阵 A（4×4）
 
@@ -780,6 +784,8 @@ eˣ。对标 Excel EXP。支持数组。
 ## 3. REGRESS — 回归分析
 
 > 返回纵向报告表（col0 = 字段名，col1.. = 值或数组展开）。p < 0.05 = 显著；R² 越接近 1 拟合越好。
+>
+> **函数索引**：OLS · WLS · RIDGE · ANOVA1 · FACTORIMP · COEF · RSQ
 
 ### 示例数据集
 
@@ -925,6 +931,8 @@ L2 正则化（防过拟合）。λ 默认 1.0。不返回标准误/t值/p值（
 > 分子量计算、单位换算、理想气体状态方程。
 
 ---
+
+> **函数索引**：MOLWT · TEMP · PRESS · VOL · MASS · C_TO_F · F_TO_C · KG_TO_LB · LB_TO_KG · L_TO_GAL · GAL_TO_L · ATM_TO_PSI · PSI_TO_ATM · IDEALGAS · GASSTP · DENSITY
 
 ### PHYCHEM.MOLWT — 分子量
 
@@ -1101,6 +1109,8 @@ PV = nRT。将待求量填 `"*"`。R = 0.082057 L·atm/(mol·K)。
 ## 5. STR — 字符串处理
 
 > 除 TEXTJOIN/UUID/RND* 外均支持数组公式（逐元素处理）。
+>
+> **函数索引**：REVERSE · NORMWS · TITLE · REMOVE · KEEP · PADLEFT · PADRIGHT · TRUNCATE · COUNTSUB · STARTSWITH · ENDSWITH · LEFTOF · RIGHTOF · EXTRACT · NTHWORD · COMMONPFX · TEXTJOIN · LEVENSHTEIN · SOUNDEX · URLENCODE · URLDECODE · HTMLENCODE · HTMLDECODE · BASE64ENC · BASE64DEC · UUID · RNDSTR · RNDALPHA · RNDNUM · ISNULLEMPTY · ISNULLWS · COALESCE · FORMAT · STRIPHTML
 
 ### 示例文本数据
 
@@ -1488,6 +1498,8 @@ instance_num: 1=第1次（默认），-1=最后一次。
 ## 6. DT — 日期时间
 
 > 日期参数接受 Excel 日期序列号。start_day: 0=Sun, 1=Mon, ...（默认 1=Mon）。
+>
+> **函数索引**：ISOWEEK · WEEKDAY · WEEKDAYISO · WEEKDAYNAME · SOW · EOW · SOM · EOM · WOM · DIM · AGEYEARS · AGEMONTHS · AGEDAYS · ISWE · ADDWKD · WKDBTWN · NEXTWKD · EASTER · QUARTER · SEMESTER · DOY · ISLEAP · UNIXTS · FROMUNIX · DATEDIFF
 
 ### 示例日期
 
@@ -1791,6 +1803,8 @@ end_date 默认今天。
 ## 7. REGEX — 正则表达式
 
 > .NET 正则引擎。支持数组公式（逐元素），超时 5 秒自动取消。
+>
+> **函数索引**：TEST · COUNT · MATCH · MATCHALL · REPLACE · SPLIT · GROUPS · ESCAPE · ISMATCH
 
 ### 示例文本
 
@@ -1942,6 +1956,8 @@ end_date 默认今天。
 ## 8. ARR — 数组操作
 
 > 一维数组操作函数集。
+>
+> **函数索引**：SORT · SORTASC · SORTDESC · SORTNUM · SORTTEXT · UNIQUE · INDEXOF · SLICE · FLATTEN · FILTER · FILTER_EQ · FILTER_NE · FILTER_GT · FILTER_LT · CONCAT · REVERSE · COUNT · CONTAINS · TOSET · FILL · RANGE · SHUFFLE
 
 ### 示例数据
 
@@ -2153,6 +2169,8 @@ Fisher-Yates 算法。
 ## 9. DICT — 字典/集合
 
 > 频率统计、集合运算、字典构建。
+>
+> **函数索引**：FREQUENCY · INTERSECT · UNION · EXCEPT · DICT · COUNT · KEYS · VALUES
 
 ### 示例数据
 
@@ -2269,6 +2287,8 @@ Fisher-Yates 算法。
 ---
 
 ## 10. JSON / XML — 数据处理
+
+> **函数索引**：JSON.PARSE · JSON.QUERY · JSON.VALIDATE · JSON.PRETTIFY · JSON.TOTABLE · XML.XPATH · XML.VALIDATE · XML.TOTABLE
 
 ### 示例 JSON（放在单元格 A1 中）
 
@@ -2425,6 +2445,8 @@ row_xpath 定义行节点。
 
 ---
 
+> **函数索引**：PIVOT · UNPIVOT · GROUPBY · CROSSJOIN
+
 ### PIVOT.PIVOT — 创建透视表
 
 **语法**：`=PIVOT.PIVOT(source_range, row_field, col_field, value_field, [aggregation])`
@@ -2493,6 +2515,8 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 ## 12. SQL — SQL 查询
 
 > 参数化 INSERT，列名经字母数字消毒。表名固定：单表 = `data`，双表 = `data` + `extra`，三表 = `data` + `b` + `c`。第一行自动识别为表头。请在可信输入上使用。
+>
+> **函数索引**：QUERY · JOIN · QUERY3
 
 ### 示例数据
 
@@ -2571,6 +2595,8 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 ## 13. FS — 文件系统
 
 > 需宏安全设置允许。除 LS/LSDIR/DRIVES/PWD/TEMP 外均支持数组公式。
+>
+> **函数索引**：NORM · COMBINE · FNAME · BNAME · EXT · FOLDER · FEXISTS · FSIZE · FDEXISTS · MKDIR · LS · LSDIR · READ · WRITE · APPEND · COPY · MOVE · DELETE · DELDIR · DRIVES · PWD · TEMP
 
 ### 示例路径
 
@@ -2817,6 +2843,8 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 | **5** | Eva | 32 | FL | 89.0 |
 
 ---
+
+> **函数索引**：TOHTML · TOJSON · TOMD · TOCSV · TOCSVTAB · TOCSVSEMI · TRANSPOSE · SELCOLS · SELROWS
 
 ### RANGE.TOHTML — 导出 HTML 表格
 
