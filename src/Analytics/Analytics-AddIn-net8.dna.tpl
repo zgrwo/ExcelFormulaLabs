@@ -2,6 +2,7 @@
   <ExternalLibrary Path="Analytics.dll" Pack="true" ExplicitExports="true" />
   <Reference Path="Foundation.dll" Pack="true" />
   <Reference Path="MathNet.Numerics.dll" Pack="true" />
+  <Reference Path="ExcelDna.IntelliSense.dll" Pack="true" />
 
   <!-- Analytics.xll — Statistics, Regression, Linear Algebra, PhyChem.
        Install: drag Analytics.xll into Excel. Category prefixes:
