@@ -58,15 +58,7 @@ Win10/11 自带 .NET Framework 4.8，直接加载 net48 版本的 `.xll`：
 
 ## VBA 调用
 
-加载 `.xll` 后，所有函数可通过 `Application.Run` 直接调用，**无需引用或声明**。
-
-**关键规则**：跳过的可选参数用**逗号占位**。
-
-```vba
-Dim r As Variant
-r = Application.Run("STATS.MEAN", Range("A1:A100"))
-r = Application.Run("REGEX.MATCH", "Order #12345", "\d+", , 2)  ' 跳过 ignore_case
-```
+加载 `.xll` 后，所有函数可通过 `Application.Run` 直接调用，无需引用或声明。详见 [API 参考 → VBA 调用](docs/api-reference.md#vba-调用)。
 
 ---
 
@@ -114,14 +106,7 @@ r = Application.Run("REGEX.MATCH", "Order #12345", "\d+", , 2)  ' 跳过 ignore_
 
 **输入过滤**：Excel 错误值（`#N/A`、`#DIV/0!` 等）在 MapOver 层**透传**，在统计函数中被跳过。空白单元格跳过不计。所有输入被过滤时返回 `#VALUE!` 或 `NaN`。
 
-**常见错误示例**：
-```
-=LINALG.MATMUL(A1:C3, E1:E10)              ' 维度不匹配 → #VALUE!
-=PHYCHEM.DENSITY(5, 0)                     ' 除零 → #NUM!
-=STATS.PEARSON({5,5,5}, {1,2,3})           ' 常数数据 → #NUM!
-=PIVOT.PIVOT(A1:D100, 0, 1, 2, "MEDIAN")   ' 不支持的聚合 → #VALUE!
-=FS.READ("C:\\missing.txt")                ' 文件不存在 → #VALUE!
-```
+完整错误清单见 [API 参考 → 错误参考](docs/api-reference.md#错误参考)。
 
 ---
 

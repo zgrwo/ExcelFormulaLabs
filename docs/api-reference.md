@@ -406,15 +406,4 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 
 ## 架构说明
 
-所有 UDF 遵循统一的调用链：
-
-```
-UDF ([ExcelFunction]) → InputNormalizer → MapOver/MapOverFlat/MapOverMulti/V() → Core → OutputWrapper.WrapError → Excel
-```
-
-- **MapOver<TIn,TOut>**：保持输入形状，null/error/empty 透传
-- **MapOverFlat<TIn,TOut>**：始终返回 `object[]`，即使标量输入
-- **MapOverMulti**：多参数广播，尺寸不匹配时返回 `ExcelError`
-- **V()**：仅统计类函数使用，尺寸不匹配时返回 NaN（非 ExcelError）
-
-Core 层为纯逻辑 `internal static` 类，100% 单元测试覆盖。所有 Excel 交互（COM Range 检测、类型转换、错误包装）完全隔离在 Foundation 层。
+所有 UDF 遵循统一调用链：`UDF → InputNormalizer → MapOver/MapOverMulti/V() → Core → WrapError → Excel`。架构分层与调度模式详见 [CLAUDE.md](../CLAUDE.md#架构分层) 和 [skill.md](../skills/excel-dna-project/skill.md#架构)。

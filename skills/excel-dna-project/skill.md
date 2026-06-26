@@ -241,7 +241,8 @@ internal static string RegexMatch(string i, string p, long n, bool ic=true)
 bash scripts/verify-docs.sh                          # ① 文档一致性验证
 dotnet test                                         # ② 全量单元测试
 dotnet test --filter "CrossVal"  # ③ 交叉验证（Analytics Python 交叉验证）
-dotnet build -c Debug && dotnet build -c Release     # ④ 双目标打包
+python scripts/verify-manual.py                      # ④ 手册示例验证（219 UDF × Python）
+dotnet build -c Debug && dotnet build -c Release     # ⑤ 双目标打包
 ```
 
 精度 1e-10。豁免：FS.*（POSIX 差异）、RANGE.*（无标准输出格式），标记 `// No Python ref:`。
@@ -311,3 +312,10 @@ xUnit `[Fact]` + FluentAssertions 6.12.0。每 Core 方法覆盖：正常路径 
 **性能**：StringCore.RandomString ThreadLocal/Random.Shared · SqlCore 列类型推断扫描前 10 行 · RemoveChars StringBuilder 单趟 · RegexMatch/Replace n=1 保留 Match() 快路径（防 delegate→Matches() 回退）
 
 **构建**：多目标 net8.0+net48 · DataToolkit .dna 双模板 · CleanupDnaAfterBuild 防增量污染 · SandboxRoot 并行测试 xUnit Collection 序列化
+
+## 外部文档
+
+- [README.md](../../README.md) — 用户向功能指南与安装
+- [docs/api-reference.md](../../docs/api-reference.md) — 219 UDF 签名唯一信源
+- [docs/user-manual.md](../../docs/user-manual.md) — 每函数详细示例（Python 交叉验证）
+- [CONTEXT.md](../../CONTEXT.md) — 领域术语表

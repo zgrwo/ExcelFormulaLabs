@@ -43,3 +43,10 @@ _Avoid_: 目标框架、框架版本
 **ExcelEmpty** — Foundation 层定义的 Excel 空单元格哨兵，`ExcelEmpty.Value`。
 **ExcelError** — Foundation 层定义的 Excel 错误哨兵，携带 `Code`（如 2042=#N/A）。
 **OLE date** — OLE 自动化日期格式，纪元为 1899-12-30。
+
+## 参见
+
+- [CLAUDE.md](CLAUDE.md) — 项目宪法与开发流程
+- [README.md](README.md) — 用户向功能指南与安装
+- [skills/excel-dna-project/skill.md](skills/excel-dna-project/skill.md) — 编码规范与架构
+- [skills/excel-dna-addins/skill.md](skills/excel-dna-addins/skill.md) — Excel-DNA 开发全流程

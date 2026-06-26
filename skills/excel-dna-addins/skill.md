@@ -107,6 +107,7 @@ dotnet clean
 - [CLAUDE.md](../../CLAUDE.md) — 项目宪法（规则和技能路由）
 - [skill.md](../excel-dna-project/skill.md) — 编码规范和详细参考
 - [README.md](../../README.md) — 用户向项目说明
+- [docs/user-manual.md](../../docs/user-manual.md) — 每函数详细示例（Python 交叉验证）
 - 测试数据：tests/TestData/Cross_Validation_vs_Python.xlsx
 - Excel-DNA 官方文档：https://github.com/Excel-DNA/ExcelDna
 

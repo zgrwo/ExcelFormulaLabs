@@ -15,7 +15,7 @@
 
 | 范围 | Skill 文件 | 内容 |
 | :--- | :--- | :--- |
-| Core / Foundation / 基础逻辑 | `skills/excel-dna-project/skill.md` | 编码规范、架构、MapOver 变体、表头/哨兵契约、测试模式、全量测试命令 |
+| Foundation / Analytics / DataToolkit / 编码规范 | `skills/excel-dna-project/skill.md` | 编码规范、架构、MapOver 变体、表头/哨兵契约、测试模式、全量测试命令 |
 | UDF / .xll 打包 / 分发 | `skills/excel-dna-addins/skill.md` | UDF 声明规范、Excel-DNA 黄金法则、打包流程 |
 
 > **执行方式**：直接 `Read` skill 文件（Skill 工具无法加载项目级 skill）。
@@ -108,3 +108,4 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 - [docs/api-reference.md](docs/api-reference.md) — 219 UDF 签名唯一信源
 - [skills/excel-dna-project/skill.md](skills/excel-dna-project/skill.md) — 编码规范与架构详情
 - [skills/excel-dna-addins/skill.md](skills/excel-dna-addins/skill.md) — Excel-DNA 开发全流程
+- [docs/user-manual.md](docs/user-manual.md) — 每函数详细示例（Python 交叉验证）

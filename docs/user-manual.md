@@ -27,22 +27,7 @@
 
 ## VBA 调用
 
-加载 .xll 后，所有函数均可通过 `Application.Run` 在 VBA 中**直接调用，无需引用或声明**。
-
-**关键规则**：跳过的可选参数用**逗号占位**。
-
-```vba
-' REGEX.MATCH(text, pattern, [ignore_case], [instance_num])
-Dim r As Variant
-r = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d+")
-' → "12345"（第 1 个匹配）
-
-r = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d+", , 2)
-' → "2024"（第 2 个匹配，第三个参数 ignore_case 跳过的位置保留逗号）
-
-r = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d+", , -1)
-' → "15"（最后一个匹配）
-```
+加载 .xll 后，所有函数可通过 `Application.Run` 直接调用，无需引用或声明。详见 [API 参考 → VBA 调用](api-reference.md#vba-调用)。
 
 ---
 
@@ -2968,45 +2953,7 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ## 15. 错误参考
 
-### 通用错误
-
-| 条件 | 结果 | 影响范围 |
-|------|------|---------|
-| 参数为 null | MapOverMulti → `Empty`，直接 Core → 视函数 | 全部 |
-| Excel 错误值作为输入 | MapOver → 透传；直接 Core → 可能吞没 | 全部 |
-| 多数组参数尺寸不匹配 | MapOverMulti → `#VALUE!`；V() → `#NUM!` | STATS二元、REGEX等 |
-| 所有输入被过滤（全空/全错误） | `#VALUE!` 或 `NaN` | 统计类 |
-| 正则超时（5 秒） | `#VALUE!` | REGEX |
-| 文件路径越界（沙箱模式） | `#VALUE!` | FS |
-| SQL 语法错误 | `#VALUE!` | SQL |
-
-### 模块特定错误
-
-| 模块 | 条件 | 结果 |
-|------|------|------|
-| STATS | 空数组 | `#NUM!` |
-| STATS | 常数数组求相关（Pearson/Spearman） | `#NUM!` |
-| STATS | 方差为零的 t 检验 | `#NUM!` |
-| STATS | 几何平均含负数 | `#NUM!` |
-| LINALG | 矩阵含 NaN/Inf | `#VALUE!` |
-| LINALG | 非方阵求特征值/Cholesky | `#VALUE!` |
-| LINALG | 奇异矩阵求 Solve | `#VALUE!` |
-| REGRESS | 常数响应变量 y（TSS=0） | `#VALUE!` |
-| REGRESS | n ≤ p（自由度不足） | `#VALUE!` |
-| REGRESS | 权重含负数/NaN/Inf | `#VALUE!` |
-| REGRESS | 岭回归 λ=NaN/Inf | `#VALUE!` |
-| PHYCHEM | 分子式含未知元素 | `#NUM!` |
-| PHYCHEM | 未知换算单位 | `#NUM!` |
-| PHYCHEM | 待求量 ≠ 1 个 / 除零 | `#NUM!` |
-| STR | Base64 解码非法输入 | `#VALUE!` |
-| DT | 非法日期值 | `#VALUE!` |
-| REGEX | 非法正则表达式 | `#VALUE!` |
-| ARR | RANGE 超过 100,000 元素 | `#VALUE!` |
-| PIVOT | 不支持的聚合函数 | `#VALUE!` |
-| PIVOT | CrossJoin 超过 1,000,000 单元格 | `#VALUE!` |
-| FS | 文件不存在 / 路径含非法字符 | `#VALUE!` |
-
-> `#VALUE!` = 输入/执行错误（用户可修正），`#NUM!` = 计算结果无定义（数据本身不满足数学条件）。
+> 完整错误条件与影响范围见 [API 参考 → 错误参考](api-reference.md#错误参考)。`#VALUE!` = 输入/执行错误，`#NUM!` = 计算结果无定义。
 
 ---
 
