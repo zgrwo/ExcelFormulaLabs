@@ -210,5 +210,34 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         // Regression: methods that already had guards before this change
         [Fact] public void StartOfWeek_MinValue_throws() => AssertMinValueThrows(() => DateTimeCore.StartOfWeek(DateTime.MinValue));
         [Fact] public void EndOfMonth_MinValue_throws() => AssertMinValueThrows(() => DateTimeCore.EndOfMonth(DateTime.MinValue));
+
+        // =====================================================================
+        // CROSS-VALIDATION: Python Reference Values
+        // Script: tests/TestData/generate_python_refs.py
+        // =====================================================================
+
+        // -- Easter (Gregorian computus, USNO verified) --
+        [Fact] public void CrossVal_Easter_1900() => DateTimeCore.Easter(1900).Should().Be(new DateTime(1900, 4, 15));
+        [Fact] public void CrossVal_Easter_1950() => DateTimeCore.Easter(1950).Should().Be(new DateTime(1950, 4, 9));
+        [Fact] public void CrossVal_Easter_2000() => DateTimeCore.Easter(2000).Should().Be(new DateTime(2000, 4, 23));
+        [Fact] public void CrossVal_Easter_2008() => DateTimeCore.Easter(2008).Should().Be(new DateTime(2008, 3, 23));
+        [Fact] public void CrossVal_Easter_2024() => DateTimeCore.Easter(2024).Should().Be(new DateTime(2024, 3, 31));
+        [Fact] public void CrossVal_Easter_2025() => DateTimeCore.Easter(2025).Should().Be(new DateTime(2025, 4, 20));
+        [Fact] public void CrossVal_Easter_2026() => DateTimeCore.Easter(2026).Should().Be(new DateTime(2026, 4, 5));
+        [Fact] public void CrossVal_Easter_2030() => DateTimeCore.Easter(2030).Should().Be(new DateTime(2030, 4, 21));
+        [Fact] public void CrossVal_Easter_2050() => DateTimeCore.Easter(2050).Should().Be(new DateTime(2050, 4, 10));
+        [Fact] public void CrossVal_Easter_2075() => DateTimeCore.Easter(2075).Should().Be(new DateTime(2075, 4, 7));
+        [Fact] public void CrossVal_Easter_2099() => DateTimeCore.Easter(2099).Should().Be(new DateTime(2099, 4, 12));
+        [Fact] public void CrossVal_Easter_2100() => DateTimeCore.Easter(2100).Should().Be(new DateTime(2100, 3, 28));
+        [Fact] public void CrossVal_Easter_out_of_range() { var a = () => DateTimeCore.Easter(0); a.Should().Throw<ArgumentOutOfRangeException>(); }
+
+        // -- ISO Week (Python datetime.isocalendar) --
+        [Fact] public void CrossVal_IsoWeek_2024_12_30() { var d = new DateTime(2024, 12, 30); DateTimeCore.IsoWeekNum(d).Should().Be(1); DateTimeCore.IsoYear(d).Should().Be(2025); }
+        [Fact] public void CrossVal_IsoWeek_2025_01_01() { var d = new DateTime(2025, 1, 1); DateTimeCore.IsoWeekNum(d).Should().Be(1); DateTimeCore.IsoYear(d).Should().Be(2025); }
+        [Fact] public void CrossVal_IsoWeek_2025_12_31() { var d = new DateTime(2025, 12, 31); DateTimeCore.IsoWeekNum(d).Should().Be(1); DateTimeCore.IsoYear(d).Should().Be(2026); }
+        [Fact] public void CrossVal_IsoWeek_2026_01_01() { var d = new DateTime(2026, 1, 1); DateTimeCore.IsoWeekNum(d).Should().Be(1); DateTimeCore.IsoYear(d).Should().Be(2026); }
+        [Fact] public void CrossVal_IsoWeek_2023_01_01() { var d = new DateTime(2023, 1, 1); DateTimeCore.IsoWeekNum(d).Should().Be(52); DateTimeCore.IsoYear(d).Should().Be(2022); }
+        [Fact] public void CrossVal_IsoWeek_2020_12_31() { var d = new DateTime(2020, 12, 31); DateTimeCore.IsoWeekNum(d).Should().Be(53); DateTimeCore.IsoYear(d).Should().Be(2020); }
+        [Fact] public void CrossVal_IsoWeek_2028_12_31() { var d = new DateTime(2028, 12, 31); DateTimeCore.IsoWeekNum(d).Should().Be(52); DateTimeCore.IsoYear(d).Should().Be(2028); }
     }
 }

@@ -140,5 +140,55 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         [Fact] public void NormalizeWs_null_safe() => StringCore.NormalizeWhitespace(null!).Should().Be("");
         [Fact] public void PadLeft_overflow() => StringCore.PadLeft("hello", 3).Should().Be("hello");
         [Fact] public void PadRight_overflow() => StringCore.PadRight("hello", 3).Should().Be("hello");
+
+        // =====================================================================
+        // CROSS-VALIDATION: Python Reference Values
+        // Script: tests/TestData/generate_python_refs.py
+        // =====================================================================
+
+        // -- Levenshtein distance (manual DP verified against textdistance) --
+        [Fact] public void CrossVal_Lev_kitten_sitting() => StringCore.LevenshteinDistance("kitten", "sitting").Should().Be(3);
+        [Fact] public void CrossVal_Lev_empty_a() => StringCore.LevenshteinDistance("", "abc").Should().Be(3);
+        [Fact] public void CrossVal_Lev_a_empty() => StringCore.LevenshteinDistance("abc", "").Should().Be(3);
+        [Fact] public void CrossVal_Lev_both_empty() => StringCore.LevenshteinDistance("", "").Should().Be(0);
+        [Fact] public void CrossVal_Lev_identical() => StringCore.LevenshteinDistance("same", "same").Should().Be(0);
+        [Fact] public void CrossVal_Lev_flaw_lawn() => StringCore.LevenshteinDistance("flaw", "lawn").Should().Be(2);
+        [Fact] public void CrossVal_Lev_case_sensitive() => StringCore.LevenshteinDistance("abc", "ABC").Should().Be(3);
+        [Fact] public void CrossVal_Lev_cafe_coffee() => StringCore.LevenshteinDistance("cafe", "coffee").Should().Be(3);
+        [Fact] public void CrossVal_Lev_one_char_diff() => StringCore.LevenshteinDistance("abcdefghij", "abcdeFghij").Should().Be(1);
+        [Fact] public void CrossVal_Lev_single_char() => StringCore.LevenshteinDistance("a", "b").Should().Be(1);
+
+        // -- Soundex (American Soundex, verified against jellyfish) --
+        [Fact] public void CrossVal_Soundex_Robert() => StringCore.Soundex("Robert").Should().Be("R163");
+        [Fact] public void CrossVal_Soundex_Rupert() => StringCore.Soundex("Rupert").Should().Be("R163");
+        [Fact] public void CrossVal_Soundex_Rubin() => StringCore.Soundex("Rubin").Should().Be("R150");
+        [Fact] public void CrossVal_Soundex_Ashcraft() => StringCore.Soundex("Ashcraft").Should().Be("A261");
+        [Fact] public void CrossVal_Soundex_Tymczak() => StringCore.Soundex("Tymczak").Should().Be("T520");
+        [Fact] public void CrossVal_Soundex_Pfister() => StringCore.Soundex("Pfister").Should().Be("P236");
+        [Fact] public void CrossVal_Soundex_empty() => StringCore.Soundex("").Should().Be("");
+        [Fact] public void CrossVal_Soundex_single_A() => StringCore.Soundex("A").Should().Be("A000");
+
+        // -- Base64 (Python stdlib base64) --
+        [Fact] public void CrossVal_Base64_empty() => StringCore.Base64Encode("").Should().Be("");
+        [Fact] public void CrossVal_Base64_hello() => StringCore.Base64Encode("hello").Should().Be("aGVsbG8=");
+        [Fact] public void CrossVal_Base64_HelloWorld() => StringCore.Base64Encode("Hello World!").Should().Be("SGVsbG8gV29ybGQh");
+        [Fact] public void CrossVal_Base64_pad_1() => StringCore.Base64Encode("ab").Should().Be("YWI=");
+        [Fact] public void CrossVal_Base64_pad_0() => StringCore.Base64Encode("abc").Should().Be("YWJj");
+        [Fact] public void CrossVal_Base64_pad_2() => StringCore.Base64Encode("abcd").Should().Be("YWJjZA==");
+        [Fact] public void CrossVal_Base64_roundtrip() => StringCore.Base64Decode(StringCore.Base64Encode("Hello World!")).Should().Be("Hello World!");
+
+        // -- URL Encode (Python urllib.parse.quote) --
+        [Fact] public void CrossVal_UrlEncode_space() => StringCore.UrlEncode("hello world").Should().Be("hello%20world");
+        [Fact] public void CrossVal_UrlEncode_special() => StringCore.UrlEncode("a+b=c").Should().Be("a%2Bb%3Dc");
+        [Fact] public void CrossVal_UrlEncode_slash() => StringCore.UrlEncode("/path/to/file").Should().Be("%2Fpath%2Fto%2Ffile");
+        [Fact] public void CrossVal_UrlEncode_empty() => StringCore.UrlEncode("").Should().Be("");
+        [Fact] public void CrossVal_UrlEncode_percent() => StringCore.UrlEncode("100%").Should().Be("100%25");
+
+        // -- HTML Encode (Python html.escape) --
+        [Fact] public void CrossVal_HtmlEncode_script() { var r = StringCore.HtmlEncode("<script>"); r.Should().Contain("&lt;").And.Contain("&gt;"); }
+        [Fact] public void CrossVal_HtmlEncode_amp() => StringCore.HtmlEncode("a & b").Should().Be("a &amp; b");
+        [Fact] public void CrossVal_HtmlEncode_quote() => StringCore.HtmlEncode("\"quoted\"").Should().Contain("&quot;");
+        [Fact] public void CrossVal_HtmlEncode_normal() => StringCore.HtmlEncode("normal text").Should().Be("normal text");
+        [Fact] public void CrossVal_HtmlEncode_empty() => StringCore.HtmlEncode("").Should().Be("");
     }
 }

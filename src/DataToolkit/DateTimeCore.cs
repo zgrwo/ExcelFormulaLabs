@@ -10,12 +10,13 @@ namespace ExcelVbaLibraries.DataToolkit
         internal static long IsoWeekNum(DateTime d)
         { AssertValidDate(d);
 #if NET48
-            // ISO 8601: week starts Monday, week 1 contains Jan 4
+            // ISO 8601: week starts Monday, week 1 contains Jan 4.
+            // Formula: floor((ordinal(thursday) + 6) / 7)  where ordinal = day-of-year (1-based).
+            // Equivalent to ((thu - jan1).Days + 7) / 7 (integer division).
             int dow = (int)d.DayOfWeek; if (dow == 0) dow = 7;
             var thu = d.AddDays(4 - dow);
             var jan1 = new DateTime(thu.Year, 1, 1);
-            int jdow = (int)jan1.DayOfWeek; if (jdow == 0) jdow = 7;
-            return ((thu - jan1).Days + jdow - 1) / 7 + 1;
+            return ((thu - jan1).Days + 7) / 7;
 #else
             return ISOWeek.GetWeekOfYear(d);
 #endif

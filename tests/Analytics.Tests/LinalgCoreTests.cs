@@ -328,6 +328,28 @@ namespace ExcelVbaLibraries.Analytics.Tests
         [Fact] public void CrossVal_NormFrobenius_Diagonal() => LinalgCore.NormFrobenius(Diag3).Should().BeApproximately(6.164414002968976, 1e-10);
         [Fact] public void CrossVal_Pinv_Diagonal() { var Ap = LinalgCore.PseudoInverse(Diag3); Ap[0, 0].Should().BeApproximately(0.5, 1e-10); Ap[1, 1].Should().BeApproximately(1.0 / 3.0, 1e-10); Ap[2, 2].Should().BeApproximately(0.2, 1e-10); }
 
+        // =====================================================================
+        // CROSS-VALIDATION: Python scipy.linalg Reference Values
+        //
+        // Reference script: tests/TestData/generate_python_refs.py
+        // Run `python tests/TestData/generate_python_refs.py` to regenerate.
+        // =====================================================================
+
+        private static readonly double[] PySvdS_B = { 17.412505166808593, 0.875161350110436, 0.196866521117430 };
+        [Fact] public void CrossVal_Svd_S_B() { var (_, S, _) = LinalgCore.Svd(B); for (int i = 0; i < 3; i++) S[i].Should().BeApproximately(PySvdS_B[i], 1e-10); }
+        [Fact] public void CrossVal_Svd_S_symmetric() { var (_, S, _) = LinalgCore.Svd(A); S[0].Should().BeApproximately(3.0, 1e-10); S[1].Should().BeApproximately(1.0, 1e-10); }
+        private static readonly double[] PyEigen_A3x3 = { 3.414213562373091, 2.000000000000000, 0.585786437626905 };
+        [Fact] public void CrossVal_Eigen_tridiagonal() { var v = LinalgCore.Eigenvalues(new double[,] { { 2, -1, 0 }, { -1, 2, -1 }, { 0, -1, 2 } }); var s = v.OrderByDescending(x => x).ToArray(); for (int i = 0; i < 3; i++) s[i].Should().BeApproximately(PyEigen_A3x3[i], 1e-10); }
+        [Fact] public void CrossVal_QR_R_diag_abs() { var (_, R) = LinalgCore.Qr(B); Math.Abs(R[0, 0]).Should().BeApproximately(8.124038404635959, 1e-8); Math.Abs(R[1, 1]).Should().BeApproximately(0.904534033733293, 1e-8); Math.Abs(R[2, 2]).Should().BeApproximately(0.408248290463862, 1e-8); }
+        [Fact] public void CrossVal_LU_components() { var (L, U, _) = LinalgCore.Lu(B); Math.Abs(L[1, 0]).Should().BeApproximately(0.142857142857143, 1e-8); Math.Abs(L[2, 0]).Should().BeApproximately(0.571428571428571, 1e-8); Math.Abs(L[2, 1]).Should().BeApproximately(0.5, 1e-8); Math.Abs(U[0, 0]).Should().BeApproximately(7.0, 1e-10); Math.Abs(U[1, 1]).Should().BeApproximately(0.857142857142857, 1e-8); Math.Abs(U[2, 2]).Should().BeApproximately(0.5, 1e-8); }
+        [Fact] public void CrossVal_Cholesky_L() { var L = LinalgCore.Cholesky(new double[,] { { 4, 2 }, { 2, 3 } }); L[0, 0].Should().BeApproximately(2.0, 1e-10); L[1, 0].Should().BeApproximately(1.0, 1e-10); Math.Abs(L[1, 1]).Should().BeApproximately(1.414213562373095, 1e-10); }
+        [Fact] public void CrossVal_Pinv_B_element() { var Ap = LinalgCore.PseudoInverse(B); Ap[0, 0].Should().BeApproximately(-0.666666666666671, 1e-8); }
+        [Fact] public void CrossVal_Det_B() => LinalgCore.Determinant(B).Should().BeApproximately(-3.0, 1e-10);
+        [Fact] public void CrossVal_Cond_B() => LinalgCore.ConditionNumber(B).Should().BeApproximately(88.448279920698738, 1e-6);
+        [Fact] public void CrossVal_Rank_B() => LinalgCore.Rank(B).Should().Be(3);
+        [Fact] public void CrossVal_Rank_deficient() => LinalgCore.Rank(new double[,] { { 1, 2, 3 }, { 4, 5, 6 }, { 5, 7, 9 } }).Should().Be(2);
+        [Fact] public void CrossVal_NormFro_B() => LinalgCore.NormFrobenius(B).Should().BeApproximately(17.435595774162696, 1e-10);
+
         private static readonly double[,] NaNM = { { double.NaN, 1 }, { 1, 1 } };
         private static readonly double[,] InfM = { { 1.0, 1 }, { 1, double.PositiveInfinity } };
         private static readonly double[,] I2 = { { 1, 0 }, { 0, 1 } };
