@@ -49,6 +49,21 @@ namespace ExcelVbaLibraries.Analytics.Tests
         [Fact] public void ANOVA_crossval() { var a=RegressionCore.AnovaOneWay(new[]{new[]{5.0,6,7,8},new[]{7.0,8,9,10},new[]{9.0,10,11,12}}); ((double)a["f_stat"]).Should().BeApproximately(9.6,1e-8); ((double)a["p_value"]).Should().BeApproximately(0.00586098088586,1e-8); }
 
         // =====================================================================
+        // CROSS-VALIDATION: WLS & Ridge vs Python statsmodels/sklearn
+        // =====================================================================
+        // statsmodels.WLS: coef=[0.34075, 1.70377], sse=0.07842, r2=0.99847
+        private static readonly double[,] Xwls = {{1,1},{1,2},{1,3},{1,4},{1,5}};
+        private static readonly double[] ywls_cv = {2.1,3.8,5.2,7.1,8.9};
+        private static readonly double[] wwls_cv = {1.0,2.0,1.0,0.5,3.0};
+        [Fact] public void CrossVal_WLS_Py_coef() { var c=(double[])RegressionCore.FitWLS(Xwls,ywls_cv,wwls_cv)["coefficients"]; c[0].Should().BeApproximately(0.340754716981135,1e-8); c[1].Should().BeApproximately(1.703773584905660,1e-8); }
+        [Fact] public void CrossVal_WLS_Py_sse() => ((double)RegressionCore.FitWLS(Xwls,ywls_cv,wwls_cv)["sse"]).Should().BeApproximately(0.078415094339623,1e-10);
+        [Fact] public void CrossVal_WLS_Py_r2() => ((double)RegressionCore.FitWLS(Xwls,ywls_cv,wwls_cv)["r_squared"]).Should().BeApproximately(0.999245386613178,1e-10);
+        // sklearn.linear_model.Ridge(alpha=1.0): coef=[-0.04742, 1.85676]
+        private static readonly double[,] Xridge = {{1,1},{1,2},{1,3},{1,4},{1,5},{1,6},{1,7},{1,8},{1,9},{1,10}};
+        private static readonly double[] yridge = {2.1,3.8,5.2,7.1,8.9,10.8,13.1,14.9,16.8,18.9};
+        [Fact] public void CrossVal_Ridge_sklearn_coef() { var c=(double[])RegressionCore.FitRidge(Xridge,yridge,1.0)["coefficients"]; c[0].Should().BeApproximately(-0.047420147420147,1e-8); c[1].Should().BeApproximately(1.856756756756757,1e-8); }
+
+        // =====================================================================
         // EDGE CASE & INPUT VALIDATION TESTS
         // (systematic coverage following H3/M4 pattern)
         // =====================================================================

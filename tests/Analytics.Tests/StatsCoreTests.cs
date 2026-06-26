@@ -561,5 +561,27 @@ namespace ExcelVbaLibraries.Analytics.Tests
         [Fact] public void CrossVal_CovarianceP() => StatsCore.CovarianceP(new[] { 1.0, 2, 3, 4, 5 }, new[] { 2.0, 4, 6, 8, 10 }).Should().BeApproximately(4.0, 1e-10);
         // numpy.cov([1..5],[2,4,6,8,10],ddof=1)[0,1] = 5.0 (n/(n-1)·4.0)
         [Fact] public void CrossVal_Covariance() => StatsCore.Covariance(new[] { 1.0, 2, 3, 4, 5 }, new[] { 2.0, 4, 6, 8, 10 }).Should().BeApproximately(5.0, 1e-10);
+
+        // =====================================================================
+        // CROSS-VALIDATION: Additional Distributions (Python scipy reference)
+        // =====================================================================
+        // CROSS-VALIDATION: Additional Distributions (Python scipy reference)
+        // =====================================================================
+        // Dataset 5: Heavy-tailed (Pareto-like, many small + few extremes, n=20)
+        private static readonly double[] DsHeavy = { 1.0,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2.0,2.1,2.2,2.5,3.0,4.0,5.0,8.0,12.0,50.0 };
+        private const double HeavyMean = 5.265, HeavyStdev = 10.869913813632078, HeavySkew = 4.059522665048582, HeavyKurt = 17.208404905550363, HeavyPct50 = 1.95, HeavyMin = 1.0, HeavyMax = 50.0;
+        [Fact] public void CrossVal_Heavy_Mean() => StatsCore.Mean(DsHeavy).Should().BeApproximately(HeavyMean, 1e-10);
+        [Fact] public void CrossVal_Heavy_Stdev() => StatsCore.Stdev(DsHeavy).Should().BeApproximately(HeavyStdev, 1e-6);
+        [Fact] public void CrossVal_Heavy_Skew() => StatsCore.Skewness(DsHeavy).Should().BeApproximately(HeavySkew, 1e-6);
+        [Fact] public void CrossVal_Heavy_Kurt() => StatsCore.Kurtosis(DsHeavy).Should().BeApproximately(HeavyKurt, 0.2);
+        [Fact] public void CrossVal_Heavy_Pct50() => StatsCore.Percentile(DsHeavy, 50).Should().BeApproximately(HeavyPct50, 1e-10);
+        [Fact] public void CrossVal_Heavy_MinMax() { StatsCore.Min(DsHeavy).Should().BeApproximately(HeavyMin, 1e-10); StatsCore.Max(DsHeavy).Should().BeApproximately(HeavyMax, 1e-10); }
+        // Dataset 6: Bimodal (two symmetric clusters, n=22)
+        private static readonly double[] DsBimodal = { 4.5,4.6,4.7,4.8,4.9,5.0,5.1,5.2,5.3,5.4,5.5,9.5,9.6,9.7,9.8,9.9,10.0,10.1,10.2,10.3,10.4,10.5 };
+        private const double BiMean = 7.5, BiStdev = 2.5792209971968187, BiSkew = 0.0, BiPct50 = 7.5;
+        [Fact] public void CrossVal_Bi_Mean() => StatsCore.Mean(DsBimodal).Should().BeApproximately(BiMean, 1e-10);
+        [Fact] public void CrossVal_Bi_Stdev() => StatsCore.Stdev(DsBimodal).Should().BeApproximately(BiStdev, 1e-6);
+        [Fact] public void CrossVal_Bi_Skew() => StatsCore.Skewness(DsBimodal).Should().BeApproximately(BiSkew, 1e-8);
+        [Fact] public void CrossVal_Bi_Pct50() => StatsCore.Percentile(DsBimodal, 50).Should().BeApproximately(BiPct50, 1e-10);
     }
 }

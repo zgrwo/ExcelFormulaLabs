@@ -218,7 +218,7 @@ namespace ExcelVbaLibraries.Analytics
             double pAtm = ConvertPressure(press, pUnit, "atm");
             if (double.IsNaN(tK) || double.IsNaN(pAtm) || tK == 0)
                 return double.NaN;
-            return vol * (pAtm / 1.0) * (273.15 / tK);
+            return vol * pAtm * (273.15 / tK);
         }
     }
 }

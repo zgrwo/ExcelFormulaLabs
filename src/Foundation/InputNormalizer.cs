@@ -224,7 +224,7 @@ namespace ExcelVbaLibraries.Foundation
             if (value is int i) return i;
             if (value is long l) return l;
             if (value is float f) return f;
-            if (value is decimal m) return (double)m;
+            if (value is decimal m) { double dm = (double)m; return double.IsInfinity(dm) ? double.NaN : dm; }
             if (value is string s)
             {
                 if (double.TryParse(s, NumberStyles.Float | NumberStyles.AllowThousands,
