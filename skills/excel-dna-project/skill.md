@@ -5,6 +5,8 @@ description: 本项目编码规范与架构参考 — Foundation/Analytics/DataT
 
 # SKILL.md
 
+> 术语定义见 [CONTEXT.md](../../CONTEXT.md)。
+
 ## 项目结构
 
 ```

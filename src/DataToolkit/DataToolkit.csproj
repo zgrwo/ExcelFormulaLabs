@@ -4,6 +4,8 @@
     <TargetFrameworks>net8.0-windows;net48</TargetFrameworks>
     <RootNamespace>ExcelVbaLibraries.DataToolkit</RootNamespace>
     <AssemblyName>DataToolkit</AssemblyName>
+    <Description>字符串 · 正则 · JSON · 数组 · SQL · 文件 · 日期 — 144 个数据处理函数</Description>
+    <Product>Excel 函数增强库</Product>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -67,6 +69,13 @@
   </Target>
   <Target Name="CleanupDnaAfterBuild" AfterTargets="ExcelDnaPack">
     <Delete Files="DataToolkit-AddIn.dna" />
+  </Target>
+
+  <!-- Patch VERSIONINFO in packed .xll files so Excel add-in manager
+       shows meaningful descriptions instead of Excel-DNA defaults. -->
+  <Target Name="PatchXllVersionInfo" AfterTargets="ExcelDnaPack" Condition="'$(Configuration)' == 'Release'">
+    <Exec Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\DataToolkit-AddIn-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" ContinueOnError="true" />
+    <Exec Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\DataToolkit-AddIn64-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" ContinueOnError="true" />
   </Target>
 
 </Project>

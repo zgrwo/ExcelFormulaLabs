@@ -4,6 +4,8 @@
     <TargetFrameworks>net8.0-windows;net48</TargetFrameworks>
     <RootNamespace>ExcelVbaLibraries.Analytics</RootNamespace>
     <AssemblyName>Analytics</AssemblyName>
+    <Description>统计 · 线性代数 · 回归 · 物理化学 — 75 个科学计算函数</Description>
+    <Product>Excel 函数增强库</Product>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -55,6 +57,13 @@
   </Target>
   <Target Name="CleanNet48Dna" AfterTargets="AfterBuild" Condition="'$(TargetFramework)' == 'net48' and Exists('Analytics-AddIn-net48.dna')">
     <Delete Files="Analytics-AddIn-net48.dna" />
+  </Target>
+
+  <!-- Patch VERSIONINFO in packed .xll files so Excel add-in manager
+       shows meaningful descriptions instead of Excel-DNA defaults. -->
+  <Target Name="PatchXllVersionInfo" AfterTargets="ExcelDnaPack" Condition="'$(Configuration)' == 'Release'">
+    <Exec Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\Analytics-AddIn-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" ContinueOnError="true" />
+    <Exec Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\Analytics-AddIn64-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" ContinueOnError="true" />
   </Target>
 
 </Project>

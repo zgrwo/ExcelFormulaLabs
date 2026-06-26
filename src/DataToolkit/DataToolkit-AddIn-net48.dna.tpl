@@ -1,4 +1,4 @@
-<DnaLibrary Name="DataToolkit Add-In (.NET Framework)" RuntimeVersion="v4.0" ExplicitExports="true">
+<DnaLibrary Name="DataToolkit - STR REGEX JSON SQL FS DT RANGE (.NET Framework)" RuntimeVersion="v4.0" ExplicitExports="true">
   <ExternalLibrary Path="DataToolkit.dll" Pack="true" ExplicitExports="true" />
   <Reference Path="Foundation.dll" Pack="true" />
   <Reference Path="System.Data.SQLite.dll" Pack="true" />

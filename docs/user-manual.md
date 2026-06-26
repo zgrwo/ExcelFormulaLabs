@@ -44,7 +44,7 @@
 
 > 对标 Python scipy，精度 1e-10。元素级函数（ABS/SQRT/LN/LOG10/EXP/SIGN）支持数组公式。
 >
-> **函数索引**：MEAN · GEOMEAN · HARMEAN · MEDIAN · VARP · VAR · STDEVP · STDEV · SKEW · KURT · MIN · MAX · RANGE · SUM · PRODUCT · PERCENTILE · IQR · SUMMARY · COUNT · MODE · COVARP · COVAR · PEARSON · SPEARMAN · TTEST1 · TTEST2 · ZSCORE · ABS · SQRT · LN · LOG10 · EXP · SIGN
+> **函数索引**：[MEAN](#stats-mean) · [GEOMEAN](#stats-geomean) · [HARMEAN](#stats-harmean) · [MEDIAN](#stats-median) · [VARP](#stats-varp) · [VAR](#stats-var) · [STDEVP](#stats-stdevp) · [STDEV](#stats-stdev) · [SKEW](#stats-skew) · [KURT](#stats-kurt) · [MIN](#stats-min) · [MAX](#stats-max) · [RANGE](#stats-range) · [SUM](#stats-sum) · [PRODUCT](#stats-product) · [PERCENTILE](#stats-percentile) · [IQR](#stats-iqr) · [SUMMARY](#stats-summary) · [COUNT](#stats-count) · [MODE](#stats-mode) · [COVARP](#stats-covarp) · [COVAR](#stats-covar) · [PEARSON](#stats-pearson) · [SPEARMAN](#stats-spearman) · [TTEST1](#stats-ttest1) · [TTEST2](#stats-ttest2) · [ZSCORE](#stats-zscore) · [ABS](#stats-abs) · [SQRT](#stats-sqrt) · [LN](#stats-ln) · [LOG10](#stats-log10) · [EXP](#stats-exp) · [SIGN](#stats-sign)
 
 ### 示例数据集
 
@@ -584,7 +584,7 @@ eˣ。对标 Excel EXP。支持数组。
 
 > 基于 MathNet.Numerics 5.0.0。所有矩阵函数接受二维区域输入。
 >
-> **函数索引**：DET · SOLVE · MATMUL · TRANSPOSE · TRACE · RANK · COND · EIGEN · SVD_U · SVD_S · SVD_VT · QR_Q · QR_R · LU_L · LU_U · LU_P · PINV · CHOLESKY · IDENTITY
+> **函数索引**：[DET](#linalg-det) · [SOLVE](#linalg-solve) · [MATMUL](#linalg-matmul) · [TRANSPOSE](#linalg-transpose) · [TRACE](#linalg-trace) · [RANK](#linalg-rank) · [COND](#linalg-cond) · [EIGEN](#linalg-eigen) · [SVD_U](#linalg-svd-u) · [SVD_S](#linalg-svd-s) · [SVD_VT](#linalg-svd-vt) · [QR_Q](#linalg-qr-q) · [QR_R](#linalg-qr-r) · [LU_L](#linalg-lu-l) · [LU_U](#linalg-lu-u) · [LU_P](#linalg-lu-p) · [PINV](#linalg-pinv) · [CHOLESKY](#linalg-cholesky) · [IDENTITY](#linalg-identity)
 
 ### 示例矩阵 A（4×4）
 
@@ -894,7 +894,7 @@ eˣ。对标 Excel EXP。支持数组。
 
 > 返回纵向报告表（col0 = 字段名，col1.. = 值或数组展开）。p < 0.05 = 显著；R² 越接近 1 拟合越好。
 >
-> **函数索引**：OLS · WLS · RIDGE · ANOVA1 · FACTORIMP · COEF · RSQ
+> **函数索引**：[OLS](#regress-ols) · [WLS](#regress-wls) · [RIDGE](#regress-ridge) · [ANOVA1](#regress-anova1) · [FACTORIMP](#regress-factorimp) · [COEF](#regress-coef) · [RSQ](#regress-rsq)
 
 ### 示例数据集
 
@@ -1055,7 +1055,7 @@ L2 正则化（防过拟合）。λ 默认 1.0。不返回标准误/t值/p值（
 
 ---
 
-> **函数索引**：MOLWT · TEMP · PRESS · VOL · MASS · C_TO_F · F_TO_C · KG_TO_LB · LB_TO_KG · L_TO_GAL · GAL_TO_L · ATM_TO_PSI · PSI_TO_ATM · IDEALGAS · GASSTP · DENSITY
+> **函数索引**：[MOLWT](#phychem-molwt) · [TEMP](#phychem-temp) · [PRESS](#phychem-press) · [VOL](#phychem-vol) · [MASS](#phychem-mass) · [C_TO_F](#phychem-c-to-f) · [F_TO_C](#phychem-f-to-c) · [KG_TO_LB](#phychem-kg-to-lb) · [LB_TO_KG](#phychem-lb-to-kg) · [L_TO_GAL](#phychem-l-to-gal) · [GAL_TO_L](#phychem-gal-to-l) · [ATM_TO_PSI](#phychem-atm-to-psi) · [PSI_TO_ATM](#phychem-psi-to-atm) · [IDEALGAS](#phychem-idealgas) · [GASSTP](#phychem-gasstp) · [DENSITY](#phychem-density)
 
 <a id="phychem-molwt"></a>
 
@@ -1257,7 +1257,7 @@ PV = nRT。将待求量填 `"*"`。R = 0.082057 L·atm/(mol·K)。
 
 > 除 TEXTJOIN/UUID/RND* 外均支持数组公式（逐元素处理）。
 >
-> **函数索引**：REVERSE · NORMWS · TITLE · REMOVE · KEEP · PADLEFT · PADRIGHT · TRUNCATE · COUNTSUB · STARTSWITH · ENDSWITH · LEFTOF · RIGHTOF · EXTRACT · NTHWORD · COMMONPFX · TEXTJOIN · LEVENSHTEIN · SOUNDEX · URLENCODE · URLDECODE · HTMLENCODE · HTMLDECODE · BASE64ENC · BASE64DEC · UUID · RNDSTR · RNDALPHA · RNDNUM · ISNULLEMPTY · ISNULLWS · COALESCE · FORMAT · STRIPHTML
+> **函数索引**：[REVERSE](#str-reverse) · [NORMWS](#str-normws) · [TITLE](#str-title) · [REMOVE](#str-remove) · [KEEP](#str-keep) · [PADLEFT](#str-padleft) · [PADRIGHT](#str-padright) · [TRUNCATE](#str-truncate) · [COUNTSUB](#str-countsub) · [STARTSWITH](#str-startswith) · [ENDSWITH](#str-endswith) · [LEFTOF](#str-leftof) · [RIGHTOF](#str-rightof) · [EXTRACT](#str-extract) · [NTHWORD](#str-nthword) · [COMMONPFX](#str-commonpfx) · [TEXTJOIN](#str-textjoin) · [LEVENSHTEIN](#str-levenshtein) · [SOUNDEX](#str-soundex) · [URLENCODE](#str-urlencode) · [URLDECODE](#str-urldecode) · [HTMLENCODE](#str-htmlencode) · [HTMLDECODE](#str-htmldecode) · [BASE64ENC](#str-base64enc) · [BASE64DEC](#str-base64dec) · [UUID](#str-uuid) · [RNDSTR](#str-rndstr) · [RNDALPHA](#str-rndalpha) · [RNDNUM](#str-rndnum) · [ISNULLEMPTY](#str-isnullempty) · [ISNULLWS](#str-isnullws) · [COALESCE](#str-coalesce) · [FORMAT](#str-format) · [STRIPHTML](#str-striphtml)
 
 ### 示例文本数据
 
@@ -1702,7 +1702,7 @@ instance_num: 1=第1次（默认），-1=最后一次。
 
 > 日期参数接受 Excel 日期序列号。start_day: 0=Sun, 1=Mon, ...（默认 1=Mon）。
 >
-> **函数索引**：ISOWEEK · WEEKDAY · WEEKDAYISO · WEEKDAYNAME · SOW · EOW · SOM · EOM · WOM · DIM · AGEYEARS · AGEMONTHS · AGEDAYS · ISWE · ADDWKD · WKDBTWN · NEXTWKD · EASTER · QUARTER · SEMESTER · DOY · ISLEAP · UNIXTS · FROMUNIX · DATEDIFF
+> **函数索引**：[ISOWEEK](#dt-isoweek) · [WEEKDAY](#dt-weekday) · [WEEKDAYISO](#dt-weekdayiso) · [WEEKDAYNAME](#dt-weekdayname) · [SOW](#dt-sow) · [EOW](#dt-eow) · [SOM](#dt-som) · [EOM](#dt-eom) · [WOM](#dt-wom) · [DIM](#dt-dim) · [AGEYEARS](#dt-ageyears) · [AGEMONTHS](#dt-agemonths) · [AGEDAYS](#dt-agedays) · [ISWE](#dt-iswe) · [ADDWKD](#dt-addwkd) · [WKDBTWN](#dt-wkdbtwn) · [NEXTWKD](#dt-nextwkd) · [EASTER](#dt-easter) · [QUARTER](#dt-quarter) · [SEMESTER](#dt-semester) · [DOY](#dt-doy) · [ISLEAP](#dt-isleap) · [UNIXTS](#dt-unixts) · [FROMUNIX](#dt-fromunix) · [DATEDIFF](#dt-datediff)
 
 ### 示例日期
 
@@ -2047,7 +2047,7 @@ end_date 默认今天。
 
 > .NET 正则引擎。支持数组公式（逐元素），超时 5 秒自动取消。
 >
-> **函数索引**：TEST · COUNT · MATCH · MATCHALL · REPLACE · SPLIT · GROUPS · ESCAPE · ISMATCH
+> **函数索引**：[TEST](#regex-test) · [COUNT](#regex-count) · [MATCH](#regex-match) · [MATCHALL](#regex-matchall) · [REPLACE](#regex-replace) · [SPLIT](#regex-split) · [GROUPS](#regex-groups) · [ESCAPE](#regex-escape) · [ISMATCH](#regex-ismatch)
 
 ### 示例文本
 
@@ -2218,7 +2218,7 @@ end_date 默认今天。
 
 > 一维数组操作函数集。
 >
-> **函数索引**：SORT · SORTASC · SORTDESC · SORTNUM · SORTTEXT · UNIQUE · INDEXOF · SLICE · FLATTEN · FILTER · FILTER_EQ · FILTER_NE · FILTER_GT · FILTER_LT · CONCAT · REVERSE · COUNT · CONTAINS · TOSET · FILL · RANGE · SHUFFLE
+> **函数索引**：[SORT](#arr-sort) · [SORTASC](#arr-sortasc) · [SORTDESC](#arr-sortdesc) · [SORTNUM](#arr-sortnum) · [SORTTEXT](#arr-sorttext) · [UNIQUE](#arr-unique) · [INDEXOF](#arr-indexof) · [SLICE](#arr-slice) · [FLATTEN](#arr-flatten) · [FILTER](#arr-filter) · [FILTER_EQ](#arr-filter-eq) · [FILTER_NE](#arr-filter-ne) · [FILTER_GT](#arr-filter-gt) · [FILTER_LT](#arr-filter-lt) · [CONCAT](#arr-concat) · [REVERSE](#arr-reverse) · [COUNT](#arr-count) · [CONTAINS](#arr-contains) · [TOSET](#arr-toset) · [FILL](#arr-fill) · [RANGE](#arr-range) · [SHUFFLE](#arr-shuffle)
 
 ### 示例数据
 
@@ -2463,7 +2463,7 @@ Fisher-Yates 算法。
 
 > 频率统计、集合运算、字典构建。
 >
-> **函数索引**：FREQUENCY · INTERSECT · UNION · EXCEPT · DICT · COUNT · KEYS · VALUES
+> **函数索引**：[FREQUENCY](#dict-frequency) · [INTERSECT](#dict-intersect) · [UNION](#dict-union) · [EXCEPT](#dict-except) · [DICT](#dict-dict) · [COUNT](#dict-count) · [KEYS](#dict-keys) · [VALUES](#dict-values)
 
 ### 示例数据
 
@@ -2768,7 +2768,7 @@ row_xpath 定义行节点。
 
 ---
 
-> **函数索引**：PIVOT · UNPIVOT · GROUPBY · CROSSJOIN
+> **函数索引**：[PIVOT](#pivot-pivot) · [UNPIVOT](#pivot-unpivot) · [GROUPBY](#pivot-groupby) · [CROSSJOIN](#pivot-crossjoin)
 
 <a id="pivot-pivot"></a>
 
@@ -2847,7 +2847,7 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 > 参数化 INSERT，列名经字母数字消毒。表名固定：单表 = `data`，双表 = `data` + `extra`，三表 = `data` + `b` + `c`。第一行自动识别为表头。请在可信输入上使用。
 >
-> **函数索引**：QUERY · JOIN · QUERY3
+> **函数索引**：[QUERY](#sql-query) · [JOIN](#sql-join) · [QUERY3](#sql-query3)
 
 ### 示例数据
 
@@ -2933,7 +2933,7 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 > 需宏安全设置允许。除 LS/LSDIR/DRIVES/PWD/TEMP 外均支持数组公式。
 >
-> **函数索引**：NORM · COMBINE · FNAME · BNAME · EXT · FOLDER · FEXISTS · FSIZE · FDEXISTS · MKDIR · LS · LSDIR · READ · WRITE · APPEND · COPY · MOVE · DELETE · DELDIR · DRIVES · PWD · TEMP
+> **函数索引**：[NORM](#fs-norm) · [COMBINE](#fs-combine) · [FNAME](#fs-fname) · [BNAME](#fs-bname) · [EXT](#fs-ext) · [FOLDER](#fs-folder) · [FEXISTS](#fs-fexists) · [FSIZE](#fs-fsize) · [FDEXISTS](#fs-fdexists) · [MKDIR](#fs-mkdir) · [LS](#fs-ls) · [LSDIR](#fs-lsdir) · [READ](#fs-read) · [WRITE](#fs-write) · [APPEND](#fs-append) · [COPY](#fs-copy) · [MOVE](#fs-move) · [DELETE](#fs-delete) · [DELDIR](#fs-deldir) · [DRIVES](#fs-drives) · [PWD](#fs-pwd) · [TEMP](#fs-temp)
 
 ### 示例路径
 
@@ -3225,7 +3225,7 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-> **函数索引**：TOHTML · TOJSON · TOMD · TOCSV · TOCSVTAB · TOCSVSEMI · TRANSPOSE · SELCOLS · SELROWS
+> **函数索引**：[TOHTML](#range-tohtml) · [TOJSON](#range-tojson) · [TOMD](#range-tomd) · [TOCSV](#range-tocsv) · [TOCSVTAB](#range-tocsvtab) · [TOCSVSEMI](#range-tocsvsemi) · [TRANSPOSE](#range-transpose) · [SELCOLS](#range-selcols) · [SELROWS](#range-selrows)
 
 <a id="range-tohtml"></a>
 

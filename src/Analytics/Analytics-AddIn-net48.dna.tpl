@@ -1,4 +1,4 @@
-<DnaLibrary Name="Analytics Add-In (.NET Framework)" RuntimeVersion="v4.0" ExplicitExports="true">
+<DnaLibrary Name="Analytics - STATS LINALG REGRESS PHYCHEM (.NET Framework)" RuntimeVersion="v4.0" ExplicitExports="true">
   <ExternalLibrary Path="Analytics.dll" Pack="true" ExplicitExports="true" />
   <Reference Path="Foundation.dll" Pack="true" />
   <Reference Path="MathNet.Numerics.dll" Pack="true" />

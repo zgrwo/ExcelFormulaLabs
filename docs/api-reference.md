@@ -404,6 +404,4 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 
 ---
 
-## 架构说明
-
-所有 UDF 遵循统一调用链：`UDF → InputNormalizer → MapOver/MapOverMulti/V() → Core → WrapError → Excel`。架构分层与调度模式详见 [CLAUDE.md](../CLAUDE.md#架构分层) 和 [skill.md](../skills/excel-dna-project/skill.md#架构)。
+> **架构**：UDF 调用链与分层详见 [CLAUDE.md](../CLAUDE.md#架构分层)。

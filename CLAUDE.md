@@ -45,11 +45,11 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 
 ### 2. 防错三原则（违反 = bug）
 
-| 原则 | ✅ DO | ❌ DON'T |
+| 原则 | 核心 | 详解 |
 | :--- | :--- | :--- |
-| **静默传播阻断** | 显式守卫 `NaN`/`Inf`/`null`/`default!`，WrapError 不兜底 | 依赖 IEEE 754 传播（如 `0/0=NaN` 静默返回） |
-| **防御完整性** | 安全机制覆盖模块所有方法（ValidatePath / Regex Timeout / SQL 参数化） | 新方法遗漏防御（对照同模块已有方法补齐） |
-| **异常过滤器** | `catch (Exception ex) when` 统一排除 `OutOfMemoryException`、`StackOverflowException`、`AccessViolationException` | 裸 `catch {}` 或 `catch (Exception)` 无 `when` |
+| **静默传播阻断** | 显式守卫 `NaN`/`Inf`/`null`/`default!`，WrapError 不兜底 | [skill.md §预防规则](skills/excel-dna-project/skill.md#1-静默传播阻断) |
+| **防御完整性** | 安全机制覆盖模块所有方法（ValidatePath / Regex Timeout / SQL 参数化） | [skill.md §预防规则](skills/excel-dna-project/skill.md#2-防御完整性) |
+| **异常过滤器** | `catch (Exception ex) when` 统一排除 `OutOfMemoryException`/`StackOverflowException`/`AccessViolationException` | [skill.md §预防规则](skills/excel-dna-project/skill.md#3-异常过滤器统一) |
 
 > **提交前自检**：`grep -rn "catch\s*{" src/ --include="*.cs"` 必须返回空。
 

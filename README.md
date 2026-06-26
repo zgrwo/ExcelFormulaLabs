@@ -134,9 +134,9 @@ FileSystemCore.SandboxRoot = @"C:\Users\Public\Documents";
 
 ## 质量保证
 
-- **3,990 个测试**（双 .NET 版本），覆盖正常路径和退化输入（零值/空值/单元素/全等值）
+- **2,790+ 个测试**（双 .NET 版本各约 1,395 个），覆盖正常路径和退化输入（零值/空值/单元素/全等值）
 - **Python 交叉验证**：Stats/Regression 与 numpy/scipy 逐项对照，精度 1e-10；DataToolkit 集成管道测试覆盖跨模块组合
-- **手册验证**：284 项 Python 验证，确保 219 个 UDF 示例结果与源码一致
+- **手册验证**：Python 交叉验证覆盖全部 219 个 UDF 示例，确保结果与源码一致
 
 ---
 
