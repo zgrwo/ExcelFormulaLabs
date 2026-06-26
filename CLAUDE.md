@@ -53,12 +53,18 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 
 > **提交前自检**：`grep -rn "catch\s*{" src/ --include="*.cs"` 必须返回空。
 
-### 3. 表头行契约（`object[,]` 表格方法）
+### 3. IntelliSense 框架隔离（Excel-DNA Issue #343）
+
+- ✅ net48：启用 `ExcelDna.IntelliSense`（AppDomain 模型稳定）
+- ❌ net8.0：**禁止添加 IntelliSense 代码**——`ExcelSynchronizationContext.Post()` 在 .NET 8 下内部空引用，`RegisterUnhandledExceptionHandler` 无法拦截异步回调。违反 → Excel JIT 调试对话框 + 公式单元格交互崩溃。
+- 代码隔离方式：`#if NET48` 条件编译，`.dna.tpl` net8 模板不引用 `ExcelDna.IntelliSense.dll`
+
+### 4. 表头行契约（`object[,]` 表格方法）
 
 - ✅ 所有接受 `object[,]` 的 Core 方法**必须**含 `bool hasHeaders = true`（`CrossJoin` 等无表头语义的方法豁免）
 - ✅ `hasHeaders=true`（默认）：跳过第一行（表头），数据从 `r=1` 开始；需要表头文本时 `r=0` 读取（不参与计算）
 
-### 4. 哨兵契约（InputNormalizer L1-L5）
+### 5. 哨兵契约（InputNormalizer L1-L5）
 
 | 层级 | 职责 | ✅ DO | ❌ DON'T | 违反后果 |
 | :--- | :--- | :--- | :--- | :--- |

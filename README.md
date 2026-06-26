@@ -140,10 +140,25 @@ FileSystemCore.SandboxRoot = @"C:\Users\Public\Documents";
 
 ---
 
+## 已知限制
+
+### IntelliSense（参数提示）仅限 net48
+
+- **net48 加载项**：加载后在公式栏输入函数名时显示参数名浮动提示。
+- **net8.0 加载项**：无参数提示。这是 Excel-DNA 已知 bug（[Issue #343](https://github.com/Excel-DNA/ExcelDna/issues/343)）——.NET 8 下 `ExcelSynchronizationContext.Post` 内部空引用。UDF 函数计算、公式列表完全不受影响。
+
+> **变通方案**：选中含函数名的单元格后按 `Ctrl+Shift+A` 插入参数名占位符；或使用 Excel 的 `fx` 按钮查看函数参数对话框。
+
+### 双加载项同时卸载
+
+两个加载项（Analytics + DataToolkit）已加载时，建议逐一卸载（先取消勾选一个，确定后再取消另一个）。
+
+---
+
 ## 卸载
 
 1. Excel → 文件 → 选项 → 加载项 → Excel 加载项 → 转到
-2. 取消勾选 `Analytics-packed` 和 `DataToolkit-packed`，确定
+2. 取消勾选加载项，确定
 3. 彻底删除：移除 `.xll` 文件；如需卸载 .NET 8 Runtime，在 Windows 设置 → 应用 中操作
 
 ---
