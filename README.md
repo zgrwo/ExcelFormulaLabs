@@ -1,6 +1,6 @@
 # Excel 函数增强库
 
-**在 Excel 里直接用 `=STATS.MEAN()`、`=STR.REVERSE()`、`=JSON.PARSE()` 等 219 个函数。** 基于 C# 高性能实现，Python 级精度。自带 IntelliSense 自动补全，VBA 中可通过 `Application.Run` 直接调用。
+**在 Excel 里直接用 `=STATS.MEAN()`、`=STR.REVERSE()`、`=JSON.PARSE()` 等函数。** 基于 C# 高性能实现，Python 级精度。自带 IntelliSense 自动补全，VBA 中可通过 `Application.Run` 直接调用。
 
 ---
 
@@ -136,7 +136,7 @@ FileSystemCore.SandboxRoot = @"C:\Users\Public\Documents";
 
 - **2,790+ 个测试**（双 .NET 版本各约 1,395 个），覆盖正常路径和退化输入（零值/空值/单元素/全等值）
 - **Python 交叉验证**：Stats/Regression 与 numpy/scipy 逐项对照，精度 1e-10；DataToolkit 集成管道测试覆盖跨模块组合
-- **手册验证**：Python 交叉验证覆盖全部 219 个 UDF 示例，确保结果与源码一致
+- **手册验证**：Python 交叉验证覆盖全部 UDF 示例，确保结果与源码一致
 
 ---
 
@@ -164,9 +164,9 @@ dotnet test
 
 | 文档 | 内容 |
 |------|------|
-| [API 参考](docs/api-reference.md) | 219 函数完整签名、参数说明、错误表 |
+| [API 参考](docs/api-reference.md) | 函数完整签名、参数说明、错误表 |
 | [用户手册](docs/user-manual.md) | 每个函数详细示例（4+ 列 × 5+ 行数据） |
-| [CONTEXT.md](CONTEXT.md) | 领域术语表 |
+| [CONTEXT.md](docs/CONTEXT.md) | 领域术语表 |
 | [CLAUDE.md](CLAUDE.md) | 项目宪法：架构分层、红线规则、开发流程 |
 | [skill: excel-dna-project](skills/excel-dna-project/skill.md) | 编码规范、MapOver 选型、测试模式 |
 | [skill: excel-dna-addins](skills/excel-dna-addins/skill.md) | Excel-DNA UDF 声明、打包、分发 |

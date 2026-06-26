@@ -5,7 +5,7 @@ description: 本项目编码规范与架构参考 — Foundation/Analytics/DataT
 
 # SKILL.md
 
-> 术语定义见 [CONTEXT.md](../../CONTEXT.md)。
+> 术语定义见 [CONTEXT.md](../../docs/CONTEXT.md)。
 
 ## 项目结构
 
@@ -27,20 +27,14 @@ tests/
 └── DataToolkit.Tests/  Core + UDF 双重测试 + IntegrationPipelineTests
 
 docs/
-├── api-reference.md   219 UDF 签名（数字的唯一信源）
-└── user-manual.md     每个 UDF 的详细示例（219 函数全覆盖）
-CONTEXT.md             领域术语表
+├── api-reference.md   UDF 签名（数字的唯一信源）
+└── user-manual.md     每个 UDF 的详细示例（全函数覆盖）
+docs/CONTEXT.md        领域术语表
 ```
 
 ## 架构
 
-```
-UDF (public static, [ExcelFunction]) → Excel-DNA 入口
-  ↓ MapOver / MapOverMulti / V()
-Core (internal static, 纯逻辑)       → 零 Excel 依赖
-  ↓ 依赖
-Foundation (InputNormalizer, ElementWiseMapper, OutputWrapper, …)
-```
+> 详见 [CLAUDE.md § 架构分层](../../CLAUDE.md#架构分层)。
 
 ### MapOver 选型
 
@@ -54,7 +48,7 @@ Foundation (InputNormalizer, ElementWiseMapper, OutputWrapper, …)
 
 ### UDF 声明规范
 
-所有 UDF 遵循统一声明模式。219 个函数覆盖 6 种调度变体，以下是完整模板。
+所有 UDF 遵循统一声明模式。函数覆盖 6 种调度变体，以下是完整模板。
 
 #### 基础模板（单参数 MapOver）
 
@@ -239,7 +233,7 @@ internal static string RegexMatch(string i, string p, long n, bool ic=true)
 bash scripts/verify-docs.sh                          # ① 文档一致性验证
 dotnet test                                         # ② 全量单元测试
 dotnet test --filter "CrossVal"  # ③ 交叉验证（Analytics Python 交叉验证）
-python scripts/verify-manual.py                      # ④ 手册示例验证（219 UDF × Python）
+python scripts/verify-manual.py                      # ④ 手册示例验证（全 UDF × Python）
 dotnet build -c Debug && dotnet build -c Release     # ⑤ 双目标打包
 ```
 
@@ -314,6 +308,6 @@ xUnit `[Fact]` + FluentAssertions 6.12.0。每 Core 方法覆盖：正常路径 
 ## 外部文档
 
 - [README.md](../../README.md) — 用户向功能指南与安装
-- [docs/api-reference.md](../../docs/api-reference.md) — 219 UDF 签名唯一信源
+- [docs/api-reference.md](../../docs/api-reference.md) — UDF 签名唯一信源
 - [docs/user-manual.md](../../docs/user-manual.md) — 每函数详细示例（Python 交叉验证）
-- [CONTEXT.md](../../CONTEXT.md) — 领域术语表
+- [CONTEXT.md](../../docs/CONTEXT.md) — 领域术语表

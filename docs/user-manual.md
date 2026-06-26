@@ -1,6 +1,6 @@
 # ExcelVbaLibraries 用户手册
 
-> **版本**：2.0 | **更新日期**：2026-06-26 | **覆盖函数**：219 个 UDF（14 模块）
+> **版本**：2.0 | **更新日期**：2026-06-26 | **覆盖**：14 模块全部函数
 > 完整签名见 [API 参考](api-reference.md)；安装说明见 [README](../README.md)
 
 ---
@@ -3436,7 +3436,7 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ## 参见
 
-- [API 参考](api-reference.md) — 219 UDF 完整签名与错误参考
+- [API 参考](api-reference.md) — UDF 完整签名与错误参考
 - [README](../README.md) — 安装、模块速览、安全说明
 - [CLAUDE.md](../CLAUDE.md) — 项目架构与开发流程
-- [CONTEXT.md](../CONTEXT.md) — 领域术语表
+- [CONTEXT.md](CONTEXT.md) — 领域术语表
