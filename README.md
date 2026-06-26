@@ -19,7 +19,7 @@ Win10/11 自带 .NET Framework 4.8，直接加载 net48 版本的 `.xll`：
 | `Analytics-AddIn-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM |
 | `DataToolkit-AddIn-packed.xll` | STR · DT · REGEX · ARR · DICT · JSON/XML · PIVOT · SQL · FS · RANGE |
 
-> 64 位 Excel 选 `64-packed`，32 位选 `packed`。两个可同时加载。
+> **版本选择**：64 位 Excel 选文件名含 `64` 的 `.xll`，32 位 Excel 选不含的。Analytics 和 DataToolkit 两个加载项可同时加载，也可按需只装一个。
 
 ### 方式二：安装 .NET 8 运行时（性能更优）
 

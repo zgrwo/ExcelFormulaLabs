@@ -1,6 +1,6 @@
 # API 参考
 
-> **219 个 UDF 函数**的完整签名，按 14 个模块组织。使用指南见 [README.md](../README.md)。
+> **219 个 UDF 函数**的完整签名。使用指南见 [README.md](../README.md)，每函数详细示例见 [用户手册](user-manual.md)。
 
 ---
 

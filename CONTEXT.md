@@ -50,3 +50,5 @@ _Avoid_: 目标框架、框架版本
 - [README.md](README.md) — 用户向功能指南与安装
 - [skills/excel-dna-project/skill.md](skills/excel-dna-project/skill.md) — 编码规范与架构
 - [skills/excel-dna-addins/skill.md](skills/excel-dna-addins/skill.md) — Excel-DNA 开发全流程
+- [docs/api-reference.md](docs/api-reference.md) — 219 UDF 签名唯一信源
+- [docs/user-manual.md](docs/user-manual.md) — 每函数详细示例

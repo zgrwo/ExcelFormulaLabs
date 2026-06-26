@@ -3004,3 +3004,12 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 ---
 
 *本文档所有示例已通过 Python 3.12 + NumPy + SciPy 交叉验证。详细验证脚本见 `scripts/verify-manual.py`。*
+
+---
+
+## 参见
+
+- [API 参考](api-reference.md) — 219 UDF 完整签名与错误参考
+- [README](../README.md) — 安装、模块速览、安全说明
+- [CLAUDE.md](../CLAUDE.md) — 项目架构与开发流程
+- [CONTEXT.md](../CONTEXT.md) — 领域术语表
