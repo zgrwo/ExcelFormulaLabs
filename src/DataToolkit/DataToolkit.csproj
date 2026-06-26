@@ -45,6 +45,14 @@
     <PackageReference Include="System.Text.Json" Version="8.0.4" />
   </ItemGroup>
 
+  <!-- ExcelDnaPack scans all NuGet references including conditional ones across
+       TFMs. For net48, Microsoft.Data.Sqlite is NOT a real dependency — it only
+       activates for net8.0-windows — but ExcelDnaPack discovers it from the
+       project manifest and fails when absent from net48 output. -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
+    <ExcelDnaPackDependenciesToExclude>Microsoft.Data.Sqlite</ExcelDnaPackDependenciesToExclude>
+  </PropertyGroup>
+
   <!-- Generate correct .dna from templates per target before ExcelDnaBuild,
        then clean up afterward. The generated DNA file is shared across inner
        builds; a stale file on disk can poison incremental builds. -->

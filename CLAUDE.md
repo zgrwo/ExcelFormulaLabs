@@ -91,7 +91,7 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 | :--- | :--- |
 | 日常构建 | `dotnet restore && dotnet build && dotnet test` |
 | 分发构建 | `dotnet build -c Release`（生成 `.xll`） |
-| 全量测试 | ① `bash scripts/verify-docs.sh` ② `dotnet test` ③ `dotnet test --filter "CrossVal"` ④ `dotnet build -c Debug && dotnet build -c Release` |
+| 全量测试 | ① `bash scripts/verify-docs.sh` ② `dotnet test` ③ `dotnet test --filter "CrossVal"` ④ `python scripts/verify-manual.py` ⑤ `dotnet build -c Debug && dotnet build -c Release` |
 
 ### Git
 
