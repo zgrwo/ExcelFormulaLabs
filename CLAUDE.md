@@ -55,11 +55,8 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 
 ### 3. 表头行契约（`object[,]` 表格方法）
 
-- ✅ 所有接受 `object[,]` 的 Core 方法**必须**含 `bool hasHeaders = true`
+- ✅ 所有接受 `object[,]` 的 Core 方法**必须**含 `bool hasHeaders = true`（`CrossJoin` 等无表头语义的方法豁免）
 - ✅ `hasHeaders=true`（默认）：跳过第一行（表头），数据从 `r=1` 开始；需要表头文本时 `r=0` 读取（不参与计算）
-- ✅ `CrossJoin` 等无表头语义的方法豁免
-- ❌ 同模块内部分方法含表头、部分不含
-- **违反后果**：逻辑混淆 / 数据错位
 
 ### 4. 哨兵契约（InputNormalizer L1-L5）
 
