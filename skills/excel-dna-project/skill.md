@@ -83,8 +83,8 @@ public static object UDF_CAT_NAME(
 
 ```csharp
 [ExcelArgument(Name = "[param_name]", Description = "...")]
-//                  ^            ^
-//          方括号标记 IntelliSense 视觉提示  方括号标记 IntelliSense 视觉提示
+//                  ^                ^
+//          开方括号，IntelliSense 视觉提示  闭方括号，IntelliSense 视觉提示
 object param = null   // ← 默认值 null，由 InputNormalizer 处理
 ```
 
@@ -116,28 +116,24 @@ private static object[,] D(object d) => InputNormalizer.NormalizeTo2D(d)!;
 => OutputWrapper.WrapError(() => LinalgCore.Determinant(M(data)));
 
 // ⑤ 标量 UDF（无 MapOver）— 零或极少参数
-=> OutputWrapper.WrapError(() => StringCore.UUID());
+=> OutputWrapper.WrapError(() => (object)StringCore.UUID());
 
 // ⑥ 自定义调度 — 绕过 MapOver，手动处理数组展开
 // 仅 STATS.CVP/COVAR/PEAR/SPR/TTEST1/TTEST2 使用
-=> OutputWrapper.WrapError(() => {
-    var x = V(input1); var y = V(input2);
-    if (x.Length != y.Length) return double.NaN;
-    return StatsCore.CovarianceP(x, y);
-});
+=> OutputWrapper.WrapError(() => (object)StatsCore.CovarianceP(V(input1), V(input2)));
 ```
 
 #### 描述编写规范
 
 | 位置 | 语言 | 规范 |
 |------|------|------|
-| `[ExcelFunction]` Description | **英文** | 动词开头，≤80 字符，以句号结尾 |
+| `[ExcelFunction]` Description | **英文** | 动词开头，≤80 字符 |
 | `[ExcelArgument]` Description | **英文** | 名词短语，描述参数含义 |
 | api-reference.md 说明 | **中文** | 用户面向文档，可包含对标 Excel 函数信息 |
 
 ```csharp
 // ✅
-[ExcelFunction(Name = "STR.REVERSE", Description = "Reverse a text string.")]
+[ExcelFunction(Name = "STR.REVERSE", Description = "Reverse a text string")]
 
 // ❌ — 描述不应含中文、不应含参数细节
 [ExcelFunction(Name = "STR.REVERSE", Description = "反转字符串，逐字符反转")]
