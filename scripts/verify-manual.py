@@ -109,20 +109,38 @@ check("LINALG.TRACE", np.trace(A), 22.0)
 check("LINALG.RANK", np.linalg.matrix_rank(A), 4)
 check("LINALG.COND", np.linalg.cond(A,2), np.linalg.cond(A,2))
 check("LINALG.EIGEN", sorted(np.linalg.eigvals([[2,1],[1,2]])), [1,3])
+# SVD — verify specific values from user-manual example (3x2 matrix)
 U_svd,S_svd,Vt_svd=np.linalg.svd(np.array([[1,4],[2,5],[3,6]],dtype=float))
-check("LINALG.SVD_S", S_svd, S_svd)
-check("LINALG.SVD_U shape", U_svd.shape, (3,3))
-check("LINALG.SVD_VT shape", Vt_svd.shape, (2,2))
-# Verify A = U diag(S) Vt
+check("LINALG.SVD_S[0]", abs(S_svd[0]-9.508)<0.01, True)
+check("LINALG.SVD_S[1]", abs(S_svd[1]-0.7729)<0.001, True)
+check("LINALG.SVD_U[0,0]", abs(U_svd[0,0]+0.4287)<0.001, True)
+check("LINALG.SVD_VT[0,0]", abs(Vt_svd[0,0]+0.3863)<0.001, True)
 recons = U_svd[:,:2] @ np.diag(S_svd) @ Vt_svd
 check("LINALG.SVD reconstruction", recons, np.array([[1,4],[2,5],[3,6]]), tol=EPS_LOOSE)
+
+# QR — verify specific values from user-manual example (3x3 matrix)
 A_qr=np.array([[12,-51,4],[6,167,-68],[-4,24,-41]],dtype=float)
 Qr,Rr=np.linalg.qr(A_qr)
-check("LINALG.QR_R", Rr[0,0], -14.0)
+check("LINALG.QR_R[0,0]", abs(Rr[0,0]+14)<0.01, True)      # -14
+check("LINALG.QR_R[1,1]", abs(Rr[1,1]+175)<0.1, True)       # -175
+check("LINALG.QR_R[2,2]", abs(Rr[2,2]+35)<0.01, True)       # -35
+check("LINALG.QR_Q[0,0]", abs(Qr[0,0]+0.8571)<0.001, True)  # -0.8571
 check("LINALG.QR_Q reconstruction", Qr@Rr, A_qr, tol=EPS_LOOSE)
+
+# LU — verify specific values from user-manual example (4x4 matrix A)
 P_lu,L_lu,U_lu=la.lu(A)
+check("LINALG.LU_U[0,0]", abs(U_lu[0,0]-4.0)<0.01, True)
+check("LINALG.LU_U[1,1]", abs(U_lu[1,1]-4.25)<0.01, True)
+check("LINALG.LU_U[2,2]", abs(U_lu[2,2]-5.2941)<0.01, True)
+check("LINALG.LU_U[3,3]", abs(U_lu[3,3]-6.5333)<0.01, True)
+check("LINALG.LU_L[1,0]", abs(L_lu[1,0]-0.75)<0.01, True)
 check("LINALG.LU_L+P+U reconstruction", P_lu@A, L_lu@U_lu, tol=EPS_LOOSE)
-check("LINALG.PINV shape", np.linalg.pinv(np.array([[1,4],[2,5],[3,6]])).shape, (2,3))
+
+# PINV — verify specific values from user-manual example (3x2 matrix)
+Ap = np.linalg.pinv(np.array([[1,4],[2,5],[3,6]],dtype=float))
+check("LINALG.PINV[0,0]", abs(Ap[0,0]+0.9444)<0.001, True)  # -0.9444
+check("LINALG.PINV[1,0]", abs(Ap[1,0]-0.4444)<0.001, True)   # 0.4444
+
 Lc=np.linalg.cholesky(np.array([[4,2],[2,3]],dtype=float))
 check("LINALG.CHOLESKY[0,0]", Lc[0,0], 2.0); check("LINALG.CHOLESKY[1,0]", Lc[1,0], 1.0)
 check("LINALG.IDENTITY", np.eye(3), np.eye(3))
