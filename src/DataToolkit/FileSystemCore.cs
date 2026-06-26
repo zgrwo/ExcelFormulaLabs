@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Threading;
 using ExcelVbaLibraries.Foundation;
 
 namespace ExcelVbaLibraries.DataToolkit
@@ -16,12 +17,19 @@ namespace ExcelVbaLibraries.DataToolkit
     /// </remarks>
     internal static class FileSystemCore
     {
+        private static string? _sandboxRoot;
         /// <summary>
         /// Optional sandbox root directory. When set, all file I/O is restricted to
         /// paths within this directory. Set to null to disable (default).
         /// Set this before loading workbooks that call FS.* UDFs.
+        /// Thread-safe: uses Volatile.Read/Write to prevent data races between
+        /// the AutoClose cleanup thread and concurrently executing UDF threads.
         /// </summary>
-        public static string? SandboxRoot { get; set; }
+        public static string? SandboxRoot
+        {
+            get => Volatile.Read(ref _sandboxRoot);
+            set => Volatile.Write(ref _sandboxRoot, value);
+        }
 
         /// <summary>
         /// Throws <see cref="UnauthorizedAccessException"/> if <paramref name="path"/>

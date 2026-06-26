@@ -48,15 +48,20 @@
     Uses Excel-DNA for .xll packaging and UDF registration.
   -->
 
-  <!-- Generate net48 .dna from template (Avoids Excel-DNA auto-discovery on net8 builds) -->
-  <Target Name="CleanStaleDna" BeforeTargets="GenerateNet48Dna">
-    <Delete Files="Analytics-AddIn-net48.dna" />
+  <!-- Generate correct .dna from templates per target before ExcelDnaBuild,
+       then clean up afterward. The generated DNA file is shared across inner
+       builds; a stale file on disk can poison incremental builds. -->
+  <Target Name="GenerateDnaFromTemplate" BeforeTargets="ExcelDnaBuild">
+    <Delete Files="Analytics-AddIn.dna" />
+    <Copy Condition="'$(TargetFramework)' == 'net8.0-windows'"
+          SourceFiles="Analytics-AddIn-net8.dna.tpl"
+          DestinationFiles="Analytics-AddIn.dna" />
+    <Copy Condition="'$(TargetFramework)' == 'net48'"
+          SourceFiles="Analytics-AddIn-net48.dna.tpl"
+          DestinationFiles="Analytics-AddIn.dna" />
   </Target>
-  <Target Name="GenerateNet48Dna" BeforeTargets="BeforeBuild" DependsOnTargets="CleanStaleDna" Condition="'$(TargetFramework)' == 'net48'">
-    <Copy SourceFiles="Analytics-AddIn-net48.dna.tpl" DestinationFiles="Analytics-AddIn-net48.dna" />
-  </Target>
-  <Target Name="CleanNet48Dna" AfterTargets="AfterBuild" Condition="'$(TargetFramework)' == 'net48' and Exists('Analytics-AddIn-net48.dna')">
-    <Delete Files="Analytics-AddIn-net48.dna" />
+  <Target Name="CleanupDnaAfterBuild" AfterTargets="ExcelDnaPack">
+    <Delete Files="Analytics-AddIn.dna" />
   </Target>
 
   <!-- Patch VERSIONINFO in packed .xll files so Excel add-in manager

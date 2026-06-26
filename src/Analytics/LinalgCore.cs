@@ -53,6 +53,20 @@ namespace ExcelVbaLibraries.Analytics
                 }
             }
 
+            /// <summary>
+            /// Clear all cached decompositions. Called on add-in unload to release
+            /// references to MathNet types before the AssemblyLoadContext is unloaded.
+            /// Thread-safe.
+            /// </summary>
+            internal static void Clear()
+            {
+                lock (Lock)
+                {
+                    Store.Clear();
+                    LruOrder.Clear();
+                }
+            }
+
             /// <summary>Content-based hash of a 2D double array.
             /// Hashes every element for correctness — the decomposition cost
             /// (SVD/LU/QR) dominates by orders of magnitude, so full hashing
@@ -258,6 +272,13 @@ namespace ExcelVbaLibraries.Analytics
         // Each returns one component of a decomposition. The full result
         // is cached on first access so consecutive calls (e.g. SVD_U +
         // SVD_S + SVD_VT in Excel) only compute the decomposition once.
+
+        /// <summary>
+        /// Clear the decomposition cache. Safe to call at any time;
+        /// subsequent UDF calls will recompute decompositions as needed.
+        /// Called by <see cref="AddIn.AutoClose"/> on add-in unload.
+        /// </summary>
+        internal static void ClearDecompCache() => DecompCache.Clear();
 
         internal static double[,] SvdU(double[,] m)
         {

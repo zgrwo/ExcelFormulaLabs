@@ -28,6 +28,13 @@ namespace ExcelVbaLibraries.Foundation
         private const int MaxCachedRegex = 64;
 
         /// <summary>
+        /// Clear the regex cache. Safe to call at any time;
+        /// subsequent filter operations will recompile patterns as needed.
+        /// Called by add-in AutoClose on unload.
+        /// </summary>
+        public static void ClearRegexCache() => RegexCache.Clear();
+
+        /// <summary>
         /// Evaluate whether <paramref name="element"/> passes the filter.
         /// </summary>
         public static bool FilterPasses(object? element, object? matchValue, string op)
