@@ -173,8 +173,9 @@ namespace ExcelVbaLibraries.Foundation
 
             if (value is string s)
             {
-                s = s.Trim();
-                if (s.Length == 0) return false;
+                if (string.IsNullOrWhiteSpace(s)) return false;
+                // NumberStyles.Float includes AllowLeadingWhite|AllowTrailingWhite,
+                // so Trim() is unnecessary — TryParse skips whitespace on its own.
                 return double.TryParse(s, NumberStyles.Float | NumberStyles.AllowThousands,
                     CultureInfo.InvariantCulture, out _);
             }

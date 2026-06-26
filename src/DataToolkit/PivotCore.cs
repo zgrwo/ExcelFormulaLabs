@@ -57,13 +57,18 @@ namespace ExcelVbaLibraries.DataToolkit
             if (hasHeaders && rows < 2) return new object[0, 0];  // header-only or empty table
             if (!hasHeaders && rows < 1) return new object[0, 0];
             var result = new List<object[]>();
+            int outWidth = nId + 2;
             for (int r = dataStartRow; r < rows; r++)
             {
-                var ids = idCols.Select(c => data[r, c]).ToArray();
                 foreach (int vc in valueCols)
                 {
-                    var varName = hasHeaders ? data[0, vc] : $"Var{vc + 1}";
-                    result.Add(ids.Concat(new[] { varName, data[r, vc] }).ToArray());
+                    // Pre-allocate output row and fill directly — avoids per-cell
+                    // Select().ToArray() and Concat().ToArray() allocations.
+                    var row = new object[outWidth];
+                    for (int j = 0; j < nId; j++) row[j] = data[r, idCols[j]];
+                    row[nId] = hasHeaders ? data[0, vc] : $"Var{vc + 1}";
+                    row[nId + 1] = data[r, vc];
+                    result.Add(row);
                 }
             }
             var outArr = new object[result.Count, nId + 2];

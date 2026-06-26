@@ -41,5 +41,20 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
         { var r=(object[,])RangeExportUdf.UDF_RANGE_TRANS(Data); r[0,0].Should().Be("Name"); r[0,1].Should().Be("Alice"); }
         [Fact] public void SelCols_content()
         { var r=(object[,])RangeExportUdf.UDF_RANGE_SELC(Data,new int[]{0}); r[0,0].Should().Be("Name"); r[1,0].Should().Be("Alice"); }
+
+        // hasHeader=false tests — verify first row treated as data, not header
+        [Fact] public void ToHtml_no_header_all_td()
+        {
+            var d = new object[,] { { "Alice", 30 }, { "Bob", 25 } };
+            var html = RangeExportCore.RangeToHtml(d, hasHeader: false);
+            html.Should().NotContain("<th>").And.Contain("<td>Alice</td>");
+        }
+
+        [Fact] public void ToCsv_no_header_includes_all_rows()
+        {
+            var d = new object[,] { { "Alice", 30 }, { "Bob", 25 } };
+            var csv = RangeExportCore.RangeToCsv(d, ",", true, hasHeader: false);
+            csv.Should().Contain("Alice").And.Contain("Bob");
+        }
     }
 }

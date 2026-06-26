@@ -387,5 +387,23 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
             r.GetLength(0).Should().Be(1);  // 1×1
             r.GetLength(1).Should().Be(2);  // col from a + col from b
         }
+
+        // hasHeaders=false tests
+        [Fact] public void Pivot_no_headers()
+        {
+            var d = new object[,] { { "A", "Jan", 100 }, { "A", "Feb", 200 }, { "B", "Jan", 300 } };
+            var r = PivotCore.Pivot(d, 0, 1, 2, "SUM", hasHeaders: false);
+            // data starts at row 0 (no header row) → 3 data rows → 2 unique keys + "Key \ Pivot"
+            r.GetLength(0).Should().Be(3);
+        }
+
+        [Fact] public void GroupBy_no_headers()
+        {
+            var d = new object[,] { { "A", 100 }, { "A", 200 }, { "B", 300 } };
+            var r = PivotCore.GroupBy(d, new[] { 0 }, 1, "SUM", hasHeaders: false);
+            r.GetLength(0).Should().Be(2);
+            r[0, 1].Should().Be(300.0);  // A group: 100 + 200
+            r[1, 1].Should().Be(300.0);  // B group: 300
+        }
     }
 }

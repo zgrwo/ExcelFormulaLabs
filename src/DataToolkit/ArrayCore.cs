@@ -11,7 +11,14 @@ namespace ExcelVbaLibraries.DataToolkit
         { var m=mode=="numeric"?ComparerMode.Numeric:mode=="text"?ComparerMode.Text:ComparerMode.Auto; var c=new object[a.Length]; Array.Copy(a,c,a.Length); ArrayOperations.Sort(c,asc,m); return c; }
         internal static object[] Unique(object[] a) { var s=new HashSet<string>(); var r=new List<object>(); foreach(var v in a){if(s.Add(ComparisonUtils.SafeKey(v)))r.Add(v);} return r.ToArray(); }
         internal static long IndexOf(object[] a, object v) => ArrayOperations.IndexOf(a, v);
-        internal static object[] Slice(object[] a, long start, long len = -1) => ArrayOperations.Slice(a, start>int.MaxValue?int.MaxValue:(int)start, len>int.MaxValue?int.MaxValue:(int)len);
+        internal static object[] Slice(object[] a, long start, long len = -1)
+        {
+            if (start > int.MaxValue || start < int.MinValue)
+                throw new ArgumentException($"start_index ({start}) is outside the valid range [{int.MinValue}, {int.MaxValue}].");
+            if (len > int.MaxValue || len < int.MinValue)
+                throw new ArgumentException($"num_elements ({len}) is outside the valid range [{int.MinValue}, {int.MaxValue}].");
+            return ArrayOperations.Slice(a, (int)start, (int)len);
+        }
         internal static object[] Flatten2D(object[,] a, string order = "R") => ArrayOperations.Flatten(a, order=="C"?NormalizeOrder.ColumnMajor:NormalizeOrder.RowMajor);
         internal static object[] Filter(object[] a, object crit, string op) { var r=new List<object>(); foreach(var v in a)if(FilterUtils.FilterPasses(v,crit,op))r.Add(v); return r.ToArray(); }
         internal static object[] Concat(object[] a, object[] b) { var r = new object[a.Length + b.Length]; Array.Copy(a, 0, r, 0, a.Length); Array.Copy(b, 0, r, a.Length, b.Length); return r; }

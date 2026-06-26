@@ -84,6 +84,11 @@ namespace ExcelVbaLibraries.Analytics
         {
             NumericGuard.AgainstNonFinite(X, y);
             int n = X.GetLength(0), p = X.GetLength(1);
+            // Dimension validation — prevent IndexOutOfRangeException from mismatched input lengths
+            if (y.Length != n)
+                throw new ArgumentException($"y length ({y.Length}) must match X row count ({n}).");
+            if (w.Length != n)
+                throw new ArgumentException($"weights length ({w.Length}) must match X row count ({n}).");
             // Reject negative/NaN/Infinity weights — Sqrt produces NaN/Inf which would silently propagate
             for (int i = 0; i < w.Length; i++)
                 if (w[i] < 0 || double.IsNaN(w[i]) || double.IsInfinity(w[i]))

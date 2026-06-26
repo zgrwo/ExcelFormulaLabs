@@ -83,6 +83,20 @@ namespace ExcelVbaLibraries.DataToolkit
         internal static string[] GetDrives() { return Array.ConvertAll(DriveInfo.GetDrives(), d => d.Name); }
         internal static string GetCurrentFolder() => Directory.GetCurrentDirectory();
         internal static string GetTempPath() => Path.GetTempPath();
-        internal static string GetTempFileName() => Path.GetTempFileName();
+        /// <summary>
+        /// Returns a zero-byte temporary file path. When <see cref="SandboxRoot"/> is set,
+        /// the file is created inside the sandbox; otherwise the system TEMP directory is used.
+        /// </summary>
+        internal static string GetTempFileName()
+        {
+            if (!string.IsNullOrEmpty(SandboxRoot))
+            {
+                EnsureFolder(SandboxRoot!);
+                string path = Path.Combine(SandboxRoot!, Path.GetRandomFileName());
+                using (File.Create(path)) { }
+                return path;
+            }
+            return Path.GetTempFileName();
+        }
     }
 }

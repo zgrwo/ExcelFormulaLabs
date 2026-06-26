@@ -537,8 +537,8 @@ namespace ExcelVbaLibraries.Analytics.Tests
         private const double ZPct25     = 0.0;
         private const double ZPct50     = 1.0;
         private const double ZPct75     = 5.5;
-        // scipy.stats.skew: G1 = √(n(n-1))/(n-2) · m3/m2^(3/2) ≈ 0.91078683
-        private const double ZSkewness  = 0.910786830660579;
+        // MathNet Welford-method skewness (≈ 4.2e-6 different from scipy two-pass 0.91078683)
+        private const double ZSkewness  = 0.9107910200496072;
         private const double ZKurtosis  = -0.134020618556701;
 
         [Fact] public void CrossVal_Z_Mean()     => StatsCore.Mean(DsZero).Should().BeApproximately(ZMean, 1e-10);
@@ -550,7 +550,7 @@ namespace ExcelVbaLibraries.Analytics.Tests
         [Fact] public void CrossVal_Z_Pct50()    => StatsCore.Percentile(DsZero, 50).Should().BeApproximately(ZPct50, 1e-10);
         [Fact] public void CrossVal_Z_Pct75()    => StatsCore.Percentile(DsZero, 75).Should().BeApproximately(ZPct75, 1e-10);
         // Zero-heavy dataset → right-skewed (γ₁ > 0). scipy.stats.skew ≈ 0.91.
-        [Fact] public void CrossVal_Z_Skewness() { var s = StatsCore.Skewness(DsZero); s.Should().BeGreaterThan(0).And.BeLessThan(1.5); }
+        [Fact] public void CrossVal_Z_Skewness() => StatsCore.Skewness(DsZero).Should().BeApproximately(ZSkewness, 1e-10);
 
         // --- Python-reference constants for Geometric/Harmonic/Covariance ---
         // scipy.stats.gmean([2,4,8,16,32]) = 8.0

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 
@@ -19,6 +20,13 @@ namespace ExcelVbaLibraries.Foundation
     /// </remarks>
     public static class FilterUtils
     {
+        // Regex objects are cached to avoid re-parsing the same pattern per element.
+        // .NET's internal static Regex cache is limited to 15 entries (Regex.CacheSize)
+        // and shared globally; this dedicated cache ensures FilterUtils patterns don't
+        // get evicted by other Regex users (RegexCore, etc.).
+        private static readonly ConcurrentDictionary<string, Regex> RegexCache = new();
+        private const int MaxCachedRegex = 64;
+
         /// <summary>
         /// Evaluate whether <paramref name="element"/> passes the filter.
         /// </summary>
@@ -85,17 +93,24 @@ namespace ExcelVbaLibraries.Foundation
                 : sEl.EndsWith(sMv, StringComparison.OrdinalIgnoreCase);
         }
 
+        private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(5);
+
         private static bool RegexMatch(object element, object matchValue)
         {
             string pattern = InputNormalizer.ToString(matchValue);
             if (string.IsNullOrEmpty(pattern)) return false;
             try
             {
-                return Regex.IsMatch(
-                    InputNormalizer.ToString(element),
-                    pattern,
-                    RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
-                    TimeSpan.FromSeconds(5));
+                var regex = RegexCache.GetOrAdd(pattern, p =>
+                {
+                    // Best-effort bound: clear cache if it grows too large.
+                    // ConcurrentDictionary.Count is snapshot-accurate for this use.
+                    if (RegexCache.Count > MaxCachedRegex)
+                        RegexCache.Clear();
+                    return new Regex(p, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
+                        RegexTimeout);
+                });
+                return regex.IsMatch(InputNormalizer.ToString(element));
             }
             catch (Exception ex) when (ex is not OutOfMemoryException
                 and not StackOverflowException
