@@ -30,7 +30,13 @@ namespace ExcelVbaLibraries.Analytics
 
             var XtX = matX.TransposeThisAndMultiply(matX);
             var Xty = matX.TransposeThisAndMultiply(vecY);
-            var beta = XtX.Solve(Xty);
+            Vector<double> beta;
+            try { beta = XtX.Solve(Xty); }
+            catch (Exception ex) when (ex is not OutOfMemoryException
+                and not StackOverflowException and not AccessViolationException)
+            { throw new ArgumentException(
+                "Cannot fit OLS: design matrix X is rank-deficient (columns may be collinear). " +
+                "Check for linearly dependent predictors or constant columns.", ex); }
 
             var fitted = matX * beta;
             var residuals = vecY - fitted;
@@ -227,25 +233,49 @@ namespace ExcelVbaLibraries.Analytics
             if (n < 2)
                 throw new ArgumentException(
                     "Factor importance requires at least 2 observations.");
-            var Xs = new double[n, p];
+            // First pass: compute means and standard deviations; flag constant columns
+            var means = new double[p];
+            var sds = new double[p];
+            var constCols = new bool[p];
+            int activeCols = 0;
             for (int j = 0; j < p; j++)
             {
                 double mean = 0, sd = 0;
                 for (int i = 0; i < n; i++) mean += X[i, j];
                 mean /= n;
+                means[j] = mean;
                 for (int i = 0; i < n; i++) { double d = X[i, j] - mean; sd += d * d; }
                 sd = Math.Sqrt(sd / (n - 1));
+                sds[j] = sd;
                 if (sd < 1e-12)
                 {
+                    constCols[j] = true;
                     System.Diagnostics.Trace.WriteLine(
                         $"[FactorImportance] Column {j} has zero variance (constant); ranked least important.");
-                    sd = 1;
                 }
-                for (int i = 0; i < n; i++) Xs[i, j] = (X[i, j] - mean) / sd;
+                else activeCols++;
             }
+            // All columns constant → no meaningful ranking
+            if (activeCols == 0)
+                return Enumerable.Range(0, p).ToArray();
+            // Build reduced design matrix excluding constant columns
+            var Xs = new double[n, activeCols];
+            var colMap = new int[activeCols];
+            int aj = 0;
+            for (int j = 0; j < p; j++)
+            {
+                if (constCols[j]) continue;
+                colMap[aj] = j;
+                for (int i = 0; i < n; i++) Xs[i, aj] = (X[i, j] - means[j]) / sds[j];
+                aj++;
+            }
+            // Fit OLS to reduced model, then map t-statistics back to original column indices
             var result = FitOLS(Xs, y);
-            var t = (double[])result["t_stats"];
-            return Enumerable.Range(0, p).OrderByDescending(j => Math.Abs(t[j])).ToArray();
+            var tReduced = (double[])result["t_stats"];
+            var tFull = new double[p]; // constCols entries remain 0.0
+            for (int rj = 0; rj < activeCols; rj++)
+                tFull[colMap[rj]] = tReduced[rj];
+            return Enumerable.Range(0, p).OrderByDescending(j => Math.Abs(tFull[j])).ToArray();
         }
 
         private static double FDistPValue(double f, double df1, double df2)

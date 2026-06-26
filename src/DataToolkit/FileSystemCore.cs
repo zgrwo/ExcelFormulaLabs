@@ -45,7 +45,7 @@ namespace ExcelVbaLibraries.DataToolkit
                     root += Path.DirectorySeparatorChar;
                 if (!(normalized + Path.DirectorySeparatorChar).StartsWith(root, StringComparison.OrdinalIgnoreCase))
                     throw new UnauthorizedAccessException(
-                        $"Path '{p}' is outside the sandbox root '{SandboxRoot}'.");
+                        "Path is outside the sandbox root.");
             }
             return normalized;
         }

@@ -24,13 +24,13 @@ namespace ExcelVbaLibraries.Foundation
     {
         // ── Canonical xlCVError COM constants (single source of truth) ──
 
-        private const int ERR_NULL  = 2000;
-        private const int ERR_DIV0  = 2007;
+        private const int ERR_NULL = 2000;
+        private const int ERR_DIV0 = 2007;
         private const int ERR_VALUE = 2015;
-        private const int ERR_REF   = 2023;
-        private const int ERR_NAME  = 2029;
-        private const int ERR_NUM   = 2036;
-        private const int ERR_NA    = 2042;
+        private const int ERR_REF = 2023;
+        private const int ERR_NAME = 2029;
+        private const int ERR_NUM = 2036;
+        private const int ERR_NA = 2042;
 
         /// <summary>Error code — matches the xlCVError COM constant.</summary>
         public int Code { get; }
@@ -41,25 +41,25 @@ namespace ExcelVbaLibraries.Foundation
         // ── Well-known error values ──────────────────────────────────────
 
         /// <summary>#NULL!  — Intersection of two ranges that don't intersect.</summary>
-        public static readonly ExcelError Null  = new ExcelError(ERR_NULL);
+        public static readonly ExcelError Null = new ExcelError(ERR_NULL);
 
         /// <summary>#DIV/0! — Division by zero.</summary>
-        public static readonly ExcelError Div0  = new ExcelError(ERR_DIV0);
+        public static readonly ExcelError Div0 = new ExcelError(ERR_DIV0);
 
         /// <summary>#VALUE! — Wrong type of argument or operand.</summary>
         public static readonly ExcelError Value = new ExcelError(ERR_VALUE);
 
         /// <summary>#REF!   — Invalid cell reference.</summary>
-        public static readonly ExcelError Ref   = new ExcelError(ERR_REF);
+        public static readonly ExcelError Ref = new ExcelError(ERR_REF);
 
         /// <summary>#NAME?  — Unrecognised formula name.</summary>
-        public static readonly ExcelError Name  = new ExcelError(ERR_NAME);
+        public static readonly ExcelError Name = new ExcelError(ERR_NAME);
 
         /// <summary>#NUM!   — Invalid numeric value (e.g. sqrt of negative).</summary>
-        public static readonly ExcelError Num   = new ExcelError(ERR_NUM);
+        public static readonly ExcelError Num = new ExcelError(ERR_NUM);
 
         /// <summary>#N/A    — Value not available (e.g. lookup failure).</summary>
-        public static readonly ExcelError NA    = new ExcelError(ERR_NA);
+        public static readonly ExcelError NA = new ExcelError(ERR_NA);
 
         // ── Equality ─────────────────────────────────────────────────────
 
@@ -89,14 +89,14 @@ namespace ExcelVbaLibraries.Foundation
         /// </summary>
         public string ErrorName => Code switch
         {
-            ERR_NULL  => "#NULL!",
-            ERR_DIV0  => "#DIV/0!",
+            ERR_NULL => "#NULL!",
+            ERR_DIV0 => "#DIV/0!",
             ERR_VALUE => "#VALUE!",
-            ERR_REF   => "#REF!",
-            ERR_NAME  => "#NAME?",
-            ERR_NUM   => "#NUM!",
-            ERR_NA    => "#N/A",
-            _         => $"#ERR({Code})"
+            ERR_REF => "#REF!",
+            ERR_NAME => "#NAME?",
+            ERR_NUM => "#NUM!",
+            ERR_NA => "#N/A",
+            _ => $"#ERR({Code})"
         };
 
         /// <summary>Human-readable representation, e.g. "#VALUE!" for error 2015.</summary>

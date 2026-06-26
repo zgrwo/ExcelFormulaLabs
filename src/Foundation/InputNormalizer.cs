@@ -235,7 +235,8 @@ namespace ExcelVbaLibraries.Foundation
             try { return Convert.ToDouble(value, CultureInfo.InvariantCulture); }
             catch (Exception ex) when (ex is not OutOfMemoryException
                 and not StackOverflowException
-                and not AccessViolationException) { return double.NaN; }
+                and not AccessViolationException)
+            { return double.NaN; }
         }
 
         /// <summary>
@@ -269,7 +270,8 @@ namespace ExcelVbaLibraries.Foundation
             try { return Convert.ToInt64(value, CultureInfo.InvariantCulture); }
             catch (Exception ex) when (ex is not OutOfMemoryException
                 and not StackOverflowException
-                and not AccessViolationException) { return 0; }
+                and not AccessViolationException)
+            { return 0; }
         }
 
         /// <summary>
@@ -298,7 +300,8 @@ namespace ExcelVbaLibraries.Foundation
             try { return Convert.ToBoolean(value, CultureInfo.InvariantCulture); }
             catch (Exception ex) when (ex is not OutOfMemoryException
                 and not StackOverflowException
-                and not AccessViolationException) { return false; }
+                and not AccessViolationException)
+            { return false; }
         }
 
         /// <summary>
@@ -316,7 +319,8 @@ namespace ExcelVbaLibraries.Foundation
                 try { return new DateTime(1899, 12, 30).AddDays(d); }
                 catch (Exception ex) when (ex is not OutOfMemoryException
                     and not StackOverflowException
-                    and not AccessViolationException) { return DateTime.MinValue; }
+                    and not AccessViolationException)
+                { return DateTime.MinValue; }
             }
             if (value is string s)
             {
@@ -328,7 +332,8 @@ namespace ExcelVbaLibraries.Foundation
             try { return Convert.ToDateTime(value, CultureInfo.InvariantCulture); }
             catch (Exception ex) when (ex is not OutOfMemoryException
                 and not StackOverflowException
-                and not AccessViolationException) { return DateTime.MinValue; }
+                and not AccessViolationException)
+            { return DateTime.MinValue; }
         }
 
         // ─────────────────────────────────────────────────────────────────

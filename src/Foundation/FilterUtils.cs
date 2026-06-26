@@ -35,7 +35,7 @@ namespace ExcelVbaLibraries.Foundation
             string opLower = op.ToLowerInvariant();
             switch (opLower)
             {
-                case "isblank":    return IsBlank(element);
+                case "isblank": return IsBlank(element);
                 case "isnotblank": return !IsBlank(element);
             }
 

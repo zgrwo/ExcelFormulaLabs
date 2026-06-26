@@ -224,8 +224,13 @@ namespace ExcelVbaLibraries.Analytics
             return Matrix<double>.Build.DenseOfArray(m).FrobeniusNorm();
         }
 
-        internal static double[,] Identity(int n) =>
-            Matrix<double>.Build.DenseIdentity(n).ToArray();
+        internal static double[,] Identity(int n)
+        {
+            if (n < 0 || n > 10_000)
+                throw new ArgumentException(
+                    $"Identity matrix size must be between 0 and 10000 (got {n}).");
+            return Matrix<double>.Build.DenseIdentity(n).ToArray();
+        }
 
         internal static double[,] Diagonal(double[] v) =>
             Matrix<double>.Build.DenseOfDiagonalArray(v).ToArray();
