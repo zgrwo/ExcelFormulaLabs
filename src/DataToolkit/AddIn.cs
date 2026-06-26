@@ -7,7 +7,11 @@ namespace ExcelVbaLibraries.DataToolkit
 {
     public class AddIn : IExcelAddIn
     {
-        public void AutoOpen() => IntelliSenseServer.Install();
+        // QueueAsMacro defers IntelliSenseServer.Install() until the Excel
+        // synchronization context is fully initialised. Calling it directly in
+        // AutoOpen triggers ProcessLoadNotification before the sync context is
+        // ready, causing NullReferenceException in Post().
+        public void AutoOpen() => ExcelAsyncUtil.QueueAsMacro(() => IntelliSenseServer.Install());
 
         public void AutoClose()
         {
@@ -16,8 +20,7 @@ namespace ExcelVbaLibraries.DataToolkit
             try { System.Data.SQLite.SQLiteConnection.ClearAllPools(); }
             catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException) { }
 #endif
-            // IntelliSenseServer.Uninstall() intentionally NOT called —
-            // process-wide server; dual-unload causes intermittent crash.
+            // IntelliSenseServer.Uninstall() intentionally NOT called.
             FileSystemCore.SandboxRoot = null;
         }
     }
