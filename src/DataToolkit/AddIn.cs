@@ -16,8 +16,8 @@ namespace ExcelVbaLibraries.DataToolkit
             try { System.Data.SQLite.SQLiteConnection.ClearAllPools(); }
             catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException) { }
 #endif
-            try { IntelliSenseServer.Uninstall(); }
-            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException) { }
+            // IntelliSenseServer.Uninstall() intentionally NOT called —
+            // process-wide server; dual-unload causes intermittent crash.
             FileSystemCore.SandboxRoot = null;
         }
     }

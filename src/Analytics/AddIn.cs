@@ -11,8 +11,11 @@ namespace ExcelVbaLibraries.Analytics
         public void AutoClose()
         {
             LinalgCore.ClearDecompCache();
-            try { IntelliSenseServer.Uninstall(); }
-            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException) { }
+            // IntelliSenseServer.Uninstall() intentionally NOT called.
+            // The IntelliSense server is process-wide — when two add-ins share it,
+            // one calling Uninstall() tears down the server while the other may
+            // still be using it, causing intermittent crashes on unload.
+            // The server process exits cleanly when Excel closes.
         }
     }
 }
