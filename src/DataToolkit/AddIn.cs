@@ -1,6 +1,8 @@
 using System;
 using ExcelDna.Integration;
+#if NET48
 using ExcelDna.IntelliSense;
+#endif
 using ExcelVbaLibraries.Foundation;
 
 namespace ExcelVbaLibraries.DataToolkit
@@ -9,14 +11,9 @@ namespace ExcelVbaLibraries.DataToolkit
     {
         public void AutoOpen()
         {
-            ExcelIntegration.RegisterUnhandledExceptionHandler(ex =>
-                ex is Exception ce && ce is NullReferenceException &&
-                ce.StackTrace?.Contains("ExcelSynchronizationContext.Post") == true
-                    ? (object)ExcelDna.Integration.ExcelError.ExcelErrorNA
-                    : (object)ExcelDna.Integration.ExcelError.ExcelErrorValue
-            );
-
+#if NET48
             ExcelAsyncUtil.QueueAsMacro(() => IntelliSenseServer.Install());
+#endif
         }
 
         public void AutoClose()
@@ -25,6 +22,8 @@ namespace ExcelVbaLibraries.DataToolkit
 #if NET48
             try { System.Data.SQLite.SQLiteConnection.ClearAllPools(); }
             catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException) { }
+            try { IntelliSenseServer.Uninstall(); }
+            catch { /* best-effort */ }
 #endif
             FileSystemCore.SandboxRoot = null;
         }

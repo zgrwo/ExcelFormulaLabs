@@ -1,6 +1,7 @@
-using System;
 using ExcelDna.Integration;
+#if NET48
 using ExcelDna.IntelliSense;
+#endif
 
 namespace ExcelVbaLibraries.Analytics
 {
@@ -8,22 +9,21 @@ namespace ExcelVbaLibraries.Analytics
     {
         public void AutoOpen()
         {
-            // Catch async NRE from IntelliSense ProcessLoadNotification callback.
-            // This is a known Excel-DNA bug (Issue #343): the ExcelSynchronizationContext
-            // may not be ready when the IntelliSense server asynchronously posts back.
-            ExcelIntegration.RegisterUnhandledExceptionHandler(ex =>
-                ex is Exception ce && ce is NullReferenceException &&
-                ce.StackTrace?.Contains("ExcelSynchronizationContext.Post") == true
-                    ? (object)ExcelError.ExcelErrorNA
-                    : (object)ExcelError.ExcelErrorValue
-            );
-
+#if NET48
             ExcelAsyncUtil.QueueAsMacro(() => IntelliSenseServer.Install());
+#endif
+            // IntelliSense disabled for net8.0: Excel-DNA Issue #343 —
+            // ProcessLoadNotification callback triggers NRE in
+            // ExcelSynchronizationContext.Post() under .NET 8.
         }
 
         public void AutoClose()
         {
             LinalgCore.ClearDecompCache();
+#if NET48
+            try { IntelliSenseServer.Uninstall(); }
+            catch { /* best-effort */ }
+#endif
         }
     }
 }
