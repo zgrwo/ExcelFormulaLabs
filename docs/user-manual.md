@@ -1,7 +1,7 @@
 # ExcelVbaLibraries 用户手册
 
 > **版本**：2.0 | **更新日期**：2026-06-26 | **覆盖函数**：219 个 UDF（14 模块）
-> 完整签名见 [API 参考](api-reference.md)；安装说明见 [用户指南](user-guide.md)
+> 完整签名见 [API 参考](api-reference.md)；安装说明见 [README](../README.md)
 
 ---
 

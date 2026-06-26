@@ -26,7 +26,7 @@ tests/
 
 docs/
 ├── api-reference.md   219 UDF 签名（数字的唯一信源）
-└── user-guide.md      安装与使用指南
+└── user-manual.md     每个 UDF 的详细示例（219 函数全覆盖）
 CONTEXT.md             领域术语表
 ```
 
