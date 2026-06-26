@@ -4,6 +4,26 @@
 
 ---
 
+## VBA 调用
+
+加载 .xll 后，所有函数均可通过 `Application.Run` 在 VBA 中直接调用，无需引用或声明。
+
+**关键规则**：跳过的可选参数用**逗号占位**。例如 `REGEX.MATCH(text, pattern, [ignore_case], [instance_num])` 跳过第三个参数时需保留逗号：
+
+```vba
+Dim result As Variant
+result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d+")
+' → "12345"（第 1 个匹配）
+
+result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d+", , 2)
+' → "2024"（第 2 个匹配，第三个参数忽略大小写用逗号占位跳过）
+
+result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d+", , -1)
+' → "15"（最后一个匹配）
+```
+
+---
+
 ## STATS.* -- 描述统计
 
 > 对标 Python scipy，精度 1e-10。元素级函数（ABS/SQRT/LN/LOG10/EXP/SIGN）支持数组公式。

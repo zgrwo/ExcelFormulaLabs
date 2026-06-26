@@ -25,6 +25,27 @@
 
 ---
 
+## VBA 调用
+
+加载 .xll 后，所有函数均可通过 `Application.Run` 在 VBA 中**直接调用，无需引用或声明**。
+
+**关键规则**：跳过的可选参数用**逗号占位**。
+
+```vba
+' REGEX.MATCH(text, pattern, [ignore_case], [instance_num])
+Dim r As Variant
+r = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d+")
+' → "12345"（第 1 个匹配）
+
+r = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d+", , 2)
+' → "2024"（第 2 个匹配，第三个参数 ignore_case 跳过的位置保留逗号）
+
+r = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d+", , -1)
+' → "15"（最后一个匹配）
+```
+
+---
+
 ## 通用约定
 
 - **数组公式**：多数函数支持数组输入。Excel 365 中数组自动溢出（spill），旧版需 `Ctrl+Shift+Enter`
