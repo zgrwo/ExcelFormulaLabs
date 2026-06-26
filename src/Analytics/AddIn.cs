@@ -9,18 +9,28 @@ namespace ExcelVbaLibraries.Analytics
     {
         public void AutoOpen()
         {
-            try { IntelliSenseServer.Install(); }
-            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException)
+            // Defer IntelliSense installation until the add-in is fully initialised.
+            // IntelliSenseServer.Install() must not be called directly in AutoOpen
+            // because the ExcelSynchronizationContext is not yet ready — the IntelliSense
+            // server's ProcessLoadNotification callback will NRE inside Post().
+            ExcelAsyncUtil.QueueAsMacro(() =>
             {
-                LogError("Analytics", $"IntelliSenseServer.Install() failed: {ex.Message}");
-            }
+                try { IntelliSenseServer.Install(); }
+                catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException)
+                {
+                    LogError("Analytics", $"IntelliSenseServer.Install() failed: {ex.Message}");
+                }
+            });
         }
 
         public void AutoClose()
         {
             LinalgCore.ClearDecompCache();
-            try { IntelliSenseServer.Uninstall(); }
-            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException) { /* best-effort */ }
+            // IntelliSenseServer.Uninstall() is intentionally NOT called here.
+            // During unload the ExcelSynchronizationContext is already tearing down;
+            // the server's asynchronous ProcessLoadNotification callback will NRE
+            // inside Post() if Uninstall triggers a pending notification.
+            // The IntelliSense server process exits on its own when the add-in unloads.
         }
 
         /// <summary>

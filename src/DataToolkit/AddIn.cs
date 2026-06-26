@@ -10,11 +10,18 @@ namespace ExcelVbaLibraries.DataToolkit
     {
         public void AutoOpen()
         {
-            try { IntelliSenseServer.Install(); }
-            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException)
+            // Defer IntelliSense installation until the add-in is fully initialised.
+            // IntelliSenseServer.Install() must not be called directly in AutoOpen
+            // because the ExcelSynchronizationContext is not yet ready — the IntelliSense
+            // server's ProcessLoadNotification callback will NRE inside Post().
+            ExcelAsyncUtil.QueueAsMacro(() =>
             {
-                LogError("DataToolkit", $"IntelliSenseServer.Install() failed: {ex.Message}");
-            }
+                try { IntelliSenseServer.Install(); }
+                catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException)
+                {
+                    LogError("DataToolkit", $"IntelliSenseServer.Install() failed: {ex.Message}");
+                }
+            });
         }
 
         public void AutoClose()
@@ -24,8 +31,10 @@ namespace ExcelVbaLibraries.DataToolkit
             try { System.Data.SQLite.SQLiteConnection.ClearAllPools(); }
             catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException) { /* best-effort */ }
 #endif
-            try { IntelliSenseServer.Uninstall(); }
-            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException) { /* best-effort */ }
+            // IntelliSenseServer.Uninstall() is intentionally NOT called here —
+            // during unload the ExcelSynchronizationContext is already tearing down
+            // and a pending ProcessLoadNotification callback will NRE inside Post().
+            // The IntelliSense server process exits on its own when the add-in unloads.
             // Clear sandbox LAST — ensures no cleanup callback runs without sandbox protection
             FileSystemCore.SandboxRoot = null;
         }
