@@ -144,7 +144,9 @@ namespace FormulaLabs.Foundation
             int targetLen = Math.Max(Math.Max(flat1.Length, flat2.Length), flat3.Length);
 
             if (targetLen == 1)
-                return MapSingleCell(flat1[0], flat2[0], flat3[0], mapper);
+                return was2D
+                    ? new object[,] { { MapSingleCell(flat1[0], flat2[0], flat3[0], mapper) } }
+                    : MapSingleCell(flat1[0], flat2[0], flat3[0], mapper);
 
             if ((flat1.Length != 1 && flat1.Length != targetLen) ||
                 (flat2.Length != 1 && flat2.Length != targetLen) ||

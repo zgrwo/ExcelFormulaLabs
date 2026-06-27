@@ -172,6 +172,18 @@ public class MapOverMultiThreeArgTests
         result.Should().BeEquivalentTo(new object[] { "1+0", "2+0" });
     }
 
+    [Fact] public void Three_all_1x1_2D_keeps_shape()
+    {
+        var result = ElementWiseMapper.MapOverMulti(
+            new object[,] { { "a" } }, new object[,] { { "b" } }, new object[,] { { "c" } },
+            (string x, string y, string z) => x + y + z);
+        result.Should().BeOfType<object[,]>();
+        var arr = (object[,])result;
+        arr.GetLength(0).Should().Be(1);
+        arr.GetLength(1).Should().Be(1);
+        arr[0, 0].Should().Be("abc");
+    }
+
     [Fact] public void Three_mismatched_sizes_error()
         => ElementWiseMapper.MapOverMulti(
             new object[] { 1, 2, 3 }, new object[] { 1, 2 }, new object[] { 1 },
