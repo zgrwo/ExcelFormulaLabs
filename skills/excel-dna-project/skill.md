@@ -9,6 +9,8 @@ description: 本项目编码规范与架构参考 — Foundation/Analytics/DataT
 
 ## 项目结构
 
+> 完整目录树、文件清单及路径路由见 **[CLAUDE.md § 仓库目录树](../../CLAUDE.md#仓库目录树)**（唯一信源）。以下为架构分层摘要：
+
 ```
 src/
 ├── Foundation/      InputNormalizer, ElementWiseMapper, OutputWrapper,

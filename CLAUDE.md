@@ -33,6 +33,80 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 - ✅ UDF 不包含业务逻辑；Core 不引用 `ExcelDna.Integration`
 - ❌ 禁止跨层直接调用或反向依赖
 
+## 仓库目录树
+
+> 路由地图：所有文件路径均以此为基准。推送规则见 [Git](#git)。
+
+```
+ExcelVbaLibraries/
+│
+├── src/                          # ✅ 源码（32 .cs + 3 .csproj + .dna.tpl）
+│   ├── Foundation/               # 共享工具层
+│   │   ├── ElementWiseMapper.cs   # MapOver/MapOverFlat/MapOverMulti 调度
+│   │   ├── InputNormalizer.cs     # 类型转换 + 哨兵 (L1-L5)
+│   │   ├── OutputWrapper.cs       # WrapError 异常→#VALUE!
+│   │   ├── NumericGuard.cs        # NaN/Inf 矩阵守卫
+│   │   ├── ArrayOperations.cs     # 数组基础操作
+│   │   ├── FilterUtils.cs         # 过滤工具
+│   │   ├── ComparisonUtils.cs     # 比较工具
+│   │   ├── DictOperations.cs      # 字典操作
+│   │   ├── ExcelEmpty.cs          # Excel 空值标记
+│   │   └── ExcelError.cs          # Excel 错误值标记
+│   ├── Analytics/                 # 统计分析模块 → Analytics-AddIn.xll
+│   │   ├── StatsCore.cs / StatsUdf.cs         # STATS.* (33 UDF)
+│   │   ├── LinalgCore.cs / LinalgUdf.cs       # LINALG.* (19 UDF)
+│   │   ├── RegressionCore.cs / RegressionUdf.cs # REGRESS.* (7 UDF)
+│   │   ├── PhyChemCore.cs / PhyChemUdf.cs     # PHYCHEM.* (16 UDF)
+│   │   ├── AnalyticsHelpers.cs                # M()/V()/D() 辅助
+│   │   └── AddIn.cs                            # AutoOpen/AutoClose
+│   ├── DataToolkit/               # 数据处理模块 → DataToolkit-AddIn.xll
+│   │   ├── StringCore.cs / StringUdf.cs       # STR.* (34 UDF)
+│   │   ├── DateTimeCore.cs / DateTimeUdf.cs   # DT.* (25 UDF)
+│   │   ├── RegexCore.cs / RegexUdf.cs         # REGEX.* (9 UDF)
+│   │   ├── ArrayCore.cs / ArrayUdf.cs         # ARR.* (22 UDF)
+│   │   ├── DictSetCore.cs / DictSetUdf.cs     # DICT.* (8 UDF)
+│   │   ├── JsonXmlCore.cs / JsonXmlUdf.cs     # JSON.* XML.* (8 UDF)
+│   │   ├── PivotCore.cs / PivotUdf.cs         # PIVOT.* (4 UDF)
+│   │   ├── SqlCore.cs / SqlUdf.cs             # SQL.* (3 UDF)
+│   │   ├── FileSystemCore.cs / FileSystemUdf.cs # FS.* (22 UDF)
+│   │   ├── RangeExportCore.cs / RangeExportUdf.cs # RANGE.* (9 UDF)
+│   │   └── AddIn.cs                            # AutoOpen/AutoClose
+│   └── Directory.Build.props      # 全局 MSBuild 属性
+│
+├── tests/                         # ✅ 测试（28 .cs + 3 .csproj + 测试数据）
+│   ├── Foundation.Tests/          # 245 测试
+│   ├── Analytics.Tests/           # 546 测试 + CrossVal (102)
+│   ├── DataToolkit.Tests/         # 1,299 测试 + IntegrationPipeline
+│   └── TestData/                  # Python 交叉验证数据
+│
+├── docs/                          # ✅ 文档
+│   ├── api-reference.md           # UDF 签名唯一信源（数字基准）
+│   ├── user-manual.md             # 每函数详细示例
+│   └── CONTEXT.md                 # 领域术语表
+│
+├── scripts/                       # ✅ 构建/验证脚本
+│   ├── verify-docs.sh             # 文档一致性
+│   ├── verify-manual.py           # 全 UDF 示例验证
+│   ├── test-load-unload.py        # XLL 加载/卸载测试
+│   ├── update_excel_arguments.py  # 同步 Excel 参数描述
+│   └── patch-xll-version.ps1      # XLL 版本号注入
+│
+├── skills/                        # ✅ Skill 定义
+│   ├── excel-dna-project/skill.md  # 编码规范、架构、MapOver、测试
+│   └── excel-dna-addins/skill.md   # Excel-DNA UDF/打包/分发
+│
+├── .github/workflows/ci.yml       # ✅ CI/CD
+├── ExcelVbaLibraries.sln           # ✅ 解决方案
+├── README.md                       # ✅ 用户向功能指南
+├── CLAUDE.md                       # ✅ 项目宪法（本文件）
+└── .gitignore                      # ✅ 排除规则
+```
+
+```
+❌ 不入库: bin/  obj/  *.xll  *.deps.json  *.runtimeconfig.json
+           .claude/reviews/  TestResults/  __pycache__/
+```
+
 ## 红线规则
 
 ### 1. 接口与兼容性
