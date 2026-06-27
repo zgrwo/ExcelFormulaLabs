@@ -48,7 +48,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `STATS.PERCENTILE` | (array, k) | `double` | k 分位数（0-100），R7 算法。对标 Excel PERCENTILE.EXC |
 | `STATS.IQR` | (number1) | `double` | 四分位距（Q3 - Q1），R7 算法 |
 | `STATS.SUMMARY` | (number1) | `double[9]` | 描述统计摘要：`[n, mean, stdev, min, q1, median, q3, max, iqr]`。R7 分位数（对标 Python scipy）。 |
-| `STATS.COUNT` | (array) | `long` | 元素个数 |
+| `STATS.COUNT` | (number) | `long` | 元素个数 |
 | `STATS.MODE` | (number1) | `double` | 众数。全唯一返回 NaN（对标 Excel MODE.SNGL） |
 | `STATS.COVARP` | (array1, array2) | `double` | 总体协方差（除以 n）。对标 Excel COVARIANCE.P |
 | `STATS.COVAR` | (array1, array2) | `double` | 样本协方差（除以 n-1）。对标 Excel COVARIANCE.S |

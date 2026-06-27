@@ -186,7 +186,7 @@ namespace ExcelVbaLibraries.Analytics
             if (v.HasValue && (double.IsNaN(v.Value) || double.IsInfinity(v.Value))) return double.NaN;
             if (n.HasValue && (double.IsNaN(n.Value) || double.IsInfinity(n.Value))) return double.NaN;
             if (t.HasValue && (double.IsNaN(t.Value) || double.IsInfinity(t.Value))) return double.NaN;
-            if (double.IsNaN(r) || double.IsInfinity(r)) return double.NaN;
+            if (r == 0 || double.IsNaN(r) || double.IsInfinity(r)) return double.NaN;
             int missing = (p.HasValue?0:1)+(v.HasValue?0:1)+(n.HasValue?0:1)+(t.HasValue?0:1);
             if (missing != 1) return double.NaN;
             // Each branch handles the case where exactly one parameter is missing.

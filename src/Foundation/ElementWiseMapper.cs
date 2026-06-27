@@ -222,8 +222,22 @@ namespace ExcelVbaLibraries.Foundation
             object value, Func<TInput, TOutput> mapper)
         {
             TInput typed = ConvertValue<TInput>(value);
-            TOutput result = mapper(typed);
-            return (object)result!;
+            try
+            {
+                TOutput result = mapper(typed);
+                return (object)result!;
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException
+                and not StackOverflowException
+                and not AccessViolationException)
+            {
+                // Per-cell isolation: a failing cell returns #VALUE! instead of
+                // aborting the entire array. Critical for DateTime UDFs where
+                // D() or AssertValidDate throws on empty/error cells in a range.
+                System.Diagnostics.Debug.WriteLine(
+                    $"[MapValue] Cell mapper failed for '{typeof(TInput).Name}'->'{typeof(TOutput).Name}': {ex.Message}");
+                return ExcelError.Value;
+            }
         }
 
         private static TOutput MapValue<T1, T2, TOutput>(

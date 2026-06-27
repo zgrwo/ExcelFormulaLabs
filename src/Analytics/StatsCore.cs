@@ -147,6 +147,7 @@ namespace ExcelVbaLibraries.Analytics
 
         internal static double[,] CorrelationMatrix(double[,] data)
         {
+            NumericGuard.AgainstNonFinite(data);
             int cols = data.GetLength(1);
             var r = new double[cols, cols];
             var colCache = new double[cols][];
