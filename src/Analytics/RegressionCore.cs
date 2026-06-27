@@ -156,6 +156,16 @@ namespace FormulaLabs.Analytics
             var Xty = matX.TransposeThisAndMultiply(vecY);
             var ridge = XtX + Matrix<double>.Build.DenseIdentity(p) * lambda;
             var beta = ridge.Solve(Xty);
+            // Guard against near-singular XtX with insufficient lambda:
+            // ridge matrix XtX+λI is mathematically positive-definite for λ>0, but when
+            // λ is subnormal relative to the data scale (e.g. λ=1e-310 with X entries ~1e20),
+            // the diagonal addition is numerically zero and Solve may produce degenerate results.
+            for (int j = 0; j < p; j++)
+                if (double.IsNaN(beta[j]) || double.IsInfinity(beta[j]))
+                    throw new ArgumentException(
+                        "Cannot fit Ridge: coefficients contain NaN/Infinity. " +
+                        "The design matrix may be near-singular and lambda is too small to regularize effectively. " +
+                        "Try increasing lambda (e.g. lambda=10 or larger).");
             var fitted = matX * beta;
             var residuals = vecY - fitted;
             double sse = residuals.DotProduct(residuals);

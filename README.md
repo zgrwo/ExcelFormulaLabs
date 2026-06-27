@@ -37,22 +37,22 @@ Win10/11 自带 .NET Framework 4.8，直接加载 net48 版本的 `.xll`：
 
 > 完整签名、参数说明见 **[API 参考](docs/api-reference.md)**；每个函数的详细示例见 **[用户手册](docs/user-manual.md)**。
 
-| 模块 | 数量 | 做什么 | 试一试 |
-|------|:--:|------|-------|
-| `STATS.*` | 33 | 均值/方差/分位数/t检验/相关… 对标 scipy | `=STATS.SUMMARY(A1:A100)` |
-| `STR.*` | 34 | 反转/提取/编解码/编辑距离/格式化… | `=STR.TEXTJOIN(",", TRUE, A1:A10)` |
-| `REGEX.*` | 9 | 正则匹配/替换/捕获组（Excel 原生没有） | `=REGEX.MATCH(A1, "\d+")` |
-| `DT.*` | 25 | ISO 周/工作日/年龄/复活节/时间戳… | `=DT.AGEYEARS(B2, TODAY())` |
-| `ARR.*` | 22 | 排序/筛选/去重/切片/打乱… | `=ARR.UNIQUE(A1:A100)` |
-| `JSON.*` / `XML.*` | 8 | 解析 JSON、XPath 查询 | `=JSON.QUERY(A1, "0.Name")` |
-| `DICT.*` | 8 | 频率统计/交集/并集/键值查找 | `=DICT.FREQUENCY(A1:A100)` |
-| `LINALG.*` | 19 | 行列式/求逆/特征值/SVD/QR/LU… | `=LINALG.SOLVE(A1:C3, D1:D3)` |
-| `REGRESS.*` | 7 | OLS/WLS/岭回归/ANOVA/因子重要性 | `=REGRESS.OLS(A1:A100, B1:C100)` |
-| `PHYCHEM.*` | 16 | 分子量/温度/压力/体积/质量换算 | `=PHYCHEM.C_TO_F(100)` |
-| `SQL.*` | 3 | 对 Excel 区域写 SQL 查询 | `=SQL.QUERY(A1:D100, "SELECT Col1, AVG(Col3) FROM data GROUP BY Col1")` |
-| `PIVOT.*` | 4 | 透视表/逆透视/分组聚合/交叉连接 | `=PIVOT.GROUPBY(A1:C100, {1}, 3, "avg")` |
-| `RANGE.*` | 9 | 导出 HTML/JSON/Markdown/CSV | `=RANGE.TOMD(A1:D10, TRUE)` |
-| `FS.*` | 22 | 读写文件/列目录/复制删除 | `=FS.READ("C:\data.txt")` |
+| 模块 | 做什么 | 试一试 |
+|------|------|-------|
+| `STATS.*` | 均值/方差/分位数/t检验/相关… 对标 scipy | `=STATS.SUMMARY(A1:A100)` |
+| `STR.*` | 反转/提取/编解码/编辑距离/格式化… | `=STR.TEXTJOIN(",", TRUE, A1:A10)` |
+| `REGEX.*` | 正则匹配/替换/捕获组（Excel 原生没有） | `=REGEX.MATCH(A1, "\d+")` |
+| `DT.*` | ISO 周/工作日/年龄/复活节/时间戳… | `=DT.AGEYEARS(B2, TODAY())` |
+| `ARR.*` | 排序/筛选/去重/切片/打乱… | `=ARR.UNIQUE(A1:A100)` |
+| `JSON.*` / `XML.*` | 解析 JSON、XPath 查询 | `=JSON.QUERY(A1, "0.Name")` |
+| `DICT.*` | 频率统计/交集/并集/键值查找 | `=DICT.FREQUENCY(A1:A100)` |
+| `LINALG.*` | 行列式/求逆/特征值/SVD/QR/LU… | `=LINALG.SOLVE(A1:C3, D1:D3)` |
+| `REGRESS.*` | OLS/WLS/岭回归/ANOVA/因子重要性 | `=REGRESS.OLS(A1:A100, B1:C100)` |
+| `PHYCHEM.*` | 分子量/温度/压力/体积/质量换算 | `=PHYCHEM.C_TO_F(100)` |
+| `SQL.*` | 对 Excel 区域写 SQL 查询 | `=SQL.QUERY(A1:D100, "SELECT Col1, AVG(Col3) FROM data GROUP BY Col1")` |
+| `PIVOT.*` | 透视表/逆透视/分组聚合/交叉连接 | `=PIVOT.GROUPBY(A1:C100, {1}, 3, "avg")` |
+| `RANGE.*` | 导出 HTML/JSON/Markdown/CSV | `=RANGE.TOMD(A1:D10, TRUE)` |
+| `FS.*` | 读写文件/列目录/复制删除 | `=FS.READ("C:\data.txt")` |
 
 ---
 
@@ -134,7 +134,7 @@ FileSystemCore.SandboxRoot = @"C:\Users\Public\Documents";
 
 ## 质量保证
 
-- **4,180+ 个测试**（双 .NET 版本各约 2,090 个），覆盖正常路径和退化输入（零值/空值/单元素/全等值）
+- **双 .NET 版本全量测试**，覆盖正常路径和退化输入（零值/空值/单元素/全等值）
 - **Python 交叉验证**：Stats/Regression 与 numpy/scipy 逐项对照，精度 1e-10；DataToolkit 集成管道测试覆盖跨模块组合
 - **手册验证**：Python 交叉验证覆盖全部 UDF 示例，确保结果与源码一致
 

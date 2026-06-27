@@ -40,7 +40,7 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 ```
 FormulaLabs/
 │
-├── src/                          # ✅ 源码（32 .cs + 3 .csproj + .dna.tpl）
+├── src/                          # ✅ 源码
 │   ├── Foundation/               # 共享工具层
 │   │   ├── ElementWiseMapper.cs   # MapOver/MapOverFlat/MapOverMulti 调度
 │   │   ├── InputNormalizer.cs     # 类型转换 + 哨兵 (L1-L5)
@@ -53,30 +53,30 @@ FormulaLabs/
 │   │   ├── ExcelEmpty.cs          # Excel 空值标记
 │   │   └── ExcelError.cs          # Excel 错误值标记
 │   ├── Analytics/                 # 统计分析模块 → Analytics-AddIn.xll
-│   │   ├── StatsCore.cs / StatsUdf.cs         # STATS.* (33 UDF)
-│   │   ├── LinalgCore.cs / LinalgUdf.cs       # LINALG.* (19 UDF)
-│   │   ├── RegressionCore.cs / RegressionUdf.cs # REGRESS.* (7 UDF)
-│   │   ├── PhyChemCore.cs / PhyChemUdf.cs     # PHYCHEM.* (16 UDF)
+│   │   ├── StatsCore.cs / StatsUdf.cs         # STATS.*
+│   │   ├── LinalgCore.cs / LinalgUdf.cs       # LINALG.*
+│   │   ├── RegressionCore.cs / RegressionUdf.cs # REGRESS.*
+│   │   ├── PhyChemCore.cs / PhyChemUdf.cs     # PHYCHEM.*
 │   │   ├── AnalyticsHelpers.cs                # M()/V()/D() 辅助
 │   │   └── AddIn.cs                            # AutoOpen/AutoClose
 │   ├── DataToolkit/               # 数据处理模块 → DataToolkit-AddIn.xll
-│   │   ├── StringCore.cs / StringUdf.cs       # STR.* (34 UDF)
-│   │   ├── DateTimeCore.cs / DateTimeUdf.cs   # DT.* (25 UDF)
-│   │   ├── RegexCore.cs / RegexUdf.cs         # REGEX.* (9 UDF)
-│   │   ├── ArrayCore.cs / ArrayUdf.cs         # ARR.* (22 UDF)
-│   │   ├── DictSetCore.cs / DictSetUdf.cs     # DICT.* (8 UDF)
-│   │   ├── JsonXmlCore.cs / JsonXmlUdf.cs     # JSON.* XML.* (8 UDF)
-│   │   ├── PivotCore.cs / PivotUdf.cs         # PIVOT.* (4 UDF)
-│   │   ├── SqlCore.cs / SqlUdf.cs             # SQL.* (3 UDF)
-│   │   ├── FileSystemCore.cs / FileSystemUdf.cs # FS.* (22 UDF)
-│   │   ├── RangeExportCore.cs / RangeExportUdf.cs # RANGE.* (9 UDF)
+│   │   ├── StringCore.cs / StringUdf.cs       # STR.*
+│   │   ├── DateTimeCore.cs / DateTimeUdf.cs   # DT.*
+│   │   ├── RegexCore.cs / RegexUdf.cs         # REGEX.*
+│   │   ├── ArrayCore.cs / ArrayUdf.cs         # ARR.*
+│   │   ├── DictSetCore.cs / DictSetUdf.cs     # DICT.*
+│   │   ├── JsonXmlCore.cs / JsonXmlUdf.cs     # JSON.* XML.*
+│   │   ├── PivotCore.cs / PivotUdf.cs         # PIVOT.*
+│   │   ├── SqlCore.cs / SqlUdf.cs             # SQL.*
+│   │   ├── FileSystemCore.cs / FileSystemUdf.cs # FS.*
+│   │   ├── RangeExportCore.cs / RangeExportUdf.cs # RANGE.*
 │   │   └── AddIn.cs                            # AutoOpen/AutoClose
 │   └── Directory.Build.props      # 全局 MSBuild 属性
 │
-├── tests/                         # ✅ 测试（28 .cs + 3 .csproj + 测试数据）
-│   ├── Foundation.Tests/          # 245 测试
-│   ├── Analytics.Tests/           # 546 测试 + CrossVal (102)
-│   ├── DataToolkit.Tests/         # 1,299 测试 + IntegrationPipeline
+├── tests/                         # ✅ 测试
+│   ├── Foundation.Tests/
+│   ├── Analytics.Tests/           # + CrossVal
+│   ├── DataToolkit.Tests/         # + IntegrationPipeline
 │   └── TestData/                  # Python 交叉验证数据
 │
 ├── docs/                          # ✅ 文档
@@ -174,9 +174,11 @@ FormulaLabs/
 
 | ✅ DO | ❌ DON'T |
 | :--- | :--- |
-| 推送构建/验证所需的源文件（`src/`, `tests/`, `docs/`, `scripts/`, `skills/`, `.github/`, `*.sln`, `*.md`, `.gitignore`） | 推送构建产物（`bin/`, `obj/`, `*.xll`, `*.deps.json`）或会话产物（`.claude/reviews/`） |
+| 仅推送[目录树](#仓库目录树)中出现的文件路径 | 推送目录树之外的文件（构建产物 `bin/` `obj/` `*.xll` `*.deps.json`、会话产物 `.claude/`、临时文件等） |
 | Commit 前确认 `dotnet test` 全绿 | 未经用户明确同意执行 `git push` |
 | Commit message 描述变更内容与原因 | 空 message 或无意义提交 |
+
+> **目录树变更管控**：对[目录树](#仓库目录树)的任何修改（新增/删除/重命名路径、调整 ✅/❌ 标记）**必须**先获得用户明确批准。目录树是推送范围的唯一信源——目录树中没有的路径不得推送。
 
 ## 参考
 

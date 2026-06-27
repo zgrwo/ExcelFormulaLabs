@@ -195,9 +195,7 @@ namespace FormulaLabs.Foundation
             if (InputNormalizer.IsExcelEmptyValue(cell1)) return ExcelEmpty.Value;
             if (InputNormalizer.IsExcelEmptyValue(cell2)) return ExcelEmpty.Value;
 
-            T1 t1 = ConvertValue<T1>(cell1);
-            T2 t2 = ConvertValue<T2>(cell2);
-            return (object)mapper(t1, t2)!;
+            return MapValue(cell1, cell2, mapper);
         }
 
         private static object MapSingleCell<T1, T2, T3, TOutput>(
@@ -217,7 +215,7 @@ namespace FormulaLabs.Foundation
             if (InputNormalizer.IsExcelEmptyValue(cell2)) return ExcelEmpty.Value;
             if (InputNormalizer.IsExcelEmptyValue(cell3)) return ExcelEmpty.Value;
 
-            return MapValue(cell1, cell2, cell3, mapper)!;
+            return MapValue(cell1, cell2, cell3, mapper);
         }
 
         // ── Type coercion + mapping ──────────────────────────────────────
@@ -244,21 +242,45 @@ namespace FormulaLabs.Foundation
             }
         }
 
-        private static TOutput MapValue<T1, T2, TOutput>(
+        private static object MapValue<T1, T2, TOutput>(
             object v1, object v2, Func<T1, T2, TOutput> mapper)
         {
             T1 t1 = ConvertValue<T1>(v1);
             T2 t2 = ConvertValue<T2>(v2);
-            return mapper(t1, t2);
+            try
+            {
+                TOutput result = mapper(t1, t2);
+                return (object)result!;
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException
+                and not StackOverflowException
+                and not AccessViolationException)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[MapValue] Cell mapper failed for '<{typeof(T1).Name},{typeof(T2).Name}>'->'{typeof(TOutput).Name}': {ex.Message}");
+                return ExcelError.Value;
+            }
         }
 
-        private static TOutput MapValue<T1, T2, T3, TOutput>(
+        private static object MapValue<T1, T2, T3, TOutput>(
             object v1, object v2, object v3, Func<T1, T2, T3, TOutput> mapper)
         {
             T1 t1 = ConvertValue<T1>(v1);
             T2 t2 = ConvertValue<T2>(v2);
             T3 t3 = ConvertValue<T3>(v3);
-            return mapper(t1, t2, t3);
+            try
+            {
+                TOutput result = mapper(t1, t2, t3);
+                return (object)result!;
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException
+                and not StackOverflowException
+                and not AccessViolationException)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[MapValue] Cell mapper failed for '<{typeof(T1).Name},{typeof(T2).Name},{typeof(T3).Name}>'->'{typeof(TOutput).Name}': {ex.Message}");
+                return ExcelError.Value;
+            }
         }
 
         private static T ConvertValue<T>(object value)
