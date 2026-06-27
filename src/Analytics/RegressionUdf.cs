@@ -64,6 +64,7 @@ namespace FormulaLabs.Analytics
                 if (val is double[] da && da.Length > maxLen) maxLen = da.Length;
                 else if (val is long[] la && la.Length > maxLen) maxLen = la.Length;
                 else if (val is object[] oa && oa.Length > maxLen) maxLen = oa.Length;
+                else if (val is System.Array arr && arr.Length > maxLen) maxLen = arr.Length;
             }
 
             var result = new object[n, maxLen + 1];
@@ -91,6 +92,12 @@ namespace FormulaLabs.Analytics
                     for (int j = 0; j < oa.Length; j++)
                         result[i, j + 1] = oa[j] ?? Foundation.ExcelEmpty.Value;
                     len = oa.Length;
+                }
+                else if (val is System.Array arr)
+                {
+                    for (int j = 0; j < arr.Length; j++)
+                        result[i, j + 1] = arr.GetValue(j) ?? Foundation.ExcelEmpty.Value;
+                    len = arr.Length;
                 }
                 else
                 {

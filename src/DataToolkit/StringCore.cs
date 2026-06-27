@@ -137,6 +137,7 @@ namespace FormulaLabs.DataToolkit
 
         private static int NthIdx(string t, string s, long n)
         {
+            if (string.IsNullOrEmpty(t)) return -1;    // empty string → no match
             if (n == 0) n = 1;                         // default → first occurrence
             if (n < 0)
             {                                          // n=-1 → last, n=-2 → second-to-last, etc.

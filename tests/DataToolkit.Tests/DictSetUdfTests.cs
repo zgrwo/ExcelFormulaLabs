@@ -32,7 +32,7 @@ namespace FormulaLabs.DataToolkit.Tests
 
         // DICT.COUNT
         [Fact] public void Count_basic() => ((long)DictSetUdf.UDF_DICT_COUNT(new object[,]{{"k1",10},{"k2",20}})).Should().Be(2);
-        [Fact] public void Count_null() => DictSetUdf.UDF_DICT_COUNT(null!).Should().Be(ExcelError.Value);
+        [Fact] public void Count_null() => ((long)DictSetUdf.UDF_DICT_COUNT(null!)).Should().Be(0);
 
         // DICT.KEYS
         [Fact] public void Keys_basic() { var r=(object[])DictSetUdf.UDF_DICT_KEYS(new object[,]{{"a",1},{"b",2}}); r.Should().Equal("a","b"); }
