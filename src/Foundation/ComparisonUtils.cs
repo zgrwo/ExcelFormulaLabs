@@ -49,8 +49,8 @@ namespace ExcelVbaLibraries.Foundation
             if (aNull || bNull) return false;
 
             // 2. Both Empty
-            bool aEmpty = ReferenceEquals(a, ExcelEmpty.Value);
-            bool bEmpty = ReferenceEquals(b, ExcelEmpty.Value);
+            bool aEmpty = InputNormalizer.IsExcelEmptyValue(a);
+            bool bEmpty = InputNormalizer.IsExcelEmptyValue(b);
             if (aEmpty && bEmpty) return true;
             if (aEmpty || bEmpty) return false;
 
@@ -121,7 +121,7 @@ namespace ExcelVbaLibraries.Foundation
         private static int GetSortOrder(object? value)
         {
             if (value == null || value is DBNull) return 0;          // Null first
-            if (ReferenceEquals(value, ExcelEmpty.Value)) return 1;  // Empty second
+            if (InputNormalizer.IsExcelEmptyValue(value)) return 1;  // Empty second
             if (value is ExcelError) return 5;                       // Error last
             return 2;  // Normal value
         }
@@ -179,7 +179,7 @@ namespace ExcelVbaLibraries.Foundation
             if (value == null || value is DBNull)
                 return "Null:##NULL##";
 
-            if (ReferenceEquals(value, ExcelEmpty.Value))
+            if (InputNormalizer.IsExcelEmptyValue(value))
                 return "Empty:##EMPTY##";
 
             if (value is ExcelError err)
@@ -253,7 +253,7 @@ namespace ExcelVbaLibraries.Foundation
         private static string SafeStr(object? value)
         {
             if (value == null || value is DBNull) return "";
-            if (ReferenceEquals(value, ExcelEmpty.Value)) return "";
+            if (InputNormalizer.IsExcelEmptyValue(value)) return "";
             if (value is ExcelError err) return $"#ERR({err.Code})";
             return Convert.ToString(value, CultureInfo.InvariantCulture) ?? "";
         }

@@ -161,7 +161,7 @@ namespace ExcelVbaLibraries.Foundation
         {
             if (value == null) return false;
             if (value is DBNull) return false;
-            if (ReferenceEquals(value, ExcelEmpty.Value)) return false;
+            if (IsExcelEmptyValue(value)) return false;
             if (value is bool) return false;         // VBA: Boolean is NOT numeric for cell purposes
             if (value is DateTime) return false;     // VBA: Date is NOT numeric for cell purposes
             if (value is ExcelError) return false;
@@ -193,10 +193,26 @@ namespace ExcelVbaLibraries.Foundation
         /// formula bar, Excel-DNA passes this sentinel; treating it as missing
         /// prevents garbage like the type name leaking into computation results.
         /// </summary>
-        internal static bool IsExcelMissing(object? value)
+        public static bool IsExcelMissing(object? value)
         {
             return value != null
                 && value.GetType().FullName == "ExcelDna.Integration.ExcelMissing";
+        }
+
+        /// <summary>
+        /// Detect both <see cref="ExcelEmpty.Value"/> (Foundation) and
+        /// <c>ExcelDna.Integration.ExcelEmpty</c> (Excel-DNA COM interop)
+        /// without a hard assembly reference. The two types are distinct:
+        /// Foundation's sentinel is used inside MapOver/ElementWiseMapper,
+        /// while Excel-DNA's appears in empty cells from COM Range extraction.
+        /// Treating both as "empty" prevents garbage text (type name via
+        /// <c>.ToString()</c>) from leaking into computation results.
+        /// </summary>
+        public static bool IsExcelEmptyValue(object? value)
+        {
+            if (value == null) return false;
+            return ReferenceEquals(value, ExcelEmpty.Value)
+                || value.GetType().FullName == "ExcelDna.Integration.ExcelEmpty";
         }
 
         /// <summary>
@@ -205,7 +221,7 @@ namespace ExcelVbaLibraries.Foundation
         public static string ToString(object? value)
         {
             if (value == null || value is DBNull || IsExcelMissing(value)) return "";
-            if (ReferenceEquals(value, ExcelEmpty.Value)) return "";
+            if (IsExcelEmptyValue(value)) return "";
             if (value is ExcelError) return "";
             if (value is string s) return s;
             return Convert.ToString(value, CultureInfo.InvariantCulture) ?? "";
@@ -218,7 +234,7 @@ namespace ExcelVbaLibraries.Foundation
         public static double ToDouble(object? value)
         {
             if (value == null || value is DBNull || IsExcelMissing(value)) return double.NaN;
-            if (ReferenceEquals(value, ExcelEmpty.Value)) return double.NaN;
+            if (IsExcelEmptyValue(value)) return double.NaN;
             if (value is ExcelError) return double.NaN;
             if (value is double d) return (double.IsNaN(d) || double.IsInfinity(d)) ? double.NaN : d; // L1 NaN/Inf guard
             if (value is int i) return i;
@@ -245,7 +261,7 @@ namespace ExcelVbaLibraries.Foundation
         public static long ToLong(object? value)
         {
             if (value == null || value is DBNull || IsExcelMissing(value)) return 0;
-            if (ReferenceEquals(value, ExcelEmpty.Value)) return 0;
+            if (IsExcelEmptyValue(value)) return 0;
             if (value is ExcelError) return 0;
             if (value is long l) return l;
             if (value is int i) return i;
@@ -281,7 +297,7 @@ namespace ExcelVbaLibraries.Foundation
         public static bool ToBool(object? value)
         {
             if (value == null || value is DBNull || IsExcelMissing(value)) return false;
-            if (ReferenceEquals(value, ExcelEmpty.Value)) return false;
+            if (IsExcelEmptyValue(value)) return false;
             if (value is ExcelError) return false;
             if (value is bool b) return b;
             if (value is double d) return double.IsNaN(d) ? false : d != 0.0; // L1 NaN guard
@@ -311,7 +327,7 @@ namespace ExcelVbaLibraries.Foundation
         public static DateTime ToDateTime(object? value)
         {
             if (value == null || value is DBNull || IsExcelMissing(value)) return DateTime.MinValue;
-            if (ReferenceEquals(value, ExcelEmpty.Value)) return DateTime.MinValue;
+            if (IsExcelEmptyValue(value)) return DateTime.MinValue;
             if (value is ExcelError) return DateTime.MinValue;
             if (value is DateTime dt) return dt;
             if (value is double d && d > 0 && !double.IsNaN(d) && !double.IsInfinity(d))

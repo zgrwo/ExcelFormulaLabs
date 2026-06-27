@@ -44,7 +44,7 @@ namespace ExcelVbaLibraries.Foundation
             {
                 if (key == null || key is DBNull) continue;
                 if (key is ExcelError) continue;
-                if (ReferenceEquals(key, ExcelEmpty.Value)) continue;
+                if (InputNormalizer.IsExcelEmptyValue(key)) continue;
                 if (key is Array) continue;
 
                 string keyStr = KeyToString(key);

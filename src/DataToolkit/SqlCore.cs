@@ -50,7 +50,7 @@ namespace ExcelVbaLibraries.DataToolkit
                 for (int r = 1; r < rows; r++)
                 {
                     object v = data[r, c];
-                    if (v == null || v is DBNull || ReferenceEquals(v, ExcelEmpty.Value) || v is ExcelError) continue;
+                    if (v == null || v is DBNull || InputNormalizer.IsExcelEmptyValue(v) || v is ExcelError) continue;
                     if (v is double or float) hasReal = true;
                     else if (v is int or long) hasInt = true;
                     else { hasReal = false; hasInt = false; break; }  // non-numeric → TEXT
@@ -63,7 +63,7 @@ namespace ExcelVbaLibraries.DataToolkit
             var ph = new string[cols]; for (int c = 0; c < cols; c++) ph[c] = $"@p{c}";
             using var ins = conn.CreateCommand(); ins.CommandText = $"INSERT INTO \"{name}\" VALUES ({string.Join(",", ph)})"; ins.CommandTimeout = SqlTimeoutSeconds;
             for (int c = 0; c < cols; c++) ins.Parameters.Add(new SqlParam($"@p{c}", types[c] == "INTEGER" ? System.Data.DbType.Int64 : types[c] == "REAL" ? System.Data.DbType.Double : System.Data.DbType.String));
-            for (int r = 1; r < rows; r++) { for (int c = 0; c < cols; c++) { object v = data[r, c]; ins.Parameters[$"@p{c}"].Value = (v == null || v is DBNull || ReferenceEquals(v, ExcelEmpty.Value) || v is ExcelError) ? DBNull.Value : v; } ins.ExecuteNonQuery(); }
+            for (int r = 1; r < rows; r++) { for (int c = 0; c < cols; c++) { object v = data[r, c]; ins.Parameters[$"@p{c}"].Value = (v == null || v is DBNull || InputNormalizer.IsExcelEmptyValue(v) || v is ExcelError) ? DBNull.Value : v; } ins.ExecuteNonQuery(); }
             tx.Commit();
         }
 

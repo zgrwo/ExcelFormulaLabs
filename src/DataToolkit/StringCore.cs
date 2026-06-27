@@ -21,7 +21,7 @@ namespace ExcelVbaLibraries.DataToolkit
         internal static string StripHtml(string t) { t ??= ""; return HtmlTagRx.Replace(t, ""); }
         internal static string ToTitleCase(string t) { t ??= ""; return CultureInfo.InvariantCulture.TextInfo.ToTitleCase(t.ToLowerInvariant()); }
         internal static string RemoveChars(string t, string chars) { t ??= ""; var set = new System.Collections.Generic.HashSet<char>(chars); var sb = new System.Text.StringBuilder(t.Length); foreach (char c in t) if (!set.Contains(c)) sb.Append(c); return sb.ToString(); }
-        internal static string KeepChars(string t, string keep) { t ??= ""; var set = new System.Collections.Generic.HashSet<char>(keep); var sb = new StringBuilder(); foreach (char c in t) if (set.Contains(c)) sb.Append(c); return sb.ToString(); }
+        internal static string KeepChars(string t, string keep) { t ??= ""; var set = new System.Collections.Generic.HashSet<char>(keep); var sb = new StringBuilder(t.Length); foreach (char c in t) if (set.Contains(c)) sb.Append(c); return sb.ToString(); }
 
         internal static string PadLeft(string t, int len, char pad = ' ')
         { if (t.Length >= len) return t; return new string(pad, len - t.Length) + t; }

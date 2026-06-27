@@ -78,7 +78,7 @@ namespace ExcelVbaLibraries.Foundation
         {
             if (value == null || value is DBNull) return true;
             if (InputNormalizer.IsExcelMissing(value)) return true;
-            if (ReferenceEquals(value, ExcelEmpty.Value)) return true;
+            if (InputNormalizer.IsExcelEmptyValue(value)) return true;
             if (value is string s) return s.Trim().Length == 0;
             return false;
         }

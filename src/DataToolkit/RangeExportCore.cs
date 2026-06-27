@@ -91,6 +91,6 @@ namespace ExcelVbaLibraries.DataToolkit
             return t;
         }
 
-        private static string JsonVal(object? v) { if (v == null || v is DBNull) return "null"; if (ReferenceEquals(v, ExcelEmpty.Value)) return "null"; if (v is string s) return $"\"{JsonEncodedText.Encode(s, JavaScriptEncoder.Default).Value}\""; if (v is bool b) return b ? "true" : "false"; if (v is double d && (double.IsNaN(d) || double.IsInfinity(d))) return "null"; if (v is long l) return l.ToString(); if (v is int i) return i.ToString(); if (v is float f) return f.ToString(System.Globalization.CultureInfo.InvariantCulture); if (v is decimal m) return m.ToString(System.Globalization.CultureInfo.InvariantCulture); return $"\"{JsonEncodedText.Encode(InputNormalizer.ToString(v), JavaScriptEncoder.Default).Value}\""; }
+        private static string JsonVal(object? v) { if (v == null || v is DBNull) return "null"; if (InputNormalizer.IsExcelEmptyValue(v)) return "null"; if (v is string s) return $"\"{JsonEncodedText.Encode(s, JavaScriptEncoder.Default).Value}\""; if (v is bool b) return b ? "true" : "false"; if (v is double d && (double.IsNaN(d) || double.IsInfinity(d))) return "null"; if (v is long l) return l.ToString(); if (v is int i) return i.ToString(); if (v is float f) return f.ToString(System.Globalization.CultureInfo.InvariantCulture); if (v is decimal m) return m.ToString(System.Globalization.CultureInfo.InvariantCulture); return $"\"{JsonEncodedText.Encode(InputNormalizer.ToString(v), JavaScriptEncoder.Default).Value}\""; }
     }
 }

@@ -173,7 +173,7 @@ namespace ExcelVbaLibraries.Foundation
         {
             if (cell == null) return cell!;
             if (cell is DBNull) return ExcelEmpty.Value;
-            if (ReferenceEquals(cell, ExcelEmpty.Value)) return ExcelEmpty.Value;
+            if (InputNormalizer.IsExcelEmptyValue(cell)) return ExcelEmpty.Value;
             if (cell is ExcelError) return cell;
 
             return MapValue(cell, mapper);
@@ -188,8 +188,8 @@ namespace ExcelVbaLibraries.Foundation
             if (cell2 == null) return cell2!;
             if (cell1 is DBNull) return ExcelEmpty.Value;
             if (cell2 is DBNull) return ExcelEmpty.Value;
-            if (ReferenceEquals(cell1, ExcelEmpty.Value)) return ExcelEmpty.Value;
-            if (ReferenceEquals(cell2, ExcelEmpty.Value)) return ExcelEmpty.Value;
+            if (InputNormalizer.IsExcelEmptyValue(cell1)) return ExcelEmpty.Value;
+            if (InputNormalizer.IsExcelEmptyValue(cell2)) return ExcelEmpty.Value;
 
             T1 t1 = ConvertValue<T1>(cell1);
             T2 t2 = ConvertValue<T2>(cell2);
@@ -209,9 +209,9 @@ namespace ExcelVbaLibraries.Foundation
             if (cell1 is DBNull) return ExcelEmpty.Value;
             if (cell2 is DBNull) return ExcelEmpty.Value;
             if (cell3 is DBNull) return ExcelEmpty.Value;
-            if (ReferenceEquals(cell1, ExcelEmpty.Value)) return ExcelEmpty.Value;
-            if (ReferenceEquals(cell2, ExcelEmpty.Value)) return ExcelEmpty.Value;
-            if (ReferenceEquals(cell3, ExcelEmpty.Value)) return ExcelEmpty.Value;
+            if (InputNormalizer.IsExcelEmptyValue(cell1)) return ExcelEmpty.Value;
+            if (InputNormalizer.IsExcelEmptyValue(cell2)) return ExcelEmpty.Value;
+            if (InputNormalizer.IsExcelEmptyValue(cell3)) return ExcelEmpty.Value;
 
             return MapValue(cell1, cell2, cell3, mapper)!;
         }

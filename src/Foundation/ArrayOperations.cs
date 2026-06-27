@@ -338,7 +338,7 @@ namespace ExcelVbaLibraries.Foundation
                 {
                     object cell = data[r, c];
                     if (cell == null || cell is DBNull ||
-                        ReferenceEquals(cell, ExcelEmpty.Value))
+                        InputNormalizer.IsExcelEmptyValue(cell))
                         continue;
                     if (!InputNormalizer.IsNumericCell(cell))
                     { allNumeric = false; break; }

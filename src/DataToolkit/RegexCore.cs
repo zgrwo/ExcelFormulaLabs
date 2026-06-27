@@ -29,6 +29,7 @@ namespace ExcelVbaLibraries.DataToolkit
             // General path: need a specific index → compute all matches
             var mc = Regex.Matches(i, p, F(ic), Timeout);
             if (mc.Count == 0) return "";
+            if (n > int.MaxValue || n < int.MinValue) return ""; // out of int range → no match possible
             int idx = n > 0 ? (int)n - 1 : mc.Count + (int)n;
             if (idx < 0 || idx >= mc.Count) return "";
             return mc[idx].Value;
@@ -52,6 +53,7 @@ namespace ExcelVbaLibraries.DataToolkit
             // General path: need a specific index → compute all matches
             var mc = Regex.Matches(i, p, F(ic), Timeout);
             if (mc.Count == 0) return i;
+            if (n > int.MaxValue || n < int.MinValue) return i; // out of int range → no replace
             int idx = n > 0 ? (int)n - 1 : mc.Count + (int)n;
             if (idx < 0 || idx >= mc.Count) return i;
             var match = mc[idx];
