@@ -4,11 +4,11 @@ using MathNet.Numerics.Statistics;
 using System.Collections.Generic;
 using System.IO;
 using ClosedXML.Excel;
-using ExcelVbaLibraries.Analytics;
+using FormulaLabs.Analytics;
 using FluentAssertions;
 using Xunit;
 
-namespace ExcelVbaLibraries.Analytics.Tests
+namespace FormulaLabs.Analytics.Tests
 {
     // ═══════════════════════════════════════════════════════════════════════════
     // Python Cross-Validation Reference Script
@@ -180,7 +180,7 @@ namespace ExcelVbaLibraries.Analytics.Tests
         //   from scipy import stats
         //
         //   wb = openpyxl.load_workbook(
-        //       r'D:\Workspace\zgrwo\VBA\DeepSeek\ClaudeCode\ExcelVbaLibraries'
+        //       r'D:\Workspace\zgrwo\VBA\DeepSeek\ClaudeCode\FormulaLabs'
         //       r'\tests\TestData\Cross_Validation_vs_Python.xlsx')
         //   ws = wb['SourceData']
         //

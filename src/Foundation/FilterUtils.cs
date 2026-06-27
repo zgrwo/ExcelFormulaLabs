@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 
-namespace ExcelVbaLibraries.Foundation
+namespace FormulaLabs.Foundation
 {
     /// <summary>
     /// Filter condition evaluation — determines whether an element passes a

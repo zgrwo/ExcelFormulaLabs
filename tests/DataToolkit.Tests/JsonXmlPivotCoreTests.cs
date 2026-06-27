@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using ExcelVbaLibraries.DataToolkit;
+using FormulaLabs.DataToolkit;
 using FluentAssertions;
 using Xunit;
 
-namespace ExcelVbaLibraries.DataToolkit.Tests
+namespace FormulaLabs.DataToolkit.Tests
 {
     public class JsonXmlCoreTests
     {
@@ -76,7 +76,7 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
             var json = "[{\"a\":1,\"b\":2},{\"a\":3}]";
             var r = JsonXmlCore.JsonToTable(json);
             r!.GetLength(0).Should().Be(3);  // header + 2 rows
-            r![2, 1].Should().Be(ExcelVbaLibraries.Foundation.ExcelEmpty.Value);
+            r![2, 1].Should().Be(FormulaLabs.Foundation.ExcelEmpty.Value);
         }
 
         [Fact] public void JsonToTable_non_object_elements_skipped()
@@ -233,7 +233,7 @@ namespace ExcelVbaLibraries.DataToolkit.Tests
             var d = new object[,] { { "K", "P", "V" }, { "A", "X", 10 }, { "B", "Y", 20 } };
             var r = PivotCore.Pivot(d, 0, 1, 2);
             r[1, 1].Should().Be(10.0);                          // A,X has data
-            r[2, 1].Should().Be(ExcelVbaLibraries.Foundation.ExcelEmpty.Value); // B,X no data → empty
+            r[2, 1].Should().Be(FormulaLabs.Foundation.ExcelEmpty.Value); // B,X no data → empty
         }
 
         // =====================================================================

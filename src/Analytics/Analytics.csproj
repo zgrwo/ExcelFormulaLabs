@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFrameworks>net8.0-windows;net48</TargetFrameworks>
-    <RootNamespace>ExcelVbaLibraries.Analytics</RootNamespace>
+    <RootNamespace>FormulaLabs.Analytics</RootNamespace>
     <AssemblyName>Analytics</AssemblyName>
     <Description>统计 · 线性代数 · 回归 · 物理化学 — 75 个科学计算函数</Description>
     <Product>Excel 函数增强库</Product>

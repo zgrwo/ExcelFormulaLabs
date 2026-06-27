@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using ExcelVbaLibraries.DataToolkit;
-using ExcelVbaLibraries.Foundation;
+using FormulaLabs.DataToolkit;
+using FormulaLabs.Foundation;
 using FluentAssertions;
 using Xunit;
 
-namespace ExcelVbaLibraries.DataToolkit.Tests
+namespace FormulaLabs.DataToolkit.Tests
 {
     /// <summary>
     /// Core tests for SqlCore — in-memory SQLite query engine for Excel ranges.

@@ -1,8 +1,8 @@
 using System;
 using ExcelDna.Integration;
-using ExcelVbaLibraries.Foundation;
+using FormulaLabs.Foundation;
 
-namespace ExcelVbaLibraries.DataToolkit
+namespace FormulaLabs.DataToolkit
 {
     public static class DateTimeUdf
     {

@@ -1,9 +1,9 @@
 using System;
 using System.Linq;
 using MathNet.Numerics.Statistics;
-using ExcelVbaLibraries.Foundation;
+using FormulaLabs.Foundation;
 
-namespace ExcelVbaLibraries.Analytics
+namespace FormulaLabs.Analytics
 {
     /// <summary>
     /// Descriptive statistics, inference, distributions, and correlation.

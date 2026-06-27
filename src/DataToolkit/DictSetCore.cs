@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using ExcelVbaLibraries.Foundation;
+using FormulaLabs.Foundation;
 
-namespace ExcelVbaLibraries.DataToolkit
+namespace FormulaLabs.DataToolkit
 {
     internal static class DictSetCore
     {

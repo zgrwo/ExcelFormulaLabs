@@ -1,4 +1,4 @@
-# ExcelVbaLibraries 用户手册
+# FormulaLabs 用户手册
 
 > **版本**：2.0 | **更新日期**：2026-06-26 | **覆盖**：14 模块全部函数
 > 完整签名见 [API 参考](api-reference.md)；安装说明见 [README](../README.md)

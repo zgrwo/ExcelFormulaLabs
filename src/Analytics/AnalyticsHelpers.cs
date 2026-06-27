@@ -1,7 +1,7 @@
 using System;
-using ExcelVbaLibraries.Foundation;
+using FormulaLabs.Foundation;
 
-namespace ExcelVbaLibraries.Analytics
+namespace FormulaLabs.Analytics
 {
     internal static class AnalyticsHelpers
     {

@@ -2,9 +2,9 @@ using System;
 using System.IO;
 using System.Text;
 using System.Threading;
-using ExcelVbaLibraries.Foundation;
+using FormulaLabs.Foundation;
 
-namespace ExcelVbaLibraries.DataToolkit
+namespace FormulaLabs.DataToolkit
 {
     /// <summary>File I/O and path operations. Ported from FileSystemUtils.bas.</summary>
     /// <remarks>

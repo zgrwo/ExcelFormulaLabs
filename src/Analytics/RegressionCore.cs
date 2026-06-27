@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using MathNet.Numerics.LinearAlgebra;
-using ExcelVbaLibraries.Foundation;
+using FormulaLabs.Foundation;
 
-namespace ExcelVbaLibraries.Analytics
+namespace FormulaLabs.Analytics
 {
     /// <summary>
     /// Regression: OLS, WLS, Ridge, ANOVA, factor importance.

@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using System.Runtime.InteropServices;
 
-namespace ExcelVbaLibraries.Foundation
+namespace FormulaLabs.Foundation
 {
     /// <summary>
     /// Flattening direction for 2D→1D conversion.

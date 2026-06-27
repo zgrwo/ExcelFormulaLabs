@@ -1,9 +1,9 @@
 using System;
-using ExcelVbaLibraries.DataToolkit;
+using FormulaLabs.DataToolkit;
 using FluentAssertions;
 using Xunit;
 
-namespace ExcelVbaLibraries.DataToolkit.Tests
+namespace FormulaLabs.DataToolkit.Tests
 {
     // Python ref: encoding→base64/urllib.parse/html, uuid→uuid, lev→python-Levenshtein, soundex→jellyfish
     public class StringCoreTests

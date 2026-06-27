@@ -1,10 +1,10 @@
-using ExcelVbaLibraries.DataToolkit;
-using ExcelVbaLibraries.Foundation;
+using FormulaLabs.DataToolkit;
+using FormulaLabs.Foundation;
 using FluentAssertions;
 #pragma warning disable CS8625 // null literal for UDF null-input testing
 using Xunit;
 
-namespace ExcelVbaLibraries.DataToolkit.Tests
+namespace FormulaLabs.DataToolkit.Tests
 {
     public class ArrayUdfTests
     {

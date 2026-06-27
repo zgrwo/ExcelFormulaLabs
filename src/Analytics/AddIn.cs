@@ -4,7 +4,7 @@ using ExcelDna.Integration;
 using ExcelDna.IntelliSense;
 #endif
 
-namespace ExcelVbaLibraries.Analytics
+namespace FormulaLabs.Analytics
 {
     public class AddIn : IExcelAddIn
     {

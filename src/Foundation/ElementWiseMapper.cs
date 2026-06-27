@@ -1,6 +1,6 @@
 using System;
 
-namespace ExcelVbaLibraries.Foundation
+namespace FormulaLabs.Foundation
 {
     /// <summary>
     /// Element-wise mapping over scalar or array inputs — the core abstraction

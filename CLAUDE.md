@@ -38,7 +38,7 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 > 路由地图：所有文件路径均以此为基准。推送规则见 [Git](#git)。
 
 ```
-ExcelVbaLibraries/
+FormulaLabs/
 │
 ├── src/                          # ✅ 源码（32 .cs + 3 .csproj + .dna.tpl）
 │   ├── Foundation/               # 共享工具层
@@ -96,7 +96,7 @@ ExcelVbaLibraries/
 │   └── excel-dna-addins/skill.md   # Excel-DNA UDF/打包/分发
 │
 ├── .github/workflows/ci.yml       # ✅ CI/CD
-├── ExcelVbaLibraries.sln           # ✅ 解决方案
+├── FormulaLabs.sln           # ✅ 解决方案
 ├── README.md                       # ✅ 用户向功能指南
 ├── CLAUDE.md                       # ✅ 项目宪法（本文件）
 └── .gitignore                      # ✅ 排除规则

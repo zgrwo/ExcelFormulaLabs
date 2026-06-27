@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using ExcelVbaLibraries.Analytics;
-using ExcelVbaLibraries.Foundation;
+using FormulaLabs.Analytics;
+using FormulaLabs.Foundation;
 using FluentAssertions;
 using Xunit;
 
-namespace ExcelVbaLibraries.Analytics.Tests
+namespace FormulaLabs.Analytics.Tests
 {
     public class RegressionUdfTests
     {

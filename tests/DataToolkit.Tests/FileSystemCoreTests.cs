@@ -1,9 +1,9 @@
-using ExcelVbaLibraries.DataToolkit;
+using FormulaLabs.DataToolkit;
 using FluentAssertions;
 using System;
 using Xunit;
 
-namespace ExcelVbaLibraries.DataToolkit.Tests
+namespace FormulaLabs.DataToolkit.Tests
 {
     // SandboxRoot is a public static field shared across all FileSystem tests.
     // [Collection("Sandbox")] serializes FileSystemCoreTests + FileSystemUdfTests

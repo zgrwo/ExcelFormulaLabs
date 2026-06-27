@@ -6,9 +6,9 @@ using System.Text.RegularExpressions;
 #if !NET8_0_OR_GREATER
 using System.Threading;
 #endif
-using ExcelVbaLibraries.Foundation;
+using FormulaLabs.Foundation;
 
-namespace ExcelVbaLibraries.DataToolkit
+namespace FormulaLabs.DataToolkit
 {
     /// <summary>String manipulation: encoding, validation, distance, UUID, URL, formatting. Ported from StringUtils.bas.</summary>
     internal static class StringCore

@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using ExcelVbaLibraries.Foundation;
+using FormulaLabs.Foundation;
 
-namespace ExcelVbaLibraries.DataToolkit
+namespace FormulaLabs.DataToolkit
 {
     /// <summary>Pivot, unpivot, grouping, cross join. Ported from PivotUtils.bas.</summary>
     internal static class PivotCore
@@ -42,7 +42,7 @@ namespace ExcelVbaLibraries.DataToolkit
                 var kv = (keys[r], pivots[c]);
                 result[r + 1, c + 1] = map.TryGetValue(kv, out double v)
                     ? (agg == "AVG" ? v / cnt[kv] : agg == "COUNT" ? cnt[kv] : v)
-                    : ExcelVbaLibraries.Foundation.ExcelEmpty.Value;
+                    : FormulaLabs.Foundation.ExcelEmpty.Value;
             } }
             return result;
         }

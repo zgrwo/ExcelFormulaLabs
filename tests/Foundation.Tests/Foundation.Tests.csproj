@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>net8.0;net48</TargetFrameworks>
     <LangVersion>latest</LangVersion>
-    <RootNamespace>ExcelVbaLibraries.Foundation.Tests</RootNamespace>
+    <RootNamespace>FormulaLabs.Foundation.Tests</RootNamespace>
     <AssemblyName>Foundation.Tests</AssemblyName>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>

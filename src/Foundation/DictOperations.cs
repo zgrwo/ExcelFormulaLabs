@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace ExcelVbaLibraries.Foundation
+namespace FormulaLabs.Foundation
 {
     /// <summary>
     /// Safe Dictionary factory and batch operations.

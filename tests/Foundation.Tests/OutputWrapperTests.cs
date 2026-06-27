@@ -1,9 +1,9 @@
 using System;
-using ExcelVbaLibraries.Foundation;
+using FormulaLabs.Foundation;
 using FluentAssertions;
 using Xunit;
 
-namespace ExcelVbaLibraries.Foundation.Tests
+namespace FormulaLabs.Foundation.Tests
 {
     /// <summary>
     /// Unit tests for OutputWrapper — error-safe execution and output reshaping.

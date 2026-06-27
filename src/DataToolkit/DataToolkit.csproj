@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFrameworks>net8.0-windows;net48</TargetFrameworks>
-    <RootNamespace>ExcelVbaLibraries.DataToolkit</RootNamespace>
+    <RootNamespace>FormulaLabs.DataToolkit</RootNamespace>
     <AssemblyName>DataToolkit</AssemblyName>
     <Description>字符串 · 正则 · JSON · 数组 · SQL · 文件 · 日期 — 144 个数据处理函数</Description>
     <Product>Excel 函数增强库</Product>

@@ -1,8 +1,8 @@
 using System;
 using System.Globalization;
-using ExcelVbaLibraries.Foundation;
+using FormulaLabs.Foundation;
 
-namespace ExcelVbaLibraries.DataToolkit
+namespace FormulaLabs.DataToolkit
 {
     /// <summary>ISO week, workdays, age, holidays, Easter. Ported from DateTimeUtils.bas.</summary>
     internal static class DateTimeCore

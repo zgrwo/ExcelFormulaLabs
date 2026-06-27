@@ -1,6 +1,6 @@
 using System;
 
-namespace ExcelVbaLibraries.Foundation
+namespace FormulaLabs.Foundation
 {
     /// <summary>
     /// Shared NaN/Infinity input validation for numeric arrays.

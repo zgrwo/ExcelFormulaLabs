@@ -1,6 +1,6 @@
 using System;
 
-namespace ExcelVbaLibraries.Foundation
+namespace FormulaLabs.Foundation
 {
     /// <summary>
     /// Represents an Excel error value (e.g. #VALUE!, #N/A, #DIV/0!).

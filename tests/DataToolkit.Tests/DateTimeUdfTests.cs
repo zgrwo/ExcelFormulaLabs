@@ -1,10 +1,10 @@
 using System;
-using ExcelVbaLibraries.DataToolkit;
-using ExcelVbaLibraries.Foundation;
+using FormulaLabs.DataToolkit;
+using FormulaLabs.Foundation;
 using FluentAssertions;
 using Xunit;
 
-namespace ExcelVbaLibraries.DataToolkit.Tests
+namespace FormulaLabs.DataToolkit.Tests
 {
     public class DateTimeUdfTests
     {
