@@ -43,7 +43,27 @@ namespace ExcelVbaLibraries.DataToolkit
         // (including the header row) as data. The parameter is kept for API compatibility
         // with RangeToJson / RangeToMarkdown / RangeToHtml.
         internal static string RangeToCsv(object[,] data, string delim = ",", bool quote = true, bool hasHeader = true)
-        { int rows = data.GetLength(0), cols = data.GetLength(1); var sb = new StringBuilder(); int startRow = 0; for (int r = startRow; r < rows; r++) { for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(delim); string v = InputNormalizer.ToString(data[r, c]); if (quote && (v.Contains(delim) || v.Contains("\"") || v.Contains("\n"))) v = "\"" + v.Replace("\"", "\"\"") + "\""; sb.Append(v); } sb.AppendLine(); } return sb.ToString(); }
+        {
+            int rows = data.GetLength(0), cols = data.GetLength(1); var sb = new StringBuilder(); int startRow = 0;
+            for (int r = startRow; r < rows; r++)
+            {
+                for (int c = 0; c < cols; c++)
+                {
+                    if (c > 0) sb.Append(delim);
+                    string v = InputNormalizer.ToString(data[r, c]);
+                    // Defang formula injection: cells starting with =, +, -, @ are
+                    // interpreted as formulas when the CSV is re-opened in Excel.
+                    // Prepend a single quote (text marker) to neutralise them.
+                    if (v.Length > 0 && (v[0] == '=' || v[0] == '+' || v[0] == '-' || v[0] == '@'))
+                        v = "'" + v;
+                    if (quote && (v.Contains(delim) || v.Contains("\"") || v.Contains("\n")))
+                        v = "\"" + v.Replace("\"", "\"\"") + "\"";
+                    sb.Append(v);
+                }
+                sb.AppendLine();
+            }
+            return sb.ToString();
+        }
 
         internal static object[,] Transpose(object[,] d) { int r = d.GetLength(0), c = d.GetLength(1); var t = new object[c, r]; for (int i = 0; i < r; i++) for (int j = 0; j < c; j++) t[j, i] = d[i, j]; return t; }
         internal static object[,] SelectColumns(object[,] d, int[] ci)

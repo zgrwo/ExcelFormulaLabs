@@ -127,3 +127,54 @@ public class NormalizationTests
         result.Should().BeEquivalentTo(new double[] { 1.0, 2.5, 3.0 });
     }
 }
+
+public class ExcelSentinelTests
+{
+    [Fact] public void IsExcelMissing_null_returns_false()
+        => InputNormalizer.IsExcelMissing(null).Should().BeFalse();
+
+    [Fact] public void IsExcelMissing_standard_object_returns_false()
+        => InputNormalizer.IsExcelMissing("hello").Should().BeFalse();
+
+    [Fact] public void IsExcelMissing_int_returns_false()
+        => InputNormalizer.IsExcelMissing(42).Should().BeFalse();
+
+    [Fact] public void IsExcelMissing_ExcelEmpty_returns_false()
+        => InputNormalizer.IsExcelMissing(ExcelEmpty.Value).Should().BeFalse();
+
+    [Fact] public void IsExcelMissing_ExcelError_returns_false()
+        => InputNormalizer.IsExcelMissing(ExcelError.Value).Should().BeFalse();
+
+    [Fact] public void IsExcelMissing_DBNull_returns_false()
+        => InputNormalizer.IsExcelMissing(DBNull.Value).Should().BeFalse();
+}
+
+public class ComRangeExtractionTests
+{
+    [Fact] public void TryExtractComRangeValue_null_returns_false()
+    {
+        // value=null for null input (input itself is null)
+        InputNormalizer.TryExtractComRangeValue(null, out var value).Should().BeFalse();
+        value.Should().BeNull();
+    }
+
+    [Fact] public void TryExtractComRangeValue_non_com_object_returns_false()
+    {
+        // value=input for non-COM objects (passthrough)
+        InputNormalizer.TryExtractComRangeValue("hello", out var value).Should().BeFalse();
+        value.Should().Be("hello");
+    }
+
+    [Fact] public void TryExtractComRangeValue_array_passthrough_returns_false()
+    {
+        var input = new object[] { 1, 2, 3 };
+        InputNormalizer.TryExtractComRangeValue(input, out var value).Should().BeFalse();
+        value.Should().BeSameAs(input);
+    }
+
+    [Fact] public void TryExtractComRangeValue_int_returns_false()
+    {
+        InputNormalizer.TryExtractComRangeValue(42, out var value).Should().BeFalse();
+        value.Should().Be(42);
+    }
+}

@@ -18,6 +18,8 @@ namespace ExcelVbaLibraries.DataToolkit
     internal static class FileSystemCore
     {
         private static string? _sandboxRoot;
+        private static bool _sandboxWarningEmitted;
+
         /// <summary>
         /// Optional sandbox root directory. When set, all file I/O is restricted to
         /// paths within this directory. Set to null to disable (default).
@@ -28,17 +30,28 @@ namespace ExcelVbaLibraries.DataToolkit
         public static string? SandboxRoot
         {
             get => Volatile.Read(ref _sandboxRoot);
-            set => Volatile.Write(ref _sandboxRoot, value);
+            set { Volatile.Write(ref _sandboxRoot, value); _sandboxWarningEmitted = value != null; }
         }
 
         /// <summary>
         /// Throws <see cref="UnauthorizedAccessException"/> if <paramref name="path"/>
         /// (after normalization) is outside <see cref="SandboxRoot"/>.
-        /// No-op when <see cref="SandboxRoot"/> is null.
+        /// No-op when <see cref="SandboxRoot"/> is null, but emits a one-time
+        /// diagnostic warning so operators are aware the sandbox is disabled.
         /// </summary>
         internal static void ValidatePath(string path)
         {
-            if (string.IsNullOrEmpty(SandboxRoot)) return;
+            if (string.IsNullOrEmpty(SandboxRoot))
+            {
+                if (!_sandboxWarningEmitted)
+                {
+                    _sandboxWarningEmitted = true;
+                    System.Diagnostics.Trace.WriteLine(
+                        "[FileSystemCore] SandboxRoot is null — file operations are unrestricted. " +
+                        "Set FileSystemCore.SandboxRoot before loading untrusted workbooks.");
+                }
+                return;
+            }
             NormalizePath(path); // sandbox check (throws UnauthorizedAccessException if outside sandbox)
         }
 

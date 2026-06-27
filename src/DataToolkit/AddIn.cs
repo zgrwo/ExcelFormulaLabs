@@ -23,7 +23,9 @@ namespace ExcelVbaLibraries.DataToolkit
             try { System.Data.SQLite.SQLiteConnection.ClearAllPools(); }
             catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException) { }
             try { IntelliSenseServer.Uninstall(); }
-            catch { /* best-effort */ }
+            catch (Exception ex) when (ex is not OutOfMemoryException
+                and not StackOverflowException and not AccessViolationException)
+            { /* best-effort: server may already be unloaded */ }
 #endif
             FileSystemCore.SandboxRoot = null;
         }

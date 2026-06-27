@@ -28,4 +28,8 @@
     Referenced by Analytics.dll and DataToolkit.dll (Excel-DNA host assemblies).
   -->
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Foundation.Tests" />
+  </ItemGroup>
+
 </Project>

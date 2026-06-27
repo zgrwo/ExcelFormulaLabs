@@ -1,3 +1,4 @@
+using System;
 using ExcelDna.Integration;
 #if NET48
 using ExcelDna.IntelliSense;
@@ -22,7 +23,9 @@ namespace ExcelVbaLibraries.Analytics
             LinalgCore.ClearDecompCache();
 #if NET48
             try { IntelliSenseServer.Uninstall(); }
-            catch { /* best-effort */ }
+            catch (Exception ex) when (ex is not OutOfMemoryException
+                and not StackOverflowException and not AccessViolationException)
+            { /* best-effort: server may already be unloaded */ }
 #endif
         }
     }
