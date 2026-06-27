@@ -1,4 +1,4 @@
-namespace FormulaLabs.Foundation
+namespace ExcelFormulaLabs.Foundation
 {
     /// <summary>
     /// Sentinel type representing an Excel empty cell.

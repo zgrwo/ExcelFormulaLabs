@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using FormulaLabs.Foundation;
+using ExcelFormulaLabs.Foundation;
 
-namespace FormulaLabs.DataToolkit
+namespace ExcelFormulaLabs.DataToolkit
 {
     internal static class ArrayCore
     {

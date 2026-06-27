@@ -6,9 +6,9 @@ using System.Text.Json;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
-using FormulaLabs.Foundation;
+using ExcelFormulaLabs.Foundation;
 
-namespace FormulaLabs.DataToolkit
+namespace ExcelFormulaLabs.DataToolkit
 {
     /// <summary>JSON parsing/querying and XML XPath/table conversion. Ported from JsonUtils.bas + XmlUtils.bas.</summary>
     internal static class JsonXmlCore

@@ -1,8 +1,8 @@
 using System;
 using ExcelDna.Integration;
-using FormulaLabs.Foundation;
+using ExcelFormulaLabs.Foundation;
 
-namespace FormulaLabs.Analytics
+namespace ExcelFormulaLabs.Analytics
 {
     public static class StatsUdf
     {

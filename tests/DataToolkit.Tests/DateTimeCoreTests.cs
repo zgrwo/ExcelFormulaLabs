@@ -1,9 +1,9 @@
 using System;
-using FormulaLabs.DataToolkit;
+using ExcelFormulaLabs.DataToolkit;
 using FluentAssertions;
 using Xunit;
 
-namespace FormulaLabs.DataToolkit.Tests
+namespace ExcelFormulaLabs.DataToolkit.Tests
 {
     public class DateTimeCoreTests
     {

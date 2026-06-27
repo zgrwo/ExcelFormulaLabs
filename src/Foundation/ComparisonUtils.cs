@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using System.Text;
 
-namespace FormulaLabs.Foundation
+namespace ExcelFormulaLabs.Foundation
 {
     /// <summary>
     /// Type-aware value comparison and deterministic key generation.

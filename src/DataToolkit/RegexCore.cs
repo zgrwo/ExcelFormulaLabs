@@ -1,8 +1,8 @@
 using System;
 using System.Text.RegularExpressions;
-using FormulaLabs.Foundation;
+using ExcelFormulaLabs.Foundation;
 
-namespace FormulaLabs.DataToolkit
+namespace ExcelFormulaLabs.DataToolkit
 {
     /// <summary>Regex operations: match, replace, split, capture groups. Ported from RegexUtils.bas.</summary>
     internal static class RegexCore

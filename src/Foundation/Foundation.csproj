@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFrameworks>net8.0;net48</TargetFrameworks>
-    <RootNamespace>FormulaLabs.Foundation</RootNamespace>
+    <RootNamespace>ExcelFormulaLabs.Foundation</RootNamespace>
     <AssemblyName>Foundation</AssemblyName>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>disable</ImplicitUsings>

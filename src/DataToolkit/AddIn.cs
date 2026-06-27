@@ -3,9 +3,9 @@ using ExcelDna.Integration;
 #if NET48
 using ExcelDna.IntelliSense;
 #endif
-using FormulaLabs.Foundation;
+using ExcelFormulaLabs.Foundation;
 
-namespace FormulaLabs.DataToolkit
+namespace ExcelFormulaLabs.DataToolkit
 {
     public class AddIn : IExcelAddIn
     {

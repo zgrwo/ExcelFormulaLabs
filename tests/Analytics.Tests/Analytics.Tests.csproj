@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFrameworks>net8.0-windows;net48</TargetFrameworks>
     <LangVersion>latest</LangVersion>
-    <RootNamespace>FormulaLabs.Analytics.Tests</RootNamespace>
+    <RootNamespace>ExcelFormulaLabs.Analytics.Tests</RootNamespace>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsTestProject>true</IsTestProject>

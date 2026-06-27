@@ -1,6 +1,6 @@
 using System;
 
-namespace FormulaLabs.Foundation
+namespace ExcelFormulaLabs.Foundation
 {
     /// <summary>
     /// Element-wise mapping over scalar or array inputs — the core abstraction

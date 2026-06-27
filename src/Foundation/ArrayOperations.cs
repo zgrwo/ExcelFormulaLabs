@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace FormulaLabs.Foundation
+namespace ExcelFormulaLabs.Foundation
 {
     /// <summary>Comparison mode for sorting and searching.</summary>
     public enum ComparerMode

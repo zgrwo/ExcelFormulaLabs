@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using FormulaLabs.Foundation;
+using ExcelFormulaLabs.Foundation;
 
-namespace FormulaLabs.Analytics
+namespace ExcelFormulaLabs.Analytics
 {
     /// <summary>
     /// Physical chemistry: molecular weight, unit conversions, gas standard state.

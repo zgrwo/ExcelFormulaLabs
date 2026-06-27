@@ -1,7 +1,7 @@
 using System;
 using System.Diagnostics;
 
-namespace FormulaLabs.Foundation
+namespace ExcelFormulaLabs.Foundation
 {
     /// <summary>
     /// Error-safe execution wrapper and output reshaping utilities.

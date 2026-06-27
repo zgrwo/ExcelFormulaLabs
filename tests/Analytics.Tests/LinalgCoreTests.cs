@@ -1,10 +1,10 @@
 using System;
 using System.Linq;
-using FormulaLabs.Analytics;
+using ExcelFormulaLabs.Analytics;
 using FluentAssertions;
 using Xunit;
 
-namespace FormulaLabs.Analytics.Tests
+namespace ExcelFormulaLabs.Analytics.Tests
 {
     public class LinalgCoreTests
     {

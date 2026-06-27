@@ -1,10 +1,10 @@
 using System.Collections.Generic;
-using FormulaLabs.DataToolkit;
-using FormulaLabs.Foundation;
+using ExcelFormulaLabs.DataToolkit;
+using ExcelFormulaLabs.Foundation;
 using FluentAssertions;
 using Xunit;
 
-namespace FormulaLabs.DataToolkit.Tests
+namespace ExcelFormulaLabs.DataToolkit.Tests
 {
     public class JsonXmlUdfTests
     {

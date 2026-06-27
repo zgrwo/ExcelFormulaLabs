@@ -9,9 +9,9 @@ using Microsoft.Data.Sqlite;
 using SqlConn = Microsoft.Data.Sqlite.SqliteConnection;
 using SqlParam = Microsoft.Data.Sqlite.SqliteParameter;
 #endif
-using FormulaLabs.Foundation;
+using ExcelFormulaLabs.Foundation;
 
-namespace FormulaLabs.DataToolkit
+namespace ExcelFormulaLabs.DataToolkit
 {
     internal static class SqlCore
     {

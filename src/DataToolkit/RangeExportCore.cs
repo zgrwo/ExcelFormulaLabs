@@ -3,9 +3,9 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Encodings.Web;
-using FormulaLabs.Foundation;
+using ExcelFormulaLabs.Foundation;
 
-namespace FormulaLabs.DataToolkit
+namespace ExcelFormulaLabs.DataToolkit
 {
     /// <summary>Range export to HTML, JSON, Markdown, CSV + row/column operations. Ported from RangeUtils.bas.</summary>
     internal static class RangeExportCore

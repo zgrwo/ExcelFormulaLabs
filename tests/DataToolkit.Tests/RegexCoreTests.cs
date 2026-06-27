@@ -1,10 +1,10 @@
 using System;
 using System.Text.RegularExpressions;
-using FormulaLabs.DataToolkit;
+using ExcelFormulaLabs.DataToolkit;
 using FluentAssertions;
 using Xunit;
 
-namespace FormulaLabs.DataToolkit.Tests
+namespace ExcelFormulaLabs.DataToolkit.Tests
 {
     // Python ref: all tests cross-validated with Python `re` module (the reference regex implementation)
     public class RegexCoreTests

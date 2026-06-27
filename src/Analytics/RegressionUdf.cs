@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using ExcelDna.Integration;
-using FormulaLabs.Foundation;
+using ExcelFormulaLabs.Foundation;
 
-namespace FormulaLabs.Analytics
+namespace ExcelFormulaLabs.Analytics
 {
     public static class RegressionUdf
     {

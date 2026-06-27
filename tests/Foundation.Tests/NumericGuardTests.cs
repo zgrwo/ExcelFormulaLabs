@@ -1,9 +1,9 @@
 using System;
-using FormulaLabs.Foundation;
+using ExcelFormulaLabs.Foundation;
 using FluentAssertions;
 using Xunit;
 
-namespace FormulaLabs.Foundation.Tests;
+namespace ExcelFormulaLabs.Foundation.Tests;
 
 public class NumericGuardMatrixTests
 {

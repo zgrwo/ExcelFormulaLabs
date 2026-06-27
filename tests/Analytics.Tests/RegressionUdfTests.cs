@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using FormulaLabs.Analytics;
-using FormulaLabs.Foundation;
+using ExcelFormulaLabs.Analytics;
+using ExcelFormulaLabs.Foundation;
 using FluentAssertions;
 using Xunit;
 
-namespace FormulaLabs.Analytics.Tests
+namespace ExcelFormulaLabs.Analytics.Tests
 {
     public class RegressionUdfTests
     {

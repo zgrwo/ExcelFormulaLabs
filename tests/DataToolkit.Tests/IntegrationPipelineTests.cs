@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using FormulaLabs.Analytics;
-using FormulaLabs.DataToolkit;
-using FormulaLabs.Foundation;
+using ExcelFormulaLabs.Analytics;
+using ExcelFormulaLabs.DataToolkit;
+using ExcelFormulaLabs.Foundation;
 using FluentAssertions;
 using Xunit;
 
-namespace FormulaLabs.DataToolkit.Tests
+namespace ExcelFormulaLabs.DataToolkit.Tests
 {
     /// <summary>
     /// Cross-module integration tests verifying that multiple toolkit modules

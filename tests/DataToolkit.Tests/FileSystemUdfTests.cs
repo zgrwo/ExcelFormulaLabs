@@ -1,8 +1,8 @@
-using FormulaLabs.DataToolkit;
-using FormulaLabs.Foundation;
+using ExcelFormulaLabs.DataToolkit;
+using ExcelFormulaLabs.Foundation;
 using FluentAssertions;
 using Xunit;
-namespace FormulaLabs.DataToolkit.Tests
+namespace ExcelFormulaLabs.DataToolkit.Tests
 {
     // In the Sandbox collection with FileSystemCoreTests because several UDFs
     // (FS.DELDIR, FS.FSIZE, etc.) call Core methods that check SandboxRoot.

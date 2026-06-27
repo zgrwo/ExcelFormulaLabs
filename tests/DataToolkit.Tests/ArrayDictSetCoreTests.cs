@@ -1,10 +1,10 @@
 using System;
-using FormulaLabs.DataToolkit;
+using ExcelFormulaLabs.DataToolkit;
 using FluentAssertions;
 #pragma warning disable CS8625 // null literal for core null-input testing
 using Xunit;
 
-namespace FormulaLabs.DataToolkit.Tests
+namespace ExcelFormulaLabs.DataToolkit.Tests
 {
     public class ArrayCoreTests
     {
