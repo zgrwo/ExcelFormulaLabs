@@ -12,6 +12,9 @@
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>CS1591;NU1701</NoWarn>
+    <ExcelAddInFileName Condition="'$(TargetFramework)' == 'net48'">Analytics-AddIn-net48</ExcelAddInFileName>
+    <ExcelAddInFileName Condition="'$(TargetFramework)' == 'net8.0-windows'">Analytics-AddIn-net8.0</ExcelAddInFileName>
+    <ExcelDna64BitAddInSuffix>-64</ExcelDna64BitAddInSuffix>
   </PropertyGroup>
 
   <ItemGroup>
@@ -52,23 +55,25 @@
        then clean up afterward. The generated DNA file is shared across inner
        builds; a stale file on disk can poison incremental builds. -->
   <Target Name="GenerateDnaFromTemplate" BeforeTargets="ExcelDnaBuild">
-    <Delete Files="Analytics-AddIn.dna" />
+    <Delete Files="Analytics-AddIn-net48.dna;Analytics-AddIn-net8.0.dna" />
     <Copy Condition="'$(TargetFramework)' == 'net8.0-windows'"
           SourceFiles="Analytics-AddIn-net8.dna.tpl"
-          DestinationFiles="Analytics-AddIn.dna" />
+          DestinationFiles="Analytics-AddIn-net8.0.dna" />
     <Copy Condition="'$(TargetFramework)' == 'net48'"
           SourceFiles="Analytics-AddIn-net48.dna.tpl"
-          DestinationFiles="Analytics-AddIn.dna" />
+          DestinationFiles="Analytics-AddIn-net48.dna" />
   </Target>
   <Target Name="CleanupDnaAfterBuild" AfterTargets="ExcelDnaPack">
-    <Delete Files="Analytics-AddIn.dna" />
+    <Delete Files="Analytics-AddIn-net48.dna;Analytics-AddIn-net8.0.dna" />
   </Target>
 
   <!-- Patch VERSIONINFO in packed .xll files so Excel add-in manager
        shows meaningful descriptions instead of Excel-DNA defaults. -->
   <Target Name="PatchXllVersionInfo" AfterTargets="ExcelDnaPack" Condition="'$(Configuration)' == 'Release'">
-    <Exec Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\Analytics-AddIn-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" ContinueOnError="true" />
-    <Exec Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\Analytics-AddIn64-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" ContinueOnError="true" />
+    <Exec Condition="'$(TargetFramework)' == 'net48'" Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\Analytics-AddIn-net48-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" ContinueOnError="true" />
+    <Exec Condition="'$(TargetFramework)' == 'net48'" Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\Analytics-AddIn-net48-64-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" ContinueOnError="true" />
+    <Exec Condition="'$(TargetFramework)' == 'net8.0-windows'" Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\Analytics-AddIn-net8.0-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" ContinueOnError="true" />
+    <Exec Condition="'$(TargetFramework)' == 'net8.0-windows'" Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\Analytics-AddIn-net8.0-64-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" ContinueOnError="true" />
   </Target>
 
 </Project>
