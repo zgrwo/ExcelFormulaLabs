@@ -53,10 +53,10 @@
        project manifest and fails when absent from net48 output. Likewise for
        net8.0-windows, System.Data.SQLite.Core is a net48-only stub. -->
   <PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
-    <ExcelDnaPackDependenciesToExclude>Microsoft.Data.Sqlite</ExcelDnaPackDependenciesToExclude>
+    <ExcelDnaPackDependenciesToExclude>Microsoft.Data.Sqlite.dll</ExcelDnaPackDependenciesToExclude>
   </PropertyGroup>
   <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
-    <ExcelDnaPackDependenciesToExclude>System.Data.SQLite;System.Data.SQLite.Core</ExcelDnaPackDependenciesToExclude>
+    <ExcelDnaPackDependenciesToExclude>System.Data.SQLite.dll;System.Data.SQLite.Core.dll</ExcelDnaPackDependenciesToExclude>
   </PropertyGroup>
 
   <!-- Generate correct .dna from templates per target before ExcelDnaBuild,
