@@ -100,7 +100,7 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 
 | ✅ DO | ❌ DON'T |
 | :--- | :--- |
-| 推送 `src/` 和 `tests/` 内的文件 | 推送这两个目录之外的任何文件 |
+| 推送构建/验证所需的源文件（`src/`, `tests/`, `docs/`, `scripts/`, `skills/`, `.github/`, `*.sln`, `*.md`, `.gitignore`） | 推送构建产物（`bin/`, `obj/`, `*.xll`, `*.deps.json`）或会话产物（`.claude/reviews/`） |
 | Commit 前确认 `dotnet test` 全绿 | 未经用户明确同意执行 `git push` |
 | Commit message 描述变更内容与原因 | 空 message 或无意义提交 |
 
