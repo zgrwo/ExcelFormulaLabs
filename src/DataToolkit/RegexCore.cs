@@ -8,10 +8,20 @@ namespace FormulaLabs.DataToolkit
     internal static class RegexCore
     {
         private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
-        internal static bool RegexTest(string i, string p, bool ic=true) =>
-            Regex.IsMatch(i, p, F(ic), Timeout);
-        internal static long RegexCount(string i, string p, bool ic=true) =>
-            Regex.Matches(i, p, F(ic), Timeout).Count;
+        /// <summary>Maximum allowed regex pattern length to guard against extreme-input resource exhaustion.</summary>
+        internal const int MaxPatternLength = 10000;
+
+        /// <summary>Throw if pattern exceeds <see cref="MaxPatternLength"/>.</summary>
+        internal static void ValidatePattern(string p)
+        {
+            if (p != null && p.Length > MaxPatternLength)
+                throw new ArgumentException($"Regex pattern exceeds maximum length of {MaxPatternLength} characters.");
+        }
+
+        internal static bool RegexTest(string i, string p, bool ic=true)
+        { ValidatePattern(p); return Regex.IsMatch(i, p, F(ic), Timeout); }
+        internal static long RegexCount(string i, string p, bool ic=true)
+        { ValidatePattern(p); return Regex.Matches(i, p, F(ic), Timeout).Count; }
         internal static string RegexMatch(string i, string p, bool ic=true)
             => RegexMatch(i, p, 1, ic);
 
@@ -23,6 +33,7 @@ namespace FormulaLabs.DataToolkit
         /// </summary>
         internal static string RegexMatch(string i, string p, long n, bool ic=true)
         {
+            ValidatePattern(p);
             if (n == 0) n = 1;
             // Fast path: first match — Regex.Match scans only until the first hit
             if (n == 1) { var m = Regex.Match(i, p, F(ic), Timeout); return m.Success ? m.Value : ""; }
@@ -35,7 +46,7 @@ namespace FormulaLabs.DataToolkit
             return mc[idx].Value;
         }
         internal static string[] RegexMatchAll(string i, string p, bool ic=true)
-        { var mc=Regex.Matches(i,p,F(ic),Timeout); var r=new string[mc.Count]; for(int j=0;j<mc.Count;j++)r[j]=mc[j].Value; return r; }
+        { ValidatePattern(p); var mc=Regex.Matches(i,p,F(ic),Timeout); var r=new string[mc.Count]; for(int j=0;j<mc.Count;j++)r[j]=mc[j].Value; return r; }
         internal static string RegexReplace(string i, string p, string r, bool ic=true)
             => RegexReplace(i, p, r, 0, ic);
 
@@ -47,6 +58,7 @@ namespace FormulaLabs.DataToolkit
         /// </summary>
         internal static string RegexReplace(string i, string p, string r, long n, bool ic=true)
         {
+            ValidatePattern(p);
             if (n == 0) return Regex.Replace(i, p, r, F(ic), Timeout);
             // Fast path: replace first match only
             if (n == 1) { var m = Regex.Match(i, p, F(ic), Timeout); return m.Success ? i.Substring(0, m.Index) + r + i.Substring(m.Index + m.Length) : i; }
@@ -71,6 +83,7 @@ namespace FormulaLabs.DataToolkit
         /// </summary>
         internal static string[] RegexSplit(string i, string p, long n, bool ic=true)
         {
+            ValidatePattern(p);
             if (n <= 0) return Regex.Split(i, p, F(ic), Timeout);
             var result = new System.Collections.Generic.List<string>((int)n + 1);
             int pos = 0, splitCount = 0;
@@ -92,6 +105,7 @@ namespace FormulaLabs.DataToolkit
         /// </summary>
         internal static object[,] RegexCaptureGroups(string i, string p, bool ic=true)
         {
+            ValidatePattern(p);
             var m = Regex.Match(i, p, FC(ic), Timeout);
             if (!m.Success) return new object[0, 0];
             var r = new object[2, m.Groups.Count];

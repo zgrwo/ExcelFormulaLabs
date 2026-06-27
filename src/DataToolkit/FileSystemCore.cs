@@ -100,7 +100,44 @@ namespace FormulaLabs.DataToolkit
         internal static bool EnsureFolder(string p) { ValidatePath(p); if (!Directory.Exists(p)) Directory.CreateDirectory(p); return true; }
         internal static string[] ListFiles(string p, string pat = "*") { ValidatePath(p); return Directory.GetFiles(p, pat); }
         internal static string[] ListFolders(string p, string pat = "*") { ValidatePath(p); return Directory.GetDirectories(p, pat); }
-        internal static bool DeleteFolder(string p, bool r = false) { ValidatePath(p); if (Directory.Exists(p)) Directory.Delete(p, r); return true; }
+        internal static bool DeleteFolder(string p, bool r = false)
+        {
+            ValidatePath(p);
+            if (!Directory.Exists(p)) return true;
+            if (!r) { Directory.Delete(p); return true; }
+            DeleteFolderRecursive(p);
+            return true;
+        }
+
+        /// <summary>
+        /// Recursively delete a directory without following NTFS junction points or
+        /// symbolic links — <see cref="Directory.Delete(string, bool)"/> follows them,
+        /// which could delete content outside the sandbox.
+        /// </summary>
+        private static void DeleteFolderRecursive(string p)
+        {
+            foreach (var entry in Directory.EnumerateFileSystemEntries(p))
+            {
+                var attr = File.GetAttributes(entry);
+                if ((attr & FileAttributes.ReparsePoint) != 0)
+                {
+                    // Junction / symlink: delete the link itself, don't follow it
+                    if ((attr & FileAttributes.Directory) != 0)
+                        Directory.Delete(entry);
+                    else
+                        File.Delete(entry);
+                }
+                else if ((attr & FileAttributes.Directory) != 0)
+                {
+                    DeleteFolderRecursive(entry);
+                }
+                else
+                {
+                    File.Delete(entry);
+                }
+            }
+            Directory.Delete(p);
+        }
         internal static string[] GetDrives() { return Array.ConvertAll(DriveInfo.GetDrives(), d => d.Name); }
         internal static string GetCurrentFolder() => Directory.GetCurrentDirectory();
         internal static string GetTempPath() => Path.GetTempPath();

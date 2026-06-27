@@ -135,7 +135,7 @@ namespace FormulaLabs.DataToolkit.Tests
         [Fact] public void HtmlDecode_null_safe() => StringCore.HtmlDecode(null!).Should().Be("");
         [Fact] public void UrlEncode_null_safe() => StringCore.UrlEncode(null!).Should().Be("");
         [Fact] public void Base64Encode_null_safe() => StringCore.Base64Encode(null!).Should().Be("");
-        [Fact] public void NthWord_negative() => StringCore.NthWord("a b c", -1).Should().Be("");
+        [Fact] public void NthWord_negative() => StringCore.NthWord("a b c", -1).Should().Be("a");  // n≤0→1
         [Fact] public void ExtractBetween_nth_occurrence() => StringCore.ExtractBetween("a(b)(c)", "(", ")", 2).Should().Be("c");
         [Fact] public void NormalizeWs_null_safe() => StringCore.NormalizeWhitespace(null!).Should().Be("");
         [Fact] public void PadLeft_overflow() => StringCore.PadLeft("hello", 3).Should().Be("hello");

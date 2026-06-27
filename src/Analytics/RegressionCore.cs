@@ -53,6 +53,13 @@ namespace FormulaLabs.Analytics
             double adjR2 = 1.0 - (1.0 - r2) * (n - 1) / (double)df;
             double sigma2 = sse / df;
             var XtXInv = XtX.Inverse();
+            // Guard against near-singular XtX: Inverse() may succeed but produce
+            // degenerate results (NaN/Inf diagonals) for highly collinear columns.
+            for (int j = 0; j < p; j++)
+                if (double.IsNaN(XtXInv[j, j]) || double.IsInfinity(XtXInv[j, j]))
+                    throw new ArgumentException(
+                        "Cannot fit OLS: design matrix X is near-singular (highly collinear columns). " +
+                        "Consider removing redundant predictors or using ridge regression (REGRESS.RIDGE).");
             var se = new double[p];
             var tStat = new double[p];
             var pVal = new double[p];

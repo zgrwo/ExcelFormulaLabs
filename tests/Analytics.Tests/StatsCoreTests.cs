@@ -79,6 +79,7 @@ namespace FormulaLabs.Analytics.Tests
         [Fact] public void Summary_9_items() => StatsCore.Summary(D).Length.Should().Be(9);
         [Fact] public void ZScore() => StatsCore.ZScore(D).Length.Should().Be(5);
         [Fact] public void ZScore_constant_throws() { var a = () => StatsCore.ZScore(new[] { 5.0, 5.0, 5.0 }); a.Should().Throw<ArgumentException>(); }
+        [Fact] public void ZScore_single_element_throws() { var a = () => StatsCore.ZScore(new[] { 42.0 }); a.Should().Throw<ArgumentException>(); }
         [Fact] public void Summary_single_element() { var r = StatsCore.Summary(new[] { 42.0 }); r[0].Should().Be(1.0); r[1].Should().Be(42.0); r[8].Should().Be(0.0); }
         [Fact] public void TTestTwoSample_equal_constant_groups() => StatsCore.TTestTwoSample(new[] { 5.0, 5.0, 5.0 }, new[] { 5.0, 5.0, 5.0 }).Should().Be(1.0);
         [Fact] public void CorrelationMatrix()

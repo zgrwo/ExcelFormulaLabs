@@ -33,10 +33,19 @@ namespace FormulaLabs.DataToolkit
         internal static string RangeToMarkdown(object[,] data, bool hasHeader = true)
         {
             int rows = data.GetLength(0), cols = data.GetLength(1); if (rows == 0) return ""; var sb = new StringBuilder();
-            for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(" | "); sb.Append(hasHeader ? InputNormalizer.ToString(data[0, c]) : $"Col{c + 1}"); } sb.AppendLine();
+            for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(" | "); sb.Append(EscapeMarkdownCell(hasHeader ? InputNormalizer.ToString(data[0, c]) : $"Col{c + 1}")); } sb.AppendLine();
             for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(" | "); sb.Append("---"); } sb.AppendLine();
-            for (int r = hasHeader ? 1 : 0; r < rows; r++) { for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(" | "); sb.Append(InputNormalizer.ToString(data[r, c])); } sb.AppendLine(); }
+            for (int r = hasHeader ? 1 : 0; r < rows; r++) { for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(" | "); sb.Append(EscapeMarkdownCell(InputNormalizer.ToString(data[r, c]))); } sb.AppendLine(); }
             return sb.ToString();
+        }
+
+        /// <summary>Escape pipe characters in cell values to prevent Markdown table breakage.</summary>
+        private static string EscapeMarkdownCell(string v)
+        {
+            if (string.IsNullOrEmpty(v)) return v;
+            // Backslash-escape pipe characters which would break the table column layout.
+            // Newlines are replaced with spaces to stay within one table row.
+            return v.Replace("\\", "\\\\").Replace("|", "\\|").Replace("\r\n", " ").Replace("\n", " ");
         }
 
         // hasHeader has no effect on row output for CSV — CSV format treats all rows

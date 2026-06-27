@@ -193,7 +193,7 @@ namespace FormulaLabs.Analytics
         {
             double m = Statistics.Mean(d);
             double sd = Math.Sqrt(Variance(d));
-            if (sd < 1e-15) throw new ArgumentException("Cannot compute z-scores for constant data (zero variance).");
+            if (double.IsNaN(sd) || sd < 1e-15) throw new ArgumentException("Cannot compute z-scores for constant data (zero variance).");
             return d.Select(x => (x - m) / sd).ToArray();
         }
 

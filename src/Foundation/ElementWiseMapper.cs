@@ -105,7 +105,9 @@ namespace FormulaLabs.Foundation
                 return ExcelEmpty.Value;
 
             if (flat1.Length == 1 && flat2.Length == 1)
-                return MapSingleCell(flat1[0], flat2[0], mapper);
+                return was2D
+                    ? new object[,] { { MapSingleCell(flat1[0], flat2[0], mapper) } }
+                    : MapSingleCell(flat1[0], flat2[0], mapper);
 
             if (flat1.Length == 1)
                 return MapMultiBroadcast(flat1[0], flat2, mapper, was2D, input1, input2);

@@ -51,7 +51,7 @@ namespace FormulaLabs.DataToolkit
         { t ??= ""; int s=NthIdx(t,l,n); if(s<0)return""; int e=t.IndexOf(r,s+l.Length); if(e<0)return""; return inc?t.Substring(s,e-s+r.Length):t.Substring(s+l.Length,e-s-l.Length); }
 
         internal static string NthWord(string t, long n)
-        { t ??= ""; var w=t.Split((char[])null!,StringSplitOptions.RemoveEmptyEntries); return n>0&&n<=w.Length?w[n-1]:""; }
+        { t ??= ""; if (n <= 0) n = 1; var w=t.Split((char[])null!,StringSplitOptions.RemoveEmptyEntries); return n<=w.Length?w[n-1]:""; }
 
         internal static string CommonPrefix(string a, string b, bool cs=true)
         { a ??= ""; b ??= ""; int i=0; while(i<a.Length&&i<b.Length&&(cs?a[i]==b[i]:char.ToUpperInvariant(a[i])==char.ToUpperInvariant(b[i])))i++; return a.Substring(0,i); }
