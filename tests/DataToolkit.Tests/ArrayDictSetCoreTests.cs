@@ -137,6 +137,22 @@ namespace FormulaLabs.DataToolkit.Tests
             ArrayCore.Slice(new object[] { 1, 2, 3 }, 10).Should().BeEmpty();
         }
 
+        [Fact] public void Slice_start_too_negative()
+        {
+            // start = -100 for 5-element array → clamped to 0 → returns all 5
+            ArrayCore.Slice(new object[] { 1, 2, 3, 4, 5 }, -100).Should().Equal(1, 2, 3, 4, 5);
+        }
+
+        [Fact] public void Shuffle_single_element()
+        {
+            ArrayCore.Shuffle(new object[] { 42 }).Should().Equal(42);
+        }
+
+        [Fact] public void Shuffle_empty_array()
+        {
+            ArrayCore.Shuffle(Array.Empty<object>()).Should().BeEmpty();
+        }
+
         [Fact] public void Filter_isblank()
         {
             ArrayCore.Filter(new object[] { "hello", "", "   ", "world" }, null, "isblank")

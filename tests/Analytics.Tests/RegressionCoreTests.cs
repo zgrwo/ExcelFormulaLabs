@@ -178,6 +178,45 @@ namespace FormulaLabs.Analytics.Tests
         [Fact] public void FactorImportance_NaN_X_throws() { var a = () => RegressionCore.FactorImportance(NaNX, y); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
         [Fact] public void FactorImportance_NaN_y_throws() { var a = () => RegressionCore.FactorImportance(X, NaNy); a.Should().Throw<ArgumentException>().WithMessage("*NaN*"); }
 
+        // ═══════════════ Near-singular guard tests (防错原则1: NaN/Inf diagonal) ═══════════════
+
+        [Fact] public void FitOLS_near_singular_XtX_guard_throws()
+        {
+            // Highly collinear columns (correlation ≈ 1.0) → XtX nearly singular
+            // → LU decomposition in Inverse() produces NaN/Inf for ill-conditioned matrices
+            // → NaN/Inf diagonal guard throws "near-singular"
+            // Use p=3 with columns 2&3 near-identical at ~1e-13 epsilon;
+            // condition number ≈ 1e26 exhausts double precision in Inverse().
+            var singX = new double[,] {
+                { 1, 1.0, 1.0000000000001 },
+                { 1, 2.0, 2.0000000000002 },
+                { 1, 3.0, 3.0000000000003 },
+                { 1, 4.0, 4.0000000000004 },
+                { 1, 5.0, 5.0000000000005 }
+            };
+            var singY = new double[] { 2.1, 3.8, 5.2, 7.1, 8.9 };
+            var a = () => RegressionCore.FitOLS(singX, singY);
+            a.Should().Throw<ArgumentException>().WithMessage("*near-singular*");
+        }
+
+        [Fact] public void FitWLS_all_zero_weights_throws()
+        {
+            // All weights = 0 zeroes out all rows → constant y guard triggers
+            var a = () => RegressionCore.FitWLS(X, y, new[] { 0.0, 0.0, 0.0 });
+            a.Should().Throw<ArgumentException>();
+        }
+
+        [Fact] public void AnovaOneWay_zero_within_variance()
+        {
+            // Groups with zero within-group variance → f = Infinity, p = 0
+            var r = RegressionCore.AnovaOneWay(new[] { new[] { 5.0, 5, 5 }, new[] { 10.0, 10, 10 } });
+            r.Should().ContainKeys("ss_between", "f_stat", "p_value");
+            ((double)r["ss_between"]).Should().BeApproximately(37.5, 1e-10);
+            ((double)r["ss_within"]).Should().Be(0.0);
+            ((double)r["f_stat"]).Should().Be(double.PositiveInfinity);
+            ((double)r["p_value"]).Should().Be(0.0);
+        }
+
         // =====================================================================
         // CROSS-VALIDATION: WLS & RIDGE (Python statsmodels/sklearn reference)
         //

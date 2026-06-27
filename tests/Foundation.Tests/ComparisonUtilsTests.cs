@@ -42,6 +42,9 @@ public class CompareTests
     [Fact] public void Three_less_than_five() => ComparisonUtils.Compare(3, 5).Should().Be(-1);
     [Fact] public void String_case_insensitive_compare() => ComparisonUtils.Compare("Apple", "banana").Should().Be(-1);
     [Fact] public void Compare_mixed_types_string_vs_number() => ComparisonUtils.Compare("hello", 42).Should().Be(1);
+    [Fact] public void Compare_nan_sorts_last() => ComparisonUtils.Compare(double.NaN, 1.0).Should().BePositive();
+    [Fact] public void Compare_datetime() => ComparisonUtils.Compare(
+        new System.DateTime(2025, 1, 15), new System.DateTime(2025, 6, 15)).Should().BeNegative();
 }
 
 public class SafeKeyTests
@@ -55,4 +58,11 @@ public class SafeKeyTests
     [Fact] public void Date_key() => ComparisonUtils.SafeKey(new System.DateTime(2025, 6, 15, 10, 30, 0)).Should().Be("Date:2025-06-15 10:30:00");
     [Fact] public void SafeKey_null_element_in_1D_array() => ComparisonUtils.SafeKey(new object?[] { "a", null, "c" }).Should().Be("Array(3):String:a|Null:##NULL##|String:c");
     [Fact] public void SafeKey_empty_1D_array() => ComparisonUtils.SafeKey(System.Array.Empty<object>()).Should().Be("Array(0):##EMPTY##");
+    [Fact] public void SafeKey_2D_array()
+    {
+        var input = new object[,] { { "a", 1 }, { "b", 2 } };
+        var key = ComparisonUtils.SafeKey(input);
+        key.Should().StartWith("Array2D(2×2):");
+        key.Should().Contain("String:a").And.Contain("Numeric:1").And.Contain("String:b").And.Contain("Numeric:2");
+    }
 }

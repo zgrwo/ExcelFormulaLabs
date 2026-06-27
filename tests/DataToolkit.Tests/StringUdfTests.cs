@@ -114,6 +114,7 @@ namespace FormulaLabs.DataToolkit.Tests
         [Fact] public void Cnt_not_found() => ((long)StringUdf.UDF_STR_CNT("hello", "xyz", false)).Should().Be(0);
         [Fact] public void Cnt_empty_text() => ((long)StringUdf.UDF_STR_CNT("", "a", false)).Should().Be(0);
         [Fact] public void Cnt_array() { var r=(object[])StringUdf.UDF_STR_CNT(new object[]{"aaa","aba"}, "a", false); ((long)r[0]).Should().Be(3); ((long)r[1]).Should().Be(2); }
+        [Fact] public void Cnt_array_mismatch() => StringUdf.UDF_STR_CNT(new object[]{"aaa","aba"}, new object[]{"a","b","c"}, false).Should().Be(ExcelError.Value);
 
         // ══════════════════════════════════════════════════════════════════
         //  STR.STARTSWITH  (MapOverMulti<string,string,bool>)
@@ -180,6 +181,7 @@ namespace FormulaLabs.DataToolkit.Tests
         [Fact] public void Nthw_null() => StringUdf.UDF_STR_NTHW(null!, 1).Should().BeNull();
         [Fact] public void Nthw_error() => StringUdf.UDF_STR_NTHW(ExcelError.NA, 1).Should().Be(ExcelError.NA);
         [Fact] public void Nthw_array() { var r=(object[])StringUdf.UDF_STR_NTHW(new object[]{"a b c","x y z"}, 2); r.Should().Equal("b","y"); }
+        [Fact] public void Nthw_omitted_n_defaults_first() => StringUdf.UDF_STR_NTHW("hello world", null!).Should().Be("hello");
 
         // ══════════════════════════════════════════════════════════════════
         //  STR.COMMONPFX  (MapOverMulti<string,string,string>)
@@ -283,6 +285,7 @@ namespace FormulaLabs.DataToolkit.Tests
         [Fact] public void B64Dec_empty() => StringUdf.UDF_STR_B64DEC("").Should().Be("");
         [Fact] public void B64Dec_null() => StringUdf.UDF_STR_B64DEC(null!).Should().BeNull();
         [Fact] public void B64Dec_error() => StringUdf.UDF_STR_B64DEC(ExcelError.NA).Should().Be(ExcelError.NA);
+        [Fact] public void B64Dec_invalid_input_returns_error() => StringUdf.UDF_STR_B64DEC("!!!invalid!!!").Should().Be(ExcelError.Value);
 
         // ══════════════════════════════════════════════════════════════════
         //  STR.UUID  (no args — returns string with dashes)

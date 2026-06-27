@@ -184,5 +184,19 @@ namespace FormulaLabs.DataToolkit.Tests
             // In either case, wall-clock time must be bounded (timeout prevents infinite hang)
             sw.ElapsedMilliseconds.Should().BeLessThan(7000, "5s timeout + 2s tolerance");
         }
+
+        [Fact] public void ValidatePattern_exceeds_max_length_throws()
+        {
+            var longPattern = new string('x', RegexCore.MaxPatternLength + 1);
+            var act = () => RegexCore.RegexTest("test", longPattern);
+            act.Should().Throw<ArgumentException>().WithMessage("*exceeds maximum length*");
+        }
+
+        [Fact] public void ValidatePattern_at_max_length_passes()
+        {
+            var maxPattern = new string('x', RegexCore.MaxPatternLength);
+            var act = () => RegexCore.RegexTest("test", maxPattern);
+            act.Should().NotThrow();
+        }
     }
 }

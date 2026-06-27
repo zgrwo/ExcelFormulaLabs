@@ -56,5 +56,13 @@ namespace FormulaLabs.DataToolkit.Tests
             var csv = RangeExportCore.RangeToCsv(d, ",", true, hasHeader: false);
             csv.Should().Contain("Alice").And.Contain("Bob");
         }
+
+        // Markdown pipe escaping via UDF layer
+        [Fact] public void ToMd_pipe_escaped()
+        {
+            var d = new object[,] { { "Name", "Expr" }, { "Alice", "A|B" } };
+            var md = (string)RangeExportUdf.UDF_RANGE_MD(d, true);
+            md.Should().Contain("A\\|B");
+        }
     }
 }

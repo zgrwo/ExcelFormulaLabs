@@ -38,6 +38,7 @@ public class SortTests
 
     [Fact] public void Sort_empty_noop() => ArrayOperations.Sort(System.Array.Empty<int>());
     [Fact] public void Sort_null_noop() { int[]? n = null; ArrayOperations.Sort(n!); }
+    [Fact] public void Sorted_null_input_returns_empty() => ArrayOperations.Sorted<int>(null!).Should().BeEmpty();
 }
 
 public class SliceTests
@@ -62,6 +63,7 @@ public class SliceTests
 
     [Fact] public void Slice_negative_length_full_copy()
         => ArrayOperations.Slice(new[] { 1, 2, 3 }, 0, -1).Should().Equal(1, 2, 3);
+    [Fact] public void Slice_null_input_returns_empty() => ArrayOperations.Slice<int>(null!, 0).Length.Should().Be(0);
 }
 
 public class IndexOfTests
@@ -74,6 +76,9 @@ public class IndexOfTests
 
     [Fact] public void Double_within_tolerance()
         => ArrayOperations.IndexOf(new[] { 1.0, 2.0 }, 2.0000000000001, 1e-10).Should().Be(1);
+    [Fact] public void IndexOf_null_array_returns_minus_one() => ArrayOperations.IndexOf<int>(null!, 42).Should().Be(-1);
+    [Fact] public void IndexOf_nan_in_double_array()
+        => ArrayOperations.IndexOf(new[] { 1.0, double.NaN, 3.0 }, double.NaN).Should().Be(1);
 }
 
 public class FlattenTests
@@ -95,6 +100,7 @@ public class FlattenTests
 
     [Fact] public void Flatten_3x1_column_vector()
         => ArrayOperations.Flatten(new int[,] { { 1 }, { 2 }, { 3 } }).Should().Equal(1, 2, 3);
+    [Fact] public void Flatten_null_input_returns_empty() => ArrayOperations.Flatten<object>(null!).Length.Should().Be(0);
 }
 
 public class CollectNumericColumnsTests

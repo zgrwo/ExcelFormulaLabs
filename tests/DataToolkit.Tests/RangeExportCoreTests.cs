@@ -528,5 +528,59 @@ namespace FormulaLabs.DataToolkit.Tests
             var act = () => RangeExportCore.SelectRows(data, new[] { 10 });
             act.Should().Throw<ArgumentException>().WithMessage("*Row index*");
         }
+
+        // ─────────────────────────────────────────────────────────────
+        // Markdown cell escaping (pipe, backslash, newline)
+        // ─────────────────────────────────────────────────────────────
+
+        [Fact]
+        public void ToMarkdown_pipe_in_cell_escaped()
+        {
+            var data = new object[,] { { "Name", "Value" }, { "Alice", "A|B" } };
+            var md = RangeExportCore.RangeToMarkdown(data);
+            md.Should().Contain("A\\|B");
+            md.Should().NotContain("A|B"); // pipe must be escaped — unescaped would break table
+        }
+
+        [Fact]
+        public void ToMarkdown_backslash_escaped()
+        {
+            // Cell value literal: path\to\file (2 single backslashes).
+            // EscapeMarkdownCell doubles each backslash: path\\to\\file (4 backslashes).
+            var data = new object[,] { { "Path" }, { "path\\to\\file" } };
+            var md = RangeExportCore.RangeToMarkdown(data);
+            md.Should().Contain("path\\\\to\\\\file");
+        }
+
+        [Fact]
+        public void ToMarkdown_newline_replaced_with_space()
+        {
+            var data = new object[,] { { "Desc" }, { "line1\r\nline2" } };
+            var md = RangeExportCore.RangeToMarkdown(data);
+            md.Should().Contain("line1 line2");
+            md.Should().NotContain("line1\r\nline2"); // original CRLF removed from cell
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // CSV formula injection defanging
+        // ─────────────────────────────────────────────────────────────
+
+        [Fact]
+        public void ToCsv_formula_injection_defanged()
+        {
+            var data = new object[,]
+            {
+                { "Expr" },
+                { "=SUM(A1:A10)" },
+                { "+calc()" },
+                { "-1+2" },
+                { "@REF" }
+            };
+            var csv = RangeExportCore.RangeToCsv(data);
+            csv.Should().Contain("'=SUM");
+            csv.Should().Contain("'+calc");
+            csv.Should().Contain("'-1+2");
+            csv.Should().Contain("'@REF");
+        }
     }
 }

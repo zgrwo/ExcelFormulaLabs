@@ -94,6 +94,68 @@ public class MapOverTests
             input, input, (string? a, string? b) => (a ?? "") + (b ?? ""));
         result.Length.Should().Be(2);
     }
+
+    [Fact] public void MapOverMulti_both_1x1_2D_keeps_shape()
+    {
+        var input1 = new object[,] { { "x" } };
+        var input2 = new object[,] { { "y" } };
+        var result = ElementWiseMapper.MapOverMulti(input1, input2, (string a, string b) => a + b);
+        result.Should().BeOfType<object[,]>();
+        var arr = (object[,])result;
+        arr.GetLength(0).Should().Be(1);
+        arr.GetLength(1).Should().Be(1);
+        arr[0, 0].Should().Be("xy");
+    }
+
+    [Fact] public void MapOverMulti_one_1x1_2D_one_scalar_keeps_shape()
+    {
+        var input1 = new object[,] { { "x" } };
+        var result = ElementWiseMapper.MapOverMulti(input1, "y", (string a, string b) => a + b);
+        result.Should().BeOfType<object[,]>();
+        var arr = (object[,])result;
+        arr.GetLength(0).Should().Be(1);
+        arr.GetLength(1).Should().Be(1);
+        arr[0, 0].Should().Be("xy");
+    }
+
+    [Fact] public void MapOverMulti_broadcast_scalar_to_2D()
+    {
+        var input = new object[,] { { 1, 2 }, { 3, 4 } };
+        var result = ElementWiseMapper.MapOverMulti(input, 10, (int a, int b) => a + b);
+        result.Should().BeOfType<object[,]>();
+        var arr = (object[,])result;
+        arr.GetLength(0).Should().Be(2);
+        arr.GetLength(1).Should().Be(2);
+        arr[0, 0].Should().Be(11);
+        arr[0, 1].Should().Be(12);
+        arr[1, 0].Should().Be(13);
+        arr[1, 1].Should().Be(14);
+    }
+
+    [Fact] public void MapOverMulti_same_length_2D()
+    {
+        var input1 = new object[,] { { 1, 2 }, { 3, 4 } };
+        var input2 = new object[,] { { 5, 6 }, { 7, 8 } };
+        var result = ElementWiseMapper.MapOverMulti(input1, input2, (int a, int b) => a + b);
+        result.Should().BeOfType<object[,]>();
+        var arr = (object[,])result;
+        arr.GetLength(0).Should().Be(2);
+        arr.GetLength(1).Should().Be(2);
+        arr[0, 0].Should().Be(6);
+        arr[1, 1].Should().Be(12);
+    }
+
+    [Fact] public void MapOverMulti_empty_input_returns_ExcelEmpty()
+        => ElementWiseMapper.MapOverMulti(
+            System.Array.Empty<object>(), System.Array.Empty<object>(),
+            (string a, string b) => a + b)
+            .Should().Be(ExcelEmpty.Value);
+
+    [Fact] public void MapOverMulti_mismatched_length_returns_ExcelError()
+        => ElementWiseMapper.MapOverMulti(
+            new object[] { "a", "b", "c" }, new object[] { "x", "y" },
+            (string a, string b) => a + b)
+            .Should().Be(ExcelError.Value);
 }
 
 public class MapOverMultiThreeArgTests

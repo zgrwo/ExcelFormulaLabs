@@ -291,5 +291,54 @@ namespace FormulaLabs.DataToolkit.Tests
             }
             finally { FileSystemCore.SandboxRoot = null; }
         }
+
+        // =====================================================================
+        // DELETE FOLDER EDGE CASES (regression coverage)
+        // =====================================================================
+
+        [Fact] public void DeleteFolder_recursive_empty_directory()
+        {
+            var root = FileSystemCore.PathCombine(FileSystemCore.GetTempPath(), "deltest_empty_" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                FileSystemCore.EnsureFolder(root);
+                FileSystemCore.FolderExists(root).Should().BeTrue();
+                FileSystemCore.DeleteFolder(root, true).Should().BeTrue();
+                FileSystemCore.FolderExists(root).Should().BeFalse();
+            }
+            finally { if (FileSystemCore.FolderExists(root)) FileSystemCore.DeleteFolder(root, true); }
+        }
+
+        [Fact] public void DeleteFolder_recursive_file_only()
+        {
+            var root = FileSystemCore.PathCombine(FileSystemCore.GetTempPath(), "deltest_fileonly_" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                FileSystemCore.EnsureFolder(root);
+                FileSystemCore.WriteTextFile(FileSystemCore.PathCombine(root, "f.txt"), "x");
+                FileSystemCore.DeleteFolder(root, true).Should().BeTrue();
+                FileSystemCore.FolderExists(root).Should().BeFalse();
+            }
+            finally { if (FileSystemCore.FolderExists(root)) FileSystemCore.DeleteFolder(root, true); }
+        }
+
+        [Fact] public void DeleteFolder_recursive_deep_nesting()
+        {
+            var root = FileSystemCore.PathCombine(FileSystemCore.GetTempPath(), "deltest_deep_" + Guid.NewGuid().ToString("N"));
+            var l1 = FileSystemCore.PathCombine(root, "L1");
+            var l2 = FileSystemCore.PathCombine(l1, "L2");
+            var l3 = FileSystemCore.PathCombine(l2, "L3");
+            try
+            {
+                FileSystemCore.EnsureFolder(l3);
+                FileSystemCore.WriteTextFile(FileSystemCore.PathCombine(root, "root.txt"), "a");
+                FileSystemCore.WriteTextFile(FileSystemCore.PathCombine(l1, "l1.txt"), "b");
+                FileSystemCore.WriteTextFile(FileSystemCore.PathCombine(l3, "l3.txt"), "c");
+                FileSystemCore.FolderExists(root).Should().BeTrue();
+                FileSystemCore.DeleteFolder(root, true).Should().BeTrue();
+                FileSystemCore.FolderExists(root).Should().BeFalse();
+            }
+            finally { if (FileSystemCore.FolderExists(root)) FileSystemCore.DeleteFolder(root, true); }
+        }
     }
 }

@@ -90,5 +90,12 @@ namespace FormulaLabs.DataToolkit.Tests
         [Fact] public void Groups_null() { var r = (object[,])RegexUdf.UDF_RX_GRP(null!,"(\\d+)",true); r.GetLength(0).Should().Be(0); }
         [Fact] public void MatchAll_null() { var r = (string[])RegexUdf.UDF_RX_MALL(null!,"\\d+",true); r.Should().BeEmpty(); }
         [Fact] public void Split_null() { var r = (object[])RegexUdf.UDF_RX_SPLIT(null!,",",true); r.Should().HaveCount(1); }
+
+        // Pattern length guard (MaxPatternLength = 10000)
+        [Fact] public void Test_too_long_pattern_returns_error()
+        {
+            var longPattern = new string('x', 10001);
+            RegexUdf.UDF_RX_TEST("test", longPattern, true).Should().Be(ExcelError.Value);
+        }
     }
 }

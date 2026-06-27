@@ -53,6 +53,14 @@ public class CoercionTests
     [Fact] public void ToLong_double_truncates() => InputNormalizer.ToLong(3.14).Should().Be(3);
     [Fact] public void ToLong_string() => InputNormalizer.ToLong("42").Should().Be(42);
     [Fact] public void ToDouble_bool_true_one() => InputNormalizer.ToDouble(true).Should().Be(1.0);
+    [Fact] public void ToDouble_nan_input_returns_nan() => InputNormalizer.ToDouble(double.NaN).Should().Be(double.NaN);
+    [Fact] public void ToDouble_positive_infinity_returns_nan() => InputNormalizer.ToDouble(double.PositiveInfinity).Should().Be(double.NaN);
+    [Fact] public void ToLong_nan_input_returns_zero() => InputNormalizer.ToLong(double.NaN).Should().Be(0);
+    [Fact] public void ToLong_infinity_input_returns_zero() => InputNormalizer.ToLong(double.PositiveInfinity).Should().Be(0);
+    [Fact] public void ToBool_nan_input_returns_false() => InputNormalizer.ToBool(double.NaN).Should().BeFalse();
+    [Fact] public void ToBool_infinity_input_returns_true() => InputNormalizer.ToBool(double.PositiveInfinity).Should().BeTrue();
+    [Fact] public void ToDateTime_nan_input_returns_minvalue() => InputNormalizer.ToDateTime(double.NaN).Should().Be(DateTime.MinValue);
+    [Fact] public void ToDateTime_zero_returns_minvalue() => InputNormalizer.ToDateTime(0.0).Should().Be(DateTime.MinValue);
 }
 
 public class NormalizationTests

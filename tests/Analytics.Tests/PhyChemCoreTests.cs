@@ -72,6 +72,39 @@ namespace FormulaLabs.Analytics.Tests
         [Fact] public void MolecularWeight_whitespace_only() =>
             double.IsNaN(PhyChemCore.MolecularWeight("   ")).Should().BeTrue();
 
+        [Fact] public void MolarMass_hydrate_with_coefficient_only() =>
+            // Hydrate dot-syntax with coefficient but no parent compound → NaN
+            // ".10H2O" splits into [""] + ["10H2O"]; empty parent → NaN immediately
+            double.IsNaN(PhyChemCore.MolecularWeight(".10H2O")).Should().BeTrue();
+
+        [Fact] public void ConvertTemperature_fahrenheit_to_kelvin() =>
+            // 32°F = 273.15 K (freezing point of water)
+            PhyChemCore.ConvertTemperature(32, "F", "K").Should().BeApproximately(273.15, 1e-10);
+
+        [Fact] public void ConvertPressure_bar_to_pascal() =>
+            // 1 bar = 100,000 Pa (exact by definition in this library)
+            PhyChemCore.ConvertPressure(1, "BAR", "PA").Should().BeApproximately(100000, 1e-10);
+
+        [Fact] public void ConvertVolume_liter_to_cubic_meter() =>
+            // 1000 L = 1 m³
+            PhyChemCore.ConvertVolume(1000, "L", "M3").Should().BeApproximately(1, 1e-10);
+
+        [Fact] public void ConvertMass_gram_to_kilogram() =>
+            // 1000 g = 1 kg
+            PhyChemCore.ConvertMass(1000, "G", "KG").Should().BeApproximately(1, 1e-10);
+
+        [Fact] public void IdealGasLaw_solve_for_T()
+        {
+            // PV = nRT → T = PV/(nR) = 1*22.4/(1*0.082057) ≈ 272.98 K
+            // (close to STP 273.15K; R=0.082057 is approximate)
+            PhyChemCore.IdealGasLaw(p: 1, v: 22.4, n: 1)
+                .Should().BeApproximately(272.98, 0.05);
+        }
+
+        [Fact] public void IdealGasLaw_extra_unknowns() =>
+            // Two missing parameters (n and t) → NaN (too many unknowns)
+            double.IsNaN(PhyChemCore.IdealGasLaw(p: 1, v: 22.4)).Should().BeTrue();
+
         [Fact] public void IdealGasLaw_too_few_params()
         {
             double.IsNaN(PhyChemCore.IdealGasLaw(p: 1)).Should().BeTrue();
