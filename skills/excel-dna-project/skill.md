@@ -5,7 +5,7 @@ description: 本项目编码规范与架构参考 — Foundation/Analytics/DataT
 
 # SKILL.md
 
-> 术语定义见 [CONTEXT.md](../../docs/CONTEXT.md)。
+> 术语定义见 [context.md](../../docs/context.md)。
 
 ## 项目结构
 
@@ -31,7 +31,7 @@ tests/
 docs/
 ├── api-reference.md   UDF 签名（数字的唯一信源）
 └── user-manual.md     每个 UDF 的详细示例（全函数覆盖）
-docs/CONTEXT.md        领域术语表
+docs/context.md        领域术语表
 ```
 
 ## 架构
@@ -312,4 +312,4 @@ xUnit `[Fact]` + FluentAssertions 6.12.0。每 Core 方法覆盖：正常路径 
 - [README.md](../../README.md) — 用户向功能指南与安装
 - [docs/api-reference.md](../../docs/api-reference.md) — UDF 签名唯一信源
 - [docs/user-manual.md](../../docs/user-manual.md) — 每函数详细示例（Python 交叉验证）
-- [CONTEXT.md](../../docs/CONTEXT.md) — 领域术语表
+- [context.md](../../docs/context.md) — 领域术语表

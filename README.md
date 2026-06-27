@@ -181,7 +181,7 @@ dotnet test
 |------|------|
 | [API 参考](docs/api-reference.md) | 函数完整签名、参数说明、错误表 |
 | [用户手册](docs/user-manual.md) | 每个函数详细示例（4+ 列 × 5+ 行数据） |
-| [CONTEXT.md](docs/CONTEXT.md) | 领域术语表 |
+| [context.md](docs/context.md) | 领域术语表 |
 | [CLAUDE.md](CLAUDE.md) | 项目宪法：架构分层、红线规则、开发流程 |
 | [skill: excel-dna-project](skills/excel-dna-project/skill.md) | 编码规范、MapOver 选型、测试模式 |
 | [skill: excel-dna-addins](skills/excel-dna-addins/skill.md) | Excel-DNA UDF 声明、打包、分发 |

@@ -5,7 +5,7 @@
 ## 元数据
 
 - **语言**：文档与注释默认中文
-- **术语**：[CONTEXT.md](docs/CONTEXT.md)
+- **术语**：[context.md](docs/context.md)
 - **数字唯一基准**：[api-reference.md](docs/api-reference.md)
 - **信息单一事实来源**：其余仅链接引用，禁止重复定义
 
@@ -82,7 +82,7 @@ FormulaLabs/
 ├── docs/                          # ✅ 文档
 │   ├── api-reference.md           # UDF 签名唯一信源（数字基准）
 │   ├── user-manual.md             # 每函数详细示例
-│   └── CONTEXT.md                 # 领域术语表
+│   └── context.md                 # 领域术语表
 │
 ├── scripts/                       # ✅ 构建/验证脚本
 │   ├── verify-docs.sh             # 文档一致性
@@ -180,7 +180,7 @@ FormulaLabs/
 
 ## 参考
 
-- [docs/CONTEXT.md](docs/CONTEXT.md) — 领域术语表
+- [docs/context.md](docs/context.md) — 领域术语表
 - [README.md](README.md) — 用户向功能指南
 - [docs/api-reference.md](docs/api-reference.md) — UDF 签名唯一信源
 - [skills/excel-dna-project/skill.md](skills/excel-dna-project/skill.md) — 编码规范与架构详情

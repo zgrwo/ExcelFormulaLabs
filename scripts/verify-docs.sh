@@ -26,8 +26,8 @@ grep -q 'RangeExport' skills/excel-dna-project/skill.md && check "skill.md Range
 grep -q 'MapOver' skills/excel-dna-project/skill.md && check "skill.md MapOver术语" "OK" || check "skill.md MapOver术语" "缺失"
 grep -q 'ElementWiseMapper' README.md && check "README 内部类名ElementWiseMapper" "用户文档应使用MapOver而非内部类名" || check "README 无内部实现细节" "OK"
 
-# 5. 版本号匹配（CONTEXT.md vs csproj）
-DOC_VER=$(grep -oP 'MathNet\.Numerics\s+\K[0-9.]+' docs/CONTEXT.md 2>/dev/null || echo "?")
+# 5. 版本号匹配（context.md vs csproj）
+DOC_VER=$(grep -oP 'MathNet\.Numerics\s+\K[0-9.]+' docs/context.md 2>/dev/null || echo "?")
 CSPROJ_VER=$(grep -oP 'MathNet\.Numerics.*Version="\K[0-9.]+' src/Analytics/Analytics.csproj 2>/dev/null || echo "?")
 [ "$DOC_VER" = "$CSPROJ_VER" ] && check "MathNet版本 ($DOC_VER)" "OK" || check "MathNet版本" "doc=$DOC_VER csproj=$CSPROJ_VER"
 
