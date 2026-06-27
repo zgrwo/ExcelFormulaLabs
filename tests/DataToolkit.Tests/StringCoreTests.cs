@@ -135,7 +135,25 @@ namespace FormulaLabs.DataToolkit.Tests
         [Fact] public void HtmlDecode_null_safe() => StringCore.HtmlDecode(null!).Should().Be("");
         [Fact] public void UrlEncode_null_safe() => StringCore.UrlEncode(null!).Should().Be("");
         [Fact] public void Base64Encode_null_safe() => StringCore.Base64Encode(null!).Should().Be("");
-        [Fact] public void NthWord_negative() => StringCore.NthWord("a b c", -1).Should().Be("a");  // n≤0→1
+        [Fact] public void NthWord_negative() => StringCore.NthWord("a b c", -1).Should().Be("c");  // n=-1 → last word
+        [Fact] public void NthWord_n0_defaults_to_first() => StringCore.NthWord("the quick brown fox", 0).Should().Be("the");
+        [Fact] public void NthWord_negative_two() => StringCore.NthWord("the quick brown fox", -2).Should().Be("brown");
+        [Fact] public void NthWord_single_word_negative() => StringCore.NthWord("hello", -1).Should().Be("hello");
+        [Fact] public void NthWord_empty_negative() => StringCore.NthWord("", -1).Should().Be("");
+        [Fact] public void NthWord_negative_exceeds_length() => StringCore.NthWord("a b c", -4).Should().Be("");
+        // n=-1 via NthIdx (tested through LeftOf/RightOf/ExtractBetween since NthIdx is private)
+        [Fact] public void LeftOf_last_occurrence() => StringCore.LeftOf("a,b,c", ",", -1).Should().Be("a,b");
+        [Fact] public void LeftOf_n0_defaults_to_first() => StringCore.LeftOf("a,b,c", ",", 0).Should().Be("a");
+        [Fact] public void LeftOf_negative_two() => StringCore.LeftOf("a,b,c,d", ",", -2).Should().Be("a,b");
+        [Fact] public void LeftOf_last_not_found() => StringCore.LeftOf("hello", ",", -1).Should().Be("hello");
+        [Fact] public void RightOf_last_occurrence() => StringCore.RightOf("a,b,c", ",", -1).Should().Be("c");
+        [Fact] public void RightOf_n0_defaults_to_first() => StringCore.RightOf("a,b,c", ",", 0).Should().Be("b,c");
+        [Fact] public void RightOf_negative_two() => StringCore.RightOf("a,b,c,d", ",", -2).Should().Be("c,d");
+        [Fact] public void RightOf_last_not_found() => StringCore.RightOf("hello", ",", -1).Should().Be("hello");
+        [Fact] public void ExtractBetween_last_occurrence() => StringCore.ExtractBetween("a(b)(c)", "(", ")", -1).Should().Be("c");
+        [Fact] public void ExtractBetween_n0_defaults_to_first() => StringCore.ExtractBetween("a(b)(c)", "(", ")", 0).Should().Be("b");
+        [Fact] public void ExtractBetween_last_not_found() => StringCore.ExtractBetween("hello", "[", "]", -1).Should().Be("");
+        [Fact] public void ExtractBetween_inclusive_last() => StringCore.ExtractBetween("[a][b]", "[", "]", -1, true).Should().Be("[b]");
         [Fact] public void ExtractBetween_nth_occurrence() => StringCore.ExtractBetween("a(b)(c)", "(", ")", 2).Should().Be("c");
         [Fact] public void NormalizeWs_null_safe() => StringCore.NormalizeWhitespace(null!).Should().Be("");
         [Fact] public void PadLeft_overflow() => StringCore.PadLeft("hello", 3).Should().Be("hello");

@@ -1673,6 +1673,7 @@ instance_num: 1=第1次（默认），-1=最后一次。
 ```
 =STR.EXTRACT("a[b]c[d]e", "[", "]")          → "b"
 =STR.EXTRACT("a[b]c[d]e", "[", "]", 2)       → "d"
+=STR.EXTRACT("a[b]c[d]e", "[", "]", -1)      → "d"
 =STR.EXTRACT("a[b]c[d]e", "[", "]", 1, TRUE) → "[b]"
 ```
 

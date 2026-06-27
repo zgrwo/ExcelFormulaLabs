@@ -146,8 +146,10 @@ namespace FormulaLabs.DataToolkit.Tests
         [Fact] public void Lof_not_found() => StringUdf.UDF_STR_LOF("hello", "|", 1).Should().Be("hello");
         [Fact] public void Lof_empty() => StringUdf.UDF_STR_LOF("", "|", 1).Should().Be("");
         [Fact] public void Lof_null_text() => StringUdf.UDF_STR_LOF(null!, "|", 1).Should().BeNull();
-        [Fact] public void Lof_nth_zero() => StringUdf.UDF_STR_LOF("a,b,c", ",", 0).Should().Be("a,b,c");
+        [Fact] public void Lof_nth_zero() => StringUdf.UDF_STR_LOF("a,b,c", ",", 0).Should().Be("a");  // n=0 → default first
         [Fact] public void Lof_array() { var r=(object[])StringUdf.UDF_STR_LOF(new object[]{"a=x","b=y"}, "=", 1); r.Should().Equal("a","b"); }
+        [Fact] public void Lof_last_occurrence() => StringUdf.UDF_STR_LOF("a.b.c", ".", -1).Should().Be("a.b");
+        [Fact] public void Lof_default_omitted() => StringUdf.UDF_STR_LOF("a,b,c", ",", null!).Should().Be("a");  // null → 0 → default first
 
         // ══════════════════════════════════════════════════════════════════
         //  STR.RIGHTOF  (MapOver<string,string>)
@@ -158,6 +160,7 @@ namespace FormulaLabs.DataToolkit.Tests
         [Fact] public void Rof_empty() => StringUdf.UDF_STR_ROF("", "|", 1).Should().Be("");
         [Fact] public void Rof_null_text() => StringUdf.UDF_STR_ROF(null!, "|", 1).Should().BeNull();
         [Fact] public void Rof_array() { var r=(object[])StringUdf.UDF_STR_ROF(new object[]{"a=x","b=y"}, "=", 1); r.Should().Equal("x","y"); }
+        [Fact] public void Rof_last_occurrence() => StringUdf.UDF_STR_ROF("a.b.c", ".", -1).Should().Be("c");
 
         // ══════════════════════════════════════════════════════════════════
         //  STR.EXTRACT  (MapOver<string,string>)
@@ -169,6 +172,7 @@ namespace FormulaLabs.DataToolkit.Tests
         [Fact] public void Ext_empty() => StringUdf.UDF_STR_EXT("", "{", "}", 1, false).Should().Be("");
         [Fact] public void Ext_null_text() => StringUdf.UDF_STR_EXT(null!, "{", "}", 1, false).Should().BeNull();
         [Fact] public void Ext_array() { var r=(object[])StringUdf.UDF_STR_EXT(new object[]{"<a>","<b>"}, "<", ">", 1, false); r.Should().Equal("a","b"); }
+        [Fact] public void Ext_last_occurrence() => StringUdf.UDF_STR_EXT("(a)(b)(c)", "(", ")", -1, false).Should().Be("c");
 
         // ══════════════════════════════════════════════════════════════════
         //  STR.NTHWORD  (MapOver<string,string>)
@@ -176,7 +180,8 @@ namespace FormulaLabs.DataToolkit.Tests
         [Fact] public void Nthw_first_word() => StringUdf.UDF_STR_NTHW("hello world foo bar", 1).Should().Be("hello");
         [Fact] public void Nthw_third_word() => StringUdf.UDF_STR_NTHW("hello world foo bar", 3).Should().Be("foo");
         [Fact] public void Nthw_out_of_range() => StringUdf.UDF_STR_NTHW("hello world", 5).Should().Be("");
-        [Fact] public void Nthw_zero() => StringUdf.UDF_STR_NTHW("hello world", 0).Should().Be("hello");  // n≤0→1
+        [Fact] public void Nthw_zero() => StringUdf.UDF_STR_NTHW("hello world", 0).Should().Be("hello");  // n=0 → default first
+        [Fact] public void Nthw_last_word() => StringUdf.UDF_STR_NTHW("the quick brown fox", -1).Should().Be("fox");
         [Fact] public void Nthw_empty() => StringUdf.UDF_STR_NTHW("", 1).Should().Be("");
         [Fact] public void Nthw_null() => StringUdf.UDF_STR_NTHW(null!, 1).Should().BeNull();
         [Fact] public void Nthw_error() => StringUdf.UDF_STR_NTHW(ExcelError.NA, 1).Should().Be(ExcelError.NA);

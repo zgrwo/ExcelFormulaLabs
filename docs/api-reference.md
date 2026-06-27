@@ -148,10 +148,10 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `STR.COUNTSUB` | (text, substring, [match_case]) | `long` | 子串出现次数。match_case=true 区分大小写 |
 | `STR.STARTSWITH` | (text, prefix, [match_case]) | `bool` | 是否以指定前缀开头 |
 | `STR.ENDSWITH` | (text, suffix, [match_case]) | `bool` | 是否以指定后缀结尾 |
-| `STR.LEFTOF` | (text, delimiter, [instance_num]) | `string` | 第 instance_num 次出现的分隔符左侧内容 |
-| `STR.RIGHTOF` | (text, delimiter, [instance_num]) | `string` | 第 instance_num 次出现的分隔符右侧内容 |
-| `STR.EXTRACT` | (text, start_delimiter, end_delimiter, [instance_num], [include_delimiters]) | `string` | 第 instance_num 对左右分隔符之间的内容。include_delimiters=true 含分隔符 |
-| `STR.NTHWORD` | (text, [instance_num]) | `string` | 第 instance_num 个空格分隔的词（1-based） |
+| `STR.LEFTOF` | (text, delimiter, [instance_num]) | `string` | 第 instance_num 次出现的分隔符左侧内容。1=第一个（默认），-1=最后一个 |
+| `STR.RIGHTOF` | (text, delimiter, [instance_num]) | `string` | 第 instance_num 次出现的分隔符右侧内容。1=第一个（默认），-1=最后一个 |
+| `STR.EXTRACT` | (text, start_delimiter, end_delimiter, [instance_num], [include_delimiters]) | `string` | 第 instance_num 对左右分隔符之间的内容。1=第一对（默认），-1=最后一对。include_delimiters=true 含分隔符 |
+| `STR.NTHWORD` | (text, [instance_num]) | `string` | 第 instance_num 个空格分隔的词。1=第一个（默认），-1=最后一个 |
 | `STR.COMMONPFX` | (text1, text2, [match_case]) | `string` | 两字符串的最长公共前缀 |
 | `STR.TEXTJOIN` | (delimiter, ignore_empty, text_array) | `string` | 用分隔符连接数组值。ignore_empty=true 跳过空值（对标 Excel TEXTJOIN） |
 | `STR.LEVENSHTEIN` | (text1, text2) | `long` | 编辑距离（Levenshtein distance） |

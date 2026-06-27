@@ -67,6 +67,27 @@ namespace FormulaLabs.DataToolkit
                 if (!(normalized + Path.DirectorySeparatorChar).StartsWith(root, StringComparison.OrdinalIgnoreCase))
                     throw new UnauthorizedAccessException(
                         "Path is outside the sandbox root.");
+                // Check path components beyond sandbox root for reparse points
+                // (junctions/symlinks) — Path.GetFullPath does not resolve them,
+                // but System.IO APIs follow them, so a junction could bypass the
+                // string-prefix sandbox check above.
+                if (normalized.Length > root.Length)
+                {
+                    string remaining = normalized.Substring(root.Length).TrimStart(Path.DirectorySeparatorChar);
+                    string checkPath = root.TrimEnd(Path.DirectorySeparatorChar);
+                    foreach (var segment in remaining.Split(new[] { Path.DirectorySeparatorChar },
+                             StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        checkPath = Path.Combine(checkPath, segment);
+                        if (Directory.Exists(checkPath) || File.Exists(checkPath))
+                        {
+                            var attr = File.GetAttributes(checkPath);
+                            if ((attr & FileAttributes.ReparsePoint) != 0)
+                                throw new UnauthorizedAccessException(
+                                    "Path crosses a junction point or symbolic link and is blocked by the sandbox.");
+                        }
+                    }
+                }
             }
             return normalized;
         }

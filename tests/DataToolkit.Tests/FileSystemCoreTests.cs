@@ -340,5 +340,44 @@ namespace FormulaLabs.DataToolkit.Tests
             }
             finally { if (FileSystemCore.FolderExists(root)) FileSystemCore.DeleteFolder(root, true); }
         }
+
+        /// <summary>Sandbox must reject paths that cross NTFS junction points,
+        /// since Path.GetFullPath does not resolve them but System.IO follows them.</summary>
+        [Fact] public void Sandbox_rejects_junction_path()
+        {
+            var tmp = FileSystemCore.GetTempPath();
+            var root = System.IO.Path.Combine(tmp, "Sandbox_" + Guid.NewGuid().ToString("N").Substring(0, 8));
+            var inner = System.IO.Path.Combine(root, "inner");
+            var link  = System.IO.Path.Combine(root, "link");   // junction → inner
+            try
+            {
+                System.IO.Directory.CreateDirectory(inner);
+                // Create junction: link → inner (works without admin on Windows for directories)
+                var psi = new System.Diagnostics.ProcessStartInfo("cmd.exe",
+                    $"/c mklink /J \"{link}\" \"{inner}\"")
+                {
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
+                using var proc = System.Diagnostics.Process.Start(psi)!;
+                proc.WaitForExit(5000);
+                FileSystemCore.SandboxRoot = root;
+                // Traversing the junction should be blocked by the reparse-point check
+                var act = () => FileSystemCore.NormalizePath(System.IO.Path.Combine(link, "test.txt"));
+                act.Should().Throw<UnauthorizedAccessException>()
+                    .WithMessage("*junction*");
+            }
+            finally
+            {
+                FileSystemCore.SandboxRoot = null;
+                // Delete junction (it's a reparse point, not followed by our code)
+                if (System.IO.Directory.Exists(link))
+                { System.IO.File.SetAttributes(link, System.IO.FileAttributes.Directory); System.IO.Directory.Delete(link); }
+                if (System.IO.Directory.Exists(root))
+                { System.IO.Directory.Delete(root, true); }
+            }
+        }
     }
 }

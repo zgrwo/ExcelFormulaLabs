@@ -51,7 +51,18 @@ namespace FormulaLabs.DataToolkit
         { t ??= ""; int s=NthIdx(t,l,n); if(s<0)return""; int e=t.IndexOf(r,s+l.Length); if(e<0)return""; return inc?t.Substring(s,e-s+r.Length):t.Substring(s+l.Length,e-s-l.Length); }
 
         internal static string NthWord(string t, long n)
-        { t ??= ""; if (n <= 0) n = 1; var w=t.Split((char[])null!,StringSplitOptions.RemoveEmptyEntries); return n<=w.Length?w[n-1]:""; }
+        {
+            t ??= "";
+            if (n == 0) n = 1;                            // default → first word
+            var w = t.Split((char[])null!, StringSplitOptions.RemoveEmptyEntries);
+            if (w.Length == 0) return "";
+            if (n < 0)                                    // n=-1 → last word, n=-2 → second-to-last
+            {
+                long idx = w.Length + n;                  // -1 → Length-1
+                return idx >= 0 ? w[idx] : "";
+            }
+            return n <= w.Length ? w[n - 1] : "";
+        }
 
         internal static string CommonPrefix(string a, string b, bool cs=true)
         { a ??= ""; b ??= ""; int i=0; while(i<a.Length&&i<b.Length&&(cs?a[i]==b[i]:char.ToUpperInvariant(a[i])==char.ToUpperInvariant(b[i])))i++; return a.Substring(0,i); }
@@ -124,7 +135,28 @@ namespace FormulaLabs.DataToolkit
         internal static bool IsNullOrWhitespaceStr(string? t)=>string.IsNullOrWhiteSpace(t);
         internal static string Coalesce(string? p,string f)=>p??f;
 
-        private static int NthIdx(string t,string s,long n)
-        { if(n<1)return -1; int i=-1; for(long j=0;j<n;j++){i=t.IndexOf(s,i+1);if(i<0)return -1;} return i; }
+        private static int NthIdx(string t, string s, long n)
+        {
+            if (n == 0) n = 1;                         // default → first occurrence
+            if (n < 0)
+            {                                          // n=-1 → last, n=-2 → second-to-last, etc.
+                long absN = -n;
+                int i = t.Length;
+                for (long j = 0; j < absN; j++)
+                {
+                    i = t.LastIndexOf(s, i - 1);       // search backward
+                    if (i < 0) return -1;
+                }
+                return i;
+            }
+            // n > 0: forward search (original logic preserved)
+            int idx = -1;
+            for (long j = 0; j < n; j++)
+            {
+                idx = t.IndexOf(s, idx + 1);
+                if (idx < 0) return -1;
+            }
+            return idx;
+        }
     }
 }
