@@ -38,4 +38,13 @@ public class FilterPassesTests
     [Fact] public void Numeric_int_vs_string_eq() => FilterUtils.FilterPasses(42, "42", "=").Should().BeTrue();
     [Fact] public void Numeric_gt_string() => FilterUtils.FilterPasses("10", "5", ">").Should().BeTrue();
     [Fact] public void Contains_case_insensitive() => FilterUtils.FilterPasses("HELLO", "hello", "contains").Should().BeTrue();
+    // IEEE 754 NaN guards — NaN is unordered, all ordered comparisons must reject it
+    [Fact] public void NaN_lt_false() => FilterUtils.FilterPasses(double.NaN, 5.0, "<").Should().BeFalse();
+    [Fact] public void NaN_le_false() => FilterUtils.FilterPasses(double.NaN, 5.0, "<=").Should().BeFalse();
+    [Fact] public void NaN_gt_false() => FilterUtils.FilterPasses(double.NaN, 5.0, ">").Should().BeFalse();
+    [Fact] public void NaN_ge_false() => FilterUtils.FilterPasses(double.NaN, 5.0, ">=").Should().BeFalse();
+    [Fact] public void Finite_gt_NaN_false() => FilterUtils.FilterPasses(5.0, double.NaN, ">").Should().BeFalse();
+    [Fact] public void Finite_lt_NaN_false() => FilterUtils.FilterPasses(5.0, double.NaN, "<").Should().BeFalse();
+    [Fact] public void NaN_eq_NaN_true() => FilterUtils.FilterPasses(double.NaN, double.NaN, "=").Should().BeTrue();
+    [Fact] public void NaN_ne_NaN_false() => FilterUtils.FilterPasses(double.NaN, double.NaN, "<>").Should().BeFalse();
 }

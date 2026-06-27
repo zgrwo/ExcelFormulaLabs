@@ -210,14 +210,14 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 
 ## REGEX.* -- 正则表达式
 
-> .NET 正则引擎。支持数组公式（逐元素处理），超时 5 秒自动取消。
+> .NET 正则引擎。除 `REGEX.MATCHALL` / `REGEX.GROUPS` / `REGEX.SPLIT` 外支持数组公式（逐元素处理），超时 5 秒自动取消。
 
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
 | `REGEX.TEST` | (text, pattern, [ignore_case]) | `bool` | 是否匹配正则 |
 | `REGEX.COUNT` | (text, pattern, [ignore_case]) | `long` | 非重叠匹配次数 |
 | `REGEX.MATCH` | (text, pattern, [ignore_case], [instance_num]) | `string` | 第 instance_num 个匹配子串。1=第一个（默认），-1=最后一个，无匹配或越界返回 `""` |
-| `REGEX.MATCHALL` | (text, pattern, [ignore_case]) | `string[]` | 所有正则匹配为数组 |
+| `REGEX.MATCHALL` | (text, pattern, [ignore_case]) | `string[]` | 所有正则匹配为数组。**不支持数组公式**（直接处理标量文本） |
 | `REGEX.REPLACE` | (text, pattern, replacement, [ignore_case], [instance_num]) | `string` | 替换第 instance_num 个正则匹配。0/省略=全部（默认），1=第一个，-1=最后一个 |
 | `REGEX.SPLIT` | (text, pattern, [ignore_case], [instance_num]) | `string[]` | 按正则分隔符拆分。0/省略=全部（默认），>0=最多拆 instance_num 次（得 instance_num+1 段） |
 | `REGEX.GROUPS` | (text, pattern, [ignore_case]) | `object[2,n]` | 捕获组。row0=组名, row1=值。`[0]`=完整匹配 |
@@ -395,6 +395,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | **DT** | 非法日期值（MinValue） | `#VALUE!` |
 | **REGEX** | 非法正则表达式 | `#VALUE!` |
 | **ARR** | RANGE 超过 100,000 元素 | `#VALUE!` |
+| **ARR** | FILL 超出 [0, 100000] 范围 | `#VALUE!` |
 | **PIVOT** | 不支持的聚合函数名 | `#VALUE!` |
 | **PIVOT** | CrossJoin 超过 1,000,000 单元格 | `#VALUE!` |
 | **FS** | 文件不存在 | `#VALUE!` |

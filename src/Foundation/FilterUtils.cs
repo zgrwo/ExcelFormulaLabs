@@ -57,6 +57,13 @@ namespace FormulaLabs.Foundation
             if (matchValue is Array) return false;
             if (matchValue is not string && Marshal.IsComObject(matchValue)) return false;
 
+            // IEEE 754: NaN is unordered — reject from ordered comparisons
+            if (opLower is "<" or "<=" or ">" or ">=")
+            {
+                if (element is double de && double.IsNaN(de)) return false;
+                if (matchValue is double dm && double.IsNaN(dm)) return false;
+            }
+
             return opLower switch
             {
                 "=" => ComparisonUtils.ValuesEqual(element, matchValue),

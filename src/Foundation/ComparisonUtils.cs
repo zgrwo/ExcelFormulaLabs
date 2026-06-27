@@ -79,6 +79,10 @@ namespace FormulaLabs.Foundation
                 double dB = Convert.ToDouble(b, CultureInfo.InvariantCulture);
                 if (double.IsNaN(dA) && double.IsNaN(dB)) return true;
                 if (double.IsNaN(dA) || double.IsNaN(dB)) return false;
+                // Infinity: Math.Abs(Inf - Inf) = NaN, which would incorrectly return false.
+                // Handle Infinity explicitly — same-sign infinities are equal, cross-sign are not.
+                if (double.IsInfinity(dA) && double.IsInfinity(dB)) return dA == dB;
+                if (double.IsInfinity(dA) || double.IsInfinity(dB)) return false;
                 return Math.Abs(dA - dB) < epsilon;
             }
 

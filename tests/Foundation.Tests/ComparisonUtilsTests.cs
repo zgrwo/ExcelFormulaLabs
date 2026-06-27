@@ -30,6 +30,12 @@ public class ValuesEqualTests
     [Fact] public void Very_close_doubles_within_default_epsilon() => ComparisonUtils.ValuesEqual(1.0, 1.0 + 1e-15).Should().BeTrue();
     // NaN == NaN for consistency with SafeKey and search semantics (防错原则1: explicit guard over IEEE 754 default)
     [Fact] public void NaN_and_NaN_behavior() => ComparisonUtils.ValuesEqual(double.NaN, double.NaN).Should().BeTrue();
+    // Infinity guards: Math.Abs(Inf-Inf)=NaN would incorrectly return false without explicit handling
+    [Fact] public void PositiveInfinity_equal_to_itself() => ComparisonUtils.ValuesEqual(double.PositiveInfinity, double.PositiveInfinity).Should().BeTrue();
+    [Fact] public void NegativeInfinity_equal_to_itself() => ComparisonUtils.ValuesEqual(double.NegativeInfinity, double.NegativeInfinity).Should().BeTrue();
+    [Fact] public void PositiveInfinity_not_equal_to_NegativeInfinity() => ComparisonUtils.ValuesEqual(double.PositiveInfinity, double.NegativeInfinity).Should().BeFalse();
+    [Fact] public void Infinity_not_equal_to_finite() => ComparisonUtils.ValuesEqual(double.PositiveInfinity, 1e300).Should().BeFalse();
+    [Fact] public void NaN_not_equal_to_Infinity() => ComparisonUtils.ValuesEqual(double.NaN, double.PositiveInfinity).Should().BeFalse();
 }
 
 public class CompareTests
