@@ -56,8 +56,10 @@ namespace ExcelFormulaLabs.DataToolkit
                 throw new ArgumentException("Column index out of range.");
             int rows = data.GetLength(0); int nId = idCols.Length;
             int dataStartRow = hasHeaders ? 1 : 0;
-            if (hasHeaders && rows < 2) return new object[0, 0];  // header-only or empty table
-            if (!hasHeaders && rows < 1) return new object[0, 0];
+            if (hasHeaders && rows < 2) throw new ArgumentException(
+                "Unpivot requires at least one data row (header + data).");
+            if (!hasHeaders && rows < 1) throw new ArgumentException(
+                "Unpivot requires at least one data row.");
             var result = new List<object[]>();
             int outWidth = nId + 2;
             for (int r = dataStartRow; r < rows; r++)

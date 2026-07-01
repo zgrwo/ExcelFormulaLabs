@@ -82,7 +82,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             var dates = dateStrings
                 .Select(s => (object)InputNormalizer.ToDateTime(s))
                 .ToArray();
-            var sorted = ArrayCore.Sort(dates, true, "auto");
+            var sorted = ArrayCore.Sort(dates, true, ComparerMode.Auto);
             ((DateTime)sorted[0]).Should().Be(new DateTime(2023, 6, 20));
             ((DateTime)sorted[1]).Should().Be(new DateTime(2024, 1, 15));
             ((DateTime)sorted[2]).Should().Be(new DateTime(2024, 12, 1));
@@ -95,7 +95,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             var dates = dateStrings
                 .Select(s => (object)InputNormalizer.ToDateTime(s))
                 .ToArray();
-            var sorted = ArrayCore.Sort(dates, false, "auto");
+            var sorted = ArrayCore.Sort(dates, false, ComparerMode.Auto);
             ((DateTime)sorted[0]).Should().Be(new DateTime(2024, 12, 1));
             ((DateTime)sorted[1]).Should().Be(new DateTime(2024, 1, 15));
             ((DateTime)sorted[2]).Should().Be(new DateTime(2023, 6, 20));
@@ -109,7 +109,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
                 .Select(s => (object)InputNormalizer.ToDateTime(s))
                 .ToArray();
             // Sort ascending: MinValue dates should appear first
-            var sorted = ArrayCore.Sort(dates, true, "auto");
+            var sorted = ArrayCore.Sort(dates, true, ComparerMode.Auto);
             ((DateTime)sorted[0]).Should().Be(DateTime.MinValue);
             ((DateTime)sorted[1]).Should().Be(DateTime.MinValue);
             ((DateTime)sorted[2]).Should().Be(new DateTime(2024, 1, 15));
@@ -256,7 +256,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             var input = new object[] { 5, 3, 1, 4, 2 };
             var sliced = ArrayCore.Slice(input, 0, 3);
             sliced.Should().Equal(5, 3, 1);
-            var sorted = ArrayCore.Sort(sliced, true, "numeric");
+            var sorted = ArrayCore.Sort(sliced, true, ComparerMode.Numeric);
             sorted.Should().Equal(1, 3, 5);
         }
 
@@ -266,7 +266,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             var input = new object[] { 5, 3, 1, 4, 2 };
             var sliced = ArrayCore.Slice(input, 1, 3);
             sliced.Should().Equal(3, 1, 4);
-            var sorted = ArrayCore.Sort(sliced, false, "numeric");
+            var sorted = ArrayCore.Sort(sliced, false, ComparerMode.Numeric);
             sorted.Should().Equal(4, 3, 1);
         }
 
@@ -276,7 +276,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             var input = new object[] { 100, 50, 75, 25 };
             var sliced = ArrayCore.Slice(input, 0);
             sliced.Should().Equal(100, 50, 75, 25);
-            var sorted = ArrayCore.Sort(sliced, true, "numeric");
+            var sorted = ArrayCore.Sort(sliced, true, ComparerMode.Numeric);
             sorted.Should().Equal(25, 50, 75, 100);
         }
 

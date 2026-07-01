@@ -7,8 +7,8 @@ namespace ExcelFormulaLabs.DataToolkit
 {
     internal static class ArrayCore
     {
-        internal static object[] Sort(object[] a, bool asc = true, string mode = "auto")
-        { var m=mode=="numeric"?ComparerMode.Numeric:mode=="text"?ComparerMode.Text:ComparerMode.Auto; var c=new object[a.Length]; Array.Copy(a,c,a.Length); ArrayOperations.Sort(c,asc,m); return c; }
+        internal static object[] Sort(object[] a, bool asc = true, ComparerMode mode = ComparerMode.Auto)
+        { var c=new object[a.Length]; Array.Copy(a,c,a.Length); ArrayOperations.Sort(c,asc,mode); return c; }
         internal static object[] Unique(object[] a) { var s=new HashSet<string>(); var r=new List<object>(); foreach(var v in a){if(s.Add(ComparisonUtils.SafeKey(v)))r.Add(v);} return r.ToArray(); }
         internal static long IndexOf(object[] a, object v) => ArrayOperations.IndexOf(a, v);
         internal static object[] Slice(object[] a, long start, long len = -1)

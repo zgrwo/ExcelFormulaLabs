@@ -162,9 +162,13 @@ namespace ExcelFormulaLabs.Foundation
         // SafeKey — deterministic string key for any value
         // ─────────────────────────────────────────────────────────────────
 
+        private const int MaxSafeKeyDepth = 20;
+
         /// <summary>
         /// Generate a deterministic, type-disambiguated string key for any value.
         /// </summary>
+        /// <param name="depth">Recursion depth guard — throws if exceeded to prevent
+        /// stack overflow from circular array references.</param>
         /// <remarks>
         /// Key format (matches VBA VariantKit.SafeKey exactly):
         ///   Null → "Null:##NULL##"
@@ -178,8 +182,12 @@ namespace ExcelFormulaLabs.Foundation
         ///   Array 1D → "Array(N):key1|key2|..."
         ///   Array 2D → "Array2D(R×C):flattened|keys"
         /// </remarks>
-        public static string SafeKey(object? value)
+        public static string SafeKey(object? value, int depth = 0)
         {
+            if (depth > MaxSafeKeyDepth)
+                throw new ArgumentException(
+                    $"SafeKey: maximum nesting depth ({MaxSafeKeyDepth}) exceeded. " +
+                    "The input may contain circular array references.");
             if (value == null || value is DBNull)
                 return "Null:##NULL##";
 
@@ -199,10 +207,10 @@ namespace ExcelFormulaLabs.Foundation
                 return $"String:{s}";
 
             if (value is object[] arr1D)
-                return Array1DToKey(arr1D);
+                return Array1DToKey(arr1D, depth + 1);
 
             if (value is object[,] arr2D)
-                return Array2DToKey(arr2D);
+                return Array2DToKey(arr2D, depth + 1);
 
             if (IsNumeric(value))
             {
@@ -216,7 +224,7 @@ namespace ExcelFormulaLabs.Foundation
         // ── Private helpers ──────────────────────────────────────────────
 
         /// <summary>Build SafeKey for a 1D array, recursing into elements.</summary>
-        private static string Array1DToKey(object[] arr)
+        private static string Array1DToKey(object[] arr, int depth)
         {
             int len = arr.Length;
             if (len == 0) return "Array(0):##EMPTY##";
@@ -226,13 +234,13 @@ namespace ExcelFormulaLabs.Foundation
             for (int i = 0; i < len; i++)
             {
                 if (i > 0) sb.Append('|');
-                sb.Append(SafeKey(arr[i]));
+                sb.Append(SafeKey(arr[i], depth));
             }
             return sb.ToString();
         }
 
         /// <summary>Build SafeKey for a 2D array, flattening row-major.</summary>
-        private static string Array2DToKey(object[,] arr)
+        private static string Array2DToKey(object[,] arr, int depth)
         {
             int rows = arr.GetLength(0);
             int cols = arr.GetLength(1);
@@ -246,7 +254,7 @@ namespace ExcelFormulaLabs.Foundation
                 for (int c = 0; c < cols; c++)
                 {
                     if (!first) sb.Append('|');
-                    sb.Append(SafeKey(arr[r, c]));
+                    sb.Append(SafeKey(arr[r, c], depth));
                     first = false;
                 }
             }

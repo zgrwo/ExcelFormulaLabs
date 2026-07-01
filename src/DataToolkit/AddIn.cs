@@ -21,7 +21,9 @@ namespace ExcelFormulaLabs.DataToolkit
             FilterUtils.ClearRegexCache();
 #if NET48
             try { System.Data.SQLite.SQLiteConnection.ClearAllPools(); }
-            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException) { }
+            catch (Exception ex) when (ex is not OutOfMemoryException
+                and not StackOverflowException and not AccessViolationException)
+            { System.Diagnostics.Debug.WriteLine($"[AddIn.AutoClose] ClearAllPools failed: {ex.Message}"); }
             try { IntelliSenseServer.Uninstall(); }
             catch (Exception ex) when (ex is not OutOfMemoryException
                 and not StackOverflowException and not AccessViolationException)

@@ -28,7 +28,18 @@ namespace ExcelFormulaLabs.Analytics
             else { p = origP; Xaug = X; }
             var matX = Matrix<double>.Build.DenseOfArray(Xaug);
             var vecY = Vector<double>.Build.Dense(y);
+            return FitOLSCore(matX, vecY, n, p);
+        }
 
+        /// <summary>
+        /// Shared OLS solver called by FitOLS (from double[,]) and FitWLS
+        /// (from pre-weighted MathNet matrices). Avoids a double allocation
+        /// in the WLS path: FitWLS builds MathNet matrices directly instead of
+        /// going through an intermediate managed array.
+        /// </summary>
+        private static Dictionary<string, object> FitOLSCore(
+            Matrix<double> matX, Vector<double> vecY, int n, int p)
+        {
             var XtX = matX.TransposeThisAndMultiply(matX);
             var Xty = matX.TransposeThisAndMultiply(vecY);
             Vector<double> beta;
@@ -54,8 +65,6 @@ namespace ExcelFormulaLabs.Analytics
             double adjR2 = 1.0 - (1.0 - r2) * (n - 1) / (double)df;
             double sigma2 = sse / df;
             var XtXInv = XtX.Inverse();
-            // Guard against near-singular XtX: Inverse() may succeed but produce
-            // degenerate results (NaN/Inf diagonals) for highly collinear columns.
             for (int j = 0; j < p; j++)
                 if (double.IsNaN(XtXInv[j, j]) || double.IsInfinity(XtXInv[j, j]))
                     throw new ArgumentException(
@@ -107,15 +116,15 @@ namespace ExcelFormulaLabs.Analytics
             for (int i = 0; i < w.Length; i++)
                 if (w[i] < 0 || double.IsNaN(w[i]) || double.IsInfinity(w[i]))
                     throw new ArgumentException($"Weight at index {i} is invalid ({w[i]}). All weights must be >= 0 and finite.");
-            var Xw = new double[n, p];
-            var yw = new double[n];
+            var matXw = Matrix<double>.Build.Dense(n, p);
+            var vecYw = Vector<double>.Build.Dense(n);
             for (int i = 0; i < n; i++)
             {
                 double sw = Math.Sqrt(w[i]);
-                for (int j = 0; j < p; j++) Xw[i, j] = Xaug[i, j] * sw;
-                yw[i] = y[i] * sw;
+                for (int j = 0; j < p; j++) matXw[i, j] = Xaug[i, j] * sw;
+                vecYw[i] = y[i] * sw;
             }
-            var result = FitOLS(Xw, yw, addIntercept: false); // Xw already has intercept column
+            var result = FitOLSCore(matXw, vecYw, n, p); // Xw already has intercept column
             // Override residuals and fitted_values to ORIGINAL scale
             var beta = (double[])result["coefficients"];
             double[] fittedOrig = new double[n];

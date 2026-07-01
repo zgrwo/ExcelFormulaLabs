@@ -1,5 +1,6 @@
 using System;
 using ExcelFormulaLabs.DataToolkit;
+using ExcelFormulaLabs.Foundation;
 using FluentAssertions;
 #pragma warning disable CS8625 // null literal for core null-input testing
 using Xunit;
@@ -8,8 +9,8 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
 {
     public class ArrayCoreTests
     {
-        [Fact] public void Sort_asc() => ArrayCore.Sort(new object[]{3,1,4,2},true,"numeric").Should().Equal(1,2,3,4);
-        [Fact] public void Sort_desc() => ArrayCore.Sort(new object[]{3,1,4,2},false,"numeric").Should().Equal(4,3,2,1);
+        [Fact] public void Sort_asc() => ArrayCore.Sort(new object[]{3,1,4,2},true,ComparerMode.Numeric).Should().Equal(1,2,3,4);
+        [Fact] public void Sort_desc() => ArrayCore.Sort(new object[]{3,1,4,2},false,ComparerMode.Numeric).Should().Equal(4,3,2,1);
         [Fact] public void Unique() => ArrayCore.Unique(new object[]{1,2,2,3,1}).Should().Equal(1,2,3);
         [Fact] public void IndexOf_found() => ArrayCore.IndexOf(new object[]{10,20,30},20).Should().Be(1);
         [Fact] public void IndexOf_notfound() => ArrayCore.IndexOf(new object[]{10,20,30},99).Should().Be(-1);
@@ -53,12 +54,12 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Sort_text_mode()
         {
             // Text sort: "10" < "2" (lexicographic)
-            ArrayCore.Sort(new object[] { "a10", "a2", "a1" }, true, "text").Should().Equal("a1", "a10", "a2");
+            ArrayCore.Sort(new object[] { "a10", "a2", "a1" }, true, ComparerMode.Text).Should().Equal("a1", "a10", "a2");
         }
 
         [Fact] public void Sort_empty()
         {
-            ArrayCore.Sort(Array.Empty<object>(), true, "auto").Should().BeEmpty();
+            ArrayCore.Sort(Array.Empty<object>(), true, ComparerMode.Auto).Should().BeEmpty();
         }
 
         [Fact] public void Unique_empty()

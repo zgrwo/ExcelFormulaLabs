@@ -48,9 +48,8 @@ namespace ExcelFormulaLabs.DataToolkit
             return v.Replace("\\", "\\\\").Replace("|", "\\|").Replace("\r\n", " ").Replace("\n", " ");
         }
 
-        // hasHeader has no effect on row output for CSV — CSV format treats all rows
-        // (including the header row) as data. The parameter is kept for API compatibility
-        // with RangeToJson / RangeToMarkdown / RangeToHtml.
+        /// <param name="hasHeader">Deprecated: has no effect on CSV output (CSV treats all rows as data).
+        /// Kept for API compatibility with RangeToJson / RangeToMarkdown / RangeToHtml.</param>
         internal static string RangeToCsv(object[,] data, string delim = ",", bool quote = true, bool hasHeader = true)
         {
             int rows = data.GetLength(0), cols = data.GetLength(1); var sb = new StringBuilder(); int startRow = 0;

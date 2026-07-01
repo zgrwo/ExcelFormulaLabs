@@ -463,6 +463,19 @@ namespace ExcelFormulaLabs.Foundation
         }
 
         /// <summary>
+        /// Like <see cref="NormalizeTo2D"/> but throws on null/empty input instead
+        /// of returning null. Use in UDF D() helpers to surface the error as #VALUE!
+        /// rather than risking a NullReferenceException from the null-forgiving operator.
+        /// </summary>
+        internal static object[,] MustNormalizeTo2D(object? input)
+        {
+            var result = NormalizeTo2D(input);
+            if (result == null)
+                throw new ArgumentException("Input cannot be null or empty.");
+            return result;
+        }
+
+        /// <summary>
         /// Extract numeric values from mixed input into a double[].
         /// Non-numeric elements are skipped. Empty input returns empty double[].
         /// Matches VBA VariantKit.ToDoubles behaviour.

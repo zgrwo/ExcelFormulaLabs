@@ -306,8 +306,7 @@ namespace ExcelFormulaLabs.Foundation
             {
                 System.Diagnostics.Debug.WriteLine(
                     $"[ConvertValue] Failed to convert '{value?.GetType().Name}' to '{typeof(T).Name}': {ex.Message}");
-                if (typeof(T) == typeof(double)) return (T)(object)double.NaN;
-                throw; // re-throw for non-double types: WrapError → #VALUE!
+                throw; // re-throw for all types: WrapError → #VALUE!
             }
         }
 
@@ -379,8 +378,11 @@ namespace ExcelFormulaLabs.Foundation
                     break;
                 }
             }
-            // If flat doesn't divide evenly into rows, return as single-row to preserve all values.
-            if (rows == 0 || flat.Length % rows != 0) rows = 1;
+            // If flat doesn't divide evenly into rows, the input shapes are inconsistent.
+            if (rows == 0 || flat.Length % rows != 0)
+                throw new InvalidOperationException(
+                    $"Cannot reshape {flat.Length} elements into {rows} rows — " +
+                    "the input arrays have mismatched dimensions.");
             int cols = flat.Length / rows;
             if (cols == 0) cols = 1;
 

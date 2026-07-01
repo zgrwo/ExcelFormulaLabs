@@ -30,7 +30,7 @@ namespace ExcelFormulaLabs.DataToolkit
         public static string? SandboxRoot
         {
             get => Volatile.Read(ref _sandboxRoot);
-            set { Volatile.Write(ref _sandboxRoot, value); _sandboxWarningEmitted = value != null; }
+            set { if (_sandboxRoot != value) System.Diagnostics.Trace.WriteLine($"[FileSystemCore] SandboxRoot changed from '{_sandboxRoot}' to '{value}'."); Volatile.Write(ref _sandboxRoot, value); _sandboxWarningEmitted = value != null; }
         }
 
         /// <summary>

@@ -28,11 +28,26 @@ namespace ExcelFormulaLabs.Analytics
 
             internal static T GetOrAdd<T>(string key, Func<T> factory)
             {
+                // Fast path: check cache without blocking other keys
                 lock (Lock)
                 {
                     if (Store.TryGetValue(key, out var existing))
                     {
-                        // Touch: move to end of LRU list
+                        LruOrder.Remove(key);
+                        LruOrder.Add(key);
+                        return (T)existing;
+                    }
+                }
+
+                // Slow path: compute outside lock so concurrent callers
+                // for different keys are not serialised by decomposition cost
+                var result = factory();
+
+                lock (Lock)
+                {
+                    // Double-check: another thread may have computed the same key
+                    if (Store.TryGetValue(key, out var existing))
+                    {
                         LruOrder.Remove(key);
                         LruOrder.Add(key);
                         return (T)existing;
@@ -40,13 +55,11 @@ namespace ExcelFormulaLabs.Analytics
 
                     if (Store.Count >= MaxEntries)
                     {
-                        // Evict least-recently-used single entry
                         var oldest = LruOrder[0];
                         Store.Remove(oldest);
                         LruOrder.RemoveAt(0);
                     }
 
-                    var result = factory();
                     Store[key] = result!;
                     LruOrder.Add(key);
                     return result;
