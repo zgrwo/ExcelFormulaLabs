@@ -82,6 +82,7 @@ ExcelFormulaLabs/
 ├── docs/                          # ✅ 文档
 │   ├── api-reference.md           # UDF 签名唯一信源（数字基准）
 │   ├── user-manual.md             # 每函数详细示例
+│   ├── cross-validation.md        # Python 交叉验证报告
 │   └── context.md                 # 领域术语表
 │
 ├── scripts/                       # ✅ 构建/验证脚本

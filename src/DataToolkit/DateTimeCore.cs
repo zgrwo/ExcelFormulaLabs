@@ -63,6 +63,6 @@ namespace ExcelFormulaLabs.DataToolkit
         }; }
 
         private static void AssertValidDate(DateTime d)
-        { if (d == DateTime.MinValue || d == DateTime.MaxValue) throw new ArgumentException("Invalid date (likely from empty/error cell)."); }
+        { if (d == DateTime.MinValue) throw new ArgumentException("Invalid date (likely from empty/error cell)."); }
     }
 }

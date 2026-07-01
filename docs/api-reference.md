@@ -45,7 +45,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `STATS.RANGE` | (number1) | `double` | 极差（max - min） |
 | `STATS.SUM` | (number1) | `double` | 求和 |
 | `STATS.PRODUCT` | (number1) | `double` | 求积 |
-| `STATS.PERCENTILE` | (array, k) | `double` | k 分位数（0-100），R7 算法。对标 Excel PERCENTILE.EXC |
+| `STATS.PERCENTILE` | (array, k) | `double` | k 分位数（0-100），R7 算法。对标 Excel PERCENTILE.INC |
 | `STATS.IQR` | (number1) | `double` | 四分位距（Q3 - Q1），R7 算法 |
 | `STATS.SUMMARY` | (number1) | `double[9]` | 描述统计摘要：`[n, mean, stdev, min, q1, median, q3, max, iqr]`。R7 分位数（对标 Python scipy）。 |
 | `STATS.COUNT` | (number) | `long` | 元素个数 |

@@ -277,7 +277,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         // ══════════════════════════════════════════════════════════════════
         //  STR.BASE64ENC  (MapOver<string,string>)
         // ══════════════════════════════════════════════════════════════════
-        [Fact] public void B64Enc_basic() => ((string)StringUdf.UDF_STR_B64ENC("hello")).Should().NotBeNullOrEmpty().And.NotBe("hello");
+        [Fact] public void B64Enc_basic() => ((string)StringUdf.UDF_STR_B64ENC("hello")).Should().Be("aGVsbG8=");
         [Fact] public void B64Enc_empty() => StringUdf.UDF_STR_B64ENC("").Should().Be("");
         [Fact] public void B64Enc_null() => StringUdf.UDF_STR_B64ENC(null!).Should().BeNull();
         [Fact] public void B64Enc_error() => StringUdf.UDF_STR_B64ENC(ExcelError.NA).Should().Be(ExcelError.NA);

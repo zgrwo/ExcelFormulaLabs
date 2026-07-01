@@ -124,11 +124,11 @@ namespace ExcelFormulaLabs.DataToolkit
 
 #if NET8_0_OR_GREATER
         internal static string RandomString(long len=8, string? cs=null)
-        { if (string.IsNullOrEmpty(cs)) cs = DefaultCharset; var sb = new StringBuilder((int)len); for (int i = 0; i < len; i++) sb.Append(cs[Random.Shared.Next(cs.Length)]); return sb.ToString(); }
+        { if (len < 0 || len > 100_000) throw new ArgumentOutOfRangeException(nameof(len), $"Length must be 0–100,000 (got {len})."); if (string.IsNullOrEmpty(cs)) cs = DefaultCharset; int n = (int)len; var sb = new StringBuilder(n); for (int i = 0; i < n; i++) sb.Append(cs[Random.Shared.Next(cs.Length)]); return sb.ToString(); }
 #else
         private static readonly ThreadLocal<Random> _rng = new(() => new Random());
         internal static string RandomString(long len=8, string? cs=null)
-        { if (string.IsNullOrEmpty(cs)) cs = DefaultCharset; var sb = new StringBuilder((int)len); var r = _rng.Value!; for (int i = 0; i < len; i++) sb.Append(cs[r.Next(cs.Length)]); return sb.ToString(); }
+        { if (len < 0 || len > 100_000) throw new ArgumentOutOfRangeException(nameof(len), $"Length must be 0–100,000 (got {len})."); if (string.IsNullOrEmpty(cs)) cs = DefaultCharset; int n = (int)len; var sb = new StringBuilder(n); var r = _rng.Value!; for (int i = 0; i < n; i++) sb.Append(cs[r.Next(cs.Length)]); return sb.ToString(); }
 #endif
 
         internal static bool IsNullOrEmptyStr(string? t)=>string.IsNullOrEmpty(t);
