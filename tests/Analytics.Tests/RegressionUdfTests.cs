@@ -133,6 +133,19 @@ namespace ExcelFormulaLabs.Analytics.Tests
         }
 
         // ── P0 guard UDF-level: WrapError → #VALUE! ──
+        [Fact] public void OLS_null_y_returns_error() => RegressionUdf.UDF_REGRESS_OLS(null!, X_test).Should().Be(ExcelError.Value);
+        [Fact] public void OLS_null_X_returns_error() => RegressionUdf.UDF_REGRESS_OLS(y_test, null!).Should().Be(ExcelError.Value);
+        [Fact] public void WLS_null_y_returns_error() => RegressionUdf.UDF_REGRESS_WLS(null!, X_test, new double[] { 1.0, 1.0, 1.0 }).Should().Be(ExcelError.Value);
+        [Fact] public void WLS_null_X_returns_error() => RegressionUdf.UDF_REGRESS_WLS(y_test, null!, new double[] { 1.0, 1.0, 1.0 }).Should().Be(ExcelError.Value);
+        [Fact] public void WLS_null_weights_returns_error() => RegressionUdf.UDF_REGRESS_WLS(y_test, X_test, null!).Should().Be(ExcelError.Value);
+        [Fact] public void Ridge_null_y_returns_error() => RegressionUdf.UDF_REGRESS_RIDGE(null!, X_test, 0.1).Should().Be(ExcelError.Value);
+        [Fact] public void Ridge_null_X_returns_error() => RegressionUdf.UDF_REGRESS_RIDGE(y_test, null!, 0.1).Should().Be(ExcelError.Value);
+        [Fact] public void Coef_null_y_returns_error() => RegressionUdf.UDF_REGRESS_COEF(null!, X_test).Should().Be(ExcelError.Value);
+        [Fact] public void Coef_null_X_returns_error() => RegressionUdf.UDF_REGRESS_COEF(y_test, null!).Should().Be(ExcelError.Value);
+        [Fact] public void Rsq_null_y_returns_error() => RegressionUdf.UDF_REGRESS_RSQ(null!, X_test).Should().Be(ExcelError.Value);
+        [Fact] public void Rsq_null_X_returns_error() => RegressionUdf.UDF_REGRESS_RSQ(y_test, null!).Should().Be(ExcelError.Value);
+        [Fact] public void FactorImportance_null_y_returns_error() => RegressionUdf.UDF_REGRESS_FACTORIMP(null!, X_test).Should().Be(ExcelError.Value);
+        [Fact] public void FactorImportance_null_X_returns_error() => RegressionUdf.UDF_REGRESS_FACTORIMP(y_test, null!).Should().Be(ExcelError.Value);
         [Fact] public void OLS_constant_y_returns_error()
         {
             var constY = new double[] { 5, 5, 5 };

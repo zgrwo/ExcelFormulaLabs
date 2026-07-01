@@ -11,6 +11,8 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static object[,] Pivot(object[,] data, int keyCol, int pivotCol, int valueCol, string agg = "SUM", bool hasHeaders = true)
         {
             agg = agg.ToUpperInvariant();
+            if (agg is not ("SUM" or "AVG" or "COUNT" or "MAX" or "MIN"))
+                throw new ArgumentException($"Unknown aggregation '{agg}'. Supported: SUM, AVG, COUNT, MAX, MIN.");
             int rows = data.GetLength(0);
             int startRow = hasHeaders ? 1 : 0;
             var map = new Dictionary<(string k, string p), double>();
@@ -79,6 +81,8 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static object[,] GroupBy(object[,] data, int[] gCols, int aCol, string agg = "SUM", bool hasHeaders = true)
         {
             agg = agg.ToUpperInvariant();
+            if (agg is not ("SUM" or "AVG" or "COUNT" or "MAX" or "MIN"))
+                throw new ArgumentException($"Unknown aggregation '{agg}'. Supported: SUM, AVG, COUNT, MAX, MIN.");
             int rows = data.GetLength(0), nG = gCols.Length;
             int startRow = hasHeaders ? 1 : 0;
             var groups = new Dictionary<string, (double val, long cnt)>();

@@ -87,7 +87,19 @@ public class MapOverTests
         ((object[])result).Length.Should().Be(1);
     }
 
-    [Fact] public void MapOverMulti_both_null_elements()
+    [Fact] public void MapOverMulti_first_null_array()
+        {
+            var valid = new object[] { "a", "b" };
+            var result = ElementWiseMapper.MapOverMulti(null!, valid, (string? a, string? b) => (a ?? "x") + b);
+            result.Should().NotBeNull();
+        }
+        [Fact] public void MapOverMulti_second_null_array()
+        {
+            var valid = new object[] { "a", "b" };
+            var result = ElementWiseMapper.MapOverMulti(valid, null!, (string? a, string? b) => a + (b ?? "y"));
+            result.Should().NotBeNull();
+        }
+        [Fact] public void MapOverMulti_both_null_elements()
     {
         var input = new object?[] { null, null };
         var result = (object[])ElementWiseMapper.MapOverMulti(

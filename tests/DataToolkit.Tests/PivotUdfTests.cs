@@ -40,6 +40,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             r.GetLength(0).Should().BeGreaterThan(1);
         }
         [Fact] public void Pivot_null_data() => PivotUdf.UDF_PIVOT_PIVOT(null!, 0, 1, 2, "SUM").Should().Be(ExcelError.Value);
+        [Fact] public void Pivot_invalid_aggregation() => PivotUdf.UDF_PIVOT_PIVOT(Data, 0, 1, 2, "UNKNOWN").Should().Be(ExcelError.Value);
         [Fact] public void Pivot_default_agg()
         {
             var r = (object[,])PivotUdf.UDF_PIVOT_PIVOT(Data, 0, 1, 2, "SUM");
@@ -133,6 +134,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             r.GetLength(1).Should().Be(3);
         }
         [Fact] public void GroupBy_null_data() => PivotUdf.UDF_PIVOT_GROUPBY(null!, new int[] { 0 }, 2, "SUM").Should().Be(ExcelError.Value);
+        [Fact] public void GroupBy_invalid_aggregation() => PivotUdf.UDF_PIVOT_GROUPBY(Data, new int[] { 0 }, 2, "INVALID").Should().Be(ExcelError.Value);
         [Fact] public void GroupBy_row_count()
         {
             var r = (object[,])PivotUdf.UDF_PIVOT_GROUPBY(Data, new int[] { 0 }, 2, "SUM");
