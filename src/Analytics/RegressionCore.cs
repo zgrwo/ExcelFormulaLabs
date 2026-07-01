@@ -16,16 +16,17 @@ namespace ExcelFormulaLabs.Analytics
         /// Ordinary Least Squares regression. Minimizes sum of squared residuals.
         /// Used by REGRESS.OLS.
         /// </summary>
-        /// <returns>
-        /// Dictionary: coefficients, sse, r_squared, adj_r_squared, residuals,
-        /// fitted_values, standard_errors, t_stats, p_values, n, df.
-        /// p&lt;0.05 = significant; R² near 1 = good fit.
-        /// </returns>
-        internal static Dictionary<string, object> FitOLS(double[,] X, double[] y)
+        /// <param name="addIntercept">If true (default), prepends a column of 1s to X
+        /// so the model includes an intercept (y = b0 + b1*X1 + ...).
+        /// Set false when design matrix already contains an intercept column.</param>
+        internal static Dictionary<string, object> FitOLS(double[,] X, double[] y, bool addIntercept = true)
         {
             NumericGuard.AgainstNonFinite(X, y);
-            int n = X.GetLength(0), p = X.GetLength(1);
-            var matX = Matrix<double>.Build.DenseOfArray(X);
+            int n = X.GetLength(0), origP = X.GetLength(1);
+            int p; double[,] Xaug;
+            if (addIntercept) { p = origP + 1; Xaug = PrependIntercept(X); }
+            else { p = origP; Xaug = X; }
+            var matX = Matrix<double>.Build.DenseOfArray(Xaug);
             var vecY = Vector<double>.Build.Dense(y);
 
             var XtX = matX.TransposeThisAndMultiply(matX);
@@ -87,22 +88,22 @@ namespace ExcelFormulaLabs.Analytics
         /// scale so they are directly comparable to the input y.
         /// Used by REGRESS.WLS.
         /// </summary>
-        /// <returns>
-        /// Same keys as FitOLS: coefficients, sse, r_squared, adj_r_squared,
-        /// residuals, fitted_values, standard_errors, t_stats, p_values, n, df.
-        /// SSE and R² are on the weighted scale (matching Python statsmodels);
-        /// residuals and fitted_values are on the original scale.
-        /// </returns>
-        internal static Dictionary<string, object> FitWLS(double[,] X, double[] y, double[] w)
+        /// <param name="addIntercept">If true (default), prepends a column of 1s
+        /// before applying weights. The intercept column is weighted along with
+        /// the data columns, producing correct WLS estimates.</param>
+        internal static Dictionary<string, object> FitWLS(double[,] X, double[] y, double[] w, bool addIntercept = true)
         {
             NumericGuard.AgainstNonFinite(X, y);
-            int n = X.GetLength(0), p = X.GetLength(1);
-            // Dimension validation — prevent IndexOutOfRangeException from mismatched input lengths
+            int n = X.GetLength(0), origP = X.GetLength(1);
+            int p; double[,] Xaug;
+            if (addIntercept) { p = origP + 1; Xaug = PrependIntercept(X); }
+            else { p = origP; Xaug = X; }
+            // Dimension validation
             if (y.Length != n)
                 throw new ArgumentException($"y length ({y.Length}) must match X row count ({n}).");
             if (w.Length != n)
                 throw new ArgumentException($"weights length ({w.Length}) must match X row count ({n}).");
-            // Reject negative/NaN/Infinity weights — Sqrt produces NaN/Inf which would silently propagate
+            // Reject negative/NaN/Infinity weights
             for (int i = 0; i < w.Length; i++)
                 if (w[i] < 0 || double.IsNaN(w[i]) || double.IsInfinity(w[i]))
                     throw new ArgumentException($"Weight at index {i} is invalid ({w[i]}). All weights must be >= 0 and finite.");
@@ -111,21 +112,18 @@ namespace ExcelFormulaLabs.Analytics
             for (int i = 0; i < n; i++)
             {
                 double sw = Math.Sqrt(w[i]);
-                for (int j = 0; j < p; j++) Xw[i, j] = X[i, j] * sw;
+                for (int j = 0; j < p; j++) Xw[i, j] = Xaug[i, j] * sw;
                 yw[i] = y[i] * sw;
             }
-            // Coefficients, SE, t-stats, p-values are correct from the weighted fit.
-            // SSE and R² are on the weighted scale (consistent with Python statsmodels).
-            var result = FitOLS(Xw, yw);
-            // Override residuals and fitted_values to ORIGINAL scale so they are
-            // comparable to the user's input y (matching Python statsmodels behaviour).
+            var result = FitOLS(Xw, yw, addIntercept: false); // Xw already has intercept column
+            // Override residuals and fitted_values to ORIGINAL scale
             var beta = (double[])result["coefficients"];
             double[] fittedOrig = new double[n];
             double[] residualsOrig = new double[n];
             for (int i = 0; i < n; i++)
             {
                 double fit = 0;
-                for (int j = 0; j < p; j++) fit += X[i, j] * beta[j];
+                for (int j = 0; j < p; j++) fit += Xaug[i, j] * beta[j];
                 fittedOrig[i] = fit;
                 residualsOrig[i] = y[i] - fit;
             }
@@ -140,21 +138,25 @@ namespace ExcelFormulaLabs.Analytics
         /// (inferential statistics are not valid under regularization).
         /// Used by REGRESS.RIDGE.
         /// </summary>
-        /// <returns>
-        /// Dictionary: coefficients, sse, r_squared, residuals, fitted_values,
-        /// lambda, n, df. NOTE: standard_errors, t_stats, p_values are NOT returned.
-        /// </returns>
-        internal static Dictionary<string, object> FitRidge(double[,] X, double[] y, double lambda = 1.0)
+        /// <param name="addIntercept">If true (default), prepends a column of 1s and
+        /// sets I[0,0]=0 so the intercept is not penalised by the L2 regularisation.</param>
+        internal static Dictionary<string, object> FitRidge(double[,] X, double[] y, double lambda = 1.0, bool addIntercept = true)
         {
             NumericGuard.AgainstNonFinite(X, y);
             if (double.IsNaN(lambda) || double.IsInfinity(lambda))
                 throw new ArgumentException($"Lambda must be a finite value (got {lambda}).");
-            int n = X.GetLength(0), p = X.GetLength(1);
-            var matX = Matrix<double>.Build.DenseOfArray(X);
+            int n = X.GetLength(0), origP = X.GetLength(1);
+            int p; double[,] Xaug;
+            if (addIntercept) { p = origP + 1; Xaug = PrependIntercept(X); }
+            else { p = origP; Xaug = X; }
+            var matX = Matrix<double>.Build.DenseOfArray(Xaug);
             var vecY = Vector<double>.Build.Dense(y);
             var XtX = matX.TransposeThisAndMultiply(matX);
             var Xty = matX.TransposeThisAndMultiply(vecY);
-            var ridge = XtX + Matrix<double>.Build.DenseIdentity(p) * lambda;
+            // Identity penalty matrix: don't penalise the intercept term
+            var I = Matrix<double>.Build.DenseIdentity(p);
+            if (addIntercept) I[0, 0] = 0.0;
+            var ridge = XtX + I * lambda;
             var beta = ridge.Solve(Xty);
             // Guard against near-singular XtX with insufficient lambda:
             // ridge matrix XtX+λI is mathematically positive-definite for λ>0, but when
@@ -286,13 +288,29 @@ namespace ExcelFormulaLabs.Analytics
                 for (int i = 0; i < n; i++) Xs[i, aj] = (X[i, j] - means[j]) / sds[j];
                 aj++;
             }
-            // Fit OLS to reduced model, then map t-statistics back to original column indices
-            var result = FitOLS(Xs, y);
+            // Fit OLS to reduced model (standardized columns already centered — no intercept needed)
+            var result = FitOLS(Xs, y, addIntercept: false);
             var tReduced = (double[])result["t_stats"];
             var tFull = new double[p]; // constCols entries remain 0.0
             for (int rj = 0; rj < activeCols; rj++)
                 tFull[colMap[rj]] = tReduced[rj];
             return Enumerable.Range(0, p).OrderByDescending(j => Math.Abs(tFull[j])).ToArray();
+        }
+
+        /// <summary>
+        /// Prepend a column of 1.0 to the design matrix as the intercept term.
+        /// Returns a new array; does not mutate the input.
+        /// </summary>
+        private static double[,] PrependIntercept(double[,] X)
+        {
+            int n = X.GetLength(0), p = X.GetLength(1);
+            var Xaug = new double[n, p + 1];
+            for (int i = 0; i < n; i++)
+            {
+                Xaug[i, 0] = 1.0;
+                for (int j = 0; j < p; j++) Xaug[i, j + 1] = X[i, j];
+            }
+            return Xaug;
         }
 
         private static double FDistPValue(double f, double df1, double df2)

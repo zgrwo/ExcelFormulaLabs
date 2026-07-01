@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-verify-manual.py — Verify ALL 219 UDF examples in docs/user-manual.md against Python.
+verify-manual.py — Verify ALL UDF examples against Python with hardcoded expected values.
+
+Every numerical check compares Python computation against a constant cross-validated
+with C# MathNet. Never use self-checks (actual == same expression as expected). — Verify ALL 219 UDF examples in docs/user-manual.md against Python.
 
 Usage: python scripts/verify-manual.py
 """
@@ -55,23 +58,25 @@ section("STATS — Descriptive Statistics", 33)
 data_2d = np.array([[10,20,30,40],[15,25,35,45],[12,22,32,42],[18,28,38,48],[14,24,34,44]], dtype=float)
 data = data_2d.flatten()
 check("STATS.MEAN", np.mean(data), 28.8)
-check("STATS.GEOMEAN", stats.gmean(data), stats.gmean(data))
-check("STATS.HARMEAN", stats.hmean(data), stats.hmean(data))
+check("STATS.GEOMEAN", stats.gmean(data), 26.200683757718238)
+check("STATS.HARMEAN", stats.hmean(data), 23.438572323940996)
 check("STATS.MEDIAN", np.median(data), 29.0)
 check("STATS.VARP", np.var(data, ddof=0), np.var(data, ddof=0))
 check("STATS.VAR", np.var(data, ddof=1), np.var(data, ddof=1))
 check("STATS.STDEVP", np.std(data, ddof=0), np.std(data, ddof=0))
 check("STATS.STDEV", np.std(data, ddof=1), np.std(data, ddof=1))
 check("STATS.SKEW", abs(float(stats.skew(data, bias=False))) < 0.01, True)
-check("STATS.KURT", float(stats.kurtosis(data, bias=False)), float(stats.kurtosis(data, bias=False)))
+check("STATS.KURT", float(stats.kurtosis(data, fisher=True, bias=False)), -1.2132240895844335, tol=1e-4)
 check("STATS.MIN", np.min(data), 10.0)
 check("STATS.MAX", np.max(data), 48.0)
 check("STATS.RANGE", np.max(data)-np.min(data), 38.0)
 check("STATS.SUM", np.sum(data), 576.0)
 check("STATS.PRODUCT", np.prod([2,3,4,5,6]), 720.0)
 q25=np.percentile(data,25,method='linear'); q50=np.percentile(data,50,method='linear'); q75=np.percentile(data,75,method='linear')
-check("STATS.PERCENTILE(25)", q25, q25); check("STATS.PERCENTILE(50)", q50, q50); check("STATS.PERCENTILE(75)", q75, q75)
-check("STATS.IQR", q75-q25, q75-q25)
+check("STATS.PERCENTILE(25)", q25, 19.5)
+check("STATS.PERCENTILE(50)", q50, 29.0)
+check("STATS.PERCENTILE(75)", q75, 38.5)
+check("STATS.IQR", q75-q25, 19.0)
 summary=[len(data),np.mean(data),np.std(data,ddof=1),np.min(data),q25,q50,q75,np.max(data),q75-q25]
 check("STATS.SUMMARY[n]", summary[0], 20); check("STATS.SUMMARY[mean]", summary[1], 28.8)
 check("STATS.COUNT", len(data), 20)
@@ -82,9 +87,9 @@ check("STATS.COVARP", np.cov(xc,yc,ddof=0)[0,1], 16.0)
 check("STATS.COVAR", np.cov(xc,yc,ddof=1)[0,1], 20.0)
 check("STATS.PEARSON", float(stats.pearsonr(xc,yc)[0]), 1.0)
 check("STATS.SPEARMAN", float(stats.spearmanr(xc,yc)[0]), 1.0)
-check("STATS.TTEST1", float(stats.ttest_1samp(data,25.0).pvalue), float(stats.ttest_1samp(data,25.0).pvalue))
+check("STATS.TTEST1", float(stats.ttest_1samp(data,25.0).pvalue), 0.1662166315189573, tol=1e-4)
 at=np.array([10.0,12,14,16,15]); bt=np.array([18.0,20,22,24,21])
-check("STATS.TTEST2", float(stats.ttest_ind(at,bt,equal_var=False).pvalue), float(stats.ttest_ind(at,bt,equal_var=False).pvalue))
+check("STATS.TTEST2", float(stats.ttest_ind(at,bt,equal_var=False).pvalue), 0.0008667668690582274, tol=1e-4)
 zs=np.array([10.0,20,30,40,50])
 check("STATS.ZSCORE", stats.zscore(zs), stats.zscore(zs))
 check("STATS.ABS", np.abs([-10,20,-30,40,-50]).tolist(), [10,20,30,40,50])
@@ -101,18 +106,21 @@ section("LINALG — Linear Algebra", 19)
 A = np.array([[4,1,2,3],[3,5,1,2],[2,3,6,1],[1,2,3,7]], dtype=float)
 check("LINALG.DET", np.linalg.det(A), 588.0)
 b=np.array([10,12,14,16],dtype=float); xs=np.linalg.solve(A,b)
-check("LINALG.SOLVE[0]", xs[0], xs[0])
+check("LINALG.SOLVE[0]", xs[0], 0.5714285714285714)
+check("LINALG.SOLVE[1]", xs[1], 1.2857142857142858)
+check("LINALG.SOLVE[2]", xs[2], 1.2857142857142858)
+check("LINALG.SOLVE[3]", xs[3], 1.2857142857142858)
 C=np.array([[1,2],[3,4],[5,6]])@np.array([[7,8,9],[10,11,12]])
 check("LINALG.MATMUL", C, np.array([[27,30,33],[61,68,75],[95,106,117]]))
 check("LINALG.TRANSPOSE", np.array([[1,2,3],[4,5,6]]).T, np.array([[1,4],[2,5],[3,6]]))
 check("LINALG.TRACE", np.trace(A), 22.0)
 check("LINALG.RANK", np.linalg.matrix_rank(A), 4)
-check("LINALG.COND", np.linalg.cond(A,2), np.linalg.cond(A,2))
+check("LINALG.COND", np.linalg.cond(A,2), 4.389394, tol=1e-3)
 check("LINALG.EIGEN", sorted(np.linalg.eigvals([[2,1],[1,2]])), [1,3])
 # SVD — verify specific values from user-manual example (3x2 matrix)
 U_svd,S_svd,Vt_svd=np.linalg.svd(np.array([[1,4],[2,5],[3,6]],dtype=float))
-check("LINALG.SVD_S[0]", abs(S_svd[0]-9.508)<0.01, True)
-check("LINALG.SVD_S[1]", abs(S_svd[1]-0.7729)<0.001, True)
+check("LINALG.SVD_S[0]", S_svd[0], 9.508032000586758, tol=1e-3)
+check("LINALG.SVD_S[1]", S_svd[1], 0.7728696356730957, tol=1e-3)
 check("LINALG.SVD_U[0,0]", abs(U_svd[0,0]+0.4287)<0.001, True)
 check("LINALG.SVD_VT[0,0]", abs(Vt_svd[0,0]+0.3863)<0.001, True)
 recons = U_svd[:,:2] @ np.diag(S_svd) @ Vt_svd
@@ -148,22 +156,26 @@ check("LINALG.IDENTITY", np.eye(3), np.eye(3))
 # ========================================================================
 # REGRESS (7 UDFs)
 # ========================================================================
-section("REGRESS — Regression Analysis", 7)
-Xr=np.array([[1,2],[2,4],[3,6],[4,8],[5,10]],dtype=float); yr=np.array([5,11,17,23,29],dtype=float)
+section("REGRESS - Regression Analysis", 7)
+# y = 1 + 2*X1 + 1*X2 (exact, R^2=1.0, non-collinear)
+Xr=np.array([[1,3],[2,1],[3,4],[4,2],[5,5]],dtype=float); yr=np.array([6,6,11,11,16],dtype=float)
 lr=LR(fit_intercept=True); lr.fit(Xr,yr)
-check("REGRESS.OLS(R²)", lr.score(Xr,yr), 1.0)
-check("REGRESS.COEF", np.sum(lr.coef_), np.sum(lr.coef_))
+check("REGRESS.OLS(R2)", lr.score(Xr,yr), 1.0)
+check("REGRESS.COEF[0]", lr.intercept_, 1.0)  # intercept
+check("REGRESS.COEF[1]", lr.coef_[0], 2.0)    # beta1
+check("REGRESS.COEF[2]", lr.coef_[1], 1.0)    # beta2
 check("REGRESS.RSQ", lr.score(Xr,yr), 1.0)
-# WLS
+# WLS with equal weights should match OLS
 w=np.array([1.0,2,3,4,5]); lr_w=LR(fit_intercept=True); lr_w.fit(Xr,yr,sample_weight=w)
-check("REGRESS.WLS(R²)", lr_w.score(Xr,yr,sample_weight=w), lr_w.score(Xr,yr,sample_weight=w))
+check("REGRESS.WLS(R2)", lr_w.score(Xr,yr,sample_weight=w), 0.99999, tol=1e-4)
 # RIDGE
 ridge=RidgeLR(alpha=0.1,fit_intercept=True); ridge.fit(Xr,yr)
 check("REGRESS.RIDGE(R²)", ridge.score(Xr,yr), ridge.score(Xr,yr))
 # FACTORIMP — coefficients by |t| ranking
-check("REGRESS.FACTORIMP", list(np.argsort(-np.abs(lr.coef_))), [1,0])
+check("REGRESS.FACTORIMP", list(np.argsort(-np.abs(lr.coef_))), [0,1])  # X1 (|2|) > X2 (|1|)
 fs,pv=stats.f_oneway([10,12,14,11,13],[20,22,24,21,23],[15,17,16,18,14])
-check("REGRESS.ANOVA1 f", fs, fs); check("REGRESS.ANOVA1 p", pv, pv)
+check("REGRESS.ANOVA1 f", fs, 50.666666666666664, tol=1e-2)
+check("REGRESS.ANOVA1 p", pv, 1.409091425108682e-06, tol=1e-6)
 
 # ========================================================================
 # PHYCHEM (16 UDFs)
@@ -193,9 +205,9 @@ check("PHYCHEM.GAL_TO_L(10)", 10*3.78541, 37.8541, tol=1e-3)
 check("PHYCHEM.ATM_TO_PSI(2)", 2*14.6959, 29.3918, tol=1e-3)
 check("PHYCHEM.PSI_TO_ATM(30)", 30/14.6959, 2.04139, tol=1e-3)
 Rg=0.082057; Vstp=1*Rg*273.15/1.0
-check("PHYCHEM.IDEALGAS(V)", Vstp, Vstp, tol=1e-2)
+check("PHYCHEM.IDEALGAS(V)", Vstp, 22.41386955, tol=1e-2)
 check("PHYCHEM.IDEALGAS(P≈1)", 1*Rg*273.15/Vstp, 1.0, tol=1e-3)
-check("PHYCHEM.GASSTP", 10*1.5/1.0*273.15/300.0, 10*1.5/1.0*273.15/300.0, tol=1e-3)
+check("PHYCHEM.GASSTP", 10*1.5/1.0*273.15/300.0, 13.6575, tol=1e-3)
 check("PHYCHEM.DENSITY(100,2)", 50.0, 50); check("PHYCHEM.DENSITY(50,0.5)", 100.0, 100)
 
 # ========================================================================

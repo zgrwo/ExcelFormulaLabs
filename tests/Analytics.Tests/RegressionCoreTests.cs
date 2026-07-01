@@ -7,14 +7,15 @@ namespace ExcelFormulaLabs.Analytics.Tests
 {
     public class RegressionCoreTests
     {
-        private static readonly double[,] X = {{1,1},{1,2},{1,3}};
+        // addIntercept=true (default) prepends a 1-column → design = [1, X]
+        private static readonly double[,] X = {{1},{2},{3}};
         private static readonly double[] y = {5,8,11};
         [Fact] public void FitOLS_keys() => RegressionCore.FitOLS(X,y).Should().ContainKeys("coefficients","sse","r_squared","t_stats","p_values");
         [Fact] public void FitOLS_r2() => ((double)RegressionCore.FitOLS(X,y)["r_squared"]).Should().BeApproximately(1.0,1e-10);
         [Fact] public void FitOLS_coef() { var c=(double[])RegressionCore.FitOLS(X,y)["coefficients"]; c[0].Should().BeApproximately(2.0,1e-8); c[1].Should().BeApproximately(3.0,1e-8); }
         [Fact] public void FitRidge_keys() => RegressionCore.FitRidge(X,y,0.1).Should().ContainKeys("coefficients","sse","r_squared","lambda");
         [Fact] public void AnovaOneWay_keys() => RegressionCore.AnovaOneWay(new[]{new[]{5.0,6,7},new[]{8.0,9,10}}).Should().ContainKeys("ss_between","f_stat","p_value");
-        [Fact] public void FactorImportance() { var r=RegressionCore.FactorImportance(X,y); r.Length.Should().Be(2); }
+        [Fact] public void FactorImportance() { var r=RegressionCore.FactorImportance(new double[,]{{1},{2},{3}},y); r.Length.Should().Be(1); }
         [Fact] public void FitWLS_equal_weights() { var o=RegressionCore.FitOLS(X,y); var w=RegressionCore.FitWLS(X,y,new[]{1.0,1,1}); var oc=(double[])o["coefficients"]; var wc=(double[])w["coefficients"]; oc[0].Should().BeApproximately(wc[0],1e-10); oc[1].Should().BeApproximately(wc[1],1e-10); }
         // WLS with unequal weights: verify keys exist and coefficients are finite
         [Fact] public void FitWLS_unequal_weights() { var w=RegressionCore.FitWLS(X,y,new[]{1.0,5,1}); w.Should().ContainKeys("coefficients","sse","r_squared"); var c=(double[])w["coefficients"]; c[0].Should().NotBe(double.NaN); c[1].Should().NotBe(double.NaN); }
@@ -22,7 +23,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         // Verify: fitted_values + residuals = original y (element-wise).
         [Fact] public void FitWLS_residuals_on_original_scale()
         {
-            var Xwls = new double[,] { { 1, 1 }, { 1, 2 }, { 1, 3 }, { 1, 4 }, { 1, 5 } };
+            var Xwls = new double[,] { { 1 }, { 2 }, { 3 }, { 4 }, { 5 } };
             var ywls = new double[] { 2.1, 3.8, 5.2, 7.1, 8.9 };
             var wwls = new double[] { 1.0, 2.0, 1.0, 0.5, 3.0 };
             var r = RegressionCore.FitWLS(Xwls, ywls, wwls);
@@ -33,11 +34,11 @@ namespace ExcelFormulaLabs.Analytics.Tests
                 (fitted[i] + resid[i]).Should().BeApproximately(ywls[i], 1e-10);
         }
         // FactorImportance returns |t-stat| sorted indices; test with 2 meaningful features
-        private static readonly double[,] Xf = {{1,1,3},{1,2,1},{1,3,4},{1,4,1},{1,5,6}};
+        private static readonly double[,] Xf = {{1,3},{2,1},{3,4},{4,1},{5,6}};
         private static readonly double[] yf = {4,5,10,11,16};
-        [Fact] public void FactorImportance_ranking() { var r=RegressionCore.FactorImportance(Xf,yf); r.Length.Should().Be(3); r.Should().OnlyHaveUniqueItems(); }
-        // Python statsmodels cross-validation: X=[1..10], y≈2x (realistic, not perfect fit)
-        private static readonly double[,] Xcv = {{1,1},{1,2},{1,3},{1,4},{1,5},{1,6},{1,7},{1,8},{1,9},{1,10}};
+        [Fact] public void FactorImportance_ranking() { var r=RegressionCore.FactorImportance(Xf,yf); r.Length.Should().Be(2); r.Should().OnlyHaveUniqueItems(); }
+        // Python statsmodels cross-validation: X=[1..10], y≈2x
+        private static readonly double[,] Xcv = {{1},{2},{3},{4},{5},{6},{7},{8},{9},{10}};
         private static readonly double[] ycv = {2.1,3.8,5.2,7.1,8.9,10.8,13.1,14.9,16.8,18.9};
         [Fact] public void OLS_crossval_coef() { var c=(double[])RegressionCore.FitOLS(Xcv,ycv)["coefficients"]; c[0].Should().BeApproximately(-0.193333333333334,1e-8); c[1].Should().BeApproximately(1.882424242424243,1e-8); }
         [Fact] public void OLS_crossval_r2() => ((double)RegressionCore.FitOLS(Xcv,ycv)["r_squared"]).Should().BeApproximately(0.997871700442665,1e-10);
@@ -52,16 +53,16 @@ namespace ExcelFormulaLabs.Analytics.Tests
         // CROSS-VALIDATION: WLS & Ridge vs Python statsmodels/sklearn
         // =====================================================================
         // statsmodels.WLS: coef=[0.34075, 1.70377], sse=0.07842, r2=0.99847
-        private static readonly double[,] Xwls = {{1,1},{1,2},{1,3},{1,4},{1,5}};
+        private static readonly double[,] Xwls = {{1},{2},{3},{4},{5}};
         private static readonly double[] ywls_cv = {2.1,3.8,5.2,7.1,8.9};
         private static readonly double[] wwls_cv = {1.0,2.0,1.0,0.5,3.0};
         [Fact] public void CrossVal_WLS_Py_coef() { var c=(double[])RegressionCore.FitWLS(Xwls,ywls_cv,wwls_cv)["coefficients"]; c[0].Should().BeApproximately(0.340754716981135,1e-8); c[1].Should().BeApproximately(1.703773584905660,1e-8); }
         [Fact] public void CrossVal_WLS_Py_sse() => ((double)RegressionCore.FitWLS(Xwls,ywls_cv,wwls_cv)["sse"]).Should().BeApproximately(0.078415094339623,1e-10);
         [Fact] public void CrossVal_WLS_Py_r2() => ((double)RegressionCore.FitWLS(Xwls,ywls_cv,wwls_cv)["r_squared"]).Should().BeApproximately(0.999245386613178,1e-10);
         // sklearn.linear_model.Ridge(alpha=1.0): coef=[-0.04742, 1.85676]
-        private static readonly double[,] Xridge = {{1,1},{1,2},{1,3},{1,4},{1,5},{1,6},{1,7},{1,8},{1,9},{1,10}};
+        private static readonly double[,] Xridge = {{1},{2},{3},{4},{5},{6},{7},{8},{9},{10}};
         private static readonly double[] yridge = {2.1,3.8,5.2,7.1,8.9,10.8,13.1,14.9,16.8,18.9};
-        [Fact] public void CrossVal_Ridge_sklearn_coef() { var c=(double[])RegressionCore.FitRidge(Xridge,yridge,1.0)["coefficients"]; c[0].Should().BeApproximately(-0.047420147420147,1e-8); c[1].Should().BeApproximately(1.856756756756757,1e-8); }
+        [Fact] public void CrossVal_Ridge_sklearn_coef() { var c=(double[])RegressionCore.FitRidge(Xridge,yridge,1.0)["coefficients"]; c[0].Should().BeApproximately(-0.069341317365270,1e-8); c[1].Should().BeApproximately(1.859880239520958,1e-8); }
 
         // =====================================================================
         // EDGE CASE & INPUT VALIDATION TESTS
@@ -94,11 +95,10 @@ namespace ExcelFormulaLabs.Analytics.Tests
 
         [Fact] public void FitRidge_large_lambda_shrinks_coefficients()
         {
-            // Large λ shrinks coefficients toward zero
+            // Large λ shrinks slope coefficients toward zero; intercept at [0] is not penalised.
             var ridge = RegressionCore.FitRidge(Xcv, ycv, 1e6);
             var coef = (double[])ridge["coefficients"];
-            // Coefficients should be near zero (heavily penalized)
-            Math.Abs(coef[0]).Should().BeLessThan(0.01);
+            // Slope (non-intercept) should be near zero (heavily penalized)
             Math.Abs(coef[1]).Should().BeLessThan(0.01);
         }
 
@@ -152,7 +152,8 @@ namespace ExcelFormulaLabs.Analytics.Tests
 
         [Fact] public void FactorImportance_constant_column()
         {
-            var constX = new double[,] { { 1, 5 }, { 1, 2 }, { 1, 3 }, { 1, 4 }, { 1, 6 } };
+            // Column 0 = constant (all 5s), column 1 varies — ranking should handle constant col
+            var constX = new double[,] { { 5, 1 }, { 5, 2 }, { 5, 3 }, { 5, 4 }, { 5, 6 } };
             var r = RegressionCore.FactorImportance(constX, yf);
             r.Length.Should().Be(2);
             r.Should().OnlyHaveUniqueItems();
@@ -188,11 +189,11 @@ namespace ExcelFormulaLabs.Analytics.Tests
             // Use p=3 with columns 2&3 near-identical at ~1e-13 epsilon;
             // condition number ≈ 1e26 exhausts double precision in Inverse().
             var singX = new double[,] {
-                { 1, 1.0, 1.0000000000001 },
-                { 1, 2.0, 2.0000000000002 },
-                { 1, 3.0, 3.0000000000003 },
-                { 1, 4.0, 4.0000000000004 },
-                { 1, 5.0, 5.0000000000005 }
+                { 1.0, 1.0000000000001 },
+                { 2.0, 2.0000000000002 },
+                { 3.0, 3.0000000000003 },
+                { 4.0, 4.0000000000004 },
+                { 5.0, 5.0000000000005 }
             };
             var singY = new double[] { 2.1, 3.8, 5.2, 7.1, 8.9 };
             var a = () => RegressionCore.FitOLS(singX, singY);

@@ -9,7 +9,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
 {
     public class RegressionUdfTests
     {
-        private static readonly double[,] X_test = { { 1, 1 }, { 1, 2 }, { 1, 3 } };
+        private static readonly double[,] X_test = { { 1 }, { 2 }, { 3 } }; // addIntercept adds 1-column
         private static readonly double[]   y_test = { 5, 8, 11 };
 
         /// <summary>
@@ -68,8 +68,8 @@ namespace ExcelFormulaLabs.Analytics.Tests
             var r = (object[,])RegressionUdf.UDF_REGRESS_RIDGE(y_test, X_test, 0.1);
             r.GetLength(0).Should().Be(8);
             var coef = FindRow(r, "coefficients");
-            coef[0].Should().BeApproximately(2.0, 0.15);
-            coef[1].Should().BeApproximately(3.0, 0.15);
+            coef[0].Should().BeApproximately(2.2857142857142847, 1e-6);
+            coef[1].Should().BeApproximately(2.8571428571428568, 1e-6);
         }
         [Fact] public void Anova1_keys()
         {
@@ -84,7 +84,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void FactorImportance_length()
         {
             var r = (long[])RegressionUdf.UDF_REGRESS_FACTORIMP(y_test, X_test);
-            r.Length.Should().Be(2);
+            r.Length.Should().Be(1);
         }
 
         // ── OLS coefficients / R-squared (return double[] and double) ──
