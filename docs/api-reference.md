@@ -328,7 +328,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 
 ## SQL.* -- SQL 查询
 
-> 数据通过参数化 INSERT 插入临时表。列名经字母数字消毒。请在可信输入上使用。
+> 数据通过参数化 INSERT 插入内存 SQLite 临时表，列名经字母数字消毒。⚠️ SQL 语句可执行 DDL/DML（`DROP TABLE`、`ATTACH DATABASE` 等），请在可信输入上使用。
 
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|

@@ -136,7 +136,7 @@ ExcelFormulaLabs/
 
 ### 4. 表头行契约（`object[,]` 表格方法）
 
-- ✅ 所有接受 `object[,]` 的 Core 方法**必须**含 `bool hasHeaders = true`（`CrossJoin` 等无表头语义的方法豁免）
+- ✅ 所有接受 `object[,]` 的 Core 方法**必须**含 `bool hasHeaders = true`（例外：无表头语义的方法豁免 — `CrossJoin`、`SelectColumns`、`SelectRows`）
 - ✅ `hasHeaders=true`（默认）：跳过第一行（表头），数据从 `r=1` 开始；需要表头文本时 `r=0` 读取（不参与计算）
 
 ### 5. 哨兵契约（InputNormalizer L1-L5）
