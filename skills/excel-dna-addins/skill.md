@@ -88,12 +88,15 @@ public static object UDF_STR_REV(
 
 ## 相关文档
 
-- [CLAUDE.md](../../CLAUDE.md) — 项目宪法（规则和技能路由）
-- [skill.md](../excel-dna-project/skill.md) — 编码规范和详细参考
-- [README.md](../../README.md) — 用户向项目说明
-- [docs/api-reference.md](../../docs/api-reference.md) — UDF 签名唯一信源
-- [docs/user-manual.md](../../docs/user-manual.md) — 每函数详细示例（Python 交叉验证）
-- [context.md](../../docs/context.md) — 领域术语表
-- 测试数据：tests/TestData/Cross_Validation_vs_Python.xlsx
-- Excel-DNA 官方文档：https://github.com/Excel-DNA/ExcelDna
+| 文档 | 角色 | 内容 |
+|------|------|------|
+| [CLAUDE.md](../../CLAUDE.md) | 项目宪法 | 架构分层、红线规则、开发流程 |
+| [skill: excel-dna-project](../excel-dna-project/skill.md) | 编码规范 | MapOver 选型、预防规则、测试模式 |
+| [README.md](../../README.md) | 用户入口 | 安装、模块速览、安全说明 |
+| [API 参考](../../docs/api-reference.md) | 数字唯一信源 | UDF 完整签名、参数说明、错误表 |
+| [用户手册](../../docs/user-manual.md) | 学习教程 | 每函数详细示例 + 结果解读指南 |
+| [context.md](../../docs/context.md) | 术语表 | 所有术语唯一定义 |
+| Excel-DNA 官方文档 | https://github.com/Excel-DNA/ExcelDna | |
+
+> 测试数据：`tests/TestData/Cross_Validation_vs_Python.xlsx`（Python 交叉验证参考值）
 

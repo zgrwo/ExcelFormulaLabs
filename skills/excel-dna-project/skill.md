@@ -30,8 +30,8 @@ tests/
 
 docs/
 ├── api-reference.md   UDF 签名（数字的唯一信源）
-└── user-manual.md     每个 UDF 的详细示例（全函数覆盖）
-docs/context.md        领域术语表
+├── user-manual.md     每个 UDF 的详细示例（全函数覆盖）
+└── context.md          领域术语表
 ```
 
 ## 架构
@@ -307,9 +307,29 @@ xUnit `[Fact]` + FluentAssertions 6.12.0。每 Core 方法覆盖：正常路径 
 
 **构建**：多目标 net8.0+net48 · DataToolkit .dna 双模板 · CleanupDnaAfterBuild 防增量污染 · SandboxRoot 并行测试 xUnit Collection 序列化
 
-## 外部文档
+## 哨兵契约 L1-L5
 
-- [README.md](../../README.md) — 用户向功能指南与安装
-- [docs/api-reference.md](../../docs/api-reference.md) — UDF 签名唯一信源
-- [docs/user-manual.md](../../docs/user-manual.md) — 每函数详细示例（Python 交叉验证）
-- [context.md](../../docs/context.md) — 领域术语表
+> 规则声明见 [CLAUDE.md §5](../../CLAUDE.md#5-哨兵契约inputnormalizer-l1-l5)。本表为实施细节。
+
+| 层级 | 职责 | ✅ DO | ❌ DON'T | 违反后果 |
+| :--- | :--- | :--- | :--- | :--- |
+| **L1 守卫** | 类型转换前 | 显式 `double.IsNaN(d)` / `double.IsInfinity(d)` | 依赖 CLR 未定义行为（如 `(long)NaN`） | 未定义行为 / 静默损坏 |
+| **L2 哨兵** | 不可转换值 | 返回类型零值哨兵：`double`→`NaN`、`long`→0、`int`→0、`bool`→`false`、`DateTime`→`MinValue`、`string`→`""` | 抛异常或返回非零值 | 调用方误判 |
+| **L3 Excel 信号** | `null`/`DBNull`/`ExcelEmpty`/`ExcelError`/`ExcelMissing` | 返回哨兵（语义：无有效值，跳过） | 抛异常或静默赋值 | Excel 交互异常 |
+| **L4 已知取舍** | `long`/`bool` 哨兵（0/false）与真实值不可区分 | 文档说明；调用方前置 `IsNumericCell` | 依赖「0/false 表示错误」语义 | 数据误判 |
+| **L5 最终边界** | `ConvertValue<T>` 未知类型 `Convert.ChangeType` 失败 | 已知 6 类委托 `InputNormalizer.ToXxx`；新类型：`double`→`NaN`，其余**必须 `throw`** | `return default(T)` 静默替代 | 脏数据传播 |
+
+## 验证脚本行为一致性
+
+> 规则声明见 [CLAUDE.md §6](../../CLAUDE.md#6-验证脚本行为一致性verify-manualpy--源码)。本表为实施对照。
+
+验证脚本必须模拟与 C# 源码**完全一致的行为**——相同模型参数、相同算法变体、相同转换常量。
+
+| 维度 | ✅ DO | ❌ DON'T | 违反后果 |
+| :--- | :--- | :--- | :--- |
+| **模型结构** | sklearn `fit_intercept` 与 C# 是否添加截距列一致 | C# 无截距但 sklearn 加了截距 | 回归验证完全无效（已发生：Issue #15） |
+| **算法参数** | scipy 参数与 MathNet 语义一致（`bias=False`, `fisher=True`） | 使用 scipy 默认参数而 MathNet 不同 | KURT/SKEW 值偏差 |
+| **转换常量** | Python 使用与 C# `PhyChemCore` 相同的转换因子 | Python 用 14.6959 而 C# 用 `101325/6894.76` | PHYCHEM 边界不一致 |
+| **空值语义** | Python 空值处理与 C# `InputNormalizer` 哨兵契约一致 | scipy `mode()` 返回首个值但 C# 返回 `NaN` | 边界用例验证失效 |
+
+> **自检**：新增/修改 UDF 后，确认 `verify-manual.py` 中的 Python 调用与 C# 源码参数、模型结构、转换常量逐项一致。

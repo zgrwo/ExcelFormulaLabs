@@ -401,8 +401,8 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | **FS** | 文件不存在 | `#VALUE!` |
 | **FS** | 路径含非法字符 | `#VALUE!` |
 
-> **提示**：`#VALUE!` 表示输入/执行错误（用户可修正输入），`#NUM!` 表示计算结果无定义（数据本身不满足数学条件）。详细行为见 [README.md](../README.md#错误处理)。
+> **提示**：`#VALUE!` 表示输入/执行错误（用户可修正输入），`#NUM!` 表示计算结果无定义（数据本身不满足数学条件）。本页为错误行为唯一信源——其他文档引用以此为准。
 
 ---
 
-> **架构**：UDF 调用链与分层详见 [CLAUDE.md](../CLAUDE.md#架构分层)。
+> **架构**：术语定义见 [context.md](context.md)，UDF 调用链与分层详见 [CLAUDE.md](../CLAUDE.md#架构分层)。

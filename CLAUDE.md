@@ -1,17 +1,17 @@
 # CLAUDE.md — 项目宪法
 
-> 全局架构、绝对红线与核心流程。编码细节按需加载 Skill。
+> 全局架构、绝对红线与核心流程。编码细节按需加载 Skill。术语见 [context.md](docs/context.md)。
 
 ## 元数据
 
 - **语言**：文档与注释默认中文
-- **术语**：[context.md](docs/context.md)
-- **数字唯一基准**：[api-reference.md](docs/api-reference.md)
-- **信息单一事实来源**：其余仅链接引用，禁止重复定义
+- **术语**：[context.md](docs/context.md) — 所有领域词汇唯一定义
+- **数字唯一基准**：[api-reference.md](docs/api-reference.md) — UDF 签名与错误行为以此为准
+- **信息单一事实来源**：每个事实只在一处定义，其余仅链接引用
 
 ## 技能加载
 
-修改代码前**必须**加载对应 Skill。Skill 文件路径：
+修改代码前**必须**加载对应 Skill：
 
 | 范围 | Skill 文件 | 内容 |
 | :--- | :--- | :--- |
@@ -82,7 +82,6 @@ ExcelFormulaLabs/
 ├── docs/                          # ✅ 文档
 │   ├── api-reference.md           # UDF 签名唯一信源（数字基准）
 │   ├── user-manual.md             # 每函数详细示例
-│   ├── cross-validation.md        # Python 交叉验证报告
 │   └── context.md                 # 领域术语表
 │
 ├── scripts/                       # ✅ 构建/验证脚本
@@ -120,11 +119,11 @@ ExcelFormulaLabs/
 
 ### 2. 防错三原则（违反 = bug）
 
-| 原则 | 核心 | 详解 |
+| 原则 | 核心 | 详见 |
 | :--- | :--- | :--- |
-| **静默传播阻断** | 显式守卫 `NaN`/`Inf`/`null`/`default!`，WrapError 不兜底 | [skill.md §预防规则](skills/excel-dna-project/skill.md#1-静默传播阻断) |
-| **防御完整性** | 安全机制覆盖模块所有方法（ValidatePath / Regex Timeout / SQL 参数化） | [skill.md §预防规则](skills/excel-dna-project/skill.md#2-防御完整性) |
-| **异常过滤器** | `catch (Exception ex) when` 统一排除 `OutOfMemoryException`/`StackOverflowException`/`AccessViolationException` | [skill.md §预防规则](skills/excel-dna-project/skill.md#3-异常过滤器统一) |
+| **静默传播阻断** | 显式守卫 `NaN`/`Inf`/`null`/`default!`，WrapError 不兜底 | [skill.md §1](skills/excel-dna-project/skill.md#1-静默传播阻断) |
+| **防御完整性** | 安全机制覆盖模块所有方法（ValidatePath / Regex Timeout / SQL 参数化） | [skill.md §2](skills/excel-dna-project/skill.md#2-防御完整性) |
+| **异常过滤器** | `catch (Exception ex) when` 统一排除 `OutOfMemoryException`/`StackOverflowException`/`AccessViolationException` | [skill.md §3](skills/excel-dna-project/skill.md#3-异常过滤器统一) |
 
 > **提交前自检**：`grep -rn "catch\s*{" src/ --include="*.cs"` 必须返回空。
 
@@ -141,24 +140,15 @@ ExcelFormulaLabs/
 
 ### 5. 哨兵契约（InputNormalizer L1-L5）
 
-| 层级 | 职责 | ✅ DO | ❌ DON'T | 违反后果 |
-| :--- | :--- | :--- | :--- | :--- |
-| **L1 守卫** | 类型转换前 | 显式 `double.IsNaN(d)` / `double.IsInfinity(d)` | 依赖 CLR 未定义行为（如 `(long)NaN`） | 未定义行为 / 静默损坏 |
-| **L2 哨兵** | 不可转换值 | 返回类型零值哨兵：`double`→`NaN`、`long`→0、`int`→0、`bool`→`false`、`DateTime`→`MinValue`、`string`→`""` | 抛异常或返回非零值 | 调用方误判 |
-| **L3 Excel 信号** | `null`/`DBNull`/`ExcelEmpty`/`ExcelError`/`ExcelMissing` | 返回哨兵（语义：无有效值，跳过） | 抛异常或静默赋值 | Excel 交互异常 |
-| **L4 已知取舍** | `long`/`bool` 哨兵（0/false）与真实值不可区分 | 文档说明；调用方前置 `IsNumericCell` | 依赖「0/false 表示错误」语义 | 数据误判 |
-| **L5 最终边界** | `ConvertValue<T>` 未知类型 `Convert.ChangeType` 失败 | 已知 6 类委托 `InputNormalizer.ToXxx`；新类型：`double`→`NaN`，其余**必须 `throw`** | `return default(T)` 静默替代 | 脏数据传播 |
+> 完整 L1-L5 层级表见 [skill.md §哨兵契约](skills/excel-dna-project/skill.md#哨兵契约-l1-l5)。
+
+核心原则：不可转换值返回类型零值哨兵（`double`→`NaN`、`long`→0、`int`→0、`bool`→`false`、`DateTime`→`MinValue`、`string`→`""`），不抛异常。Excel 信号（`null`/`DBNull`/`ExcelEmpty`/`ExcelError`/`ExcelMissing`）返回哨兵。未知类型 `Convert.ChangeType` 失败：`double`→`NaN`，其余**必须 `throw`**（禁止 `return default(T)` 静默替代）。
 
 ### 6. 验证脚本行为一致性（`verify-manual.py` ↔ 源码）
 
-验证脚本必须模拟与 C# 源码**完全一致的行为**——相同模型参数、相同算法变体、相同转换常量。脚本用不同参数通过 = 假阴性。
+> 完整对照表见 [skill.md §验证一致性](skills/excel-dna-project/skill.md#验证脚本行为一致性)。
 
-| 维度 | ✅ DO | ❌ DON'T | 违反后果 |
-| :--- | :--- | :--- | :--- |
-| **模型结构** | sklearn `fit_intercept` 与 C# 是否添加截距列一致 | C# 无截距但 sklearn 加了截距 | 回归验证完全无效（已发生：Issue #15） |
-| **算法参数** | scipy 参数与 MathNet 语义一致（`bias=False`, `fisher=True`） | 使用 scipy 默认参数而 MathNet 不同 | KURT/SKEW 值偏差 |
-| **转换常量** | Python 使用与 C# `PhyChemCore` 相同的转换因子 | Python 用 14.6959 而 C# 用 `101325/6894.76` | PHYCHEM 边界不一致 |
-| **空值语义** | Python 空值处理与 C# `InputNormalizer` 哨兵契约一致 | scipy `mode()` 返回首个值但 C# 返回 `NaN` | 边界用例验证失效 |
+验证脚本必须模拟与 C# 源码**完全一致的行为**——相同模型参数、相同算法变体、相同转换常量。脚本用不同参数通过 = 假阴性。
 
 > **自检**：新增/修改 UDF 后，确认 `verify-manual.py` 中的 Python 调用与 C# 源码参数、模型结构、转换常量逐项一致。
 
@@ -196,9 +186,11 @@ ExcelFormulaLabs/
 
 ## 参考
 
-- [docs/context.md](docs/context.md) — 领域术语表
-- [README.md](README.md) — 用户向功能指南
-- [docs/api-reference.md](docs/api-reference.md) — UDF 签名唯一信源
-- [skills/excel-dna-project/skill.md](skills/excel-dna-project/skill.md) — 编码规范与架构详情
-- [skills/excel-dna-addins/skill.md](skills/excel-dna-addins/skill.md) — Excel-DNA 开发全流程
-- [docs/user-manual.md](docs/user-manual.md) — 每函数详细示例（Python 交叉验证）
+| 文档 | 角色 | 内容 |
+| :--- | :--- | :--- |
+| [context.md](docs/context.md) | 术语表 | 所有术语唯一定义 |
+| [api-reference.md](docs/api-reference.md) | 数字唯一信源 | UDF 签名、参数、错误行为 |
+| [user-manual.md](docs/user-manual.md) | 学习教程 | 每函数详细示例 + 结果解读指南 |
+| [README.md](README.md) | 用户入口 | 安装、模块速览、使用模式、安全 |
+| [skill: excel-dna-project](skills/excel-dna-project/skill.md) | 编码规范 | MapOver 选型、预防规则、测试模式 |
+| [skill: excel-dna-addins](skills/excel-dna-addins/skill.md) | 打包分发 | UDF 声明、黄金法则、.xll 打包 |

@@ -98,15 +98,14 @@ Win10/11 自带 .NET Framework 4.8，直接加载 net48 版本的 `.xll`：
 
 ## 错误处理
 
-| 返回值 | Excel 显示 | 含义 | 常见原因 |
-|--------|-----------|------|---------|
-| `#VALUE!` | `#VALUE!` | 输入/执行错误 | 参数类型错误、矩阵维度不匹配、正则超时、文件不存在、除零 |
-| `NaN` | `#NUM!` | 计算结果无定义 | 空数据集、方差为零的相关性、常数响应变量的回归 |
-| `0` / `false` / `""` | 对应显示 | 哨兵值 | 非数值单元格类型转换后的占位值 |
+函数返回两类错误值：**`#VALUE!`**（输入/执行错误，用户可修正）和 **`#NUM!`**（计算结果无定义，数据本身不满足数学条件）。
 
-**输入过滤**：Excel 错误值（`#N/A`、`#DIV/0!` 等）在 MapOver 层**透传**，在统计函数中被跳过。空白单元格跳过不计。所有输入被过滤时返回 `#VALUE!` 或 `NaN`。
+- Excel 错误值（`#N/A`、`#DIV/0!` 等）在 MapOver 层透传，在统计函数中被跳过
+- 空白单元格跳过不计
+- 非数值单元格经类型转换后返回哨兵值（`0`/`false`/`""`），不视为错误
+- 所有输入被过滤时返回 `#VALUE!` 或 `NaN`
 
-完整错误清单见 [API 参考 → 错误参考](docs/api-reference.md#错误参考)。
+> 完整错误清单见 **[API 参考 → 错误参考](docs/api-reference.md#错误参考)**（唯一信源）。
 
 ---
 
@@ -177,11 +176,11 @@ dotnet test
 
 ## 文档索引
 
-| 文档 | 内容 |
-|------|------|
-| [API 参考](docs/api-reference.md) | 函数完整签名、参数说明、错误表 |
-| [用户手册](docs/user-manual.md) | 每个函数详细示例（4+ 列 × 5+ 行数据） |
-| [context.md](docs/context.md) | 领域术语表 |
-| [CLAUDE.md](CLAUDE.md) | 项目宪法：架构分层、红线规则、开发流程 |
-| [skill: excel-dna-project](skills/excel-dna-project/skill.md) | 编码规范、MapOver 选型、测试模式 |
-| [skill: excel-dna-addins](skills/excel-dna-addins/skill.md) | Excel-DNA UDF 声明、打包、分发 |
+| 文档 | 角色 | 内容 |
+|------|------|------|
+| [API 参考](docs/api-reference.md) | 数字唯一信源 | 函数完整签名、参数说明、错误表 |
+| [用户手册](docs/user-manual.md) | 学习教程 | 每个函数详细示例 + 结果解读指南 |
+| [context.md](docs/context.md) | 术语表 | 所有术语唯一定义 |
+| [CLAUDE.md](CLAUDE.md) | 项目宪法 | 架构分层、红线规则、开发流程 |
+| [skill: excel-dna-project](skills/excel-dna-project/skill.md) | 编码规范 | MapOver 选型、预防规则、测试模式 |
+| [skill: excel-dna-addins](skills/excel-dna-addins/skill.md) | 打包分发 | UDF 声明、黄金法则、.xll 打包 |

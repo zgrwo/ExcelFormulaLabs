@@ -3630,9 +3630,11 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-## 参见
+## 文档索引
 
-- [API 参考](api-reference.md) — UDF 完整签名与错误参考
-- [README](../README.md) — 安装、模块速览、安全说明
-- [CLAUDE.md](../CLAUDE.md) — 项目架构与开发流程
-- [context.md](context.md) — 领域术语表
+| 文档 | 角色 | 内容 |
+|------|------|------|
+| [API 参考](api-reference.md) | 数字唯一信源 | UDF 完整签名、参数说明、错误表 |
+| [README](../README.md) | 用户入口 | 安装、模块速览、安全说明 |
+| [CLAUDE.md](../CLAUDE.md) | 项目宪法 | 架构分层、红线规则、开发流程 |
+| [context.md](context.md) | 术语表 | 所有术语唯一定义 |
