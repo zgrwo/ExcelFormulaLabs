@@ -80,10 +80,10 @@ namespace ExcelFormulaLabs.Analytics.Tests
             fStat.Should().BeGreaterThan(0);
         }
 
-        // ── Factor importance (returns long[]) ──
+        // ── Factor importance (returns double[]) ──
         [Fact] public void FactorImportance_length()
         {
-            var r = (long[])RegressionUdf.UDF_REGRESS_FACTORIMP(y_test, X_test);
+            var r = (double[])RegressionUdf.UDF_REGRESS_FACTORIMP(y_test, X_test);
             r.Length.Should().Be(1);
         }
 
@@ -127,7 +127,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         }
         [Fact] public void FactorImportance_multi_column()
         {
-            var r = (long[])RegressionUdf.UDF_REGRESS_FACTORIMP(y_multi, X_multi);
+            var r = (double[])RegressionUdf.UDF_REGRESS_FACTORIMP(y_multi, X_multi);
             r.Should().HaveCount(2);
             r[0].Should().Be(0); // X1 (|t|=2) more important than X2 (|t|=1)
             r[1].Should().Be(1);

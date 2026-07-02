@@ -102,7 +102,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `REGRESS.WLS` | (known_y, known_x, weights) | `object[11,?]` | **加权最小二乘法**（异方差数据）。返回同 OLS 的 11 行报告。 |
 | `REGRESS.RIDGE` | (known_y, known_x, [lambda]) | `object[8,?]` | **岭回归**（L2 正则化，防过拟合）。λ 默认 1.0。返回 8 行：`coefficients`、`sse`、`r_squared`、`residuals`、`fitted_values`、`lambda`(惩罚参数)、`n`、`df`。**不返回**标准误/t值/p值（正则化下推断无效）。 |
 | `REGRESS.ANOVA1` | (input_range) | `object[12,?]` | **单因素方差分析**。数据按列分组（每列一组）。返回 12 行：`ss_between`(组间平方和)、`ss_within`(组内平方和)、`ss_total`、`df_between`、`df_within`、`df_total`、`ms_between`、`ms_within`、`f_stat`(F值)、`p_value`(p值)、`group_means`(各组均值)、`group_counts`(各组样本量)。数组字段横向展开到多列。`p<0.05` = 至少有一组均值显著不同。 |
-| `REGRESS.FACTORIMP` | (known_y, known_x) | `long[]` | **因子重要性排名**。按标准化后的 \|t\| 降序排列，返回 0-based 列索引数组。 |
+| `REGRESS.FACTORIMP` | (known_y, known_x) | `double[]` | **因子重要性排名**。按标准化后的 \|t\| 降序排列，返回 0-based 列索引数组。 |
 | `REGRESS.COEF` | (known_y, known_x) | `double[]` | OLS 回归系数向量（仅 beta）。 |
 | `REGRESS.RSQ` | (known_y, known_x) | `double` | OLS 决定系数 R²。范围 0-1，1 = 完美拟合。 |
 

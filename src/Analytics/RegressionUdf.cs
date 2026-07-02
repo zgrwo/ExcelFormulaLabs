@@ -35,7 +35,7 @@ namespace ExcelFormulaLabs.Analytics
 
         [ExcelFunction(Name = "REGRESS.FACTORIMP", Description = "Rank predictor importance by |t| from standardized OLS. Returns 0-based column index array most-to-least important.")]
         public static object UDF_REGRESS_FACTORIMP([ExcelArgument(Name="known_y", Description="The Y variable range (dependent variable)")] object y, [ExcelArgument(Name="known_x", Description="The X variable range (independent variables)")] object X)
-            => OutputWrapper.WrapError(() => RegressionCore.FactorImportance(M(X), V(y)).Select(i=>(long)i).ToArray());
+            => OutputWrapper.WrapError(() => RegressionCore.FactorImportance(M(X), V(y)).Select(i=>(double)i).ToArray());
 
         [ExcelFunction(Name = "REGRESS.COEF", Description = "OLS regression coefficients only (beta vector).")]
         public static object UDF_REGRESS_COEF([ExcelArgument(Name="known_y", Description="The Y variable range (dependent variable)")] object y, [ExcelArgument(Name="known_x", Description="The X variable range (independent variables)")] object X)
