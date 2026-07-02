@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>ExcelFormulaLabs.CrossValRunner</RootNamespace>
+    <AssemblyName>CrossValRunner</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Analytics\Analytics.csproj" />
+    <ProjectReference Include="..\..\src\DataToolkit\DataToolkit.csproj" />
+    <ProjectReference Include="..\..\src\Foundation\Foundation.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="test_manifest.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>

@@ -87,6 +87,11 @@ namespace ExcelFormulaLabs.Analytics.Tests
             r.Length.Should().Be(1);
         }
 
+        // ── Multi-column X test data ──
+        // y = 1 + 2*X1 + 1*X2 (perfect linear relationship, from user manual)
+        private static readonly double[,] X_multi = { { 1, 3 }, { 2, 1 }, { 3, 4 }, { 4, 2 }, { 5, 5 } };
+        private static readonly double[] y_multi = { 6, 6, 11, 11, 16 };
+
         // ── OLS coefficients / R-squared (return double[] and double) ──
         [Fact] public void Coef_values()
         {
@@ -95,6 +100,38 @@ namespace ExcelFormulaLabs.Analytics.Tests
             c[1].Should().BeApproximately(3.0, 1e-8);
         }
         [Fact] public void Rsq_is_one_for_perfect_fit() => ((double)RegressionUdf.UDF_REGRESS_RSQ(y_test, X_test)).Should().BeApproximately(1.0, 1e-10);
+
+        // ── Multi-column X regression ──
+        [Fact] public void Coef_multi_column()
+        {
+            var c = (double[])RegressionUdf.UDF_REGRESS_COEF(y_multi, X_multi);
+            c.Should().HaveCount(3); // intercept + 2 betas
+            c[0].Should().BeApproximately(1.0, 1e-8); // intercept
+            c[1].Should().BeApproximately(2.0, 1e-8); // beta1
+            c[2].Should().BeApproximately(1.0, 1e-8); // beta2
+        }
+        [Fact] public void Rsq_multi_column()
+        {
+            ((double)RegressionUdf.UDF_REGRESS_RSQ(y_multi, X_multi)).Should().BeApproximately(1.0, 1e-10);
+        }
+        [Fact] public void OLS_multi_column()
+        {
+            var r = (object[,])RegressionUdf.UDF_REGRESS_OLS(y_multi, X_multi);
+            r.GetLength(0).Should().Be(11); // 11 report rows
+            var coef = FindRow(r, "coefficients");
+            coef.Should().HaveCount(3);
+            coef[0].Should().BeApproximately(1.0, 1e-8);
+            coef[1].Should().BeApproximately(2.0, 1e-8);
+            coef[2].Should().BeApproximately(1.0, 1e-8);
+            FindScalar(r, "r_squared").Should().BeApproximately(1.0, 1e-10);
+        }
+        [Fact] public void FactorImportance_multi_column()
+        {
+            var r = (long[])RegressionUdf.UDF_REGRESS_FACTORIMP(y_multi, X_multi);
+            r.Should().HaveCount(2);
+            r[0].Should().Be(0); // X1 (|t|=2) more important than X2 (|t|=1)
+            r[1].Should().Be(1);
+        }
 
         // ── Report content verification ──────────────────────────────
         [Fact] public void OLS_report_content()

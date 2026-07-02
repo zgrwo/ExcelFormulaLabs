@@ -1419,14 +1419,22 @@ PV = nRT。将待求量填 `"*"`。R = 0.082057 L·atm/(mol·K)。
 
 <a id="phychem-gasstp"></a> ### PHYCHEM.GASSTP — 气体体积换算标况
 
-**语法**：`=PHYCHEM.GASSTP(volume, temperature, pressure)`
+**语法**：`=PHYCHEM.GASSTP(volume, temperature, pressure, [tUnit], [pUnit])`
 
-换算到 STP（273.15K, 1atm）：V_stp = V × P / 1 × 273.15 / T。
+换算到 STP（273.15K, 1atm）：V_stp = V × P / P_stp × T_stp / T。
+
+| 参数 | 说明 |
+|------|------|
+| volume | 气体体积 |
+| temperature | 温度，默认单位 ℃（摄氏度） |
+| pressure | 压力，默认单位 atm |
+| [tUnit] | 温度单位：C（摄氏，默认）/ K（开尔文）/ F（华氏度） |
+| [pUnit] | 压力单位：atm（默认）/ PSI / KPA / PA / BAR / MMHG / TORR |
 
 **示例**：
 ```
-=PHYCHEM.GASSTP(10, 300, 1.5)
-→ ≈13.65 L
+=PHYCHEM.GASSTP(10, 26.85, 1.5)         → ≈13.65 L   (26.85℃ = 300K)
+=PHYCHEM.GASSTP(10, 300, 1.5, "K")      → ≈13.65 L   (直接使用开尔文)
 ```
 
 ---

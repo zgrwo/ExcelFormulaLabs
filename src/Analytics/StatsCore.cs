@@ -192,7 +192,7 @@ namespace ExcelFormulaLabs.Analytics
         internal static double[] ZScore(double[] d)
         {
             double m = Statistics.Mean(d);
-            double sd = Math.Sqrt(Variance(d));
+            double sd = Math.Sqrt(VarianceP(d));
             if (double.IsNaN(sd) || sd < 1e-15) throw new ArgumentException("Cannot compute z-scores for constant data (zero variance).");
             return d.Select(x => (x - m) / sd).ToArray();
         }

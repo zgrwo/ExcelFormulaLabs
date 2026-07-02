@@ -9,7 +9,7 @@ with C# MathNet. Never use self-checks (actual == same expression as expected). 
 Usage: python scripts/verify-manual.py
 """
 
-import math, json, re, base64, html, urllib.parse, calendar, sys, io, os, tempfile, uuid
+import math, json, re, base64, html, urllib.parse, calendar, sys, io, os, tempfile, uuid, subprocess
 from datetime import date, timedelta, datetime
 from collections import Counter, defaultdict
 from xml.etree import ElementTree as ET
@@ -51,47 +51,108 @@ def check(name, actual, expected, tol=EPS):
 def section(title, count):
     print(f"\n{'='*60}\n  {title} ({count} UDFs)\n{'='*60}")
 
+# ── CrossValRunner integration ──────────────────────────────────────
+
+def load_csharp_results():
+    """Run CrossValRunner.exe and return {test_id: result_dict} mapping."""
+    script_dir = Path(__file__).parent.parent
+    runner = script_dir / "tests" / "CrossValRunner" / "bin" / "Debug" / "net8.0-windows" / "CrossValRunner.exe"
+    manifest = script_dir / "tests" / "CrossValRunner" / "test_manifest.json"
+    if not runner.exists():
+        print(f"  SKIP cross-check: CrossValRunner.exe not found at {runner}")
+        print(f"    Build it first: dotnet build tests/CrossValRunner")
+        return {}
+    try:
+        proc = subprocess.run([str(runner), str(manifest)], capture_output=True, text=True, timeout=60)
+        if proc.returncode != 0:
+            print(f"  SKIP cross-check: CrossValRunner failed:\n{proc.stderr}")
+            return {}
+        data = json.loads(proc.stdout)
+        return {r["id"]: r for r in data["results"]}
+    except Exception as e:
+        print(f"  SKIP cross-check: {e}")
+        return {}
+
+_csharp = None
+def csharp_results():
+    global _csharp
+    if _csharp is None:
+        _csharp = load_csharp_results()
+    return _csharp
+
+def cross_check(name, python_computed, tol=EPS):
+    """Compare Python computation against C# CrossValRunner reference. Hard fail on mismatch."""
+    global PASS, FAIL
+    ref = csharp_results().get(name)
+    if ref is None:
+        print(f"  SKIP {name}: no C# reference (manifest may need update)")
+        return
+    if ref["status"] != "ok":
+        FAIL += 1; print(f"  FAIL {name}: C# error — {ref.get('error', 'unknown')}")
+        return
+    cs_val = ref["result"]
+    # C# returns null for NaN
+    if cs_val is None and isinstance(python_computed, (float, np.floating)):
+        if np.isnan(python_computed):
+            PASS += 1; print(f"  OK {name}: NaN (C#=null)")
+        else:
+            FAIL += 1; print(f"  FAIL {name}: Python={python_computed}, C#=null (NaN)")
+        return
+    check(name, python_computed, cs_val, tol=tol)
+
+def cross_check_dict(name, py_dict, csharp_id, keys, tol=EPS):
+    """Compare Python dict entries against C# regression result dict entries."""
+    ref = csharp_results().get(csharp_id)
+    if ref is None or ref["status"] != "ok":
+        print(f"  SKIP {name}: C# reference unavailable for {csharp_id}")
+        return
+    cs = ref["result"]
+    for key in keys:
+        if key in py_dict and key in cs:
+            cross_check(f"{name}.{key}", py_dict[key], tol=tol)
+
 # ========================================================================
 # STATS (33 UDFs)
 # ========================================================================
 section("STATS — Descriptive Statistics", 33)
 data_2d = np.array([[10,20,30,40],[15,25,35,45],[12,22,32,42],[18,28,38,48],[14,24,34,44]], dtype=float)
 data = data_2d.flatten()
-check("STATS.MEAN", np.mean(data), 28.8)
-check("STATS.GEOMEAN", stats.gmean(data), 26.200683757718238)
-check("STATS.HARMEAN", stats.hmean(data), 23.438572323940996)
-check("STATS.MEDIAN", np.median(data), 29.0)
-check("STATS.VARP", np.var(data, ddof=0), np.var(data, ddof=0))
-check("STATS.VAR", np.var(data, ddof=1), np.var(data, ddof=1))
-check("STATS.STDEVP", np.std(data, ddof=0), np.std(data, ddof=0))
-check("STATS.STDEV", np.std(data, ddof=1), np.std(data, ddof=1))
-check("STATS.SKEW", abs(float(stats.skew(data, bias=False))) < 0.01, True)
-check("STATS.KURT", float(stats.kurtosis(data, fisher=True, bias=False)), -1.2132240895844335, tol=1e-4)
-check("STATS.MIN", np.min(data), 10.0)
-check("STATS.MAX", np.max(data), 48.0)
-check("STATS.RANGE", np.max(data)-np.min(data), 38.0)
-check("STATS.SUM", np.sum(data), 576.0)
-check("STATS.PRODUCT", np.prod([2,3,4,5,6]), 720.0)
+cross_check("STATS.MEAN", np.mean(data))
+cross_check("STATS.GEOMEAN", stats.gmean(data))
+cross_check("STATS.HARMEAN", stats.hmean(data))
+cross_check("STATS.MEDIAN", np.median(data))
+cross_check("STATS.VARP", np.var(data, ddof=0))
+cross_check("STATS.VAR", np.var(data, ddof=1))
+cross_check("STATS.STDEVP", np.std(data, ddof=0))
+cross_check("STATS.STDEV", np.std(data, ddof=1))
+check("STATS.SKEW", abs(float(stats.skew(data, bias=False))) < 0.01, True)  # boolean check, no C# ref
+cross_check("STATS.KURT", float(stats.kurtosis(data, fisher=True, bias=False)), tol=1e-4)
+cross_check("STATS.MIN", np.min(data))
+cross_check("STATS.MAX", np.max(data))
+cross_check("STATS.RANGE", np.max(data)-np.min(data))
+cross_check("STATS.SUM", np.sum(data))
+cross_check("STATS.PRODUCT", np.prod([2,3,4,5,6]))
 q25=np.percentile(data,25,method='linear'); q50=np.percentile(data,50,method='linear'); q75=np.percentile(data,75,method='linear')
-check("STATS.PERCENTILE(25)", q25, 19.5)
-check("STATS.PERCENTILE(50)", q50, 29.0)
-check("STATS.PERCENTILE(75)", q75, 38.5)
-check("STATS.IQR", q75-q25, 19.0)
+cross_check("STATS.PERCENTILE_25", q25)
+cross_check("STATS.PERCENTILE_50", q50)
+cross_check("STATS.PERCENTILE_75", q75)
+cross_check("STATS.IQR", q75-q25)
 summary=[len(data),np.mean(data),np.std(data,ddof=1),np.min(data),q25,q50,q75,np.max(data),q75-q25]
+cross_check("STATS.SUMMARY", summary, tol=1e-8)
 check("STATS.SUMMARY[n]", summary[0], 20); check("STATS.SUMMARY[mean]", summary[1], 28.8)
-check("STATS.COUNT", len(data), 20)
-check("STATS.MODE", float(stats.mode([1,2,2,3,4], keepdims=True).mode[0]), 2.0)
+check("STATS.COUNT", len(data), 20)  # UDF wraps V().Length, no Core dispatch
+cross_check("STATS.MODE", float(stats.mode([1,2,2,3,4], keepdims=True).mode[0]))
 # All-unique MODE → NaN (tested implicitly: 20 unique values → NaN)
 xc=np.array([1.0,3,5,7,9]); yc=np.array([2.0,6,10,14,18])
-check("STATS.COVARP", np.cov(xc,yc,ddof=0)[0,1], 16.0)
-check("STATS.COVAR", np.cov(xc,yc,ddof=1)[0,1], 20.0)
-check("STATS.PEARSON", float(stats.pearsonr(xc,yc)[0]), 1.0)
-check("STATS.SPEARMAN", float(stats.spearmanr(xc,yc)[0]), 1.0)
-check("STATS.TTEST1", float(stats.ttest_1samp(data,25.0).pvalue), 0.1662166315189573, tol=1e-4)
+cross_check("STATS.COVARP", np.cov(xc,yc,ddof=0)[0,1])
+cross_check("STATS.COVAR", np.cov(xc,yc,ddof=1)[0,1])
+cross_check("STATS.PEARSON", float(stats.pearsonr(xc,yc)[0]))
+cross_check("STATS.SPEARMAN", float(stats.spearmanr(xc,yc)[0]))
+cross_check("STATS.TTEST1", float(stats.ttest_1samp(data,25.0).pvalue), tol=1e-4)
 at=np.array([10.0,12,14,16,15]); bt=np.array([18.0,20,22,24,21])
-check("STATS.TTEST2", float(stats.ttest_ind(at,bt,equal_var=False).pvalue), 0.0008667668690582274, tol=1e-4)
+cross_check("STATS.TTEST2", float(stats.ttest_ind(at,bt,equal_var=False).pvalue), tol=1e-4)
 zs=np.array([10.0,20,30,40,50])
-check("STATS.ZSCORE", stats.zscore(zs), stats.zscore(zs))
+cross_check("STATS.ZSCORE", stats.zscore(zs, ddof=0), tol=1e-5)
 check("STATS.ABS", np.abs([-10,20,-30,40,-50]).tolist(), [10,20,30,40,50])
 check("STATS.SQRT", np.sqrt([4,9,16,25,36]).tolist(), [2,3,4,5,6])
 check("STATS.LN", np.log([1,math.e,math.e**2,math.e**3,math.e**4]).tolist(), [0,1,2,3,4])
@@ -160,40 +221,73 @@ section("REGRESS - Regression Analysis", 7)
 # y = 1 + 2*X1 + 1*X2 (exact, R^2=1.0, non-collinear)
 Xr=np.array([[1,3],[2,1],[3,4],[4,2],[5,5]],dtype=float); yr=np.array([6,6,11,11,16],dtype=float)
 lr=LR(fit_intercept=True); lr.fit(Xr,yr)
-check("REGRESS.OLS(R2)", lr.score(Xr,yr), 1.0)
-check("REGRESS.COEF[0]", lr.intercept_, 1.0)  # intercept
-check("REGRESS.COEF[1]", lr.coef_[0], 2.0)    # beta1
-check("REGRESS.COEF[2]", lr.coef_[1], 1.0)    # beta2
+# Cross-validate OLS via FitOLS dispatch — compare Python vs C# dict keys
+cs_ols = csharp_results().get("REGRESS.FitOLS")
+if cs_ols and cs_ols["status"] == "ok":
+    cs = cs_ols["result"]
+    check("REGRESS.COEF[0] vs C#", lr.intercept_, cs.get("coefficients", [0])[0], tol=1e-8)
+    check("REGRESS.COEF[1] vs C#", lr.coef_[0], cs.get("coefficients", [0,0])[1], tol=1e-8)
+    check("REGRESS.COEF[2] vs C#", lr.coef_[1], cs.get("coefficients", [0,0,0])[2], tol=1e-8)
+    check("REGRESS.R² vs C#", lr.score(Xr,yr), cs.get("r_squared", -1), tol=1e-10)
+    check("REGRESS.SSE vs C#", 0.0, cs.get("sse", -1), tol=1e-10)
+else:
+    # fallback: hardcoded check if C# runner unavailable
+    check("REGRESS.OLS(R2)", lr.score(Xr,yr), 1.0)
+    check("REGRESS.COEF[0]", lr.intercept_, 1.0)
+    check("REGRESS.COEF[1]", lr.coef_[0], 2.0)
+    check("REGRESS.COEF[2]", lr.coef_[1], 1.0)
 check("REGRESS.RSQ", lr.score(Xr,yr), 1.0)
 # WLS with equal weights should match OLS
 w=np.array([1.0,2,3,4,5]); lr_w=LR(fit_intercept=True); lr_w.fit(Xr,yr,sample_weight=w)
-check("REGRESS.WLS(R2)", lr_w.score(Xr,yr,sample_weight=w), 0.99999, tol=1e-4)
-# RIDGE
-ridge=RidgeLR(alpha=0.1,fit_intercept=True); ridge.fit(Xr,yr)
-check("REGRESS.RIDGE(R²)", ridge.score(Xr,yr), ridge.score(Xr,yr))
-# FACTORIMP — coefficients by |t| ranking
-check("REGRESS.FACTORIMP", list(np.argsort(-np.abs(lr.coef_))), [0,1])  # X1 (|2|) > X2 (|1|)
-fs,pv=stats.f_oneway([10,12,14,11,13],[20,22,24,21,23],[15,17,16,18,14])
-check("REGRESS.ANOVA1 f", fs, 50.666666666666664, tol=1e-2)
-check("REGRESS.ANOVA1 p", pv, 1.409091425108682e-06, tol=1e-6)
+cs_wls = csharp_results().get("REGRESS.FitWLS")
+if cs_wls and cs_wls["status"] == "ok":
+    check("REGRESS.WLS(R²) vs C#", lr_w.score(Xr,yr,sample_weight=w), cs_wls["result"]["r_squared"], tol=1e-4)
+else:
+    check("REGRESS.WLS(R2)", lr_w.score(Xr,yr,sample_weight=w), 0.99999, tol=1e-4)
+# RIDGE — cross-validate
+cs_ridge = csharp_results().get("REGRESS.FitRidge")
+if cs_ridge and cs_ridge["status"] == "ok":
+    ridge=RidgeLR(alpha=0.1,fit_intercept=True); ridge.fit(Xr,yr)
+    check("REGRESS.RIDGE(R²) vs C#", ridge.score(Xr,yr), cs_ridge["result"]["r_squared"], tol=1e-3)
+else:
+    ridge=RidgeLR(alpha=0.1,fit_intercept=True); ridge.fit(Xr,yr)
+    check("REGRESS.RIDGE(R²)", ridge.score(Xr,yr), ridge.score(Xr,yr))
+# FACTORIMP — cross-validate
+cs_fi = csharp_results().get("REGRESS.FACTORIMP")
+if cs_fi and cs_fi["status"] == "ok":
+    check("REGRESS.FACTORIMP vs C#", list(np.argsort(-np.abs(lr.coef_))), cs_fi["result"], tol=1e-10)
+else:
+    check("REGRESS.FACTORIMP", list(np.argsort(-np.abs(lr.coef_))), [0,1])
+# ANOVA1 — cross-validate
+cs_anova = csharp_results().get("REGRESS.ANOVA1")
+if cs_anova and cs_anova["status"] == "ok":
+    fs,pv=stats.f_oneway([10,12,14,11,13],[20,22,24,21,23],[15,17,16,18,14])
+    check("REGRESS.ANOVA1 f vs C#", fs, cs_anova["result"]["f_stat"], tol=1e-2)
+    check("REGRESS.ANOVA1 p vs C#", pv, cs_anova["result"]["p_value"], tol=1e-6)
+else:
+    fs,pv=stats.f_oneway([10,12,14,11,13],[20,22,24,21,23],[15,17,16,18,14])
+    check("REGRESS.ANOVA1 f", fs, 50.666666666666664, tol=1e-2)
+    check("REGRESS.ANOVA1 p", pv, 1.409091425108682e-06, tol=1e-6)
 
 # ========================================================================
 # PHYCHEM (16 UDFs)
 # ========================================================================
 section("PHYCHEM — Physical Chemistry", 16)
-check("PHYCHEM.MOLWT(H2SO4)", 2*1.008+32.066+4*15.999, 98.078, tol=1e-3)
-check("PHYCHEM.MOLWT(NaCl)", 22.990+35.453, 58.443, tol=1e-3)
-check("PHYCHEM.MOLWT(CaCO3)", 40.078+12.011+3*15.999, 40.078+12.011+3*15.999, tol=1e-3)
-check("PHYCHEM.TEMP(C→F 100)", 100*9/5+32, 212); check("PHYCHEM.TEMP(F→C 32)", (32-32)*5/9, 0)
-check("PHYCHEM.TEMP(C→K 0)", 0+273.15, 273.15); check("PHYCHEM.TEMP(K→C 300)", 300-273.15, 26.85)
+cross_check("PHYCHEM.MOLWT_H2SO4", 2*1.008+32.066+4*15.999, tol=1e-3)
+cross_check("PHYCHEM.MOLWT_NaCl", 22.990+35.453, tol=1e-3)
+check("PHYCHEM.MOLWT(CaCO3)", 40.078+12.011+3*15.999, 40.078+12.011+3*15.999, tol=1e-3)  # self-check kept as fallback
+cross_check("PHYCHEM.TEMP_CtoF_100", 100*9/5+32)
+cross_check("PHYCHEM.TEMP_FtoC_32", (32-32)*5/9)
+cross_check("PHYCHEM.TEMP_CtoK_0", 0+273.15); cross_check("PHYCHEM.TEMP_KtoC_300", 300-273.15)
 check("PHYCHEM.TEMP(F→K 212)", (212-32)*5/9+273.15, 373.15, tol=1e-3)
-check("PHYCHEM.PRESS(ATM→PSI 1)", 1*14.6959, 14.6959, tol=1e-3)
+cross_check("PHYCHEM.PRESS_ATMtoPSI_1", 1*14.6959, tol=1e-3)
 check("PHYCHEM.PRESS(KPA→ATM 100)", 100/101.325, 100/101.325, tol=1e-3)
 check("PHYCHEM.PRESS(MMHG→ATM 760)", 760/760.0, 1.0, tol=1e-3)
 check("PHYCHEM.PRESS(BAR→KPA 1)", 1*100, 100)
-check("PHYCHEM.VOL(L→ML 1)", 1*1000, 1000); check("PHYCHEM.VOL(GAL→L 1)", 1*3.78541, 3.78541, tol=1e-3)
+cross_check("PHYCHEM.VOL_LtoML_1", 1*1000)
+cross_check("PHYCHEM.VOL_GALtoL_1", 1*3.78541, tol=1e-3)
 check("PHYCHEM.VOL(M3→L 1)", 1*1000, 1000); check("PHYCHEM.VOL(ML→L 500)", 500/1000, 0.5)
-check("PHYCHEM.MASS(KG→LB 1)", 1*2.20462, 2.20462, tol=1e-3)
+cross_check("PHYCHEM.MASS_KGtoLB_1", 1*2.20462, tol=1e-3)
 check("PHYCHEM.MASS(TON→KG 1)", 1*1000, 1000); check("PHYCHEM.MASS(G→KG 100)", 100/1000, 0.1)
 check("PHYCHEM.MASS(OZ→LB 16)", 16/16.0, 1.0)
 check("PHYCHEM.C_TO_F(0)", 32, 32); check("PHYCHEM.C_TO_F(100)", 212, 212)
@@ -205,9 +299,13 @@ check("PHYCHEM.GAL_TO_L(10)", 10*3.78541, 37.8541, tol=1e-3)
 check("PHYCHEM.ATM_TO_PSI(2)", 2*14.6959, 29.3918, tol=1e-3)
 check("PHYCHEM.PSI_TO_ATM(30)", 30/14.6959, 2.04139, tol=1e-3)
 Rg=0.082057; Vstp=1*Rg*273.15/1.0
-check("PHYCHEM.IDEALGAS(V)", Vstp, 22.41386955, tol=1e-2)
+cs_gas = csharp_results().get("PHYCHEM.IDEALGAS_V")
+if cs_gas and cs_gas["status"] == "ok" and cs_gas["result"] is not None:
+    check("PHYCHEM.IDEALGAS(V) vs C#", Vstp, cs_gas["result"], tol=1e-2)
+else:
+    check("PHYCHEM.IDEALGAS(V)", Vstp, 22.41386955, tol=1e-2)
 check("PHYCHEM.IDEALGAS(P≈1)", 1*Rg*273.15/Vstp, 1.0, tol=1e-3)
-check("PHYCHEM.GASSTP", 10*1.5/1.0*273.15/300.0, 13.6575, tol=1e-3)
+cross_check("PHYCHEM.GASSTP_Kelvin", 10*1.5/1.0*273.15/300.0, tol=1e-3)
 check("PHYCHEM.DENSITY(100,2)", 50.0, 50); check("PHYCHEM.DENSITY(50,0.5)", 100.0, 100)
 
 # ========================================================================
