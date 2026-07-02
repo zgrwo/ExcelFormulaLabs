@@ -20,7 +20,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void PrepV_scalar() { var result = AnalyticsHelpers.PrepV(42); result.Length.Should().Be(1); result[0].Should().Be(42.0); }
         [Fact] public void PrepV_1D() { var result = AnalyticsHelpers.PrepV(new object[]{1.0,2,3}); result.Length.Should().Be(3); }
         [Fact] public void PrepV_2D_flattens() { var result = AnalyticsHelpers.PrepV(new object[,]{{1.0},{2.0},{3.0}}); result.Length.Should().Be(3); }
-        [Fact] public void PrepV_empty() { var result = AnalyticsHelpers.PrepV(ExcelEmpty.Value); result.Should().BeEmpty(); }
+        [Fact] public void PrepV_empty() { var a = () => AnalyticsHelpers.PrepV(ExcelEmpty.Value); a.Should().Throw<ArgumentException>(); }
         // NaN/Inf guards (防错原则1: PrepM/PrepV now uniformly throw)
         [Fact] public void ToDoubleMatrix_NaN_throws() { var a = () => AnalyticsHelpers.ToDoubleMatrix(new object[,] { { double.NaN, 1.0 }, { 2.0, 3.0 } }); a.Should().Throw<ArgumentException>().WithMessage("*non-numeric*"); }
         [Fact] public void ToDoubleMatrix_Inf_throws() { var a = () => AnalyticsHelpers.ToDoubleMatrix(new object[,] { { double.PositiveInfinity, 1.0 }, { 2.0, 3.0 } }); a.Should().Throw<ArgumentException>().WithMessage("*non-numeric*"); }

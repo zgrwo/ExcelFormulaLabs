@@ -221,8 +221,8 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         // ══════════════════════════════════════════════════════════════════
         [Fact] public void Range_1_to_5() { var r=(object[])ArrayUdf.UDF_ARR_RANGE(1,5,1); r.Should().Equal(1.0,2.0,3.0,4.0,5.0); }
         [Fact] public void Range_with_step() { var r=(object[])ArrayUdf.UDF_ARR_RANGE(1.0,5.0,2.0); r.Should().Equal(1.0,3.0,5.0); }
-        [Fact] public void Range_step_zero_defaults_1() { var r=(object[])ArrayUdf.UDF_ARR_RANGE(1,3,0); r.Should().Equal(1.0,2.0,3.0); }
-        [Fact] public void Range_step_negative_defaults_1() { var r=(object[])ArrayUdf.UDF_ARR_RANGE(1,3,-1); r.Should().Equal(1.0,2.0,3.0); }
+        [Fact] public void Range_step_zero_throws() { var r = ArrayUdf.UDF_ARR_RANGE(1,3,0); r.Should().Be(ExcelError.Value); }
+        [Fact] public void Range_step_negative_descending() { var r=(object[])ArrayUdf.UDF_ARR_RANGE(3,1,-1); r.Should().Equal(3.0,2.0,1.0); }
         [Fact] public void Range_start_gt_end() { var r=(object[])ArrayUdf.UDF_ARR_RANGE(5,1,1); r.Should().BeEmpty(); }
         [Fact] public void Range_single() { var r=(object[])ArrayUdf.UDF_ARR_RANGE(7,7,1); r.Should().Equal(7.0); }
         [Fact] public void Range_null_start() { var r=(object[])ArrayUdf.UDF_ARR_RANGE(null!,5,1); r.Should().BeEmpty(); }

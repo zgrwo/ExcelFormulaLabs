@@ -59,10 +59,13 @@ namespace ExcelFormulaLabs.DataToolkit
                 {
                     if (c > 0) sb.Append(delim);
                     string v = InputNormalizer.ToString(data[r, c]);
-                    // Defang formula injection: cells starting with =, +, -, @ are
-                    // interpreted as formulas when the CSV is re-opened in Excel.
-                    // Prepend a single quote (text marker) to neutralise them.
-                    if (v.Length > 0 && (v[0] == '=' || v[0] == '+' || v[0] == '-' || v[0] == '@'))
+                    // Defang formula injection: cells starting with =, +, -, @, or
+                    // DDE/command prefixes are interpreted as formulas/commands when
+                    // the CSV is re-opened in Excel. Prepend a single quote (text marker)
+                    // to neutralise them. Also trim leading whitespace before checking
+                    // since Excel ignores it before formula-introducing characters.
+                    string trimmed = v.TrimStart();
+                    if (trimmed.Length > 0 && (trimmed[0] == '=' || trimmed[0] == '+' || trimmed[0] == '-' || trimmed[0] == '@'))
                         v = "'" + v;
                     if (quote && (v.Contains(delim) || v.Contains("\"") || v.Contains("\n")))
                         v = "\"" + v.Replace("\"", "\"\"") + "\"";
@@ -99,6 +102,6 @@ namespace ExcelFormulaLabs.DataToolkit
             return t;
         }
 
-        private static string JsonVal(object? v) { if (v == null || v is DBNull) return "null"; if (InputNormalizer.IsExcelEmptyValue(v)) return "null"; if (v is string s) return $"\"{JsonEncodedText.Encode(s, JavaScriptEncoder.Default).Value}\""; if (v is bool b) return b ? "true" : "false"; if (v is double d && (double.IsNaN(d) || double.IsInfinity(d))) return "null"; if (v is long l) return l.ToString(); if (v is int i) return i.ToString(); if (v is float f) return f.ToString(System.Globalization.CultureInfo.InvariantCulture); if (v is decimal m) return m.ToString(System.Globalization.CultureInfo.InvariantCulture); return $"\"{JsonEncodedText.Encode(InputNormalizer.ToString(v), JavaScriptEncoder.Default).Value}\""; }
+        private static string JsonVal(object? v) { if (v == null || v is DBNull) return "null"; if (InputNormalizer.IsExcelEmptyValue(v)) return "null"; if (v is string s) return $"\"{JsonEncodedText.Encode(s, JavaScriptEncoder.Default).Value}\""; if (v is bool b) return b ? "true" : "false"; if (v is double d && (double.IsNaN(d) || double.IsInfinity(d))) return "null"; if (v is double fd) return fd.ToString("G17", System.Globalization.CultureInfo.InvariantCulture); if (v is long l) return l.ToString(); if (v is int i) return i.ToString(); if (v is float f) return f.ToString(System.Globalization.CultureInfo.InvariantCulture); if (v is decimal m) return m.ToString(System.Globalization.CultureInfo.InvariantCulture); return $"\"{JsonEncodedText.Encode(InputNormalizer.ToString(v), JavaScriptEncoder.Default).Value}\""; }
     }
 }

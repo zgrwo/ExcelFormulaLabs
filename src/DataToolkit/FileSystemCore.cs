@@ -109,7 +109,7 @@ namespace ExcelFormulaLabs.DataToolkit
         /// </remarks>
         internal static bool IsPathValid(string p) { if(string.IsNullOrEmpty(p))return false; if(p.IndexOfAny(System.IO.Path.GetInvalidPathChars())>=0)return false; try{Path.GetFullPath(p);return true;}catch(Exception ex) when(ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException){return false;} }
         internal static bool FileExists(string p) { ValidatePath(p); return File.Exists(p); }
-        internal static long GetFileSize(string p) { ValidatePath(p); return File.Exists(p) ? new FileInfo(p).Length : -1; }
+        internal static long GetFileSize(string p) { ValidatePath(p); if (!File.Exists(p)) throw new System.IO.FileNotFoundException($"File not found: {p}"); return new FileInfo(p).Length; }
         internal static string ReadTextFile(string p, Encoding? e = null) { ValidatePath(p); return File.ReadAllText(p, e ?? Encoding.UTF8); }
         internal static string[] ReadAllLines(string p, Encoding? e = null) { ValidatePath(p); return File.ReadAllLines(p, e ?? Encoding.UTF8); }
         internal static bool WriteTextFile(string p, string c, Encoding? e = null) { ValidatePath(p); File.WriteAllText(p, c, e ?? Encoding.UTF8); return true; }
@@ -159,9 +159,22 @@ namespace ExcelFormulaLabs.DataToolkit
             }
             Directory.Delete(p);
         }
-        internal static string[] GetDrives() { return Array.ConvertAll(DriveInfo.GetDrives(), d => d.Name); }
-        internal static string GetCurrentFolder() => Directory.GetCurrentDirectory();
-        internal static string GetTempPath() => Path.GetTempPath();
+        /// <summary>Enumerate logical drives. When <see cref="SandboxRoot"/> is set,
+        /// returns only the sandbox root drive to limit filesystem reconnaissance.</summary>
+        internal static string[] GetDrives()
+        {
+            if (!string.IsNullOrEmpty(SandboxRoot))
+                return new[] { Path.GetPathRoot(Path.GetFullPath(SandboxRoot))! };
+            return Array.ConvertAll(DriveInfo.GetDrives(), d => d.Name);
+        }
+        /// <summary>Returns the current working directory. When <see cref="SandboxRoot"/> is set,
+        /// returns the sandbox root to avoid leaking the real working directory.</summary>
+        internal static string GetCurrentFolder()
+            => !string.IsNullOrEmpty(SandboxRoot) ? Path.GetFullPath(SandboxRoot) : Directory.GetCurrentDirectory();
+        /// <summary>Returns the system temporary folder. When <see cref="SandboxRoot"/> is set,
+        /// returns the sandbox root so temp files created outside FS.* stay within the sandbox.</summary>
+        internal static string GetTempPath()
+            => !string.IsNullOrEmpty(SandboxRoot) ? Path.GetFullPath(SandboxRoot) : Path.GetTempPath();
         /// <summary>
         /// Returns a zero-byte temporary file path. When <see cref="SandboxRoot"/> is set,
         /// the file is created inside the sandbox; otherwise the system TEMP directory is used.

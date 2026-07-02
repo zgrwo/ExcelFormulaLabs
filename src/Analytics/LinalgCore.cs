@@ -259,8 +259,14 @@ namespace ExcelFormulaLabs.Analytics
             return Matrix<double>.Build.DenseIdentity(n).ToArray();
         }
 
-        internal static double[,] Diagonal(double[] v) =>
-            Matrix<double>.Build.DenseOfDiagonalArray(v).ToArray();
+        internal static double[,] Diagonal(double[] v)
+        {
+            for (int i = 0; i < v.Length; i++)
+                if (double.IsNaN(v[i]) || double.IsInfinity(v[i]))
+                    throw new ArgumentException(
+                        $"Diagonal array contains non-finite value at index {i}.");
+            return Matrix<double>.Build.DenseOfDiagonalArray(v).ToArray();
+        }
 
         internal static double[,] MatMul(double[,] A, double[,] B)
         {

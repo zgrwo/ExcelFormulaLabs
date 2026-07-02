@@ -370,12 +370,20 @@ namespace ExcelFormulaLabs.Foundation
             object[] flat, params object[] originals)
         {
             int rows = flat.Length;
+            // Validate all 2D inputs share the same row count — otherwise
+            // same-length arrays with different shapes (e.g. [6,1] and [2,3])
+            // would silently produce a wrong output shape.
+            int? expectedRows = null;
             foreach (var orig in originals)
             {
                 if (orig is object[,] arr2D)
                 {
-                    rows = arr2D.GetLength(0);
-                    break;
+                    int r = arr2D.GetLength(0);
+                    if (expectedRows == null) { expectedRows = r; rows = r; }
+                    else if (expectedRows.Value != r)
+                        throw new InvalidOperationException(
+                            $"Cannot reshape into consistent 2D shape: one input has {expectedRows.Value} " +
+                            $"rows but another has {r} rows. Use identically-shaped ranges.");
                 }
             }
             // If flat doesn't divide evenly into rows, the input shapes are inconsistent.

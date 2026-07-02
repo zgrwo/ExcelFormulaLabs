@@ -33,7 +33,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
 
         // GetFileSize tests
         [Fact] public void GetFileSize_knownFile() => FileSystemCore.GetFileSize(@"C:\Windows\System32\notepad.exe").Should().BeGreaterThan(0);
-        [Fact] public void GetFileSize_nonexistent() => FileSystemCore.GetFileSize(@"C:\nonexistent\file.txt").Should().Be(-1);
+        [Fact] public void GetFileSize_nonexistent() { var a = () => FileSystemCore.GetFileSize(@"C:\nonexistent\file.txt"); a.Should().Throw<System.IO.FileNotFoundException>(); }
 
         // FolderExists tests
         [Fact] public void FolderExists_true() => FileSystemCore.FolderExists(@"C:\Windows").Should().BeTrue();

@@ -32,7 +32,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Folder_null() => FileSystemUdf.UDF_FS_FDR(null!).Should().BeNull();
         [Fact] public void FExists_empty() => ((bool)FileSystemUdf.UDF_FS_FEX("")).Should().BeFalse();
         [Fact] public void FExists_null() => FileSystemUdf.UDF_FS_FEX(null!).Should().BeNull();
-        [Fact] public void FSize_empty() => FileSystemUdf.UDF_FS_FSZ("").Should().Be(-1L);
+        [Fact] public void FSize_empty() => FileSystemUdf.UDF_FS_FSZ("").Should().Be(ExcelError.Value);
         [Fact] public void FSize_null() => FileSystemUdf.UDF_FS_FSZ(null!).Should().BeNull();
         [Fact] public void FDExists_empty() => ((bool)FileSystemUdf.UDF_FS_FDEX("")).Should().BeFalse();
         [Fact] public void FDExists_null() => FileSystemUdf.UDF_FS_FDEX(null!).Should().BeNull();

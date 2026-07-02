@@ -29,9 +29,10 @@ namespace ExcelFormulaLabs.Analytics
         }
         /// <summary>
         /// Converts input to a double[] vector for statistical UDFs.
-        /// Throws on NaN/Inf — consistent with PrepM which also throws.
-        /// (Previously used ToDoubles which silently filtered non-numeric values,
-        /// causing length mismatches between X and y when y had NaN/Inf but X did not.)
+        /// Throws on any non-numeric cell (text, errors, empty, NaN, Inf)
+        /// — consistent with PrepM / ToDoubleMatrix which also throws.
+        /// (Previously used IsNumericCell to silently skip non-numeric values,
+        /// which caused length mismatches and silent subset computation.)
         /// </summary>
         internal static double[] PrepV(object data)
         {
@@ -39,7 +40,6 @@ namespace ExcelFormulaLabs.Analytics
             var result = new System.Collections.Generic.List<double>(raw.Length);
             for (int i = 0; i < raw.Length; i++)
             {
-                if (!InputNormalizer.IsNumericCell(raw[i])) continue;
                 double v = InputNormalizer.ToDouble(raw[i]);
                 if (double.IsNaN(v) || double.IsInfinity(v))
                     throw new ArgumentException(
