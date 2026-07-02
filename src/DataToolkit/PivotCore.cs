@@ -8,11 +8,23 @@ namespace ExcelFormulaLabs.DataToolkit
     /// <summary>Pivot, unpivot, grouping, cross join. Ported from PivotUtils.bas.</summary>
     internal static class PivotCore
     {
+        private static void ValidateAgg(string agg)
+        {
+            if (agg is not ("SUM" or "AVG" or "COUNT" or "MAX" or "MIN"))
+                throw new ArgumentException($"Unknown aggregation '{agg}'. Supported: SUM, AVG, COUNT, MAX, MIN.");
+        }
+
+        private static double Accumulate(string agg, double current, double incoming) => agg switch
+        {
+            "MAX" => Math.Max(current, incoming),
+            "MIN" => Math.Min(current, incoming),
+            _ => current + incoming  // SUM, AVG, COUNT
+        };
+
         internal static object[,] Pivot(object[,] data, int keyCol, int pivotCol, int valueCol, string agg = "SUM", bool hasHeaders = true)
         {
             agg = agg.ToUpperInvariant();
-            if (agg is not ("SUM" or "AVG" or "COUNT" or "MAX" or "MIN"))
-                throw new ArgumentException($"Unknown aggregation '{agg}'. Supported: SUM, AVG, COUNT, MAX, MIN.");
+            ValidateAgg(agg);
             int rows = data.GetLength(0);
             int startRow = hasHeaders ? 1 : 0;
             var map = new Dictionary<(string k, string p), double>();
@@ -31,7 +43,7 @@ namespace ExcelFormulaLabs.DataToolkit
                 if (map.TryGetValue(kv, out double ex))
                 {
                     cnt[kv] = cnt[kv] + 1;
-                    map[kv] = agg switch { "MAX" => Math.Max(ex, v), "MIN" => Math.Min(ex, v), "SUM" or "AVG" or "COUNT" => ex + v, _ => throw new ArgumentException($"Unknown aggregation '{agg}'. Supported: SUM, AVG, COUNT, MAX, MIN.") };
+                    map[kv] = Accumulate(agg, ex, v);
                 }
                 else { map[kv] = v; cnt[kv] = 1; }
             }
@@ -83,8 +95,7 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static object[,] GroupBy(object[,] data, int[] gCols, int aCol, string agg = "SUM", bool hasHeaders = true)
         {
             agg = agg.ToUpperInvariant();
-            if (agg is not ("SUM" or "AVG" or "COUNT" or "MAX" or "MIN"))
-                throw new ArgumentException($"Unknown aggregation '{agg}'. Supported: SUM, AVG, COUNT, MAX, MIN.");
+            ValidateAgg(agg);
             int rows = data.GetLength(0), nG = gCols.Length;
             int startRow = hasHeaders ? 1 : 0;
             var groups = new Dictionary<string, (double val, long cnt)>();
@@ -94,7 +105,7 @@ namespace ExcelFormulaLabs.DataToolkit
                 var gk = gCols.Select(c => InputNormalizer.ToString(data[r, c])).ToArray();
                 string gks = MakeCompoundKey(gk); double v = InputNormalizer.ToDouble(data[r, aCol]);
                 if (double.IsNaN(v) || double.IsInfinity(v)) continue;
-                if (groups.TryGetValue(gks, out var ex)) groups[gks] = agg switch { "SUM" => (ex.val + v, ex.cnt + 1), "MAX" => (Math.Max(ex.val, v), ex.cnt + 1), "MIN" => (Math.Min(ex.val, v), ex.cnt + 1), "COUNT" => (0, ex.cnt + 1), "AVG" => (ex.val + v, ex.cnt + 1), _ => throw new ArgumentException($"Unknown aggregation '{agg}'. Supported: SUM, AVG, COUNT, MAX, MIN.") };
+                if (groups.TryGetValue(gks, out var ex)) groups[gks] = agg switch { "SUM" or "AVG" => (ex.val + v, ex.cnt + 1), "MAX" => (Math.Max(ex.val, v), ex.cnt + 1), "MIN" => (Math.Min(ex.val, v), ex.cnt + 1), "COUNT" => (0, ex.cnt + 1) };
                 else { groups[gks] = (v, 1); if (seen.Add(gks)) keyNames.Add(gk); }
             }
             var result = new object[keyNames.Count, nG + 1];
