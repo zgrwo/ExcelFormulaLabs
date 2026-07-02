@@ -10,32 +10,32 @@ namespace ExcelFormulaLabs.DataToolkit
     /// <summary>Range export to HTML, JSON, Markdown, CSV + row/column operations. Ported from RangeUtils.bas.</summary>
     internal static class RangeExportCore
     {
-        internal static string RangeToHtml(object[,] data, bool hasHeader = true, string? tableClass = null)
+        internal static string RangeToHtml(object[,] data, bool hasHeaders = true, string? tableClass = null)
         {
             int rows = data.GetLength(0), cols = data.GetLength(1); var sb = new StringBuilder();
             string cls = tableClass != null ? $" class=\"{tableClass}\"" : "";
             sb.Append($"<table{cls}>");
-            for (int r = 0; r < rows; r++) { sb.Append("<tr>"); string tag = (hasHeader && r == 0) ? "th" : "td"; for (int c = 0; c < cols; c++) sb.Append('<').Append(tag).Append('>').Append(System.Net.WebUtility.HtmlEncode(InputNormalizer.ToString(data[r, c]))).Append("</").Append(tag).Append('>'); sb.Append("</tr>"); }
+            for (int r = 0; r < rows; r++) { sb.Append("<tr>"); string tag = (hasHeaders && r == 0) ? "th" : "td"; for (int c = 0; c < cols; c++) sb.Append('<').Append(tag).Append('>').Append(System.Net.WebUtility.HtmlEncode(InputNormalizer.ToString(data[r, c]))).Append("</").Append(tag).Append('>'); sb.Append("</tr>"); }
             sb.Append("</table>"); return sb.ToString();
         }
 
-        internal static string RangeToJson(object[,] data, bool hasHeader = true, bool pretty = false)
+        internal static string RangeToJson(object[,] data, bool hasHeaders = true, bool pretty = false)
         {
             int rows = data.GetLength(0), cols = data.GetLength(1); var sb = new StringBuilder();
             string nl = pretty ? "\n" : "", sp = pretty ? "  " : ""; sb.Append('[');
-            int startRow = hasHeader ? 1 : 0;
+            int startRow = hasHeaders ? 1 : 0;
             string[]? headers = null;
-            if (hasHeader && rows > 0) { headers = new string[cols]; for (int c = 0; c < cols; c++) headers[c] = InputNormalizer.ToString(data[0, c]); }
+            if (hasHeaders && rows > 0) { headers = new string[cols]; for (int c = 0; c < cols; c++) headers[c] = InputNormalizer.ToString(data[0, c]); }
             for (int r = startRow; r < rows; r++) { if (r > startRow) sb.Append(',').Append(nl); sb.Append(sp).Append('{'); for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(',').Append(' '); string key = headers != null ? $"\"{JsonEncodedText.Encode(headers[c], JavaScriptEncoder.Default).Value}\"" : $"\"Col{c + 1}\""; sb.Append(key).Append(": "); sb.Append(JsonVal(data[r, c])); } sb.Append('}'); }
             sb.Append(nl).Append(']'); return sb.ToString();
         }
 
-        internal static string RangeToMarkdown(object[,] data, bool hasHeader = true)
+        internal static string RangeToMarkdown(object[,] data, bool hasHeaders = true)
         {
             int rows = data.GetLength(0), cols = data.GetLength(1); if (rows == 0) return ""; var sb = new StringBuilder();
-            for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(" | "); sb.Append(EscapeMarkdownCell(hasHeader ? InputNormalizer.ToString(data[0, c]) : $"Col{c + 1}")); } sb.AppendLine();
+            for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(" | "); sb.Append(EscapeMarkdownCell(hasHeaders ? InputNormalizer.ToString(data[0, c]) : $"Col{c + 1}")); } sb.AppendLine();
             for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(" | "); sb.Append("---"); } sb.AppendLine();
-            for (int r = hasHeader ? 1 : 0; r < rows; r++) { for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(" | "); sb.Append(EscapeMarkdownCell(InputNormalizer.ToString(data[r, c]))); } sb.AppendLine(); }
+            for (int r = hasHeaders ? 1 : 0; r < rows; r++) { for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(" | "); sb.Append(EscapeMarkdownCell(InputNormalizer.ToString(data[r, c]))); } sb.AppendLine(); }
             return sb.ToString();
         }
 
@@ -48,9 +48,9 @@ namespace ExcelFormulaLabs.DataToolkit
             return v.Replace("\\", "\\\\").Replace("|", "\\|").Replace("\r\n", " ").Replace("\n", " ");
         }
 
-        /// <param name="hasHeader">Deprecated: has no effect on CSV output (CSV treats all rows as data).
+        /// <param name="hasHeaders">Deprecated: has no effect on CSV output (CSV treats all rows as data).
         /// Kept for API compatibility with RangeToJson / RangeToMarkdown / RangeToHtml.</param>
-        internal static string RangeToCsv(object[,] data, string delim = ",", bool quote = true, bool hasHeader = true)
+        internal static string RangeToCsv(object[,] data, string delim = ",", bool quote = true, bool hasHeaders = true)
         {
             int rows = data.GetLength(0), cols = data.GetLength(1); var sb = new StringBuilder(); int startRow = 0;
             for (int r = startRow; r < rows; r++)
@@ -59,13 +59,19 @@ namespace ExcelFormulaLabs.DataToolkit
                 {
                     if (c > 0) sb.Append(delim);
                     string v = InputNormalizer.ToString(data[r, c]);
-                    // Defang formula injection: cells starting with =, +, -, @, or
-                    // DDE/command prefixes are interpreted as formulas/commands when
-                    // the CSV is re-opened in Excel. Prepend a single quote (text marker)
-                    // to neutralise them. Also trim leading whitespace before checking
-                    // since Excel ignores it before formula-introducing characters.
+                    // Defang formula injection: cells starting with =, +, @ are formulas.
+                    // For '-' prefix: only defang if the value is NOT a valid number
+                    // (i.e. formula expressions like -1+2 or DDE patterns like -|SHEET).
+                    // Legitimate negative numbers like -42 are parsed and left unchanged.
                     string trimmed = v.TrimStart();
-                    if (trimmed.Length > 0 && (trimmed[0] == '=' || trimmed[0] == '+' || trimmed[0] == '-' || trimmed[0] == '@'))
+                    bool defang = trimmed.Length > 0 && (
+                        trimmed[0] == '=' || trimmed[0] == '+' || trimmed[0] == '@' ||
+                        (trimmed[0] == '-' && trimmed.Length > 1 &&
+                         !double.TryParse(trimmed,
+                             System.Globalization.NumberStyles.Float,
+                             System.Globalization.CultureInfo.InvariantCulture,
+                             out _)));
+                    if (defang)
                         v = "'" + v;
                     if (quote && (v.Contains(delim) || v.Contains("\"") || v.Contains("\n")))
                         v = "\"" + v.Replace("\"", "\"\"") + "\"";

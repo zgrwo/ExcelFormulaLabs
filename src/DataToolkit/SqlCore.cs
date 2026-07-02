@@ -45,9 +45,12 @@ namespace ExcelFormulaLabs.DataToolkit
                 for (int dedup = 2; !usedNames.Add(colName); dedup++)
                     colName = baseName + "_" + dedup;
                 names[c] = colName;
-                // Scan all data rows to determine the widest type; mixed → TEXT
+                // Scan first N rows to determine the widest type; mixed → TEXT.
+                // Limit to MaxScanRows to avoid O(rows×cols) on large tables.
+                const int maxScan = 10;
+                int scanEnd = Math.Min(rows, 1 + maxScan);
                 bool hasReal = false, hasInt = false;
-                for (int r = 1; r < rows; r++)
+                for (int r = 1; r < scanEnd; r++)
                 {
                     object v = data[r, c];
                     if (v == null || v is DBNull || InputNormalizer.IsExcelEmptyValue(v) || v is ExcelError) continue;

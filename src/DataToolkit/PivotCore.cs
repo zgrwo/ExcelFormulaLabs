@@ -117,7 +117,7 @@ namespace ExcelFormulaLabs.DataToolkit
             long totalCells = (long)ra * rb * (ca + cb);
             if (totalCells > maxCells)
                 throw new ArgumentException(
-                    $"Cross join would produce {ra * rb:N0} rows × {ca + cb} cols = {totalCells:N0} cells. " +
+                    $"Cross join would produce {(long)ra * rb:N0} rows × {ca + cb} cols = {totalCells:N0} cells. " +
                     $"Maximum is {maxCells:N0} cells. Reduce input size or use a join condition instead.");
             var r = new object[ra * rb, ca + cb];
             for (int i = 0; i < ra; i++)

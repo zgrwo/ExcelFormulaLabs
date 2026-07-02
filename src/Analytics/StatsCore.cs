@@ -179,7 +179,7 @@ namespace ExcelFormulaLabs.Analytics
             if (a.Length < 2 || b.Length < 2) return double.NaN;
             double ma = Statistics.Mean(a), mb = Statistics.Mean(b);
             double va = Variance(a), vb = Variance(b);
-            if (va + vb < 1e-15) return ma == mb ? 1.0 : double.NaN;
+            if (va + vb < 1e-15) return Math.Abs(ma - mb) < 1e-15 ? 1.0 : double.NaN;
             double se = Math.Sqrt(va / a.Length + vb / b.Length);
             double t = (ma - mb) / se;
             double num = (va / a.Length + vb / b.Length);

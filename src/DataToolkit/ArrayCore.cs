@@ -25,7 +25,7 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static object[] Reverse(object[] a) { var r=new object[a.Length]; for(int i=0;i<a.Length;i++)r[i]=a[a.Length-1-i]; return r; }
         internal static long Count(object[] a) => a.Length;
         internal static bool Contains(object[] a, object v) => ArrayOperations.IndexOf(a,v)>=0;
-        internal static object[] CollectNumeric(object[,] data, int rows, int cols, out string[] names, bool header = true) { var ci=ArrayOperations.CollectNumericColumns(data,rows,cols,out names,header); return ci.Select(i=>(object)(long)i).ToArray(); }
+        internal static object[] CollectNumeric(object[,] data, int rows, int cols, out string[] names, bool hasHeaders = true) { var ci=ArrayOperations.CollectNumericColumns(data,rows,cols,out names,hasHeaders); return ci.Select(i=>(object)(long)i).ToArray(); }
 
         internal static object[] Shuffle(object[] a)
         {

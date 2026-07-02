@@ -214,9 +214,11 @@ namespace ExcelFormulaLabs.Analytics
         internal static double GasToSTP(double vol, double temp, double press,
             string tUnit = "C", string pUnit = "atm")
         {
+            if (double.IsNaN(vol) || double.IsInfinity(vol) || vol < 0)
+                return double.NaN;
             double tK = ConvertTemperature(temp, tUnit, "K");
             double pAtm = ConvertPressure(press, pUnit, "atm");
-            if (double.IsNaN(tK) || double.IsNaN(pAtm) || tK == 0)
+            if (double.IsNaN(tK) || double.IsNaN(pAtm) || tK <= 0)
                 return double.NaN;
             return vol * pAtm * (273.15 / tK);
         }

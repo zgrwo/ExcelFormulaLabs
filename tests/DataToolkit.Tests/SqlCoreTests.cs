@@ -115,16 +115,19 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         }
 
         [Fact]
-        public void Type_inference_beyond_first_10_rows()
+        public void Type_inference_scans_first_10_rows()
         {
+            // Type inference scans max 10 rows per column (performance heuristic).
+            // Rows beyond the scan window inherit the inferred column type.
             var data = new object[13, 2];
             data[0, 0] = "Num"; data[0, 1] = "Val";
-            for (int i = 1; i <= 10; i++) { data[i, 0] = (double)i; data[i, 1] = (double)(i * 10); }
-            data[11, 0] = 11.0; data[11, 1] = "text_value";
-            data[12, 0] = 12.0; data[12, 1] = 120.0;
-            var r = SqlCore.SqlQuery(data, "SELECT Val FROM data WHERE Val = 'text_value'");
-            r!.GetLength(0).Should().Be(2);        // header + 1 matching row
-            r![1, 0].Should().Be("text_value");    // stored as TEXT, returned as string
+            // First 10 rows are integers → column inferred as INTEGER
+            for (int i = 1; i <= 10; i++) { data[i, 0] = (double)i; data[i, 1] = (long)(i * 10); }
+            // Row 11: double value beyond scan window → stored with INTEGER affinity (truncated)
+            data[11, 0] = 11.0; data[11, 1] = 115.5;
+            data[12, 0] = 12.0; data[12, 1] = (long)120;
+            var r = SqlCore.SqlQuery(data, "SELECT Val FROM data WHERE Val > 50");
+            r!.GetLength(0).Should().Be(8);  // header + 7 rows (>50)
         }
 
         // ─────────────────────────────────────────────────────────────

@@ -38,7 +38,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact]
         public void ToHtml_no_header()
         {
-            var html = RangeExportCore.RangeToHtml(BasicData, hasHeader: false);
+            var html = RangeExportCore.RangeToHtml(BasicData, hasHeaders: false);
             html.Should().NotContain("<th>");
             html.Should().Contain("<td>Name</td>");     // first row is data, not header
             html.Should().Contain("<td>Alice</td>");
@@ -121,7 +121,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact]
         public void ToJson_no_header_uses_colN_keys()
         {
-            var json = RangeExportCore.RangeToJson(BasicData, hasHeader: false);
+            var json = RangeExportCore.RangeToJson(BasicData, hasHeaders: false);
             json.Should().Contain("\"Col1\"");
             json.Should().Contain("\"Col2\"");
             // All 3 rows are data when hasHeader=false, so "Name" IS a data value
@@ -140,7 +140,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         public void ToJson_null_value_outputs_null_literal()
         {
             var data = new object[,] { { "Name", "Score" }, { "Alice", null! } };
-            var json = RangeExportCore.RangeToJson(data, hasHeader: true);
+            var json = RangeExportCore.RangeToJson(data, hasHeaders: true);
             json.Should().Contain("null");             // null → "null" in JSON
         }
 
@@ -148,7 +148,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         public void ToJson_excelempty_value_outputs_null()
         {
             var data = new object[,] { { "Name", "Score" }, { "Alice", ExcelEmpty.Value } };
-            var json = RangeExportCore.RangeToJson(data, hasHeader: true);
+            var json = RangeExportCore.RangeToJson(data, hasHeaders: true);
             json.Should().Contain("null");             // ExcelEmpty → "null"
         }
 
@@ -259,7 +259,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact]
         public void ToMarkdown_no_header()
         {
-            var md = RangeExportCore.RangeToMarkdown(BasicData, hasHeader: false);
+            var md = RangeExportCore.RangeToMarkdown(BasicData, hasHeaders: false);
             md.Should().Contain("Col1");
             md.Should().Contain("Col2");
             md.Should().Contain("---");

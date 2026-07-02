@@ -317,19 +317,19 @@ namespace ExcelFormulaLabs.Foundation
         /// <param name="numRows">Total rows.</param>
         /// <param name="numCols">Total columns.</param>
         /// <param name="colNames">Output: column names (header row or "Col1","Col2",...).</param>
-        /// <param name="hasHeader">If true, row 0 = header, data starts at row 1.</param>
+        /// <param name="hasHeaders">If true, row 0 = header, data starts at row 1.</param>
         /// <returns>0-based indices of all-numeric columns.</returns>
         public static int[] CollectNumericColumns(
             object[,] data, int numRows, int numCols,
-            out string[] colNames, bool hasHeader = true)
+            out string[] colNames, bool hasHeaders = true)
         {
             colNames = new string[numCols];
             var numericCols = new List<int>();
-            int dataStartRow = hasHeader ? 1 : 0;
+            int dataStartRow = hasHeaders ? 1 : 0;
 
             for (int c = 0; c < numCols; c++)
             {
-                colNames[c] = (hasHeader && numRows > 0)
+                colNames[c] = (hasHeaders && numRows > 0)
                     ? InputNormalizer.ToString(data[0, c])
                     : $"Col{c + 1}";
 

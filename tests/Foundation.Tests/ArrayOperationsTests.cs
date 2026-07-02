@@ -123,7 +123,7 @@ public class CollectNumericColumnsTests
     [Fact] public void Mixed_with_no_header()
     {
         var data = new object[,] { { 1, "text", 3.0 }, { 4, "more", 6.0 } };
-        var cols = ArrayOperations.CollectNumericColumns(data, 2, 3, out var names, hasHeader: false);
+        var cols = ArrayOperations.CollectNumericColumns(data, 2, 3, out var names, hasHeaders: false);
         cols.Should().Equal(0, 2);
     }
 }

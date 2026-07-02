@@ -299,52 +299,21 @@ namespace ExcelFormulaLabs.Analytics
         /// </summary>
         internal static void ClearDecompCache() => DecompCache.Clear();
 
-        internal static double[,] SvdU(double[,] m)
+        private static TResult GetDecompPart<TDecomp, TResult>(
+            double[,] m, string prefix,
+            Func<double[,], TDecomp> decomp, Func<TDecomp, TResult> select)
         {
             var key = DecompCache.MatrixHash(m);
-            return DecompCache.GetOrAdd("svd:" + key, () => Svd(m)).U;
+            return select(DecompCache.GetOrAdd(prefix + key, () => decomp(m)));
         }
 
-        internal static double[] SvdS(double[,] m)
-        {
-            var key = DecompCache.MatrixHash(m);
-            return DecompCache.GetOrAdd("svd:" + key, () => Svd(m)).S;
-        }
-
-        internal static double[,] SvdVt(double[,] m)
-        {
-            var key = DecompCache.MatrixHash(m);
-            return DecompCache.GetOrAdd("svd:" + key, () => Svd(m)).Vt;
-        }
-
-        internal static double[,] QrQ(double[,] m)
-        {
-            var key = DecompCache.MatrixHash(m);
-            return DecompCache.GetOrAdd("qr:" + key, () => Qr(m)).Q;
-        }
-
-        internal static double[,] QrR(double[,] m)
-        {
-            var key = DecompCache.MatrixHash(m);
-            return DecompCache.GetOrAdd("qr:" + key, () => Qr(m)).R;
-        }
-
-        internal static double[,] LuL(double[,] m)
-        {
-            var key = DecompCache.MatrixHash(m);
-            return DecompCache.GetOrAdd("lu:" + key, () => Lu(m)).L;
-        }
-
-        internal static double[,] LuU(double[,] m)
-        {
-            var key = DecompCache.MatrixHash(m);
-            return DecompCache.GetOrAdd("lu:" + key, () => Lu(m)).U;
-        }
-
-        internal static double[,] LuP(double[,] m)
-        {
-            var key = DecompCache.MatrixHash(m);
-            return DecompCache.GetOrAdd("lu:" + key, () => Lu(m)).P;
-        }
+        internal static double[,] SvdU(double[,] m) => GetDecompPart(m, "svd:", Svd, d => d.U);
+        internal static double[]   SvdS(double[,] m) => GetDecompPart(m, "svd:", Svd, d => d.S);
+        internal static double[,] SvdVt(double[,] m) => GetDecompPart(m, "svd:", Svd, d => d.Vt);
+        internal static double[,] QrQ(double[,] m) => GetDecompPart(m, "qr:", Qr, d => d.Q);
+        internal static double[,] QrR(double[,] m) => GetDecompPart(m, "qr:", Qr, d => d.R);
+        internal static double[,] LuL(double[,] m) => GetDecompPart(m, "lu:", Lu, d => d.L);
+        internal static double[,] LuU(double[,] m) => GetDecompPart(m, "lu:", Lu, d => d.U);
+        internal static double[,] LuP(double[,] m) => GetDecompPart(m, "lu:", Lu, d => d.P);
     }
 }

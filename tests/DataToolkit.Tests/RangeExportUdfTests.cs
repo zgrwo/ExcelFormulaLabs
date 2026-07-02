@@ -46,14 +46,14 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void ToHtml_no_header_all_td()
         {
             var d = new object[,] { { "Alice", 30 }, { "Bob", 25 } };
-            var html = RangeExportCore.RangeToHtml(d, hasHeader: false);
+            var html = RangeExportCore.RangeToHtml(d, hasHeaders: false);
             html.Should().NotContain("<th>").And.Contain("<td>Alice</td>");
         }
 
         [Fact] public void ToCsv_no_header_includes_all_rows()
         {
             var d = new object[,] { { "Alice", 30 }, { "Bob", 25 } };
-            var csv = RangeExportCore.RangeToCsv(d, ",", true, hasHeader: false);
+            var csv = RangeExportCore.RangeToCsv(d, ",", true, hasHeaders: false);
             csv.Should().Contain("Alice").And.Contain("Bob");
         }
 
