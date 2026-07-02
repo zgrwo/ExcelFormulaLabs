@@ -16,7 +16,16 @@
       [15.0, 17.0, 16.0, 18.0, 14.0]
     ],
     "sign_data": [-10.0, 0.0, 30.0, -0.5, 100.0],
-    "product_data": [2.0, 3.0, 4.0, 5.0, 6.0]
+    "product_data": [2.0, 3.0, 4.0, 5.0, 6.0],
+    "A_4x4": [[4.0,1.0,2.0,3.0],[3.0,5.0,1.0,2.0],[2.0,3.0,6.0,1.0],[1.0,2.0,3.0,7.0]],
+    "b_4": [10.0,12.0,14.0,16.0],
+    "C_3x2": [[1.0,2.0],[3.0,4.0],[5.0,6.0]],
+    "D_2x3": [[7.0,8.0,9.0],[10.0,11.0,12.0]],
+    "E_2x2": [[1.0,2.0],[3.0,4.0]],
+    "eigen_2x2": [[2.0,1.0],[1.0,2.0]],
+    "svd_3x2": [[1.0,4.0],[2.0,5.0],[3.0,6.0]],
+    "qr_3x3": [[12.0,-51.0,4.0],[6.0,167.0,-68.0],[-4.0,24.0,-41.0]],
+    "chol_2x2": [[4.0,2.0],[2.0,3.0]]
   },
   "tests": [
     {"id":"STATS.MEAN","module":"STATS","coreClass":"StatsCore","coreMethod":"Mean","args":[{"ref":"data_flat_20"}],"tolerance":1e-10},
@@ -66,6 +75,21 @@
     {"id":"PHYCHEM.VOL_GALtoL_1","module":"PHYCHEM","coreClass":"PhyChemCore","coreMethod":"ConvertVolume","args":[1.0,"GAL","L"],"tolerance":1e-3},
     {"id":"PHYCHEM.MASS_KGtoLB_1","module":"PHYCHEM","coreClass":"PhyChemCore","coreMethod":"ConvertMass","args":[1.0,"KG","LB"],"tolerance":1e-3},
     {"id":"PHYCHEM.IDEALGAS_V","module":"PHYCHEM","coreClass":"PhyChemCore","coreMethod":"IdealGasLaw","args":[1.0,null,1.0,273.15],"tolerance":1e-2},
-    {"id":"PHYCHEM.GASSTP_Kelvin","module":"PHYCHEM","coreClass":"PhyChemCore","coreMethod":"GasToSTP","args":[10.0,300.0,1.5],"kwargs":{"tUnit":"K","pUnit":"atm"},"tolerance":1e-3}
+    {"id":"PHYCHEM.GASSTP_Kelvin","module":"PHYCHEM","coreClass":"PhyChemCore","coreMethod":"GasToSTP","args":[10.0,300.0,1.5],"kwargs":{"tUnit":"K","pUnit":"atm"},"tolerance":1e-3},
+
+    {"id":"LINALG.DET","module":"LINALG","coreClass":"LinalgCore","coreMethod":"Determinant","args":[{"ref":"A_4x4"}],"tolerance":1e-10},
+    {"id":"LINALG.SOLVE","module":"LINALG","coreClass":"LinalgCore","coreMethod":"Solve","args":[{"ref":"A_4x4"},{"ref":"b_4"}],"tolerance":1e-10},
+    {"id":"LINALG.MATMUL","module":"LINALG","coreClass":"LinalgCore","coreMethod":"MatMul","args":[{"ref":"C_3x2"},{"ref":"D_2x3"}],"tolerance":1e-10},
+    {"id":"LINALG.TRANSPOSE","module":"LINALG","coreClass":"LinalgCore","coreMethod":"Transpose","args":[{"ref":"E_2x2"}],"tolerance":1e-10},
+    {"id":"LINALG.TRACE","module":"LINALG","coreClass":"LinalgCore","coreMethod":"Trace","args":[{"ref":"A_4x4"}],"tolerance":1e-10},
+    {"id":"LINALG.RANK","module":"LINALG","coreClass":"LinalgCore","coreMethod":"Rank","args":[{"ref":"A_4x4"}],"tolerance":1e-10},
+    {"id":"LINALG.COND","module":"LINALG","coreClass":"LinalgCore","coreMethod":"ConditionNumber","args":[{"ref":"A_4x4"}],"tolerance":1e-3},
+    {"id":"LINALG.EIGEN","module":"LINALG","coreClass":"LinalgCore","coreMethod":"Eigenvalues","args":[{"ref":"eigen_2x2"}],"tolerance":1e-10},
+    {"id":"LINALG.SVD","module":"LINALG","coreClass":"LinalgCore","coreMethod":"Svd","args":[{"ref":"svd_3x2"}],"tolerance":1e-3},
+    {"id":"LINALG.QR","module":"LINALG","coreClass":"LinalgCore","coreMethod":"Qr","args":[{"ref":"qr_3x3"}],"tolerance":1e-3},
+    {"id":"LINALG.LU","module":"LINALG","coreClass":"LinalgCore","coreMethod":"Lu","args":[{"ref":"A_4x4"}],"tolerance":1e-3},
+    {"id":"LINALG.PINV","module":"LINALG","coreClass":"LinalgCore","coreMethod":"PseudoInverse","args":[{"ref":"svd_3x2"}],"tolerance":1e-3},
+    {"id":"LINALG.CHOLESKY","module":"LINALG","coreClass":"LinalgCore","coreMethod":"Cholesky","args":[{"ref":"chol_2x2"}],"tolerance":1e-10},
+    {"id":"LINALG.IDENTITY","module":"LINALG","coreClass":"LinalgCore","coreMethod":"Identity","args":[3],"tolerance":1e-10}
   ]
 }
