@@ -319,17 +319,31 @@ xUnit `[Fact]` + FluentAssertions 6.12.0。每 Core 方法覆盖：正常路径 
 | **L4 已知取舍** | `long`/`bool` 哨兵（0/false）与真实值不可区分 | 文档说明；调用方前置 `IsNumericCell` | 依赖「0/false 表示错误」语义 | 数据误判 |
 | **L5 最终边界** | `ConvertValue<T>` 未知类型 `Convert.ChangeType` 失败 | 已知 6 类委托 `InputNormalizer.ToXxx`；新类型：`double`→`NaN`，其余**必须 `throw`** | `return default(T)` 静默替代 | 脏数据传播 |
 
-## 验证脚本行为一致性
+## 闭环验证
 
-> 规则声明见 [CLAUDE.md §6](../../CLAUDE.md#6-验证脚本行为一致性verify-manualpy--源码)。本表为实施对照。
+> 规则声明见 [CLAUDE.md §6](../../CLAUDE.md#6-闭环验证强制python--c--手册)。本表为实施对照。
 
-验证脚本必须模拟与 C# 源码**完全一致的行为**——相同模型参数、相同算法变体、相同转换常量。
+### 验证流程
+
+```
+CrossValRunner(.cs) ⇢ 调用 Core 方法 ⇢ JSON
+verify-manual(.py) ⇢ 读取 JSON ⇢ 与 Python 独立计算比对
+不一致 ⇢ FAIL
+```
+
+### 对照维度（6 维度，无盲区）
 
 | 维度 | ✅ DO | ❌ DON'T | 违反后果 |
 | :--- | :--- | :--- | :--- |
-| **模型结构** | sklearn `fit_intercept` 与 C# 是否添加截距列一致 | C# 无截距但 sklearn 加了截距 | 回归验证完全无效（已发生：Issue #15） |
-| **算法参数** | scipy 参数与 MathNet 语义一致（`bias=False`, `fisher=True`） | 使用 scipy 默认参数而 MathNet 不同 | KURT/SKEW 值偏差 |
-| **转换常量** | Python 使用与 C# `PhyChemCore` 相同的转换因子 | Python 用 14.6959 而 C# 用 `101325/6894.76` | PHYCHEM 边界不一致 |
-| **空值语义** | Python 空值处理与 C# `InputNormalizer` 哨兵契约一致 | scipy `mode()` 返回首个值但 C# 返回 `NaN` | 边界用例验证失效 |
+| **算法选型** | scipy `ddof`/`bias`/`fisher` 与 MathNet 语义逐项对齐；ZSCORE 用 ddof=0 | 依赖 scipy 默认值而不检查 MathNet 对应参数 | 系统性偏移（历史 Bug: ZSCORE） |
+| **模型结构** | sklearn `fit_intercept` 与 C# `addIntercept` 一致 | C# 无截距但 sklearn 加了截距 | 回归验证完全无效（Issue #15） |
+| **默认参数** | Python 显式传递与 C# 签名默认值一致的参数（`tUnit="C"`、`r=0.082057` 等） | C# 默认 `tUnit="C"` 但 Python 隐式用 Kelvin | 全量偏差（历史 Bug: GASSTP） |
+| **转换常量** | Python 与 C# 使用相同转换因子（`101325/6894.76` 非 `14.6959`） | Python 硬编码约数而 C# 用精确比值 | 边界不一致 |
+| **静态数据表** | Python 与 C# `AtomicWeights` 字典精度一致（S=32.066 非 32.07） | Python 用 IUPAC 精确值而 C# 用约整值 | 系统性偏移（历史 Bug: MOLWT） |
+| **空值语义** | Python 空值处理与 C# `InputNormalizer` 哨兵契约一致 | scipy `mode()` 返回首个值但 C# 返回 `NaN` | 边界用例失效 |
 
-> **自检**：新增/修改 UDF 后，确认 `verify-manual.py` 中的 Python 调用与 C# 源码参数、模型结构、转换常量逐项一致。
+### 禁止事项
+
+- ❌ **禁止自校验**：`check(name, X, X)` = 永远 PASS
+- ❌ **禁止 `cross_check()` 返回 SKIP**：新 Core 方法必须注册 Dispatcher + Manifest
+- ❌ **禁止修改后跳过全量验证**：5 步任一步失败不可提交

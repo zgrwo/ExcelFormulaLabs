@@ -144,13 +144,33 @@ ExcelFormulaLabs/
 
 核心原则：不可转换值返回类型零值哨兵（`double`→`NaN`、`long`→0、`int`→0、`bool`→`false`、`DateTime`→`MinValue`、`string`→`""`），不抛异常。Excel 信号（`null`/`DBNull`/`ExcelEmpty`/`ExcelError`/`ExcelMissing`）返回哨兵。未知类型 `Convert.ChangeType` 失败：`double`→`NaN`，其余**必须 `throw`**（禁止 `return default(T)` 静默替代）。
 
-### 6. 验证脚本行为一致性（`verify-manual.py` ↔ 源码）
+### 6. 闭环验证强制（Python ↔ C# ↔ 手册）
 
 > 完整对照表见 [skill.md §验证一致性](skills/excel-dna-project/skill.md#验证脚本行为一致性)。
 
-验证脚本必须模拟与 C# 源码**完全一致的行为**——相同模型参数、相同算法变体、相同转换常量。脚本用不同参数通过 = 假阴性。
+**核心理念**：`verify-manual.py` 必须**调用 C# 源码**计算手册示例，与 Python 独立计算结果比对。仅靠 Python 自校验 (`check(name, expr, expr)`) = 假阴性，三处已证实 Bug（ZSCORE 方差、GASSTP 单位、MOLWT 原子量）均因此漏过。
 
-> **自检**：新增/修改 UDF 后，确认 `verify-manual.py` 中的 Python 调用与 C# 源码参数、模型结构、转换常量逐项一致。
+#### 强制规则
+
+| # | 规则 | 检测方式 |
+|:---|:---|:---|
+| **6.1** | **禁止自校验**：`check(name, X, X)` 永远为 PASS，无验证价值 | `grep -nE 'check\(.*,\s*(.+),\s*\1\s*[,)]' scripts/verify-manual.py` 必须返回空 |
+| **6.2** | **数值类 UDF 必须 `cross_check()`**：STATS / LINALG / REGRESS / PHYCHEM 模块的数值断言必须通过 `cross_check()`（Python vs C#）或 `check(... vs C#)`（字典/矩阵逐键比对） | 新增 UDF 时，默认使用 `cross_check()`；保留 `check()` 仅限于字符串/布尔/格式验证 |
+| **6.3** | **修改后必须运行全量验证**：① `bash scripts/verify-docs.sh` ② `dotnet test` ③ `dotnet test --filter CrossVal` ④ `python scripts/verify-manual.py` ⑤ `dotnet build -c Release` — 任一步失败 = 不可提交 | CI 强制执行 |
+| **6.4** | **扩展 CrossValRunner 覆盖**：新增 Core 方法后，必须在 `Dispatcher.cs` 注册并在 `test_manifest.json` 添加测试条目，使 Python 能获取 C# 参考值 | `cross_check()` 调用不应 SKIP |
+
+#### 对照维度（逐项覆盖，无盲区）
+
+| 维度 | 示例 | 违反后果 |
+|:---|:---|:---|
+| **算法选型** | scipy `bias`/`ddof` 与 MathNet 语义一致；ZSCORE 用总体标准差 (ddof=0) | 所有数据点系统性偏移（历史 Bug） |
+| **模型结构** | sklearn `fit_intercept` 与 C# `addIntercept` 一致 | 回归验证完全无效 |
+| **默认参数** | Python 计算时必须显式传递与 C# 默认值一致的参数（如 `tUnit="C"`、`r=0.082057`） | 单位/常量不一致（历史 Bug） |
+| **转换常量** | Python 与 C# `PhyChemCore` 使用相同转换因子（如 `101325/6894.76` 而非 `14.6959`） | 边界值偏差 |
+| **静态数据表** | Python 与 C# `AtomicWeights` 字典使用相同原子量精度（如 S=32.066 非 32.07） | 全量结果系统性偏移（历史 Bug） |
+| **空值语义** | Python 空值处理与 `InputNormalizer` 哨兵契约一致 | 边界用例验证失效 |
+
+> **闭环验证流程**：`CrossValRunner(.cs)` ⇢ 调用 Core 方法 ⇢ 输出 JSON ⇢ `verify-manual(.py)` 读取并比较 Python 独立计算结果 ⇢ 不一致 = FAIL。
 
 ## 开发流程
 
