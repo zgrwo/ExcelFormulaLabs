@@ -150,6 +150,17 @@ namespace ExcelFormulaLabs.Analytics
             NumericGuard.AgainstNonFinite(data);
             int rows = data.GetLength(0), cols = data.GetLength(1);
             var r = new double[cols, cols];
+            // Sample correlation requires at least 2 observations.  With 0 or 1 rows,
+            // every entry is undefined — fill NaN and return early (avoids 0/0 → NaN
+            // which then fails the sds < 1e-15 check because NaN comparisons are always
+            // false in IEEE 754, producing a spurious 1.0 on the diagonal).
+            if (rows < 2)
+            {
+                for (int i = 0; i < cols; i++)
+                    for (int j = 0; j < cols; j++)
+                        r[i, j] = double.NaN;
+                return r;
+            }
             // Pre-compute column means and stddevs (one pass per column).
             var means = new double[cols]; var sds = new double[cols];
             for (int j = 0; j < cols; j++)

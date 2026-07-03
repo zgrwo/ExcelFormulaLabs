@@ -90,6 +90,16 @@ namespace ExcelFormulaLabs.Analytics.Tests
         { var r=StatsCore.CorrelationMatrix(new double[,]{{1},{2},{3}}); r[0,0].Should().Be(1.0); }
         [Fact] public void CorrelationMatrix_constant_column()
         { var r=StatsCore.CorrelationMatrix(new double[,]{{5,1},{5,2},{5,3}}); double.IsNaN(r[0,1]).Should().BeTrue(); }
+        [Fact] public void CorrelationMatrix_single_row()
+        {   // rows==1 → every entry is undefined (sample correlation needs ≥2 obs)
+            var r=StatsCore.CorrelationMatrix(new double[,]{{1,2,3}});
+            for (int i=0;i<3;i++) for (int j=0;j<3;j++) double.IsNaN(r[i,j]).Should().BeTrue();
+        }
+        [Fact] public void CorrelationMatrix_zero_rows()
+        {   // rows==0 → every entry is undefined
+            var r=StatsCore.CorrelationMatrix(new double[0,3]);
+            for (int i=0;i<3;i++) for (int j=0;j<3;j++) double.IsNaN(r[i,j]).Should().BeTrue();
+        }
 
         // =====================================================================
         // NEW FUNCTION TESTS (expected values cross-validated with Python)
