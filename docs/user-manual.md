@@ -44,7 +44,7 @@
 
 > 对标 Python scipy，精度 1e-10。元素级函数（ABS/SQRT/LN/LOG10/EXP/SIGN）支持数组公式。
 >
-> **函数索引**：[MEAN](#stats-mean) · [GEOMEAN](#stats-geomean) · [HARMEAN](#stats-harmean) · [MEDIAN](#stats-median) · [VARP](#stats-varp) · [VAR](#stats-var) · [STDEVP](#stats-stdevp) · [STDEV](#stats-stdev) · [SKEW](#stats-skew) · [KURT](#stats-kurt) · [MIN](#stats-min) · [MAX](#stats-max) · [RANGE](#stats-range) · [SUM](#stats-sum) · [PRODUCT](#stats-product) · [PERCENTILE](#stats-percentile) · [IQR](#stats-iqr) · [SUMMARY](#stats-summary) · [COUNT](#stats-count) · [MODE](#stats-mode) · [COVARP](#stats-covarp) · [COVAR](#stats-covar) · [PEARSON](#stats-pearson) · [SPEARMAN](#stats-spearman) · [TTEST1](#stats-ttest1) · [TTEST2](#stats-ttest2) · [ZSCORE](#stats-zscore) · [ABS](#stats-abs) · [SQRT](#stats-sqrt) · [LN](#stats-ln) · [LOG10](#stats-log10) · [EXP](#stats-exp) · [SIGN](#stats-sign)
+> **函数索引**：[MEAN](#stats-mean) · [GEOMEAN](#stats-geomean) · [HARMEAN](#stats-harmean) · [MEDIAN](#stats-median) · [VARP](#stats-varp) · [VAR](#stats-var) · [STDEVP](#stats-stdevp) · [STDEV](#stats-stdev) · [SKEW](#stats-skew) · [KURT](#stats-kurt) · [MIN](#stats-min) · [MAX](#stats-max) · [RANGE](#stats-range) · [SUM](#stats-sum) · [PRODUCT](#stats-product) · [PERCENTILE](#stats-percentile) · [IQR](#stats-iqr) · [SUMMARY](#stats-summary) · [COUNT](#stats-count) · [MODE](#stats-mode) · [COVARP](#stats-covarp) · [COVAR](#stats-covar) · [PEARSON](#stats-pearson) · [SPEARMAN](#stats-spearman) · [CORRMATRIX](#stats-corrmatrix) · [TTEST1](#stats-ttest1) · [TTEST2](#stats-ttest2) · [ZSCORE](#stats-zscore) · [ABS](#stats-abs) · [SQRT](#stats-sqrt) · [LN](#stats-ln) · [LOG10](#stats-log10) · [EXP](#stats-exp) · [SIGN](#stats-sign)
 
 ### 示例数据集
 
