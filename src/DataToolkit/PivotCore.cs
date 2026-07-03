@@ -21,6 +21,14 @@ namespace ExcelFormulaLabs.DataToolkit
             _ => current + incoming  // SUM, AVG, COUNT
         };
 
+        /// <summary>Compute final aggregation cell value from accumulator and count.</summary>
+        private static object AggResult(string agg, double val, long cnt) => agg switch
+        {
+            "AVG"   => val / cnt,
+            "COUNT" => (object)cnt,  // keep as long, not double
+            _       => val,          // SUM, MAX, MIN
+        };
+
         internal static object[,] Pivot(object[,] data, int keyCol, int pivotCol, int valueCol, string agg = "SUM", bool hasHeaders = true)
         {
             agg = agg.ToUpperInvariant();
@@ -55,7 +63,7 @@ namespace ExcelFormulaLabs.DataToolkit
             {
                 var kv = (keys[r], pivots[c]);
                 result[r + 1, c + 1] = map.TryGetValue(kv, out double v)
-                    ? (agg == "AVG" ? v / cnt[kv] : agg == "COUNT" ? (object)cnt[kv] : v)
+                    ? AggResult(agg, v, cnt[kv])
                     : ExcelFormulaLabs.Foundation.ExcelEmpty.Value;
             } }
             return result;
@@ -109,7 +117,7 @@ namespace ExcelFormulaLabs.DataToolkit
                 else { groups[gks] = (v, 1); if (seen.Add(gks)) keyNames.Add(gk); }
             }
             var result = new object[keyNames.Count, nG + 1];
-            for (int i = 0; i < keyNames.Count; i++) { var kn = keyNames[i]; for (int j = 0; j < nG; j++) result[i, j] = kn[j]; var (val, cnt) = groups[MakeCompoundKey(kn)]; result[i, nG] = agg == "COUNT" ? (object)cnt : (agg == "AVG" ? val / cnt : val); }
+            for (int i = 0; i < keyNames.Count; i++) { var kn = keyNames[i]; for (int j = 0; j < nG; j++) result[i, j] = kn[j]; var (val, cnt) = groups[MakeCompoundKey(kn)]; result[i, nG] = AggResult(agg, val, cnt); }
             return result;
         }
 

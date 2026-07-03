@@ -148,13 +148,39 @@ namespace ExcelFormulaLabs.Analytics
         internal static double[,] CorrelationMatrix(double[,] data)
         {
             NumericGuard.AgainstNonFinite(data);
-            int cols = data.GetLength(1);
+            int rows = data.GetLength(0), cols = data.GetLength(1);
             var r = new double[cols, cols];
-            var colCache = new double[cols][];
-            for (int i = 0; i < cols; i++) colCache[i] = ExtractColumn(data, i);
+            // Pre-compute column means and stddevs (one pass per column).
+            var means = new double[cols]; var sds = new double[cols];
+            for (int j = 0; j < cols; j++)
+            {
+                double sum = 0;
+                for (int i = 0; i < rows; i++) sum += data[i, j];
+                means[j] = sum / rows;
+                double ss = 0;
+                for (int i = 0; i < rows; i++) { double d = data[i, j] - means[j]; ss += d * d; }
+                sds[j] = Math.Sqrt(ss / (rows - 1));  // sample stddev
+            }
+            // Fill diagonal = 1.0 (or NaN for constant columns)
             for (int i = 0; i < cols; i++)
-                for (int j = i; j < cols; j++)
-                    r[i, j] = r[j, i] = Pearson(colCache[i], colCache[j]);
+            {
+                if (sds[i] < 1e-15) { for (int j = 0; j < cols; j++) r[i, j] = r[j, i] = double.NaN; }
+                else r[i, i] = 1.0;
+            }
+            // Off-diagonal: Pearson r from pre-computed means/sds → O(cols²×rows)
+            for (int i = 0; i < cols; i++)
+            {
+                if (double.IsNaN(r[i, i])) continue;
+                for (int j = i + 1; j < cols; j++)
+                {
+                    if (double.IsNaN(r[j, j])) continue;
+                    double cov = 0;
+                    for (int k = 0; k < rows; k++)
+                        cov += (data[k, i] - means[i]) * (data[k, j] - means[j]);
+                    cov /= (rows - 1);
+                    r[i, j] = r[j, i] = cov / (sds[i] * sds[j]);
+                }
+            }
             return r;
         }
 
