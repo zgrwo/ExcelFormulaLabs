@@ -427,6 +427,33 @@
 
 ---
 
+<a id="stats-corrmatrix"></a>
+
+### STATS.CORRMATRIX — Pearson 相关矩阵
+
+**语法**：`=STATS.CORRMATRIX(data)`
+
+多列 Pearson 相关系数矩阵。每列为一个变量，返回对称矩阵，对角线为 1.0。常量列（方差为零）返回 NaN。
+
+**示例**：
+
+| A | B | C |
+|---|----|----|
+| 1 | 2  | 10 |
+| 2 | 4  | 5  |
+| 3 | 6  | 0  |
+
+```
+=STATS.CORRMATRIX(A1:C3)
+→ 3×3 对称矩阵：
+│  1   1  -1 │
+│  1   1  -1 │
+│ -1  -1   1 │
+```
+A 列与 B 列完全正相关 (r=1)，A 列与 C 列完全负相关 (r=-1)。
+
+---
+
 <a id="stats-ttest1"></a>
 
 <a id="stats-ttest1"></a> ### STATS.TTEST1 — 单样本双侧 t 检验
