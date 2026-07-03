@@ -152,7 +152,9 @@ cross_check("STATS.TTEST1", float(stats.ttest_1samp(data,25.0).pvalue), tol=1e-4
 at=np.array([10.0,12,14,16,15]); bt=np.array([18.0,20,22,24,21])
 cross_check("STATS.TTEST2", float(stats.ttest_ind(at,bt,equal_var=False).pvalue), tol=1e-4)
 zs=np.array([10.0,20,30,40,50])
+X_cm=np.array([[4.0,1.0,2.0,3.0],[3.0,5.0,1.0,2.0],[2.0,3.0,6.0,1.0],[1.0,2.0,3.0,7.0]])  # A_4x4: rows=obs, cols=var
 cross_check("STATS.ZSCORE", stats.zscore(zs, ddof=0), tol=1e-5)
+cross_check("STATS.CORRMATRIX", np.corrcoef(X_cm, rowvar=False), tol=1e-10)
 check("STATS.ABS", np.abs([-10,20,-30,40,-50]).tolist(), [10,20,30,40,50])
 check("STATS.SQRT", np.sqrt([4,9,16,25,36]).tolist(), [2,3,4,5,6])
 check("STATS.LN", np.log([1,math.e,math.e**2,math.e**3,math.e**4]).tolist(), [0,1,2,3,4])
@@ -283,8 +285,7 @@ if cs_ridge and cs_ridge["status"] == "ok":
     check("REGRESS.RIDGE(R²) vs C#", ridge.score(Xr,yr), cs_ridge["result"]["r_squared"], tol=1e-3)
 else:
     ridge=RidgeLR(alpha=0.1,fit_intercept=True); ridge.fit(Xr,yr)
-    r2_val = ridge.score(Xr,yr)
-    check("REGRESS.RIDGE(R²) valid range", 0.0 <= r2_val <= 1.0, True)
+    check("REGRESS.RIDGE(R²) sklearn", ridge.score(Xr,yr), 0.871, tol=1e-2)
 # FACTORIMP — cross-validate
 cs_fi = csharp_results().get("REGRESS.FACTORIMP")
 if cs_fi and cs_fi["status"] == "ok":

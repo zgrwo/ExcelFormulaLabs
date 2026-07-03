@@ -17,14 +17,14 @@ namespace ExcelFormulaLabs.DataToolkit
     {
         private const int SqlTimeoutSeconds = 30;
 
-        /// <summary>Quick check that a SQL statement starts with SELECT (case-insensitive).
+        /// <summary>Quick check that a SQL statement is read-only.
         /// Rejects DDL (CREATE/ALTER/DROP), DML (INSERT/UPDATE/DELETE),
         /// ATTACH/DETACH, and PRAGMA for safety in shared-workbook scenarios.
-        /// Common Table Expressions (WITH … SELECT) are accepted.</summary>
+        /// Accepts SELECT and WITH (CTE) prefixes.</summary>
         private static readonly System.Text.RegularExpressions.Regex SelectOnly =
-            new(@"^\s*SELECT\s", System.Text.RegularExpressions.RegexOptions.IgnoreCase
-                | System.Text.RegularExpressions.RegexOptions.CultureInvariant
-                | System.Text.RegularExpressions.RegexOptions.Compiled);
+            new(@"^\s*(?:SELECT|WITH)\s", System.Text.RegularExpressions.RegexOptions.IgnoreCase
+                | System.Text.RegularExpressions.RegexOptions.Compiled,
+                TimeSpan.FromSeconds(5));
 
         internal static object[,]? SqlQuery(object[,] range, string sql, Dictionary<string, object[,]>? extra = null)
         {
