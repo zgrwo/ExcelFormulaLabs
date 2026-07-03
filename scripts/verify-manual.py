@@ -283,7 +283,8 @@ if cs_ridge and cs_ridge["status"] == "ok":
     check("REGRESS.RIDGE(R²) vs C#", ridge.score(Xr,yr), cs_ridge["result"]["r_squared"], tol=1e-3)
 else:
     ridge=RidgeLR(alpha=0.1,fit_intercept=True); ridge.fit(Xr,yr)
-    check("REGRESS.RIDGE(R²)", ridge.score(Xr,yr), ridge.score(Xr,yr))
+    r2_val = ridge.score(Xr,yr)
+    check("REGRESS.RIDGE(R²) valid range", 0.0 <= r2_val <= 1.0, True)
 # FACTORIMP — cross-validate
 cs_fi = csharp_results().get("REGRESS.FACTORIMP")
 if cs_fi and cs_fi["status"] == "ok":
@@ -307,13 +308,13 @@ else:
 section("PHYCHEM — Physical Chemistry", 16)
 cross_check("PHYCHEM.MOLWT_H2SO4", 2*1.008+32.066+4*15.999, tol=1e-3)
 cross_check("PHYCHEM.MOLWT_NaCl", 22.990+35.453, tol=1e-3)
-check("PHYCHEM.MOLWT(CaCO3)", 40.078+12.011+3*15.999, 40.078+12.011+3*15.999, tol=1e-3)  # self-check kept as fallback
+check("PHYCHEM.MOLWT(CaCO3)", 40.078+12.011+3*15.999, 100.086, tol=1e-3)  # 40.078+12.011+47.997=100.086
 cross_check("PHYCHEM.TEMP_CtoF_100", 100*9/5+32)
 cross_check("PHYCHEM.TEMP_FtoC_32", (32-32)*5/9)
 cross_check("PHYCHEM.TEMP_CtoK_0", 0+273.15); cross_check("PHYCHEM.TEMP_KtoC_300", 300-273.15)
 check("PHYCHEM.TEMP(F→K 212)", (212-32)*5/9+273.15, 373.15, tol=1e-3)
 cross_check("PHYCHEM.PRESS_ATMtoPSI_1", 1*14.6959, tol=1e-3)
-check("PHYCHEM.PRESS(KPA→ATM 100)", 100/101.325, 100/101.325, tol=1e-3)
+check("PHYCHEM.PRESS(KPA→ATM 100)", 100/101.325, 0.9869, tol=1e-3)  # 100 kPa / 101.325 kPa/atm
 check("PHYCHEM.PRESS(MMHG→ATM 760)", 760/760.0, 1.0, tol=1e-3)
 check("PHYCHEM.PRESS(BAR→KPA 1)", 1*100, 100)
 cross_check("PHYCHEM.VOL_LtoML_1", 1*1000)

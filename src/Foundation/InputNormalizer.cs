@@ -330,9 +330,25 @@ namespace ExcelFormulaLabs.Foundation
             if (IsExcelEmptyValue(value)) return DateTime.MinValue;
             if (value is ExcelError) return DateTime.MinValue;
             if (value is DateTime dt) return dt;
+            // Handle numeric types as Excel OLE serial dates (epoch: 1899-12-30).
+            // Integer types (int, long, short, byte) are valid serial dates when
+            // passed via VBA CLng() or similar — treat them identically to double.
+            double? serialDate = null;
             if (value is double d && d > 0 && !double.IsNaN(d) && !double.IsInfinity(d))
+                serialDate = d;
+            else if (value is int i && i > 0)
+                serialDate = i;
+            else if (value is long l && l > 0)
+                serialDate = l;
+            else if (value is short sh && sh > 0)
+                serialDate = sh;
+            else if (value is byte b && b > 0)
+                serialDate = b;
+            else if (value is float f && f > 0 && !float.IsNaN(f) && !float.IsInfinity(f))
+                serialDate = f;
+            if (serialDate.HasValue)
             {
-                try { return new DateTime(1899, 12, 30).AddDays(d); }
+                try { return new DateTime(1899, 12, 30).AddDays(serialDate.Value); }
                 catch (Exception ex) when (ex is not OutOfMemoryException
                     and not StackOverflowException
                     and not AccessViolationException)

@@ -39,7 +39,7 @@ public class CoercionTests
     [Fact] public void ToBool_null_false() => InputNormalizer.ToBool(null).Should().BeFalse();
     [Fact] public void ToBool_zero_false() => InputNormalizer.ToBool(0).Should().BeFalse();
     [Fact] public void ToBool_nonzero_true() => InputNormalizer.ToBool(1).Should().BeTrue();
-    [Fact] public void ToDateTime_int() => InputNormalizer.ToDateTime(45000).Should().Be(DateTime.MinValue);
+    [Fact] public void ToDateTime_int() => InputNormalizer.ToDateTime(45000).Should().Be(new DateTime(2023, 3, 15));
     [Fact] public void ToDateTime_double() => InputNormalizer.ToDateTime(45000.5).Should().Be(new DateTime(2023, 3, 15, 12, 0, 0));
     [Fact] public void ToDateTime_null() => InputNormalizer.ToDateTime(null).Should().Be(DateTime.MinValue);
     [Fact] public void ToDateTime_empty() => InputNormalizer.ToDateTime(ExcelEmpty.Value).Should().Be(DateTime.MinValue);

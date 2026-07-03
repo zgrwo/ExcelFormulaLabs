@@ -41,7 +41,7 @@
     <PackageReference Include="ExcelDna.AddIn" Version="1.8.0">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="ExcelDna.IntelliSense" Version="1.8.0" />
+    <PackageReference Include="ExcelDna.IntelliSense" Version="1.8.0" Condition="'$(TargetFramework)' == 'net48'" />
   </ItemGroup>
 
   <ItemGroup>
@@ -53,6 +53,13 @@
     Targets net8.0-windows + net48. Depends on Foundation.dll + MathNet.Numerics.
     Uses Excel-DNA for .xll packaging and UDF registration.
   -->
+
+  <!-- Exclude IntelliSense from net8.0 build per CLAUDE.md IntelliSense 框架隔离 rule.
+       Excel-DNA auto-discovers dependencies via deps.json; without this the DLL
+       would be packed into the net8.0 .xll even though the .dna.tpl omits it. -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
+    <ExcelDnaPackDependenciesToExclude>ExcelDna.IntelliSense.dll</ExcelDnaPackDependenciesToExclude>
+  </PropertyGroup>
 
   <!-- Generate correct .dna from templates per target before ExcelDnaBuild,
        then clean up afterward. The generated DNA file is shared across inner

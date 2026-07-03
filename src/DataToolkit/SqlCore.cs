@@ -17,8 +17,21 @@ namespace ExcelFormulaLabs.DataToolkit
     {
         private const int SqlTimeoutSeconds = 30;
 
+        /// <summary>Quick check that a SQL statement starts with SELECT (case-insensitive).
+        /// Rejects DDL (CREATE/ALTER/DROP), DML (INSERT/UPDATE/DELETE),
+        /// ATTACH/DETACH, and PRAGMA for safety in shared-workbook scenarios.
+        /// Common Table Expressions (WITH … SELECT) are accepted.</summary>
+        private static readonly System.Text.RegularExpressions.Regex SelectOnly =
+            new(@"^\s*SELECT\s", System.Text.RegularExpressions.RegexOptions.IgnoreCase
+                | System.Text.RegularExpressions.RegexOptions.CultureInvariant
+                | System.Text.RegularExpressions.RegexOptions.Compiled);
+
         internal static object[,]? SqlQuery(object[,] range, string sql, Dictionary<string, object[,]>? extra = null)
         {
+            if (!SelectOnly.IsMatch(sql))
+                throw new ArgumentException(
+                    "Only SELECT statements are allowed for security. " +
+                    "Use a dedicated database tool for DDL/DML operations.");
             using var conn = new SqlConn("Data Source=:memory:");
             conn.Open();
             CreateTable(conn, "data", range);

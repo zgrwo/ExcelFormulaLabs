@@ -126,7 +126,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `PHYCHEM.ATM_TO_PSI` | (atm) | `double` | 大气压 → PSI |
 | `PHYCHEM.PSI_TO_ATM` | (psi) | `double` | PSI → 大气压 |
 | `PHYCHEM.IDEALGAS` | (pressure, volume, moles, temperature) | `double` | 理想气体状态方程 PV=nRT。将待求量填 `*` |
-| `PHYCHEM.GASSTP` | (volume, temperature, pressure) | `double` | 气体体积换算标况（STP） |
+| `PHYCHEM.GASSTP` | (volume, temperature, pressure, [tUnit], [pUnit]) | `double` | 气体体积换算标况（STP）。tUnit 默认 `"C"`，pUnit 默认 `"ATM"` |
 | `PHYCHEM.DENSITY` | (mass, volume) | `double` | 密度 = 质量 / 体积 |
 
 ---
@@ -333,8 +333,8 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
 | `SQL.QUERY` | (source_range, sql_query) | `object[,]` | 对区域执行 SQL。表名 = `data` |
-| `SQL.JOIN` | (source_range, join_table, sql_query) | `object[,]` | 两个表 `data` + `join_table` 的 SQL |
-| `SQL.QUERY3` | (table1, table2, table3, sql_query) | `object[,]` | 三个表 `data` + `table2` + `table3` 的 SQL |
+| `SQL.JOIN` | (source_range, join_table, sql_query) | `object[,]` | 两个表的 SQL。第一个表名 = `data`，第二个表名 = `extra` |
+| `SQL.QUERY3` | (table1, table2, table3, sql_query) | `object[,]` | 三个表的 SQL。表名依次为 `data`、`b`、`c` |
 
 ---
 
