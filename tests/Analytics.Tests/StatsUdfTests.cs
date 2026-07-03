@@ -75,6 +75,9 @@ namespace ExcelFormulaLabs.Analytics.Tests
         // TTest: single value (n<2) -> NaN
         // TTest: same groups -> p~1.0
         [Fact] public void T2_same_group() => ((double)StatsUdf.UDF_STAT_T2(D,D)).Should().BeApproximately(1.0,0.1);
+        // CORRMATRIX: 2-column input -> symmetric 2x2 matrix
+        [Fact] public void CorrMatrix_2col() { var r=(double[,])StatsUdf.UDF_STAT_CMX(new double[,]{{1,2},{2,4},{3,6}}); r[0,0].Should().Be(1.0); r[1,1].Should().Be(1.0); Math.Abs(r[0,1]).Should().BeApproximately(1.0,1e-10); }
+        [Fact] public void CorrMatrix_null() => StatsUdf.UDF_STAT_CMX(null!).Should().Be(ExcelError.Value);
 
         // ── MapOver element-wise edge cases (Abs, Sqrt, Ln, Log10, Exp, Sign) ──
         // Abs: array input

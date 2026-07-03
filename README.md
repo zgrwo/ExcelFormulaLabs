@@ -39,7 +39,7 @@ Win10/11 自带 .NET Framework 4.8，直接加载 net48 版本的 `.xll`：
 
 | 模块 | 做什么 | 试一试 |
 |------|------|-------|
-| `STATS.*` | 均值/方差/分位数/t检验/相关… 对标 scipy | `=STATS.SUMMARY(A1:A100)` |
+| `STATS.*` | 均值/方差/分位数/t检验/相关/相关矩阵… 对标 scipy | `=STATS.SUMMARY(A1:A100)` |
 | `STR.*` | 反转/提取/编解码/编辑距离/格式化… | `=STR.TEXTJOIN(",", TRUE, A1:A10)` |
 | `REGEX.*` | 正则匹配/替换/捕获组（Excel 原生没有） | `=REGEX.MATCH(A1, "\d+")` |
 | `DT.*` | ISO 周/工作日/年龄/复活节/时间戳… | `=DT.AGEYEARS(B2, TODAY())` |

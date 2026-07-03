@@ -48,6 +48,7 @@
     {"id":"STATS.COVAR","module":"STATS","coreClass":"StatsCore","coreMethod":"Covariance","args":[{"ref":"xc"},{"ref":"yc"}],"tolerance":1e-10},
     {"id":"STATS.PEARSON","module":"STATS","coreClass":"StatsCore","coreMethod":"Pearson","args":[{"ref":"xc"},{"ref":"yc"}],"tolerance":1e-10},
     {"id":"STATS.SPEARMAN","module":"STATS","coreClass":"StatsCore","coreMethod":"Spearman","args":[{"ref":"xc"},{"ref":"yc"}],"tolerance":1e-10},
+    {"id":"STATS.CORRMATRIX","module":"STATS","coreClass":"StatsCore","coreMethod":"CorrelationMatrix","args":[{"ref":"A_4x4"}],"tolerance":1e-10},
     {"id":"STATS.TTEST1","module":"STATS","coreClass":"StatsCore","coreMethod":"TTestOneSample","args":[{"ref":"data_flat_20"},25.0],"tolerance":1e-4},
     {"id":"STATS.TTEST2","module":"STATS","coreClass":"StatsCore","coreMethod":"TTestTwoSample","args":[{"ref":"at"},{"ref":"bt"}],"tolerance":1e-4},
     {"id":"STATS.ZSCORE","module":"STATS","coreClass":"StatsCore","coreMethod":"ZScore","args":[{"ref":"zs"}],"tolerance":1e-5},

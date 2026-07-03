@@ -54,6 +54,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `STATS.COVAR` | (array1, array2) | `double` | 样本协方差（除以 n-1）。对标 Excel COVARIANCE.S |
 | `STATS.PEARSON` | (array1, array2) | `double` | Pearson 线性相关系数 r。范围 -1~1。对标 Excel PEARSON |
 | `STATS.SPEARMAN` | (array1, array2) | `double` | Spearman 秩相关系数。范围 -1~1 |
+| `STATS.CORRMATRIX` | (data) | `double[,]` | Pearson 相关矩阵。输入列为变量，返回对称矩阵，对角线为 1 |
 | `STATS.TTEST1` | (array, x) | `double` | 单样本双侧 t 检验 p 值（H₀: mean = x）。`p<0.05` = 均值与 x 差异显著 |
 | `STATS.TTEST2` | (array1, array2) | `double` | Welch 双样本双侧 t 检验 p 值（不等方差）。`p<0.05` = 两样本均值差异显著 |
 | `STATS.ZSCORE` | (number1) | `double[]` | 标准化 z 值：(x - mean) / stdev |
