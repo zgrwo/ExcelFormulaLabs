@@ -33,6 +33,10 @@ namespace ExcelFormulaLabs.DataToolkit
         {
             agg = agg.ToUpperInvariant();
             ValidateAgg(agg);
+            int cols = data.GetLength(1);
+            if (keyCol < 0 || keyCol >= cols || pivotCol < 0 || pivotCol >= cols || valueCol < 0 || valueCol >= cols)
+                throw new ArgumentException($"Column index out of range. Data has {cols} columns. " +
+                    $"keyCol={keyCol}, pivotCol={pivotCol}, valueCol={valueCol}.");
             int rows = data.GetLength(0);
             int startRow = hasHeaders ? 1 : 0;
             var map = new Dictionary<(string k, string p), double>();
@@ -104,6 +108,9 @@ namespace ExcelFormulaLabs.DataToolkit
         {
             agg = agg.ToUpperInvariant();
             ValidateAgg(agg);
+            int gc = data.GetLength(1);
+            if (gCols.Any(c => c < 0 || c >= gc) || aCol < 0 || aCol >= gc)
+                throw new ArgumentException($"Column index out of range. Data has {gc} columns.");
             int rows = data.GetLength(0), nG = gCols.Length;
             int startRow = hasHeaders ? 1 : 0;
             var groups = new Dictionary<string, (double val, long cnt)>();

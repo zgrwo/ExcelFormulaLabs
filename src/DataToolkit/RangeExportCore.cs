@@ -59,18 +59,21 @@ namespace ExcelFormulaLabs.DataToolkit
                 {
                     if (c > 0) sb.Append(delim);
                     string v = InputNormalizer.ToString(data[r, c]);
-                    // Defang formula injection: cells starting with =, +, @ are formulas.
+                    // Defang formula injection: cells starting with =, +, @, -, Tab, CR are
+                    // potential formula/DDE triggers in CSV.  Check the raw first character
+                    // BEFORE TrimStart because TrimStart strips Tab and CR.
                     // For '-' prefix: only defang if the value is NOT a valid number
                     // (i.e. formula expressions like -1+2 or DDE patterns like -|SHEET).
                     // Legitimate negative numbers like -42 are parsed and left unchanged.
+                    bool tabCrPrefix = v.Length > 0 && (v[0] == '\t' || v[0] == '\r');
                     string trimmed = v.TrimStart();
-                    bool defang = trimmed.Length > 0 && (
+                    bool defang = tabCrPrefix || (trimmed.Length > 0 && (
                         trimmed[0] == '=' || trimmed[0] == '+' || trimmed[0] == '@' ||
                         (trimmed[0] == '-' && trimmed.Length > 1 &&
                          !double.TryParse(trimmed,
                              System.Globalization.NumberStyles.Float,
                              System.Globalization.CultureInfo.InvariantCulture,
-                             out _)));
+                             out _))));
                     if (defang)
                         v = "'" + v;
                     if (quote && (v.Contains(delim) || v.Contains("\"") || v.Contains("\n")))

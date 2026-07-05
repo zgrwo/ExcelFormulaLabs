@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    name: Build & Test
+    name: Build & Test (Debug, net8.0)
     runs-on: windows-latest
 
     steps:
@@ -29,3 +29,64 @@ jobs:
 
       - name: Test
         run: dotnet test --no-build --verbosity normal
+
+  cross-val:
+    name: Cross-Validation (Python ↔ C#)
+    runs-on: windows-latest
+    needs: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: pip install numpy scipy
+
+      - name: Build CrossValRunner
+        run: dotnet build tests/CrossValRunner/CrossValRunner.csproj -c Debug
+
+      - name: Run CrossVal tests
+        run: dotnet test --filter "CrossVal" --verbosity normal
+
+      - name: Run verify-manual.py
+        run: python scripts/verify-manual.py
+
+  release-build:
+    name: Release Build (packaging)
+    runs-on: windows-latest
+    needs: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+
+      - name: Build (Release)
+        run: dotnet build -c Release
+
+  verify-docs:
+    name: Verify Docs
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run verify-docs.sh
+        run: bash scripts/verify-docs.sh

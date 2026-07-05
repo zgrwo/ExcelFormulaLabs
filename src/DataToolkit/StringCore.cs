@@ -16,7 +16,17 @@ namespace ExcelFormulaLabs.DataToolkit
         private static readonly Regex WhitespaceRx = new(@"\s+", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
         private static readonly Regex HtmlTagRx = new(@"<[^>]+>", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
 
-        internal static string ReverseString(string t) { t ??= ""; var a = t.ToCharArray(); Array.Reverse(a); return new string(a); }
+        internal static string ReverseString(string t)
+        {
+            t ??= "";
+            // Use text-element enumeration to correctly handle surrogate pairs
+            // (emoji, CJK Extension B+, etc.) — StringInfo works on both net48 and net8.0.
+            var e = StringInfo.GetTextElementEnumerator(t);
+            var elements = new System.Collections.Generic.List<string>();
+            while (e.MoveNext()) elements.Add(e.GetTextElement());
+            elements.Reverse();
+            return string.Concat(elements);
+        }
         internal static string NormalizeWhitespace(string t) { t ??= ""; return WhitespaceRx.Replace(t.Trim(), " "); }
         internal static string StripHtml(string t) { t ??= ""; return HtmlTagRx.Replace(t, ""); }
         internal static string ToTitleCase(string t) { t ??= ""; return CultureInfo.InvariantCulture.TextInfo.ToTitleCase(t.ToLowerInvariant()); }

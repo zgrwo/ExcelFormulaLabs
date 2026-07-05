@@ -24,7 +24,7 @@ namespace ExcelFormulaLabs.Analytics
             private static readonly Dictionary<string, object> Store = new();
             private static readonly List<string> LruOrder = new(); // most-recently-used at end
             private static readonly object Lock = new();
-            private const int MaxEntries = 8;
+            private const int MaxEntries = 32;
 
             internal static T GetOrAdd<T>(string key, Func<T> factory)
             {
@@ -136,23 +136,14 @@ namespace ExcelFormulaLabs.Analytics
                 return (qr.Q.SubMatrix(0, rows, 0, cols).ToArray(),
                         qr.R.SubMatrix(0, cols, 0, cols).ToArray());
             }
-            // Wide (rows &lt; cols): MathNet QR requires m ≥ n. Zero-pad to square n×n,
-            // decompose, then extract Q[0:m, 0:m] and R[0:m, 0:n].
-            // Guard against excessive memory: cols×cols doubles = cols² × 8 bytes.
-            // Limit cols to 2000 (≈ 32 MB) to prevent OOM from accidentally wide input.
-            const int maxCols = 2000;
-            if (cols > maxCols)
-                throw new ArgumentException(
-                    $"QR decomposition: matrix has {cols} columns but only up to {maxCols} are supported " +
-                    $"for wide matrices (rows={rows} < cols={cols}). For wide input, transpose and use tall-skinny QR.");
-            var pad = Matrix<double>.Build.Dense(cols, cols);
-            var Aorig = Matrix<double>.Build.DenseOfArray(m);
-            for (int i = 0; i < rows; i++)
-                for (int j = 0; j < cols; j++)
-                    pad[i, j] = Aorig[i, j];
-            var q = pad.QR(QRMethod.Full);
-            return (q.Q.SubMatrix(0, rows, 0, rows).ToArray(),
-                    q.R.SubMatrix(0, rows, 0, cols).ToArray());
+            // Wide (rows < cols): MathNet QR requires m ≥ n.
+            // Zero-padding to a square matrix and extracting sub-matrices does NOT
+            // produce a valid QR factorisation (Q_sub is not orthogonal and
+            // Q_sub * R_sub ≠ A).  Throw instead of silently returning wrong results.
+            throw new NotSupportedException(
+                $"QR decomposition requires rows >= columns, but input has {rows} rows and {cols} columns. " +
+                "For wide matrices, use SVD (LINALG.SVD_*) for a full decomposition, " +
+                "or transpose the input (LINALG.TRANSPOSE) to compute the tall-skinny QR.");
         }
 
         internal static (double[,] L, double[,] U, double[,] P) Lu(double[,] m)

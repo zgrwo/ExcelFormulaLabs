@@ -396,8 +396,9 @@ check("STR.LEVENSHTEIN", levenshtein("kitten","sitting"), 3)
 def soundex(s):
     if not s: return ""
     s = s.upper(); first = s[0]
-    m = str.maketrans({c:d for k,d in {'BFPV':'1','CGJKQSXZ':'2','DT':'3','L':'4','MN':'5','R':'6'}.items() for c in k})
-    digits = first + ''.join(c.translate(m) for c in s[1:])
+    lookup = {c:d for k,d in {'BFPV':'1','CGJKQSXZ':'2','DT':'3','L':'4','MN':'5','R':'6'}.items() for c in k}
+    # Use dict.get default '0' for vowels, H, W, Y (unmapped → dropped per Soundex rules)
+    digits = first + ''.join(lookup.get(c, '0') for c in s[1:])
     # Collapse consecutive identical digits, drop zeros, pad/truncate
     dedup = [digits[0]]
     for c in digits[1:]:
@@ -478,7 +479,13 @@ def next_workday(d):
     return d
 check("DT.NEXTWKD(Fri)", next_workday(date(2024,6,14)), date(2024,6,14))
 check("DT.NEXTWKD(Sat)", next_workday(date(2024,6,15)), date(2024,6,17))
-check("DT.EASTER(2024)", date(2024,3,31), date(2024,3,31))
+# EASTER — Python implementation of Gauss algorithm (independent of C#)
+def easter(y):
+    a=y%19; b=y//100; c=y%100; d=b//4; e=b%4; f=(b+8)//25; g=(b-f+1)//3
+    h=(19*a+b-d-g+15)%30; i=c//4; k=c%4; l=(32+2*e+2*i-h-k)%7; m=(a+11*h+22*l)//451
+    mo=(h+l-7*m+114)//31; da=(h+l-7*m+114)%31+1
+    return date(y,mo,da)
+check("DT.EASTER(2024)", easter(2024), date(2024,3,31))  # reference: USNO almanac
 check("DT.QUARTER(3)", (3+2)//3, 1); check("DT.QUARTER(7)", (7+2)//3, 3)
 check("DT.SEMESTER(3)", 1 if 3<=6 else 2, 1); check("DT.SEMESTER(9)", 1 if 9<=6 else 2, 2)
 check("DT.DOY(1/1)", d1.timetuple().tm_yday, 1); check("DT.DOY(6/15)", d5.timetuple().tm_yday, 167)
@@ -491,7 +498,7 @@ unix_ts=1704067200; from_unix=date(1970,1,1)+timedelta(seconds=unix_ts)
 check("DT.FROMUNIX(1704067200)", from_unix, date(2024,1,1))
 check("DT.DATEDIFF(d)", (date(2024,12,31)-d1).days, 365)
 check("DT.DATEDIFF(m)", (date(2024,12,31).year - d1.year) * 12 + date(2024,12,31).month - d1.month, 11)  # Jan→Dec = 11 months
-check("DT.DATEDIFF(y)", date(2024,12,31).year - d1.year, 4)
+check("DT.DATEDIFF(y)", date(2024,12,31).year - d1.year, 0)
 
 # ========================================================================
 # REGEX (9 UDFs)
@@ -656,7 +663,7 @@ if os.path.exists("C:\\Windows\\System32\\notepad.exe"):
     sz=os.path.getsize("C:\\Windows\\System32\\notepad.exe")
     check("FS.FSIZE > 0", sz>0, True)
 else:
-    check("FS.FSIZE skip", True, True)
+    print("  SKIP FS.FSIZE: notepad.exe not found (non-Windows environment)")
 # MKDIR — test with temp dir
 td=os.path.join(tempfile.gettempdir(),"test_evl_mkdir_"+str(uuid.uuid4())[:8])
 try:
@@ -692,7 +699,8 @@ try:
     shutil.rmtree(td)
     check("FS.DELDIR", not os.path.exists(td), True)
 except Exception as e:
-    check(f"FS IO: {e}", True, True)  # fallback
+    print(f"  FAIL FS IO: {e}")
+    check("FS IO (temp dir)", False, True)  # exception during FS ops → fail
 # DRIVES
 check("FS.DRIVES", len(os.listdir("C:\\"))>0, True)
 # PWD

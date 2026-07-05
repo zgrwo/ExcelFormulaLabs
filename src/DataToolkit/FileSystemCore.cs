@@ -33,6 +33,12 @@ namespace ExcelFormulaLabs.DataToolkit
             set { if (_sandboxRoot != value) System.Diagnostics.Trace.WriteLine($"[FileSystemCore] SandboxRoot changed from '{_sandboxRoot}' to '{value}'."); Volatile.Write(ref _sandboxRoot, value); _sandboxWarningEmitted = value != null; }
         }
 
+        /// <summary>Maximum file size in bytes for read operations. Default 100 MB. Set to 0 for unlimited.</summary>
+        public static long MaxReadSizeBytes { get; set; } = 100_000_000;
+
+        /// <summary>Maximum content length in bytes for write operations. Default 100 MB. Set to 0 for unlimited.</summary>
+        public static long MaxWriteSizeBytes { get; set; } = 100_000_000;
+
         /// <summary>
         /// Throws <see cref="UnauthorizedAccessException"/> if <paramref name="path"/>
         /// (after normalization) is outside <see cref="SandboxRoot"/>.
@@ -110,9 +116,9 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static bool IsPathValid(string p) { if(string.IsNullOrEmpty(p))return false; if(p.IndexOfAny(System.IO.Path.GetInvalidPathChars())>=0)return false; try{Path.GetFullPath(p);return true;}catch(Exception ex) when(ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException){return false;} }
         internal static bool FileExists(string p) { ValidatePath(p); return File.Exists(p); }
         internal static long GetFileSize(string p) { ValidatePath(p); if (!File.Exists(p)) throw new System.IO.FileNotFoundException($"File not found: {p}"); return new FileInfo(p).Length; }
-        internal static string ReadTextFile(string p, Encoding? e = null) { ValidatePath(p); return File.ReadAllText(p, e ?? Encoding.UTF8); }
-        internal static string[] ReadAllLines(string p, Encoding? e = null) { ValidatePath(p); return File.ReadAllLines(p, e ?? Encoding.UTF8); }
-        internal static bool WriteTextFile(string p, string c, Encoding? e = null) { ValidatePath(p); File.WriteAllText(p, c, e ?? Encoding.UTF8); return true; }
+        internal static string ReadTextFile(string p, Encoding? e = null) { ValidatePath(p); if (MaxReadSizeBytes > 0 && new FileInfo(p).Length > MaxReadSizeBytes) throw new ArgumentException($"File size exceeds maximum read limit of {MaxReadSizeBytes} bytes."); return File.ReadAllText(p, e ?? Encoding.UTF8); }
+        internal static string[] ReadAllLines(string p, Encoding? e = null) { ValidatePath(p); if (MaxReadSizeBytes > 0 && new FileInfo(p).Length > MaxReadSizeBytes) throw new ArgumentException($"File size exceeds maximum read limit of {MaxReadSizeBytes} bytes."); return File.ReadAllLines(p, e ?? Encoding.UTF8); }
+        internal static bool WriteTextFile(string p, string c, Encoding? e = null) { ValidatePath(p); if (MaxWriteSizeBytes > 0 && c.Length > MaxWriteSizeBytes) throw new ArgumentException($"Content length exceeds maximum write limit of {MaxWriteSizeBytes} bytes."); File.WriteAllText(p, c, e ?? Encoding.UTF8); return true; }
         internal static bool AppendTextFile(string p, string c, Encoding? e = null) { ValidatePath(p); File.AppendAllText(p, c, e ?? Encoding.UTF8); return true; }
         internal static bool DeleteFile(string p) { ValidatePath(p); if (File.Exists(p)) File.Delete(p); return true; }
         internal static bool CopyFile(string s, string d, bool o = false) { ValidatePath(s); ValidatePath(d); File.Copy(s, d, o); return true; }

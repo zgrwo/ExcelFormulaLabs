@@ -113,6 +113,9 @@ namespace ExcelFormulaLabs.Foundation
         {
             string pattern = InputNormalizer.ToString(matchValue);
             if (string.IsNullOrEmpty(pattern)) return false;
+            // Guard against overly-long patterns (mirrors RegexCore.MaxPatternLength)
+            const int maxPatternLength = 10000;
+            if (pattern.Length > maxPatternLength) return false;
             try
             {
                 var regex = RegexCache.GetOrAdd(pattern, p =>

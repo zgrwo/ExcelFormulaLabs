@@ -22,7 +22,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         // ── QR correctness: A ≈ Q * R  and  Qᵀ * Q ≈ I ──────────────────
         [Fact] public void Qr_Correctness_square() { var A=B;var(Q,R)=LinalgCore.Qr(A);DiffFro(A,LinalgCore.MatMul(Q,R)).Should().BeApproximately(0.0,1e-9); }
         [Fact] public void Qr_Correctness_tall() { var A=new double[,]{{1,2},{3,4},{5,6}};var(Q,R)=LinalgCore.Qr(A);DiffFro(A,LinalgCore.MatMul(Q,R)).Should().BeApproximately(0.0,1e-9); }
-        [Fact] public void Qr_Correctness_wide() { var A=new double[,]{{1,2,3},{4,5,6}};var(Q,R)=LinalgCore.Qr(A);DiffFro(A,LinalgCore.MatMul(Q,R)).Should().BeApproximately(0.0,1e-9); }
+        [Fact] public void Qr_wide_throws_NotSupportedException() { var A=new double[,]{{1,2,3},{4,5,6}};var act=()=>LinalgCore.Qr(A);act.Should().Throw<NotSupportedException>().WithMessage("*rows >= columns*"); }
         [Fact] public void Qr_Correctness_rankDeficient() { var A=new double[,]{{1,2,3},{4,5,6},{5,7,9}};var(Q,R)=LinalgCore.Qr(A);DiffFro(A,LinalgCore.MatMul(Q,R)).Should().BeApproximately(0.0,1e-9); }
         [Fact] public void Qr_Orthogonal_Q() { var A=B;var(Q,_)=LinalgCore.Qr(A);var Qt=LinalgCore.Transpose(Q);int k=Q.GetLength(1);var QtQ=LinalgCore.MatMul(Qt,Q);var I=LinalgCore.Identity(k);DiffFro(I,QtQ).Should().BeApproximately(0.0,1e-9); }
         // ── PINV correctness: Moore-Penrose A * A⁺ * A ≈ A ──────────────
@@ -139,11 +139,11 @@ namespace ExcelFormulaLabs.Analytics.Tests
 
         [Fact] public void Qr_wide_exceeds_maxCols()
         {
-            // QR with rows=2, cols=2001 > maxCols=2000 → throws ArgumentException
+            // QR with rows=2, cols=2001: wide path now throws NotSupportedException
             var wide = new double[2, 2001];
             var act = () => LinalgCore.Qr(wide);
-            act.Should().Throw<ArgumentException>()
-                .WithMessage("*QR decomposition*");
+            act.Should().Throw<NotSupportedException>()
+                .WithMessage("*rows >= columns*");
         }
 
         [Fact] public void Trace_non_square()
