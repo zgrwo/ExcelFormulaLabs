@@ -336,7 +336,7 @@ namespace ExcelFormulaLabs.Foundation
             if (value is IConvertible && value is not string)
             {
                 double d = Convert.ToDouble(value);
-                if (d > 0 && !double.IsNaN(d) && !double.IsInfinity(d))
+                if (d >= 0 && !double.IsNaN(d) && !double.IsInfinity(d))
                 {
                     try { return new DateTime(1899, 12, 30).AddDays(d); }
                     catch (Exception ex) when (ex is not OutOfMemoryException

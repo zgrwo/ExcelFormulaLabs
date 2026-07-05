@@ -57,8 +57,8 @@ namespace ExcelFormulaLabs.Analytics.Tests
         private static readonly double[] ywls_cv = {2.1,3.8,5.2,7.1,8.9};
         private static readonly double[] wwls_cv = {1.0,2.0,1.0,0.5,3.0};
         [Fact] public void CrossVal_WLS_Py_coef() { var c=(double[])RegressionCore.FitWLS(Xwls,ywls_cv,wwls_cv)["coefficients"]; c[0].Should().BeApproximately(0.340754716981135,1e-8); c[1].Should().BeApproximately(1.703773584905660,1e-8); }
-        [Fact] public void CrossVal_WLS_Py_sse() => ((double)RegressionCore.FitWLS(Xwls,ywls_cv,wwls_cv)["sse"]).Should().BeApproximately(0.078415094339623,1e-10);
-        [Fact] public void CrossVal_WLS_Py_r2() => ((double)RegressionCore.FitWLS(Xwls,ywls_cv,wwls_cv)["r_squared"]).Should().BeApproximately(0.999245386613178,1e-10);
+        [Fact] public void CrossVal_WLS_Py_sse() => ((double)RegressionCore.FitWLS(Xwls,ywls_cv,wwls_cv)["sse"]).Should().BeApproximately(0.074041295834818,1e-10);
+        [Fact] public void CrossVal_WLS_Py_r2() => ((double)RegressionCore.FitWLS(Xwls,ywls_cv,wwls_cv)["r_squared"]).Should().BeApproximately(0.997413675568156,1e-10);
         // sklearn.linear_model.Ridge(alpha=1.0): coef=[-0.04742, 1.85676]
         private static readonly double[,] Xridge = {{1},{2},{3},{4},{5},{6},{7},{8},{9},{10}};
         private static readonly double[] yridge = {2.1,3.8,5.2,7.1,8.9,10.8,13.1,14.9,16.8,18.9};

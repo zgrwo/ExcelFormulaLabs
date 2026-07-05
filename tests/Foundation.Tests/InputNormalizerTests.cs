@@ -60,7 +60,7 @@ public class CoercionTests
     [Fact] public void ToBool_nan_input_returns_false() => InputNormalizer.ToBool(double.NaN).Should().BeFalse();
     [Fact] public void ToBool_infinity_input_returns_true() => InputNormalizer.ToBool(double.PositiveInfinity).Should().BeTrue();
     [Fact] public void ToDateTime_nan_input_returns_minvalue() => InputNormalizer.ToDateTime(double.NaN).Should().Be(DateTime.MinValue);
-    [Fact] public void ToDateTime_zero_returns_minvalue() => InputNormalizer.ToDateTime(0.0).Should().Be(DateTime.MinValue);
+    [Fact] public void ToDateTime_zero_returns_epoch() => InputNormalizer.ToDateTime(0.0).Should().Be(new DateTime(1899,12,30));
 }
 
 public class NormalizationTests

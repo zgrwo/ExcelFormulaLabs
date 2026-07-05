@@ -138,6 +138,24 @@ namespace ExcelFormulaLabs.Analytics
             }
             result["fitted_values"] = fittedOrig;
             result["residuals"] = residualsOrig;
+            // Recompute SSE, TSS and R² in ORIGINAL scale to match residuals/fitted_values.
+            // The SSE/R² returned by FitOLSCore are in the sqrt(w)-transformed scale
+            // and are not comparable with the original-scale residuals.
+            double sseOrig = 0, tssOrig = 0;
+            double yMean = y.Sum() / n;
+            for (int i = 0; i < n; i++)
+            {
+                sseOrig += residualsOrig[i] * residualsOrig[i];
+                double dev = y[i] - yMean;
+                tssOrig += dev * dev;
+            }
+            if (Math.Abs(tssOrig) < 1e-15)
+                throw new ArgumentException(
+                    "Cannot fit WLS: total sum of squares is zero (constant response variable y).");
+            double r2Orig = 1.0 - sseOrig / tssOrig;
+            result["sse"] = sseOrig;
+            result["r_squared"] = r2Orig;
+            result["adj_r_squared"] = 1.0 - (1.0 - r2Orig) * (n - 1) / (double)(n - p);
             return result;
         }
 
