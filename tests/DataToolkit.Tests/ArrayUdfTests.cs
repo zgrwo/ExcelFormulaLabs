@@ -245,5 +245,8 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             var result = (object[])ArrayUdf.UDF_ARR_SHUFFLE(input);
             result.Should().NotBeEquivalentTo(input, o => o.WithStrictOrdering());
         }
+
+        // Default behaviour: omitted sort_order → ascending (Core default asc=true)
+        [Fact] public void Default_sort_order_ascending() { var r=(object[])ArrayUdf.UDF_ARR_SORT(new object[]{3,1,2}); r.Should().Equal(1,2,3); }
     }
 }

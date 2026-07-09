@@ -321,6 +321,19 @@ namespace ExcelFormulaLabs.Foundation
         }
 
         /// <summary>
+        /// Safe conversion to bool with explicit default value.
+        /// Error/Null/Empty/Missing → <paramref name="defaultValue"/>.
+        /// Otherwise delegates to <see cref="ToBool(object?)"/>.
+        /// </summary>
+        public static bool ToBool(object? value, bool defaultValue)
+        {
+            if (value == null || value is DBNull || IsExcelMissing(value)) return defaultValue;
+            if (IsExcelEmptyValue(value)) return defaultValue;
+            if (value is ExcelError) return defaultValue;
+            return ToBool(value);
+        }
+
+        /// <summary>
         /// Safe conversion to DateTime. Error/Null/Empty → DateTime.MinValue.
         /// Numeric values are treated as Excel serial dates (1899-12-30 epoch).
         /// </summary>

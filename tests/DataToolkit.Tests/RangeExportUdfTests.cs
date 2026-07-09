@@ -64,5 +64,13 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             var md = (string)RangeExportUdf.UDF_RANGE_MD(d, true);
             md.Should().Contain("A\\|B");
         }
+
+        // Default behaviour: omitted has_headers → true (Core default hasHeaders=true)
+        [Fact] public void Default_has_headers_markdown()
+        {
+            var d = new object[,] { { "H1", "H2" }, { "v1", "v2" } };
+            var md = (string)RangeExportUdf.UDF_RANGE_MD(d, true);
+            md.Should().Contain("---");  // markdown table separator between header and data
+        }
     }
 }

@@ -97,5 +97,14 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             var longPattern = new string('x', 10001);
             RegexUdf.UDF_RX_TEST("test", longPattern, true).Should().Be(ExcelError.Value);
         }
+
+        // Default behaviour: omitted ignore_case → case-insensitive (Core default ic=true)
+        [Fact] public void Default_ignore_case_Test() => ((bool)RegexUdf.UDF_RX_TEST("Hello", "hello")).Should().BeTrue();
+        [Fact] public void Default_ignore_case_Count() => ((long)RegexUdf.UDF_RX_COUNT("Hello hello", "hello")).Should().Be(2);
+        [Fact] public void Default_ignore_case_Match() => ((string)RegexUdf.UDF_RX_MATCH("Hello", "hello")).Should().Be("Hello");
+        [Fact] public void Default_ignore_case_Replace() => ((string)RegexUdf.UDF_RX_REPL("Hello", "hello", "Hi")).Should().Be("Hi");
+        [Fact] public void Default_ignore_case_Split() { var r=(object[])RegexUdf.UDF_RX_SPLIT("Hello,World,hello", "hello"); r.Should().Equal("", ",World,", ""); }
+        [Fact] public void Default_ignore_case_MatchAll() { var r=(object[])RegexUdf.UDF_RX_MALL("Hello hello", "hello"); ((string)r[0]).Should().Be("Hello"); ((string)r[1]).Should().Be("hello"); }
+        [Fact] public void Default_ignore_case_Groups() { var r=(object[,])RegexUdf.UDF_RX_GRP("Hello", "(hello)"); r[1,0].Should().Be("Hello"); }
     }
 }

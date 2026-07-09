@@ -412,5 +412,11 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Coal_primary_null() => StringUdf.UDF_STR_COAL(null!, "fallback").Should().Be(ExcelEmpty.Value);
         [Fact] public void Coal_both_null() => StringUdf.UDF_STR_COAL(null!, null!).Should().Be(ExcelEmpty.Value);
         [Fact] public void Coal_array() { var r=(object[])StringUdf.UDF_STR_COAL(new object[]{"a",null,"b"}, "fallback"); ((string)r[0]).Should().Be("a"); r[1].Should().BeNull(); ((string)r[2]).Should().Be("b"); }
+
+        // Default behaviour: omitted match_case → case-sensitive (Core default cs=true)
+        [Fact] public void Default_match_case_CountSub() => ((long)StringUdf.UDF_STR_CNT("AbAbAb", "ab")).Should().Be(0);
+        [Fact] public void Default_match_case_StartsWith() => ((bool)StringUdf.UDF_STR_SW("Hello", "hello")).Should().BeFalse();
+        [Fact] public void Default_match_case_EndsWith() => ((bool)StringUdf.UDF_STR_EW("Hello.World", "world")).Should().BeFalse();
+        [Fact] public void Default_match_case_CommonPrefix() => StringUdf.UDF_STR_CPFX("Hello", "hello").Should().Be("");
     }
 }
