@@ -33,7 +33,7 @@ namespace ExcelFormulaLabs.Foundation
         public static object WrapError(Func<object> action)
         {
             try { return action(); }
-            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException) { var msg = $"[WrapError] {ex.GetType().Name}: {ex.Message}"; Debug.WriteLine(msg); Trace.WriteLine(msg); return ExcelError.Value; }
+            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException) { var msg = $"[WrapError] {ex.GetType().Name}"; Debug.WriteLine(msg); Trace.WriteLine(msg); return ExcelError.Value; }
         }
 
         /// <summary>
@@ -43,7 +43,7 @@ namespace ExcelFormulaLabs.Foundation
         public static T WrapError<T>(Func<T> action, T errorResult)
         {
             try { return action(); }
-            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException) { var msg = $"[WrapError] {ex.GetType().Name}: {ex.Message}"; Debug.WriteLine(msg); Trace.WriteLine(msg); return errorResult; }
+            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException) { var msg = $"[WrapError] {ex.GetType().Name}"; Debug.WriteLine(msg); Trace.WriteLine(msg); return errorResult; }
         }
 
         /// <summary>

@@ -11,7 +11,7 @@ namespace ExcelFormulaLabs.Analytics
         private static double[] V(object d) => AnalyticsHelpers.PrepV(d);
 
         [ExcelFunction(Name = "REGRESS.OLS",
-          Description = "OLS. Returns 2xn: coefficients, sse, r_squared, adj_r_squared, residuals, fitted_values, standard_errors, t_stats, p_values, n, df. p<0.05 = significant; R^2 near 1 = good fit.")]
+          Description = "OLS regression. Returns an 11-row report table: coefficients, sse, r_squared, adj_r_squared, residuals, fitted_values, standard_errors, t_stats, p_values, n, df. p<0.05 = significant; R^2 near 1 = good fit.")]
         public static object UDF_REGRESS_OLS([ExcelArgument(Name="known_y", Description="The Y variable range (dependent variable)")] object y, [ExcelArgument(Name="known_x", Description="The X variable range (independent variables)")] object X)
             => OutputWrapper.WrapError(() => DictToReport(RegressionCore.FitOLS(M(X), V(y))));
 

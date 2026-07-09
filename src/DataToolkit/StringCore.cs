@@ -34,16 +34,22 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static string KeepChars(string t, string keep) { t ??= ""; var set = new System.Collections.Generic.HashSet<char>(keep); var sb = new StringBuilder(t.Length); foreach (char c in t) if (set.Contains(c)) sb.Append(c); return sb.ToString(); }
 
         internal static string PadLeft(string t, int len, char pad = ' ')
-        { if (t.Length >= len) return t; return new string(pad, len - t.Length) + t; }
+        { t ??= ""; if (t.Length >= len) return t; return new string(pad, len - t.Length) + t; }
 
         internal static string PadRight(string t, int len, char pad = ' ')
-        { if (t.Length >= len) return t; return t + new string(pad, len - t.Length); }
+        { t ??= ""; if (t.Length >= len) return t; return t + new string(pad, len - t.Length); }
 
         internal static string Truncate(string t, int max, string suffix = "...")
         { t ??= ""; if (max <= 0) return ""; if (t.Length <= max) return t; int keep = max - suffix.Length; if (keep <= 0) return t.Substring(0, max); return t.Substring(0, keep) + suffix; }
 
         internal static long CountSubstring(string t, string s, bool cs = true)
-        { if(string.IsNullOrEmpty(s)||string.IsNullOrEmpty(t))return 0; int c=0,i=0; var m=cs?0:1; while((i=t.IndexOf(s,i,m==0?StringComparison.Ordinal:StringComparison.OrdinalIgnoreCase))>=0){c++;i+=s.Length;} return c; }
+        {
+            if (string.IsNullOrEmpty(s) || string.IsNullOrEmpty(t)) return 0;
+            int count = 0, idx = 0;
+            var comp = cs ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+            while ((idx = t.IndexOf(s, idx, comp)) >= 0) { count++; idx += s.Length; }
+            return count;
+        }
 
         internal static bool StartsWithStr(string t, string p, bool cs = true)
         { t ??= ""; return t.StartsWith(p, cs ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase); }

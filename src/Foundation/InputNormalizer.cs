@@ -321,15 +321,17 @@ namespace ExcelFormulaLabs.Foundation
         }
 
         /// <summary>
-        /// Safe conversion to bool with explicit default value.
-        /// Error/Null/Empty/Missing → <paramref name="defaultValue"/>.
-        /// Otherwise delegates to <see cref="ToBool(object?)"/>.
+        /// Safe conversion to bool with explicit sentinel value.
+        /// <paramref name="sentinelValue"/> is returned only for Excel signal values
+        /// (null, <see cref="DBNull"/>, <see cref="ExcelMissing"/>, empty, error).
+        /// For all other values — including unparseable strings — the behaviour
+        /// is identical to <see cref="ToBool(object?)"/> and ignores the sentinel.
         /// </summary>
-        public static bool ToBool(object? value, bool defaultValue)
+        public static bool ToBool(object? value, bool sentinelValue)
         {
-            if (value == null || value is DBNull || IsExcelMissing(value)) return defaultValue;
-            if (IsExcelEmptyValue(value)) return defaultValue;
-            if (value is ExcelError) return defaultValue;
+            if (value == null || value is DBNull || IsExcelMissing(value)) return sentinelValue;
+            if (IsExcelEmptyValue(value)) return sentinelValue;
+            if (value is ExcelError) return sentinelValue;
             return ToBool(value);
         }
 

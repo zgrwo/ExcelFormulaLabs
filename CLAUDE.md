@@ -146,7 +146,7 @@ ExcelFormulaLabs/
 
 ### 6. 闭环验证强制（Python ↔ C# ↔ 手册）
 
-> 完整对照表见 [skill.md §验证一致性](skills/excel-dna-project/skill.md#验证脚本行为一致性)。
+> 完整对照表见 [skill.md §闭环验证](skills/excel-dna-project/skill.md#闭环验证)。
 
 **核心理念**：`verify-manual.py` 必须**调用 C# 源码**计算手册示例，与 Python 独立计算结果比对。仅靠 Python 自校验 (`check(name, expr, expr)`) = 假阴性，三处已证实 Bug（ZSCORE 方差、GASSTP 单位、MOLWT 原子量）均因此漏过。
 

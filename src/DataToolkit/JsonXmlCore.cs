@@ -65,7 +65,7 @@ namespace ExcelFormulaLabs.DataToolkit
         }
 
         private static object? Q(JsonElement e,string p)
-        { foreach(var s in p.Split('.')){int b=s.IndexOf('[');string k=b>=0?s.Substring(0,b):s; if(!string.IsNullOrEmpty(k)&&e.ValueKind==JsonValueKind.Object){ if(e.TryGetProperty(k,out JsonElement c))e=c;else return null; } if(b>=0&&e.ValueKind==JsonValueKind.Array){ if(int.TryParse(s.Substring(b+1,s.Length-b-2),out int ix)&&ix<e.GetArrayLength())e=e[ix];else return null; } } return Elm(e); }
+        { foreach(var s in p.Split('.')){int b=s.IndexOf('[');string k=b>=0?s.Substring(0,b):s; if(!string.IsNullOrEmpty(k)&&e.ValueKind==JsonValueKind.Object){ if(e.TryGetProperty(k,out JsonElement c))e=c;else return null; } if(b>=0&&e.ValueKind==JsonValueKind.Array){ if(int.TryParse(s.Substring(b+1,s.Length-b-2),out int ix)&&ix>=0&&ix<e.GetArrayLength())e=e[ix];else return null; } } return Elm(e); }
 
         // ── XML ────────────────────────────────────────────────────────────
 

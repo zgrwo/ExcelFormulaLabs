@@ -84,6 +84,15 @@ namespace ExcelFormulaLabs.DataToolkit
         }
 
         private static string Sanitize(string raw, int idx)
-        { if (string.IsNullOrWhiteSpace(raw)) return $"Col{idx + 1}"; var ca = raw.ToCharArray(); for (int i = 0; i < ca.Length; i++) if (!char.IsLetterOrDigit(ca[i]) && ca[i] != '_') ca[i] = '_'; string n = new(ca); if (char.IsDigit(n[0])) n = "_" + n; return n; }
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return $"Col{idx + 1}";
+            var ca = raw.ToCharArray();
+            for (int i = 0; i < ca.Length; i++)
+                if (!char.IsLetterOrDigit(ca[i]) && ca[i] != '_')
+                    ca[i] = '_';
+            string n = new(ca);
+            if (char.IsDigit(n[0])) n = "_" + n;
+            return n;
+        }
     }
 }

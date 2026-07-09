@@ -30,7 +30,7 @@ namespace ExcelFormulaLabs.DataToolkit
         public static string? SandboxRoot
         {
             get => Volatile.Read(ref _sandboxRoot);
-            set { if (_sandboxRoot != value) System.Diagnostics.Trace.WriteLine($"[FileSystemCore] SandboxRoot changed from '{_sandboxRoot}' to '{value}'."); Volatile.Write(ref _sandboxRoot, value); _sandboxWarningEmitted = value != null; }
+            set { if (_sandboxRoot != value) System.Diagnostics.Trace.WriteLine($"[FileSystemCore] SandboxRoot changed from '{_sandboxRoot}' to '{value}'."); Volatile.Write(ref _sandboxRoot, value); Volatile.Write(ref _sandboxWarningEmitted, value != null); }
         }
 
         /// <summary>Maximum file size in bytes for read operations. Default 100 MB. Set to 0 for unlimited.</summary>
@@ -49,9 +49,10 @@ namespace ExcelFormulaLabs.DataToolkit
         {
             if (string.IsNullOrEmpty(SandboxRoot))
             {
-                if (!_sandboxWarningEmitted)
+                bool warned = Volatile.Read(ref _sandboxWarningEmitted);
+                if (!warned)
                 {
-                    _sandboxWarningEmitted = true;
+                    Volatile.Write(ref _sandboxWarningEmitted, true);
                     System.Diagnostics.Trace.WriteLine(
                         "[FileSystemCore] SandboxRoot is null — file operations are unrestricted. " +
                         "Set FileSystemCore.SandboxRoot before loading untrusted workbooks.");
@@ -118,7 +119,7 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static long GetFileSize(string p) { ValidatePath(p); if (!File.Exists(p)) throw new System.IO.FileNotFoundException($"File not found: {p}"); return new FileInfo(p).Length; }
         internal static string ReadTextFile(string p, Encoding? e = null) { ValidatePath(p); if (MaxReadSizeBytes > 0 && new FileInfo(p).Length > MaxReadSizeBytes) throw new ArgumentException($"File size exceeds maximum read limit of {MaxReadSizeBytes} bytes."); return File.ReadAllText(p, e ?? Encoding.UTF8); }
         internal static string[] ReadAllLines(string p, Encoding? e = null) { ValidatePath(p); if (MaxReadSizeBytes > 0 && new FileInfo(p).Length > MaxReadSizeBytes) throw new ArgumentException($"File size exceeds maximum read limit of {MaxReadSizeBytes} bytes."); return File.ReadAllLines(p, e ?? Encoding.UTF8); }
-        internal static bool WriteTextFile(string p, string c, Encoding? e = null) { ValidatePath(p); if (MaxWriteSizeBytes > 0 && c.Length > MaxWriteSizeBytes) throw new ArgumentException($"Content length exceeds maximum write limit of {MaxWriteSizeBytes} bytes."); File.WriteAllText(p, c, e ?? Encoding.UTF8); return true; }
+        internal static bool WriteTextFile(string p, string c, Encoding? e = null) { ValidatePath(p); var enc = e ?? Encoding.UTF8; if (MaxWriteSizeBytes > 0 && enc.GetByteCount(c) > MaxWriteSizeBytes) throw new ArgumentException($"Content byte length exceeds maximum write limit of {MaxWriteSizeBytes} bytes."); File.WriteAllText(p, c, enc); return true; }
         internal static bool AppendTextFile(string p, string c, Encoding? e = null) { ValidatePath(p); File.AppendAllText(p, c, e ?? Encoding.UTF8); return true; }
         internal static bool DeleteFile(string p) { ValidatePath(p); if (File.Exists(p)) File.Delete(p); return true; }
         internal static bool CopyFile(string s, string d, bool o = false) { ValidatePath(s); ValidatePath(d); File.Copy(s, d, o); return true; }

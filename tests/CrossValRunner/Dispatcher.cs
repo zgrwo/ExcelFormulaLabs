@@ -96,17 +96,28 @@ public static class Dispatcher
         Register("StringCore", "LevenshteinDistance", (a, _) => StringCore.LevenshteinDistance(ToString(a[0]), ToString(a[1])));
         Register("StringCore", "Base64Encode", (a, _) => StringCore.Base64Encode(ToString(a[0])));
         Register("StringCore", "Base64Decode", (a, _) => StringCore.Base64Decode(ToString(a[0])));
+        Register("StringCore", "Soundex", (a, _) => StringCore.Soundex(ToString(a[0])));
+        Register("StringCore", "CountSubstring", (a, k) => StringCore.CountSubstring(ToString(a[0]), ToString(a[1]), Kwarg(k, "cs", true)));
+        Register("StringCore", "CommonPrefix", (a, k) => StringCore.CommonPrefix(ToString(a[0]), ToString(a[1]), Kwarg(k, "cs", true)));
 
         // ═══════════════════ DateTimeCore ═══════════════════
         Register("DateTimeCore", "IsoWeekNum", (a, _) => DateTimeCore.IsoWeekNum(ToDateTime(a[0])));
         Register("DateTimeCore", "Easter", (a, _) => DateTimeCore.Easter(ToLong(a[0])));
         Register("DateTimeCore", "IsLeapYear", (a, _) => DateTimeCore.IsLeapYear(ToLong(a[0])));
+        Register("DateTimeCore", "AddWorkdays", (a, _) => DateTimeCore.AddWorkdays(ToDateTime(a[0]), ToLong(a[1])));
+        Register("DateTimeCore", "NextWorkday", (a, _) => DateTimeCore.NextWorkday(ToDateTime(a[0])));
 
         // ═══════════════════ RegexCore ═══════════════════
         Register("RegexCore", "RegexTest", (a, k) => RegexCore.RegexTest(ToString(a[0]), ToString(a[1]),
             Kwarg(k, "ignoreCase", true)));
         Register("RegexCore", "RegexCount", (a, k) => RegexCore.RegexCount(ToString(a[0]), ToString(a[1]),
             Kwarg(k, "ignoreCase", true)));
+        Register("RegexCore", "RegexMatch", (a, k) => RegexCore.RegexMatch(ToString(a[0]), ToString(a[1]),
+            Kwarg(k, "n", 1L), Kwarg(k, "ic", true)));
+        Register("RegexCore", "RegexReplace", (a, k) => RegexCore.RegexReplace(ToString(a[0]), ToString(a[1]), ToString(a[2]),
+            Kwarg(k, "n", 0L), Kwarg(k, "ic", true)));
+        Register("RegexCore", "RegexSplit", (a, k) => RegexCore.RegexSplit(ToString(a[0]), ToString(a[1]),
+            Kwarg(k, "n", 0L), Kwarg(k, "ic", true)));
     }
 
     public static (object? result, string? error) Invoke(string coreClass, string coreMethod,
