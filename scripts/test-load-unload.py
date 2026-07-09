@@ -12,7 +12,7 @@ import pythoncom
 import psutil
 
 BUILT = r"D:\Workspace\zgrwo\VBA\DeepSeek\ClaudeCode\已编译文件"
-ROUNDS = 10
+ROUNDS = 4
 
 XLLS = {
     "Analytics-net48":     os.path.join(BUILT, "net48", "Analytics-AddIn64-packed.xll"),
