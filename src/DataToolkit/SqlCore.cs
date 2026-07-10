@@ -32,6 +32,15 @@ namespace ExcelFormulaLabs.DataToolkit
                 throw new ArgumentException(
                     "Only SELECT statements are allowed for security. " +
                     "Use a dedicated database tool for DDL/DML operations.");
+            // Reject semicolons to prevent multi-statement injection
+            // (e.g. SELECT 1; ATTACH DATABASE …).  SQLite single-statement
+            // execution doesn't require a terminating semicolon, and the
+            // rare case of semicolons inside string literals is not a
+            // realistic Excel-formula scenario.
+            if (sql.IndexOf(';') >= 0)
+                throw new ArgumentException(
+                    "Semicolons are not allowed in SQL queries for security. " +
+                    "Multi-statement queries are blocked to prevent data exfiltration.");
             using var conn = new SqlConn("Data Source=:memory:");
             conn.Open();
             CreateTable(conn, "data", range);

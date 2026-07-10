@@ -17,7 +17,7 @@ namespace ExcelFormulaLabs.Analytics
         /// Lightweight decomposition cache. Avoids recomputing SVD/QR/LU
         /// when individual matrix accessors (SVD_U, SVD_S, SVD_VT, etc.)
         /// are called consecutively with the same input in Excel.
-        /// Thread-safe; max 8 entries with LRU eviction.
+        /// Thread-safe; max 32 entries with LRU eviction.
         /// </summary>
         private static class DecompCache
         {

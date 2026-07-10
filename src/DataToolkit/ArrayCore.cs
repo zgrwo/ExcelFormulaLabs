@@ -39,7 +39,7 @@ namespace ExcelFormulaLabs.DataToolkit
             return r;
         }
 #if !NET8_0_OR_GREATER
-        private static readonly System.Threading.ThreadLocal<System.Random> ThreadLocalRng = new(() => new System.Random());
+        private static readonly System.Threading.ThreadLocal<System.Random> ThreadLocalRng = new(() => new System.Random(Guid.NewGuid().GetHashCode()));
 #endif
     }
 }

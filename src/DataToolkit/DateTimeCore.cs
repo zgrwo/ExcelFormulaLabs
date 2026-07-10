@@ -52,10 +52,9 @@ namespace ExcelFormulaLabs.DataToolkit
             var d = s;
             long inc = days > 0 ? 1 : -1;
             long rem = Math.Abs(days);
-            // Fast path: skip full weeks (5 workdays = 7 calendar days)
-            long fullWeeks = rem / 5;
-            if (fullWeeks > 0) { d = d.AddDays(inc * fullWeeks * 7); rem %= 5; }
-            // Process remaining < 5 workdays
+            // Simple day-by-day walk — guaranteed correct for every
+            // start day (including weekends).  The 100k-workday cap
+            // (~140k calendar days) keeps this bounded.
             while (rem > 0) { d = d.AddDays(inc); if (!IsWeekend(d)) rem--; }
             return d;
         }

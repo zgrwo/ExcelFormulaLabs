@@ -98,7 +98,7 @@ namespace ExcelFormulaLabs.Foundation
         {
             if (value is string s) return s;
             if (value is double d) return double.IsNaN(d) ? "NaN" : double.IsInfinity(d) ? (d > 0 ? "+Inf" : "-Inf") : d.ToString("G17", System.Globalization.CultureInfo.InvariantCulture);
-            if (value is float f) return ((double)f).ToString("G17", System.Globalization.CultureInfo.InvariantCulture);
+            if (value is float f) { double df = f; return double.IsNaN(df) ? "NaN" : double.IsInfinity(df) ? (df > 0 ? "+Inf" : "-Inf") : df.ToString("G17", System.Globalization.CultureInfo.InvariantCulture); }
             if (value is decimal m) return ((double)m).ToString("G17", System.Globalization.CultureInfo.InvariantCulture);
             if (value is int i) return i.ToString(System.Globalization.CultureInfo.InvariantCulture);
             if (value is long l) return l.ToString(System.Globalization.CultureInfo.InvariantCulture);

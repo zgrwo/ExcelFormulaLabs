@@ -88,7 +88,7 @@ namespace ExcelFormulaLabs.Analytics
 
         internal static double CovarianceP(double[] a, double[] b)
         {
-            if (a.Length != b.Length || a.Length == 0) return double.NaN;
+            if (a.Length != b.Length || a.Length < 1) return double.NaN;
             return Statistics.Covariance(a, b) * (a.Length - 1) / a.Length;
         }
 

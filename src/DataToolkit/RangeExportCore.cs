@@ -13,7 +13,7 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static string RangeToHtml(object[,] data, bool hasHeaders = true, string? tableClass = null)
         {
             int rows = data.GetLength(0), cols = data.GetLength(1); var sb = new StringBuilder();
-            string cls = tableClass != null ? $" class=\"{tableClass}\"" : "";
+            string cls = tableClass != null ? $" class=\"{System.Net.WebUtility.HtmlEncode(tableClass)}\"" : "";
             sb.Append($"<table{cls}>");
             for (int r = 0; r < rows; r++) { sb.Append("<tr>"); string tag = (hasHeaders && r == 0) ? "th" : "td"; for (int c = 0; c < cols; c++) sb.Append('<').Append(tag).Append('>').Append(System.Net.WebUtility.HtmlEncode(InputNormalizer.ToString(data[r, c]))).Append("</").Append(tag).Append('>'); sb.Append("</tr>"); }
             sb.Append("</table>"); return sb.ToString();

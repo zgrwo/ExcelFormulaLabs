@@ -245,7 +245,7 @@ namespace ExcelFormulaLabs.Foundation
             {
                 if (double.TryParse(s, NumberStyles.Float | NumberStyles.AllowThousands,
                     CultureInfo.InvariantCulture, out double result))
-                    return result;
+                    return (double.IsNaN(result) || double.IsInfinity(result)) ? double.NaN : result;
                 return double.NaN;
             }
             try { return Convert.ToDouble(value, CultureInfo.InvariantCulture); }

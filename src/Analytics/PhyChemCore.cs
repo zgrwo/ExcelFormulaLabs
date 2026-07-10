@@ -76,15 +76,18 @@ namespace ExcelFormulaLabs.Analytics
             formula = ParenRx.Replace(formula, m =>
                 ExpandGroup(m.Groups[1].Value, ParseCount(m.Groups[2].Value)));
             double mw = 0;
+            bool matched = false;
             foreach (Match m in ElemRx.Matches(formula))
             {
+                matched = true;
                 string elem = m.Groups[1].Value;
                 int cnt = ParseCount(m.Groups[2].Value);
                 if (AtomicWeights.TryGetValue(elem, out double w))
                     mw += w * cnt;
                 else return double.NaN;
             }
-            return mw;
+            // No element matched → invalid formula (e.g. all-lowercase "h2o")
+            return matched ? mw : double.NaN;
         }
 
         private static string ExpandGroup(string inner, int mult) =>

@@ -92,7 +92,7 @@ namespace ExcelFormulaLabs.DataToolkit
 
         internal static string Soundex(string t)
         { if(string.IsNullOrEmpty(t))return""; char f=char.ToUpperInvariant(t[0]); var sb=new StringBuilder();sb.Append(f);char pc=Sdx(f);
-          for(int i=1;i<t.Length&&sb.Length<4;i++){char c=Sdx(char.ToUpperInvariant(t[i])); if(c!='0'&&c!=pc){sb.Append(c);pc=c;}} while(sb.Length<4)sb.Append('0'); return sb.ToString(); }
+          for(int i=1;i<t.Length&&sb.Length<4;i++){char c=Sdx(char.ToUpperInvariant(t[i])); if(c!='0'&&c!=pc){sb.Append(c);pc=c;}else if(c=='0')pc='0';} while(sb.Length<4)sb.Append('0'); return sb.ToString(); }
         private static char Sdx(char c)=>c switch{'B'or'F'or'P'or'V'=>'1','C'or'G'or'J'or'K'or'Q'or'S'or'X'or'Z'=>'2','D'or'T'=>'3','L'=>'4','M'or'N'=>'5','R'=>'6',_=>'0'};
 
         internal static string UrlEncode(string t)=>Uri.EscapeDataString(t??"");
