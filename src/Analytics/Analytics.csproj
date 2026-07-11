@@ -94,4 +94,15 @@
     <Exec Condition="'$(TargetFramework)' == 'net8.0-windows'" Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\Analytics-AddIn-net8.0-64-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" ContinueOnError="true" />
   </Target>
 
+  <!-- 打包后验证：检查 .xll 产物完整性 -->
+  <Target Name="VerifyPackOutput" AfterTargets="ExcelDnaPack"
+          Condition="'$(Configuration)' == 'Release'">
+    <Message Text="[VerifyPack] Analytics $(TargetFramework) — 检查打包产物..." Importance="high" />
+    <Exec Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\verify-pack.ps1&quot; -PublishDir &quot;$(OutDir)publish&quot; -Module Analytics -Tfm &quot;$(TargetFramework)&quot;"
+          ContinueOnError="true">
+      <Output TaskParameter="ExitCode" PropertyName="_VerifyExitCode" />
+    </Exec>
+    <Warning Text="[VerifyPack] 验证发现问题，请检查上述输出。" Condition="$(_VerifyExitCode) != 0" />
+  </Target>
+
 </Project>

@@ -247,28 +247,36 @@ namespace ExcelFormulaLabs.Analytics.Tests
         // --- Excel helper -------------------------------------------------
 
         private static double[]? _numericX1Cache;
+        private static readonly object _numericX1Lock = new();
+
         private static double[] LoadNumericX1()
         {
             if (_numericX1Cache != null)
                 return _numericX1Cache;
 
-            var values = new List<double>();
-            using var wb = new XLWorkbook(ExcelPath);
-            var ws = wb.Worksheet("SourceData");
-
-            // Skip header row (row 1), read column U (1-based index 21: NumericX1).
-            foreach (var row in ws.RowsUsed())
+            lock (_numericX1Lock)
             {
-                if (row.RowNumber() == 1)
-                    continue;
+                if (_numericX1Cache != null)
+                    return _numericX1Cache;
 
-                var cell = row.Cell(21);  // NumericX1 column
-                if (!cell.IsEmpty() && cell.TryGetValue<double>(out var val))
-                    values.Add(val);
+                var values = new List<double>();
+                using var wb = new XLWorkbook(ExcelPath);
+                var ws = wb.Worksheet("SourceData");
+
+                // Skip header row (row 1), read column U (1-based index 21: NumericX1).
+                foreach (var row in ws.RowsUsed())
+                {
+                    if (row.RowNumber() == 1)
+                        continue;
+
+                    var cell = row.Cell(21);  // NumericX1 column
+                    if (!cell.IsEmpty() && cell.TryGetValue<double>(out var val))
+                        values.Add(val);
+                }
+
+                _numericX1Cache = values.ToArray();
+                return _numericX1Cache;
             }
-
-            _numericX1Cache = values.ToArray();
-            return _numericX1Cache;
         }
 
         // --- Python reference constants (cross-validated with scipy/numpy) ---
