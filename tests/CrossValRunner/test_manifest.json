@@ -91,6 +91,10 @@
     {"id":"LINALG.LU","module":"LINALG","coreClass":"LinalgCore","coreMethod":"Lu","args":[{"ref":"A_4x4"}],"tolerance":1e-3},
     {"id":"LINALG.PINV","module":"LINALG","coreClass":"LinalgCore","coreMethod":"PseudoInverse","args":[{"ref":"svd_3x2"}],"tolerance":1e-3},
     {"id":"LINALG.CHOLESKY","module":"LINALG","coreClass":"LinalgCore","coreMethod":"Cholesky","args":[{"ref":"chol_2x2"}],"tolerance":1e-10},
-    {"id":"LINALG.IDENTITY","module":"LINALG","coreClass":"LinalgCore","coreMethod":"Identity","args":[3],"tolerance":1e-10}
+    {"id":"LINALG.IDENTITY","module":"LINALG","coreClass":"LinalgCore","coreMethod":"Identity","args":[3],"tolerance":1e-10},
+
+    {"id":"DT.EASTER_2024","module":"DT","coreClass":"DateTimeCore","coreMethod":"Easter","args":[2024],"tolerance":0},
+    {"id":"DT.EASTER_2025","module":"DT","coreClass":"DateTimeCore","coreMethod":"Easter","args":[2025],"tolerance":0},
+    {"id":"DT.EASTER_2000","module":"DT","coreClass":"DateTimeCore","coreMethod":"Easter","args":[2000],"tolerance":0}
   ]
 }

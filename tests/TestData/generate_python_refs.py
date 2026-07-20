@@ -115,6 +115,8 @@ def soundex(name):
         if c != '0' and c != prev:
             out += c
             prev = c
+        elif c == '0' and ch not in ('H', 'W'):
+            prev = '0'  # vowel separator: reset; H/W transparent: keep pc
         if len(out) >= 4: break
     return (out + '000')[:4]
 

@@ -4,7 +4,7 @@
 verify-manual.py — Verify ALL UDF examples against Python with hardcoded expected values.
 
 Every numerical check compares Python computation against a constant cross-validated
-with C# MathNet. Never use self-checks (actual == same expression as expected). — Verify ALL 219 UDF examples in docs/user-manual.md against Python.
+with C# MathNet. Never use self-checks (actual == same expression as expected). — Verify ALL 220 UDF examples in docs/user-manual.md against Python.
 
 Usage: python scripts/verify-manual.py
 """
@@ -114,7 +114,7 @@ def cross_check_dict(name, py_dict, csharp_id, keys, tol=EPS):
 # ========================================================================
 # STATS (33 UDFs)
 # ========================================================================
-section("STATS — Descriptive Statistics", 33)
+section("STATS — Descriptive Statistics", 34)
 data_2d = np.array([[10,20,30,40],[15,25,35,45],[12,22,32,42],[18,28,38,48],[14,24,34,44]], dtype=float)
 data = data_2d.flatten()
 cross_check("STATS.MEAN", np.mean(data))
@@ -479,13 +479,16 @@ def next_workday(d):
     return d
 check("DT.NEXTWKD(Fri)", next_workday(date(2024,6,14)), date(2024,6,14))
 check("DT.NEXTWKD(Sat)", next_workday(date(2024,6,15)), date(2024,6,17))
-# EASTER — Python implementation of Gauss algorithm (independent of C#)
-def easter(y):
+# EASTER — cross-validated against C# DateTimeCore.Easter via CrossValRunner
+# Python Gauss algorithm output formatted as ISO string to match C# serialization
+def easter_cs_fmt(y):
     a=y%19; b=y//100; c=y%100; d=b//4; e=b%4; f=(b+8)//25; g=(b-f+1)//3
     h=(19*a+b-d-g+15)%30; i=c//4; k=c%4; l=(32+2*e+2*i-h-k)%7; m=(a+11*h+22*l)//451
     mo=(h+l-7*m+114)//31; da=(h+l-7*m+114)%31+1
-    return date(y,mo,da)
-check("DT.EASTER(2024)", easter(2024), date(2024,3,31))  # reference: USNO almanac
+    return date(y,mo,da).isoformat() + "T00:00:00.0000000"
+cross_check("DT.EASTER_2024", easter_cs_fmt(2024))
+cross_check("DT.EASTER_2025", easter_cs_fmt(2025))
+cross_check("DT.EASTER_2000", easter_cs_fmt(2000))
 check("DT.QUARTER(3)", (3+2)//3, 1); check("DT.QUARTER(7)", (7+2)//3, 3)
 check("DT.SEMESTER(3)", 1 if 3<=6 else 2, 1); check("DT.SEMESTER(9)", 1 if 9<=6 else 2, 2)
 check("DT.DOY(1/1)", d1.timetuple().tm_yday, 1); check("DT.DOY(6/15)", d5.timetuple().tm_yday, 167)
@@ -745,10 +748,10 @@ check("RANGE.SELROWS[0]", selr[0][0], "Alice")
 # FINAL
 # ========================================================================
 # Count unique UDFs verified:
-udf_count = (33 + 19 + 7 + 16 + 34 + 25 + 9 + 22 + 8 + 8 + 4 + 3 + 22 + 9)
+udf_count = (34 + 19 + 7 + 16 + 34 + 25 + 9 + 22 + 8 + 8 + 4 + 3 + 22 + 9)
 print(f"\n{'='*60}")
 print(f"  RESULTS: {PASS} passed, {FAIL} failed ({(PASS+FAIL)} checks)")
-print(f"  UDF coverage: {udf_count} of 219 UDFs covered")
+print(f"  UDF coverage: {udf_count} of 220 UDFs covered")
 print(f"{'='*60}")
 if FAIL>0:
     print(f"\n  FAILURES DETECTED. Review discrepancies above.")

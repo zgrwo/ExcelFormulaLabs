@@ -233,10 +233,15 @@ namespace ExcelFormulaLabs.Analytics
                     "ANOVA requires at least 2 groups.");
             // Reject NaN/Inf in group data (防错原则1: avoid silent NaN propagation in means/SS)
             for (int i = 0; i < k; i++)
+            {
+                if (groups[i].Length == 0)
+                    throw new ArgumentException(
+                        $"Group {i} is empty. All groups must have at least one observation.");
                 for (int j = 0; j < groups[i].Length; j++)
                     if (double.IsNaN(groups[i][j]) || double.IsInfinity(groups[i][j]))
                         throw new ArgumentException(
                             $"Group {i} contains {(double.IsNaN(groups[i][j]) ? "NaN" : "Infinity")} at index {j}. ANOVA requires finite values.");
+            }
             var means = groups.Select(g => g.Average()).ToArray();
             var counts = groups.Select(g => (long)g.Length).ToArray();
             double grand = groups.SelectMany(g => g).Average();

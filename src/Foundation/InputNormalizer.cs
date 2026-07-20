@@ -239,7 +239,7 @@ namespace ExcelFormulaLabs.Foundation
             if (value is double d) return (double.IsNaN(d) || double.IsInfinity(d)) ? double.NaN : d; // L1 NaN/Inf guard
             if (value is int i) return i;
             if (value is long l) return l;
-            if (value is float f) return f;
+            if (value is float f) return (float.IsNaN(f) || float.IsInfinity(f)) ? double.NaN : f;
             if (value is decimal m) { double dm = (double)m; return double.IsInfinity(dm) ? double.NaN : dm; }
             if (value is string s)
             {
@@ -268,7 +268,9 @@ namespace ExcelFormulaLabs.Foundation
             if (value is double d)
             {
                 if (double.IsNaN(d) || double.IsInfinity(d)) return 0; // L1 NaN/Inf guard
-                return (long)Math.Round(d);
+                double rd = Math.Round(d);
+                if (rd < long.MinValue || rd > long.MaxValue) return 0; // L2 range guard
+                return (long)rd;
             }
             if (value is string s)
             {

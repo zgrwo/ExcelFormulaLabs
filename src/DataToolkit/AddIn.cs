@@ -71,8 +71,16 @@ namespace ExcelFormulaLabs.DataToolkit
                     }
                     if (needExtract)
                     {
-                        using var fs = new FileStream(extractedPath, FileMode.Create, FileAccess.Write);
-                        stream.CopyTo(fs);
+                        // 原子写入：先写临时文件再 rename，避免多进程并发写入导致 DLL 损坏。
+                        string tempPath = extractedPath + $".tmp.{System.Diagnostics.Process.GetCurrentProcess().Id}";
+                        using (var fs = new FileStream(tempPath, FileMode.Create, FileAccess.Write))
+                            stream.CopyTo(fs);
+                        try { File.Move(tempPath, extractedPath); }
+                        catch (IOException)
+                        {
+                            // 另一 Excel 实例已完成提取；清理临时文件后使用已有 DLL。
+                            try { File.Delete(tempPath); } catch { /* best-effort */ }
+                        }
                     }
                     LoadNativeLibrary(extractedPath);
                     return;

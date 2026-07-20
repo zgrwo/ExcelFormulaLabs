@@ -291,7 +291,7 @@ namespace ExcelFormulaLabs.Foundation
             if (targetType == typeof(string)) return (T)(object)InputNormalizer.ToString(value);
             if (targetType == typeof(double)) return (T)(object)InputNormalizer.ToDouble(value);
             if (targetType == typeof(long)) return (T)(object)InputNormalizer.ToLong(value);
-            if (targetType == typeof(int)) return (T)(object)(int)InputNormalizer.ToLong(value);
+            if (targetType == typeof(int)) { long lv = InputNormalizer.ToLong(value); return lv is < int.MinValue or > int.MaxValue ? throw new OverflowException($"Value {lv} overflows int.") : (T)(object)(int)lv; }
             if (targetType == typeof(bool)) return (T)(object)InputNormalizer.ToBool(value);
             if (targetType == typeof(DateTime)) return (T)(object)InputNormalizer.ToDateTime(value);
 
