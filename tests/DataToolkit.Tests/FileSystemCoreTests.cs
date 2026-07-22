@@ -8,7 +8,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
     // SandboxRoot is a public static field shared across all FileSystem tests.
     // [Collection("Sandbox")] serializes FileSystemCoreTests + FileSystemUdfTests
     // so no parallel test sees a concurrently mutated SandboxRoot.
-    [CollectionDefinition("Sandbox", DisableParallelization = false)]
+    [CollectionDefinition("Sandbox", DisableParallelization = true)]
     public class SandboxCollection { }
 
     [Collection("Sandbox")]

@@ -16,10 +16,12 @@ Win10/11 自带 .NET Framework 4.8，直接加载 net48 版本的 `.xll`：
 
 | 文件 | 包含模块 |
 |------|---------|
-| `Analytics-AddIn-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM |
-| `DataToolkit-AddIn-packed.xll` | STR · DT · REGEX · ARR · DICT · JSON/XML · PIVOT · SQL · FS · RANGE |
+| `Analytics-AddIn-net48-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM（需 .NET Framework 4.8） |
+| `Analytics-AddIn-net8.0-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM（需 .NET 8 运行时） |
+| `DataToolkit-AddIn-net48-packed.xll` | STR · DT · REGEX · ARR · DICT · JSON/XML · PIVOT · SQL · FS · RANGE（需 .NET Framework 4.8） |
+| `DataToolkit-AddIn-net8.0-packed.xll` | STR · DT · REGEX · ARR · DICT · JSON/XML · PIVOT · SQL · FS · RANGE（需 .NET 8 运行时） |
 
-> **版本选择**：64 位 Excel 选文件名含 `64` 的 `.xll`，32 位 Excel 选不含的。Analytics 和 DataToolkit 两个加载项可同时加载，也可按需只装一个。
+> **版本选择**：64 位 Excel 选文件名含 `64` 的 `.xll`，32 位 Excel 选不含的。`-net48` 版本无需额外安装运行时（Win10/11 自带），`-net8.0` 版本性能更优但需安装 .NET 8 运行时。两个加载项可同时加载，也可按需只装一个。
 
 ### 方式二：安装 .NET 8 运行时（性能更优）
 
@@ -113,13 +115,14 @@ Win10/11 自带 .NET Framework 4.8，直接加载 net48 版本的 `.xll`：
 
 ### 文件系统沙箱
 
-`FS.*` 默认无路径限制。分发场景下可在 `AddIn.cs` 的 `AutoOpen()` 中启用沙箱：
+> ⚠️ **重要**：`FS.*` 函数默认**无路径限制**（`SandboxRoot` 为 `null`），可访问任意文件系统路径。
+> 若分发给不受信任的用户，请务必在 `AddIn.cs` 的 `AutoOpen()` 中启用沙箱：
 
 ```csharp
 FileSystemCore.SandboxRoot = @"C:\Users\Public\Documents";
 ```
 
-越界访问返回 `#VALUE!`。
+越界访问返回 `#VALUE!`。沙箱支持 NTFS 重解析点（junctions/symlinks）逐段检查。
 
 ### SQL 注入防护
 

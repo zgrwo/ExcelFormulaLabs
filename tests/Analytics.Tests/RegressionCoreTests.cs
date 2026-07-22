@@ -209,13 +209,10 @@ namespace ExcelFormulaLabs.Analytics.Tests
 
         [Fact] public void AnovaOneWay_zero_within_variance()
         {
-            // Groups with zero within-group variance → f = Infinity, p = 0
-            var r = RegressionCore.AnovaOneWay(new[] { new[] { 5.0, 5, 5 }, new[] { 10.0, 10, 10 } });
-            r.Should().ContainKeys("ss_between", "f_stat", "p_value");
-            ((double)r["ss_between"]).Should().BeApproximately(37.5, 1e-10);
-            ((double)r["ss_within"]).Should().Be(0.0);
-            ((double)r["f_stat"]).Should().Be(double.PositiveInfinity);
-            ((double)r["p_value"]).Should().Be(0.0);
+            // Groups with zero within-group variance → now throws (defense-in-depth guard
+            // prevents silent NaN/Infinity from 0/0 division).
+            var act = () => RegressionCore.AnovaOneWay(new[] { new[] { 5.0, 5, 5 }, new[] { 10.0, 10, 10 } });
+            act.Should().Throw<ArgumentException>().WithMessage("*within-group sum of squares*");
         }
 
         // =====================================================================

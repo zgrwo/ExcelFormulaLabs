@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 
@@ -120,10 +121,13 @@ namespace ExcelFormulaLabs.Foundation
             {
                 var regex = RegexCache.GetOrAdd(pattern, p =>
                 {
-                    // Best-effort bound: clear cache if it grows too large.
-                    // ConcurrentDictionary.Count is snapshot-accurate for this use.
+                    // Evict one entry when cache exceeds limit — avoids cache-stampede
+                    // that Clear() would cause when many threads repopulate at once.
                     if (RegexCache.Count > MaxCachedRegex)
-                        RegexCache.Clear();
+                    {
+                        var first = RegexCache.Keys.FirstOrDefault();
+                        if (first != null) RegexCache.TryRemove(first, out _);
+                    }
                     return new Regex(p, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
                         RegexTimeout);
                 });

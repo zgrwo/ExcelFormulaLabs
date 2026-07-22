@@ -23,6 +23,9 @@ namespace ExcelFormulaLabs.Analytics
         {
             NumericGuard.AgainstNonFinite(X, y);
             int n = X.GetLength(0), origP = X.GetLength(1);
+            if (n == 0 || y.Length == 0)
+                throw new ArgumentException(
+                    "Input data is empty. Regression requires at least one observation.");
             int p; double[,] Xaug;
             if (addIntercept) { p = origP + 1; Xaug = PrependIntercept(X); }
             else { p = origP; Xaug = X; }
@@ -256,6 +259,13 @@ namespace ExcelFormulaLabs.Analytics
             if (dfW <= 0)
                 throw new ArgumentException(
                     $"ANOVA requires at least 2 observations per group (df_within={dfW}).");
+
+            // Guard against degenerate data where all observations are identical
+            // (within-group variance = 0 → F = 0/0 = NaN with no diagnostic message).
+            if (Math.Abs(ssW) < 1e-15)
+                throw new ArgumentException(
+                    "ANOVA failed: within-group sum of squares is near zero. " +
+                    "All observations within each group are effectively identical.");
             double msB = ssB / dfB, msW = ssW / dfW;
             double f = msB / msW;
             double p = FDistPValue(f, dfB, dfW);

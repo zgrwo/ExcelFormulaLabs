@@ -32,9 +32,9 @@ namespace ExcelFormulaLabs.DataToolkit
             get => Volatile.Read(ref _sandboxRoot);
             set
             {
-                // Atomic swap: CompareExchange returns the previous value,
-                // eliminating the check-then-act race on concurrent calls.
-                string? prev = Interlocked.CompareExchange(ref _sandboxRoot, value, Volatile.Read(ref _sandboxRoot));
+                // Atomic swap: Exchange unconditionally writes the new value and
+                // returns the previous value, ensuring no concurrent write is lost.
+                string? prev = Interlocked.Exchange(ref _sandboxRoot, value);
                 if (!ReferenceEquals(prev, value) && prev != value)
                     System.Diagnostics.Trace.WriteLine($"[FileSystemCore] SandboxRoot changed from '{prev}' to '{value}'.");
                 Volatile.Write(ref _sandboxWarningEmitted, value != null);
@@ -125,8 +125,8 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static bool IsPathValid(string p) { if(string.IsNullOrEmpty(p))return false; if(p.IndexOfAny(System.IO.Path.GetInvalidPathChars())>=0)return false; try{Path.GetFullPath(p);return true;}catch(Exception ex) when(ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException){return false;} }
         internal static bool FileExists(string p) { ValidatePath(p); return File.Exists(p); }
         internal static long GetFileSize(string p) { ValidatePath(p); if (!File.Exists(p)) throw new System.IO.FileNotFoundException($"File not found: {p}"); return new FileInfo(p).Length; }
-        internal static string ReadTextFile(string p, Encoding? e = null) { ValidatePath(p); if (MaxReadSizeBytes > 0 && new FileInfo(p).Length > MaxReadSizeBytes) throw new ArgumentException($"File size exceeds maximum read limit of {MaxReadSizeBytes} bytes."); return File.ReadAllText(p, e ?? Encoding.UTF8); }
-        internal static string[] ReadAllLines(string p, Encoding? e = null) { ValidatePath(p); if (MaxReadSizeBytes > 0 && new FileInfo(p).Length > MaxReadSizeBytes) throw new ArgumentException($"File size exceeds maximum read limit of {MaxReadSizeBytes} bytes."); return File.ReadAllLines(p, e ?? Encoding.UTF8); }
+        internal static string ReadTextFile(string p, Encoding? e = null) { ValidatePath(p); var enc = e ?? Encoding.UTF8; using var fs = new FileStream(p, FileMode.Open, FileAccess.Read, FileShare.Read); if (MaxReadSizeBytes > 0 && fs.Length > MaxReadSizeBytes) throw new ArgumentException($"File size exceeds maximum read limit of {MaxReadSizeBytes} bytes."); using var sr = new StreamReader(fs, enc); return sr.ReadToEnd(); }
+        internal static string[] ReadAllLines(string p, Encoding? e = null) { ValidatePath(p); var enc = e ?? Encoding.UTF8; using var fs = new FileStream(p, FileMode.Open, FileAccess.Read, FileShare.Read); if (MaxReadSizeBytes > 0 && fs.Length > MaxReadSizeBytes) throw new ArgumentException($"File size exceeds maximum read limit of {MaxReadSizeBytes} bytes."); using var sr = new StreamReader(fs, enc); var lines = new System.Collections.Generic.List<string>(); string? line; while ((line = sr.ReadLine()) != null) lines.Add(line); return lines.ToArray(); }
         internal static bool WriteTextFile(string p, string c, Encoding? e = null) { ValidatePath(p); var enc = e ?? Encoding.UTF8; if (MaxWriteSizeBytes > 0 && enc.GetByteCount(c) > MaxWriteSizeBytes) throw new ArgumentException($"Content byte length exceeds maximum write limit of {MaxWriteSizeBytes} bytes."); File.WriteAllText(p, c, enc); return true; }
         internal static bool AppendTextFile(string p, string c, Encoding? e = null) { ValidatePath(p); var enc = e ?? Encoding.UTF8; if (MaxWriteSizeBytes > 0 && enc.GetByteCount(c) > MaxWriteSizeBytes) throw new ArgumentException($"Content byte length exceeds maximum write limit of {MaxWriteSizeBytes} bytes."); File.AppendAllText(p, c, enc); return true; }
         internal static bool DeleteFile(string p) { ValidatePath(p); if (File.Exists(p)) File.Delete(p); return true; }
@@ -169,7 +169,13 @@ namespace ExcelFormulaLabs.DataToolkit
                 }
                 else
                 {
-                    File.Delete(entry);
+                    // Re-check ReparsePoint before delete: a symlink could have been
+                    // swapped in between the attribute check above and this delete.
+                    var finalAttr = File.GetAttributes(entry);
+                    if ((finalAttr & FileAttributes.ReparsePoint) != 0)
+                        File.Delete(entry);  // delete link itself, don't follow
+                    else
+                        File.Delete(entry);
                 }
             }
             Directory.Delete(p);

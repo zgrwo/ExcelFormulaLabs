@@ -244,13 +244,5 @@ namespace ExcelFormulaLabs.Analytics
             double x = df / (df + t * t);
             return MathNet.Numerics.SpecialFunctions.BetaRegularized(df / 2.0, 0.5, x);
         }
-
-        private static double[] ExtractColumn(double[,] data, int col)
-        {
-            int rows = data.GetLength(0);
-            var r = new double[rows];
-            for (int i = 0; i < rows; i++) r[i] = data[i, col];
-            return r;
-        }
     }
 }

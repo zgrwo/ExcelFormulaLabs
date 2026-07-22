@@ -68,6 +68,13 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static long DaysInMonth(long y, long m) { if (y < 1 || y > 9999) throw new ArgumentOutOfRangeException(nameof(y), $"Year {y} is outside the valid range [1, 9999]."); return DateTime.DaysInMonth((int)y, (int)m); }
         internal static double UnixTimestamp(DateTime d) { AssertValidDate(d); return (d.ToUniversalTime() - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds; }
         internal static DateTime FromUnixTimestamp(double ts) => new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(ts).ToLocalTime();
+        /// <summary>
+        /// Date difference in the specified unit. "M" (months) and "Y" (years) use
+        /// Excel DATEDIF complete-interval semantics: a month/year only counts when
+        /// the full interval has elapsed (e.g. Jan 31 → Feb 1 = 0 months because
+        /// February does not have 31 days). This differs from VBA DateDiff which
+        /// counts calendar-boundary crossings (Jan 31 → Feb 1 = 1 month).
+        /// </summary>
         internal static long DateDiff(string u, DateTime d1, DateTime d2) { AssertValidDate(d1); AssertValidDate(d2); return u.ToUpperInvariant() switch
         {
             "D" or "DAY" => (long)(d2 - d1).TotalDays,

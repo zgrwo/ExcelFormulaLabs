@@ -8,6 +8,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
 {
     public class LinalgCoreTests
     {
+        public LinalgCoreTests() => LinalgCore.ClearDecompCache();
         private static readonly double[,] A = {{2,-1},{-1,2}};
         private static readonly double[,] B = {{1,2,3},{4,5,6},{7,8,10}};
         [Fact] public void Svd() { var (U,S,Vt)=LinalgCore.Svd(B); U.GetLength(0).Should().Be(3); S.Length.Should().Be(3); }
