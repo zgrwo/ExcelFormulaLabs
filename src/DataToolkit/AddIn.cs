@@ -79,7 +79,10 @@ namespace ExcelFormulaLabs.DataToolkit
                         catch (IOException)
                         {
                             // 另一 Excel 实例已完成提取；清理临时文件后使用已有 DLL。
-                            try { File.Delete(tempPath); } catch { /* best-effort */ }
+                            try { File.Delete(tempPath); }
+                            catch (Exception ex) when (ex is not OutOfMemoryException
+                                and not StackOverflowException and not AccessViolationException)
+                            { /* best-effort */ }
                         }
                     }
                     LoadNativeLibrary(extractedPath);

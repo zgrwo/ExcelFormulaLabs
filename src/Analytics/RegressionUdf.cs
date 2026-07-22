@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Linq;
 using ExcelDna.Integration;
 using ExcelFormulaLabs.Foundation;
@@ -28,10 +27,7 @@ namespace ExcelFormulaLabs.Analytics
         [ExcelFunction(Name = "REGRESS.ANOVA1",
           Description = "One-way ANOVA (groups as columns). Returns 2xn: ss_between, ss_within, ss_total, df_between, df_within, df_total, ms_between, ms_within, f_stat, p_value, group_means, group_counts. p<0.05 = groups differ significantly.")]
         public static object UDF_REGRESS_ANOVA1([ExcelArgument(Name="input_range", Description="Input data range with groups as columns")] object data)
-            => OutputWrapper.WrapError(() => {
-                var m=InputNormalizer.NormalizeTo2D(data)!; int nc=m.GetLength(1); var g=new double[nc][];
-                for(int c=0;c<nc;c++){var l=new List<double>();for(int r=0;r<m.GetLength(0);r++){double v=InputNormalizer.ToDouble(m[r,c]);if(!double.IsNaN(v))l.Add(v);}g[c]=l.ToArray();}
-                return AnalyticsHelpers.DictToReport(RegressionCore.AnovaOneWay(g)); });
+            => OutputWrapper.WrapError(() => AnalyticsHelpers.DictToReport(RegressionCore.AnovaOneWay(AnalyticsHelpers.ToJaggedColumns(data))));
 
         [ExcelFunction(Name = "REGRESS.FACTORIMP", Description = "Rank predictor importance by |t| from standardized OLS. Returns 0-based column index array most-to-least important.")]
         public static object UDF_REGRESS_FACTORIMP([ExcelArgument(Name="known_y", Description="The Y variable range (dependent variable)")] object y, [ExcelArgument(Name="known_x", Description="The X variable range (independent variables)")] object X)

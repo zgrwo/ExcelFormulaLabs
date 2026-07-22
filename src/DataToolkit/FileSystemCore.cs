@@ -30,7 +30,15 @@ namespace ExcelFormulaLabs.DataToolkit
         public static string? SandboxRoot
         {
             get => Volatile.Read(ref _sandboxRoot);
-            set { if (_sandboxRoot != value) System.Diagnostics.Trace.WriteLine($"[FileSystemCore] SandboxRoot changed from '{_sandboxRoot}' to '{value}'."); Volatile.Write(ref _sandboxRoot, value); Volatile.Write(ref _sandboxWarningEmitted, value != null); }
+            set
+            {
+                // Atomic swap: CompareExchange returns the previous value,
+                // eliminating the check-then-act race on concurrent calls.
+                string? prev = Interlocked.CompareExchange(ref _sandboxRoot, value, Volatile.Read(ref _sandboxRoot));
+                if (!ReferenceEquals(prev, value) && prev != value)
+                    System.Diagnostics.Trace.WriteLine($"[FileSystemCore] SandboxRoot changed from '{prev}' to '{value}'.");
+                Volatile.Write(ref _sandboxWarningEmitted, value != null);
+            }
         }
 
         /// <summary>Maximum file size in bytes for read operations. Default 100 MB. Set to 0 for unlimited.</summary>

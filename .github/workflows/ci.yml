@@ -102,6 +102,9 @@ jobs:
       - name: Build (Release)
         run: dotnet build -c Release
 
+      - name: Test (Release)
+        run: dotnet test -c Release --no-build --verbosity normal
+
   verify-docs:
     name: Verify Docs
     runs-on: ubuntu-latest

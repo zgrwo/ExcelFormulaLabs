@@ -53,6 +53,30 @@ namespace ExcelFormulaLabs.Analytics
         }
 
         /// <summary>
+        /// Extract columns from a 2D input into a jagged double array (one array per column).
+        /// NaN values (from empty/error cells) are skipped per column.
+        /// Used by ANOVA1 to convert an Excel range into group arrays.
+        /// </summary>
+        internal static double[][] ToJaggedColumns(object data)
+        {
+            var m = InputNormalizer.NormalizeTo2D(data)
+                ?? throw new ArgumentException("Cannot convert input to 2D array.");
+            int rows = m.GetLength(0), cols = m.GetLength(1);
+            var groups = new double[cols][];
+            for (int c = 0; c < cols; c++)
+            {
+                var list = new List<double>(rows);
+                for (int r = 0; r < rows; r++)
+                {
+                    double v = InputNormalizer.ToDouble(m[r, c]);
+                    if (!double.IsNaN(v)) list.Add(v);
+                }
+                groups[c] = list.ToArray();
+            }
+            return groups;
+        }
+
+        /// <summary>
         /// Convert a Dictionary{string,object} to an Excel-compatible report table.
         /// Each field becomes a row: column 0 = field name, columns 1.. = scalar or
         /// unpacked array elements.
