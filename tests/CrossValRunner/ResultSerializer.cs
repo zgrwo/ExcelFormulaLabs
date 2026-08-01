@@ -30,6 +30,7 @@ public static class ResultSerializer
             DateTime dt => dt.ToString("O"),
             double[] da => da.Select(d => (object?)(
                 double.IsNaN(d) || double.IsInfinity(d) ? null : d)).ToArray(),
+            string[] sa => sa.Cast<object>().ToArray(),
             int[] ia => ia.Cast<object>().ToArray(),
             long[] la => la.Cast<object>().ToArray(),
             double[,] d2 => MatrixToJagged(d2),

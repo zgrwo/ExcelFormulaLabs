@@ -48,10 +48,19 @@ jobs:
         run: dotnet restore
 
       - name: Build (Debug, net48)
-        run: dotnet build --no-restore -f net48
+        run: |
+          dotnet build --no-restore src/Foundation/Foundation.csproj -f net48
+          dotnet build --no-restore src/Analytics/Analytics.csproj -f net48
+          dotnet build --no-restore src/DataToolkit/DataToolkit.csproj -f net48
+          dotnet build --no-restore tests/Foundation.Tests/Foundation.Tests.csproj -f net48
+          dotnet build --no-restore tests/Analytics.Tests/Analytics.Tests.csproj -f net48
+          dotnet build --no-restore tests/DataToolkit.Tests/DataToolkit.Tests.csproj -f net48
 
       - name: Test (net48)
-        run: dotnet test --no-build -f net48 --verbosity normal
+        run: |
+          dotnet test --no-build tests/Foundation.Tests/Foundation.Tests.csproj -f net48 --verbosity normal
+          dotnet test --no-build tests/Analytics.Tests/Analytics.Tests.csproj -f net48 --verbosity normal
+          dotnet test --no-build tests/DataToolkit.Tests/DataToolkit.Tests.csproj -f net48 --verbosity normal
 
   cross-val:
     name: Cross-Validation (Python ↔ C#)
