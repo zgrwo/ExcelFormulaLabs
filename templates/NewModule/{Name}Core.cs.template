@@ -1,0 +1,63 @@
+// ============================================================================
+// {Name}Core.cs — 脚手架模板
+// 使用方法：将 {Name} 替换为模块名（PascalCase），如 Weather、Finance
+// 放置位置：src/{Module}/{Name}Core.cs
+// ============================================================================
+using System;
+using ExcelFormulaLabs.Foundation;
+
+namespace ExcelFormulaLabs.{Module}
+{
+    /// <summary>
+    /// {描述：模块功能一句话说明}
+    /// </summary>
+    internal static class {Name}Core
+    {
+        // ====================================================================
+        // 哨兵契约 (L1-L5)：
+        //   L1: 不可转换值 → 返回类型零值（double→NaN, string→""）
+        //   L2: 除零 → NaN（不抛异常）
+        //   L3: 空集合 → NaN 或空结果
+        //   L4: 溢出 → NaN（不抛异常）
+        //   L5: 未知类型 Convert 失败 → throw
+        // ====================================================================
+
+        /// <summary>
+        /// {方法描述}
+        /// </summary>
+        /// <param name="input">输入值</param>
+        /// <returns>计算结果；无效输入返回 NaN</returns>
+        internal static double Compute(double input)
+        {
+            // ── 防错三原则 ──
+            // 1. 静默传播阻断：显式守卫 NaN/Inf
+            if (double.IsNaN(input) || double.IsInfinity(input))
+                return double.NaN;
+
+            // 2. 防御完整性：参数范围验证
+            // if (input < 0) return double.NaN;
+
+            // 3. 核心逻辑
+            double result = input; // TODO: 替换为实际计算
+
+            // 结果守卫：防止计算产生 Inf
+            if (double.IsInfinity(result))
+                return double.NaN;
+
+            return result;
+        }
+
+        /// <summary>
+        /// {字符串方法描述}
+        /// </summary>
+        internal static string Process(string input)
+        {
+            // L1: null/空 → 返回空字符串
+            if (string.IsNullOrEmpty(input))
+                return string.Empty;
+
+            // TODO: 替换为实际逻辑
+            return input;
+        }
+    }
+}

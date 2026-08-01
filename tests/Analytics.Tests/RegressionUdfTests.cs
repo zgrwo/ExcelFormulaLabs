@@ -1,0 +1,208 @@
+using System;
+using System.Collections.Generic;
+using ExcelFormulaLabs.Analytics;
+using ExcelFormulaLabs.Foundation;
+using FluentAssertions;
+using Xunit;
+
+namespace ExcelFormulaLabs.Analytics.Tests
+{
+    public class RegressionUdfTests
+    {
+        private static readonly double[,] X_test = { { 1 }, { 2 }, { 3 } }; // addIntercept adds 1-column
+        private static readonly double[]   y_test = { 5, 8, 11 };
+
+        /// <summary>
+        /// Extract the values of a named field from a DictToReport table.
+        /// Column 0 = field name, columns 1+ = scalar or unpacked array values.
+        /// </summary>
+        private static double[] FindRow(object[,] r, string key)
+        {
+            for (int i = 0; i < r.GetLength(0); i++)
+            {
+                if (r[i, 0] is string s && s == key)
+                {
+                    var vals = new List<double>();
+                    for (int j = 1; j < r.GetLength(1); j++)
+                    {
+                        if (r[i, j] is double d) vals.Add(d);
+                        else if (r[i, j] is long l) vals.Add(l);
+                        else break;
+                    }
+                    return vals.ToArray();
+                }
+            }
+            return Array.Empty<double>();
+        }
+
+        /// <summary>Extract a scalar value from a DictToReport table.</summary>
+        private static double FindScalar(object[,] r, string key)
+        {
+            var vals = FindRow(r, key);
+            return vals.Length > 0 ? vals[0] : double.NaN;
+        }
+
+        // ── Regression methods (return object[,] from DictToReport) ──
+        [Fact] public void OLS_returns_report()
+        {
+            var r = (object[,])RegressionUdf.UDF_REGRESS_OLS(y_test, X_test);
+            // Report: N fields × (maxLen+1) columns. 11 fields for OLS.
+            r.GetLength(0).Should().Be(11);
+            r.GetLength(1).Should().BeGreaterOrEqualTo(2);
+            // Coefficients are unpacked scalars across columns 1+
+            var coef = FindRow(r, "coefficients");
+            coef.Should().HaveCount(2);
+            coef[0].Should().BeApproximately(2.0, 1e-10);
+            coef[1].Should().BeApproximately(3.0, 1e-10);
+        }
+        [Fact] public void WLS_equal_weights()
+        {
+            var r = (object[,])RegressionUdf.UDF_REGRESS_WLS(y_test, X_test, new double[] { 1.0, 1.0, 1.0 });
+            r.GetLength(0).Should().Be(11);
+            var coef = FindRow(r, "coefficients");
+            coef[0].Should().BeApproximately(2.0, 1e-10);
+            coef[1].Should().BeApproximately(3.0, 1e-10);
+        }
+        [Fact] public void Ridge_keys()
+        {
+            var r = (object[,])RegressionUdf.UDF_REGRESS_RIDGE(y_test, X_test, 0.1);
+            r.GetLength(0).Should().Be(8);
+            var coef = FindRow(r, "coefficients");
+            coef[0].Should().BeApproximately(2.2857142857142847, 1e-6);
+            coef[1].Should().BeApproximately(2.8571428571428568, 1e-6);
+        }
+        [Fact] public void Anova1_keys()
+        {
+            var r = (object[,])RegressionUdf.UDF_REGRESS_ANOVA1(new double[,] { { 5, 8 }, { 6, 9 }, { 7, 10 } });
+            r.GetLength(0).Should().Be(12);
+            r.GetLength(1).Should().BeGreaterOrEqualTo(2);
+            var fStat = FindScalar(r, "f_stat");
+            fStat.Should().BeGreaterThan(0);
+        }
+
+        // ── Factor importance (returns double[]) ──
+        [Fact] public void FactorImportance_length()
+        {
+            var r = (double[])RegressionUdf.UDF_REGRESS_FACTORIMP(y_test, X_test);
+            r.Length.Should().Be(1);
+        }
+
+        // ── Multi-column X test data ──
+        // y = 1 + 2*X1 + 1*X2 (perfect linear relationship, from user manual)
+        private static readonly double[,] X_multi = { { 1, 3 }, { 2, 1 }, { 3, 4 }, { 4, 2 }, { 5, 5 } };
+        private static readonly double[] y_multi = { 6, 6, 11, 11, 16 };
+
+        // ── OLS coefficients / R-squared (return double[] and double) ──
+        [Fact] public void Coef_values()
+        {
+            var c = (double[])RegressionUdf.UDF_REGRESS_COEF(y_test, X_test);
+            c[0].Should().BeApproximately(2.0, 1e-8);
+            c[1].Should().BeApproximately(3.0, 1e-8);
+        }
+        [Fact] public void Rsq_is_one_for_perfect_fit() => ((double)RegressionUdf.UDF_REGRESS_RSQ(y_test, X_test)).Should().BeApproximately(1.0, 1e-10);
+
+        // ── Multi-column X regression ──
+        [Fact] public void Coef_multi_column()
+        {
+            var c = (double[])RegressionUdf.UDF_REGRESS_COEF(y_multi, X_multi);
+            c.Should().HaveCount(3); // intercept + 2 betas
+            c[0].Should().BeApproximately(1.0, 1e-8); // intercept
+            c[1].Should().BeApproximately(2.0, 1e-8); // beta1
+            c[2].Should().BeApproximately(1.0, 1e-8); // beta2
+        }
+        [Fact] public void Rsq_multi_column()
+        {
+            ((double)RegressionUdf.UDF_REGRESS_RSQ(y_multi, X_multi)).Should().BeApproximately(1.0, 1e-10);
+        }
+        [Fact] public void OLS_multi_column()
+        {
+            var r = (object[,])RegressionUdf.UDF_REGRESS_OLS(y_multi, X_multi);
+            r.GetLength(0).Should().Be(11); // 11 report rows
+            var coef = FindRow(r, "coefficients");
+            coef.Should().HaveCount(3);
+            coef[0].Should().BeApproximately(1.0, 1e-8);
+            coef[1].Should().BeApproximately(2.0, 1e-8);
+            coef[2].Should().BeApproximately(1.0, 1e-8);
+            FindScalar(r, "r_squared").Should().BeApproximately(1.0, 1e-10);
+        }
+        [Fact] public void FactorImportance_multi_column()
+        {
+            var r = (double[])RegressionUdf.UDF_REGRESS_FACTORIMP(y_multi, X_multi);
+            r.Should().HaveCount(2);
+            r[0].Should().Be(0); // X1 (|t|=2) more important than X2 (|t|=1)
+            r[1].Should().Be(1);
+        }
+
+        // ── Report content verification ──────────────────────────────
+        [Fact] public void OLS_report_content()
+        {
+            var r = (object[,])RegressionUdf.UDF_REGRESS_OLS(y_test, X_test);
+            FindScalar(r, "sse").Should().BeApproximately(0.0, 1e-10);
+            FindScalar(r, "r_squared").Should().BeApproximately(1.0, 1e-10);
+            FindScalar(r, "adj_r_squared").Should().BeApproximately(1.0, 1e-10);
+            FindScalar(r, "n").Should().Be(3);
+            FindScalar(r, "df").Should().Be(1);
+            var resid = FindRow(r, "residuals");
+            resid.Should().HaveCount(3);
+            foreach (var v in resid) v.Should().BeApproximately(0.0, 1e-10);
+        }
+        [Fact] public void WLS_report_content()
+        {
+            var r = (object[,])RegressionUdf.UDF_REGRESS_WLS(y_test, X_test, new double[] { 1.0, 1.0, 1.0 });
+            FindScalar(r, "r_squared").Should().BeApproximately(1.0, 1e-10);
+            FindScalar(r, "n").Should().Be(3);
+            var resid = FindRow(r, "residuals");
+            foreach (var v in resid) v.Should().BeApproximately(0.0, 1e-10);
+        }
+        [Fact] public void Ridge_report_content()
+        {
+            var r = (object[,])RegressionUdf.UDF_REGRESS_RIDGE(y_test, X_test, 0.1);
+            FindScalar(r, "r_squared").Should().BeGreaterThan(0.99);
+            FindScalar(r, "lambda").Should().Be(0.1);
+        }
+        [Fact] public void Anova1_report_content()
+        {
+            var r = (object[,])RegressionUdf.UDF_REGRESS_ANOVA1(new double[,] { { 5, 8 }, { 6, 9 }, { 7, 10 } });
+            FindScalar(r, "ss_total").Should().BeGreaterThan(0);
+            FindScalar(r, "f_stat").Should().BeGreaterThan(0);
+            FindScalar(r, "p_value").Should().BeLessThan(0.05);
+            FindRow(r, "group_means").Should().HaveCount(2);
+        }
+
+        // ── P0 guard UDF-level: WrapError → #VALUE! ──
+        [Fact] public void OLS_null_y_returns_error() => RegressionUdf.UDF_REGRESS_OLS(null!, X_test).Should().Be(ExcelError.Value);
+        [Fact] public void OLS_null_X_returns_error() => RegressionUdf.UDF_REGRESS_OLS(y_test, null!).Should().Be(ExcelError.Value);
+        [Fact] public void WLS_null_y_returns_error() => RegressionUdf.UDF_REGRESS_WLS(null!, X_test, new double[] { 1.0, 1.0, 1.0 }).Should().Be(ExcelError.Value);
+        [Fact] public void WLS_null_X_returns_error() => RegressionUdf.UDF_REGRESS_WLS(y_test, null!, new double[] { 1.0, 1.0, 1.0 }).Should().Be(ExcelError.Value);
+        [Fact] public void WLS_null_weights_returns_error() => RegressionUdf.UDF_REGRESS_WLS(y_test, X_test, null!).Should().Be(ExcelError.Value);
+        [Fact] public void Ridge_null_y_returns_error() => RegressionUdf.UDF_REGRESS_RIDGE(null!, X_test, 0.1).Should().Be(ExcelError.Value);
+        [Fact] public void Ridge_null_X_returns_error() => RegressionUdf.UDF_REGRESS_RIDGE(y_test, null!, 0.1).Should().Be(ExcelError.Value);
+        [Fact] public void Coef_null_y_returns_error() => RegressionUdf.UDF_REGRESS_COEF(null!, X_test).Should().Be(ExcelError.Value);
+        [Fact] public void Coef_null_X_returns_error() => RegressionUdf.UDF_REGRESS_COEF(y_test, null!).Should().Be(ExcelError.Value);
+        [Fact] public void Rsq_null_y_returns_error() => RegressionUdf.UDF_REGRESS_RSQ(null!, X_test).Should().Be(ExcelError.Value);
+        [Fact] public void Rsq_null_X_returns_error() => RegressionUdf.UDF_REGRESS_RSQ(y_test, null!).Should().Be(ExcelError.Value);
+        [Fact] public void FactorImportance_null_y_returns_error() => RegressionUdf.UDF_REGRESS_FACTORIMP(null!, X_test).Should().Be(ExcelError.Value);
+        [Fact] public void FactorImportance_null_X_returns_error() => RegressionUdf.UDF_REGRESS_FACTORIMP(y_test, null!).Should().Be(ExcelError.Value);
+        [Fact] public void OLS_constant_y_returns_error()
+        {
+            var constY = new double[] { 5, 5, 5 };
+            RegressionUdf.UDF_REGRESS_OLS(constY, X_test).Should().Be(ExcelError.Value);
+        }
+        [Fact] public void Ridge_constant_y_returns_error()
+        {
+            var constY = new double[] { 5, 5, 5 };
+            RegressionUdf.UDF_REGRESS_RIDGE(constY, X_test, 0.1).Should().Be(ExcelError.Value);
+        }
+        [Fact] public void Anova1_single_group_returns_error()
+        {
+            RegressionUdf.UDF_REGRESS_ANOVA1(new double[,] { { 1 }, { 2 }, { 3 } })
+                .Should().Be(ExcelError.Value);
+        }
+        [Fact] public void FactorImportance_single_row_returns_error()
+        {
+            var singleX = new double[,] { { 1, 5 } };
+            var singleY = new double[] { 7 };
+            RegressionUdf.UDF_REGRESS_FACTORIMP(singleY, singleX).Should().Be(ExcelError.Value);
+        }
+    }
+}

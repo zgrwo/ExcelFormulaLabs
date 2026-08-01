@@ -1,0 +1,169 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0-windows;net48</TargetFrameworks>
+    <RootNamespace>ExcelFormulaLabs.DataToolkit</RootNamespace>
+    <AssemblyName>DataToolkit</AssemblyName>
+    <Description>字符串 · 正则 · JSON · 数组 · SQL · 文件 · 日期 — 144 个数据处理函数</Description>
+    <Product>Excel 函数增强库</Product>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>CS1573;CS1591;CS8509;CS8603;CS8625;NU1701</NoWarn>
+    <ExcelAddInFileName Condition="'$(TargetFramework)' == 'net48'">DataToolkit-AddIn-net48</ExcelAddInFileName>
+    <ExcelAddInFileName Condition="'$(TargetFramework)' == 'net8.0-windows'">DataToolkit-AddIn-net8.0</ExcelAddInFileName>
+    <ExcelDna64BitAddInSuffix>-64</ExcelDna64BitAddInSuffix>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>DataToolkit.Tests</_Parameter1>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>CrossValRunner</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Foundation\Foundation.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ExcelDna.Integration" Version="1.8.0" />
+    <PackageReference Include="ExcelDna.AddIn" Version="1.8.0">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="ExcelDna.IntelliSense" Version="1.8.0" Condition="'$(TargetFramework)' == 'net48'" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.0" />
+    <!-- 将原生 e_sqlite3.dll 嵌入为托管资源，运行时按需提取。
+         ExcelDnaPack 虽已将其打包为 NATIVE_LIBRARY_LZMA，但 SQLitePCLRaw
+         的自定义加载器可能无法发现 ExcelDNA 提取的临时文件。
+         嵌入资源方案确保 100% 可靠加载。 -->
+    <EmbeddedResource Include="$(NuGetPackageRoot)sqlitepclraw.lib.e_sqlite3\2.1.6\runtimes\win-x86\native\e_sqlite3.dll">
+      <LogicalName>sqlite_native_x86</LogicalName>
+      <Visible>false</Visible>
+    </EmbeddedResource>
+    <EmbeddedResource Include="$(NuGetPackageRoot)sqlitepclraw.lib.e_sqlite3\2.1.6\runtimes\win-x64\native\e_sqlite3.dll">
+      <LogicalName>sqlite_native_x64</LogicalName>
+      <Visible>false</Visible>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />
+    <PackageReference Include="System.Text.Json" Version="8.0.4" />
+    <!-- 将原生 SQLite.Interop.dll 嵌入为托管资源，运行时按需提取，
+         使 net48 XLL 真正自包含（单文件） -->
+    <EmbeddedResource Include="$(NuGetPackageRoot)stub.system.data.sqlite.core.netframework\1.0.119\build\net46\x86\SQLite.Interop.dll">
+      <LogicalName>sqlite_interop_x86</LogicalName>
+      <Visible>false</Visible>
+    </EmbeddedResource>
+    <EmbeddedResource Include="$(NuGetPackageRoot)stub.system.data.sqlite.core.netframework\1.0.119\build\net46\x64\SQLite.Interop.dll">
+      <LogicalName>sqlite_interop_x64</LogicalName>
+      <Visible>false</Visible>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <!-- ExcelDnaPack scans all NuGet references including conditional ones across
+       TFMs. For net48, Microsoft.Data.Sqlite is NOT a real dependency — it only
+       activates for net8.0-windows — but ExcelDnaPack discovers it from the
+       project manifest and fails when absent from net48 output. Likewise for
+       net8.0-windows, System.Data.SQLite.Core is a net48-only stub. -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
+    <ExcelDnaPackDependenciesToExclude>Microsoft.Data.Sqlite.dll</ExcelDnaPackDependenciesToExclude>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
+    <ExcelDnaPackDependenciesToExclude>System.Data.SQLite.dll;System.Data.SQLite.Core.dll;ExcelDna.IntelliSense.dll</ExcelDnaPackDependenciesToExclude>
+  </PropertyGroup>
+
+  <!-- Generate correct .dna from templates per target before ExcelDnaBuild,
+       then clean up afterward. The generated DNA file is shared across inner
+       builds; a stale file on disk can poison incremental builds.
+       Wildcard-delete every ExcelDnaBuild-generated .dna so that 32/64-bit
+       variants from the opposite TFM inner build never leak across. -->
+  <Target Name="GenerateDnaFromTemplate" BeforeTargets="ExcelDnaBuild">
+    <ItemGroup>
+      <_StaleDna Include="DataToolkit-AddIn*.dna" />
+    </ItemGroup>
+    <Delete Files="@(_StaleDna)" ContinueOnError="true" />
+    <Copy Condition="'$(TargetFramework)' == 'net8.0-windows'"
+          SourceFiles="DataToolkit-AddIn-net8.dna.tpl"
+          DestinationFiles="DataToolkit-AddIn-net8.0.dna" />
+    <Copy Condition="'$(TargetFramework)' == 'net48'"
+          SourceFiles="DataToolkit-AddIn-net48.dna.tpl"
+          DestinationFiles="DataToolkit-AddIn-net48.dna" />
+  </Target>
+  <Target Name="CleanupDnaAfterBuild" AfterTargets="ExcelDnaPack">
+    <ItemGroup>
+      <_GenDna Include="DataToolkit-AddIn*.dna" />
+    </ItemGroup>
+    <Delete Files="@(_GenDna)" ContinueOnError="true" />
+  </Target>
+
+  <!-- Patch VERSIONINFO in packed .xll files so Excel add-in manager
+       shows meaningful descriptions instead of Excel-DNA defaults. -->
+  <Target Name="PatchXllVersionInfo" AfterTargets="ExcelDnaPack" Condition="'$(Configuration)' == 'Release'">
+    <Exec Condition="'$(TargetFramework)' == 'net48'" Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\DataToolkit-AddIn-net48-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" ContinueOnError="true" />
+    <Exec Condition="'$(TargetFramework)' == 'net48'" Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\DataToolkit-AddIn-net48-64-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" ContinueOnError="true" />
+    <Exec Condition="'$(TargetFramework)' == 'net8.0-windows'" Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\DataToolkit-AddIn-net8.0-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" ContinueOnError="true" />
+    <Exec Condition="'$(TargetFramework)' == 'net8.0-windows'" Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\DataToolkit-AddIn-net8.0-64-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" ContinueOnError="true" />
+  </Target>
+
+  <!-- 将 SQLite 原生 interop DLL 复制到 publish 目录。
+       System.Data.SQLite 需要在 XLL 同目录的 x86\ 或 x64\ 子目录下找到
+       SQLite.Interop.dll，供 AddIn.AutoOpen 中的 LoadLibrary 预加载。 -->
+  <Target Name="CopySQLiteInteropToPublish" AfterTargets="ExcelDnaPack"
+          Condition="'$(TargetFramework)' == 'net48'">
+    <Copy SourceFiles="$(OutDir)x86\SQLite.Interop.dll"
+          DestinationFolder="$(OutDir)publish\x86\"
+          SkipUnchangedFiles="true"
+          ContinueOnError="true" />
+    <Copy SourceFiles="$(OutDir)x64\SQLite.Interop.dll"
+          DestinationFolder="$(OutDir)publish\x64\"
+          SkipUnchangedFiles="true"
+          ContinueOnError="true" />
+    <Warning Text="x86\SQLite.Interop.dll 未找到，publish 产物可能缺少 SQLite 原生依赖。"
+             Condition="!Exists('$(OutDir)publish\x86\SQLite.Interop.dll')" />
+    <Message Text="已复制 SQLite 原生 interop DLL 到 publish 目录。" Importance="high"
+             Condition="Exists('$(OutDir)publish\x86\SQLite.Interop.dll')" />
+  </Target>
+
+  <!-- net8.0: 将 e_sqlite3 原生 DLL 复制到 publish 目录。
+       Microsoft.Data.Sqlite (SQLitePCLRaw) 需要的原生 e_sqlite3.dll。
+       注：ExcelDnaPack 已将其作为 NATIVE_LIBRARY_LZMA 打包进 XLL，
+       此处额外复制一份作为文件系统后备，供 AddIn.AutoOpen 预加载。 -->
+  <Target Name="CopyESqlite3ToPublish" AfterTargets="ExcelDnaPack"
+          Condition="'$(TargetFramework)' == 'net8.0-windows'">
+    <Copy SourceFiles="$(OutDir)runtimes\win-x86\native\e_sqlite3.dll"
+          DestinationFolder="$(OutDir)publish\x86\"
+          SkipUnchangedFiles="true"
+          ContinueOnError="true" />
+    <Copy SourceFiles="$(OutDir)runtimes\win-x64\native\e_sqlite3.dll"
+          DestinationFolder="$(OutDir)publish\x64\"
+          SkipUnchangedFiles="true"
+          ContinueOnError="true" />
+  </Target>
+
+  <!-- 打包后验证：检查 .xll 产物完整性和原生依赖 -->
+  <Target Name="VerifyPackOutput" AfterTargets="CopySQLiteInteropToPublish;CopyESqlite3ToPublish"
+          Condition="'$(Configuration)' == 'Release'">
+    <Message Text="[VerifyPack] DataToolkit $(TargetFramework) ..." Importance="high" />
+    <Exec Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\verify-pack.ps1&quot; -PublishDir &quot;$(OutDir)publish&quot; -Module DataToolkit -Tfm &quot;$(TargetFramework)&quot;"
+          ContinueOnError="true">
+      <Output TaskParameter="ExitCode" PropertyName="_VerifyExitCode" />
+    </Exec>
+    <Warning Text="[VerifyPack] 验证发现问题，请检查上述输出。" Condition="$(_VerifyExitCode) != 0" />
+  </Target>
+
+</Project>

@@ -1,0 +1,111 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0-windows;net48</TargetFrameworks>
+    <RootNamespace>ExcelFormulaLabs.Analytics</RootNamespace>
+    <AssemblyName>Analytics</AssemblyName>
+    <Description>统计 · 线性代数 · 回归 · 物理化学 — 76 个科学计算函数</Description>
+    <Product>Excel 函数增强库</Product>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>CS1591;CS8625;NU1701</NoWarn>
+    <ExcelAddInFileName Condition="'$(TargetFramework)' == 'net48'">Analytics-AddIn-net48</ExcelAddInFileName>
+    <ExcelAddInFileName Condition="'$(TargetFramework)' == 'net8.0-windows'">Analytics-AddIn-net8.0</ExcelAddInFileName>
+    <ExcelDna64BitAddInSuffix>-64</ExcelDna64BitAddInSuffix>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>Analytics.Tests</_Parameter1>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>DataToolkit.Tests</_Parameter1>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>CrossValRunner</_Parameter1>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>ExcelFormulaLabs.Benchmarks</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
+    <PackageReference Include="ExcelDna.Integration" Version="1.8.0" />
+    <PackageReference Include="ExcelDna.AddIn" Version="1.8.0">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="ExcelDna.IntelliSense" Version="1.8.0" Condition="'$(TargetFramework)' == 'net48'" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Foundation\Foundation.csproj" />
+  </ItemGroup>
+
+  <!--
+    Analytics.xll — Statistics, Regression, Linear Algebra, PhyChem.
+    Targets net8.0-windows + net48. Depends on Foundation.dll + MathNet.Numerics.
+    Uses Excel-DNA for .xll packaging and UDF registration.
+  -->
+
+  <!-- Exclude IntelliSense from net8.0 build per agents.md IntelliSense 框架隔离 rule.
+       Excel-DNA auto-discovers dependencies via deps.json; without this the DLL
+       would be packed into the net8.0 .xll even though the .dna.tpl omits it. -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
+    <ExcelDnaPackDependenciesToExclude>ExcelDna.IntelliSense.dll</ExcelDnaPackDependenciesToExclude>
+  </PropertyGroup>
+
+  <!-- Generate correct .dna from templates per target before ExcelDnaBuild,
+       then clean up afterward. The generated DNA file is shared across inner
+       builds; a stale file on disk can poison incremental builds.
+       Wildcard-delete every ExcelDnaBuild-generated .dna so that 32/64-bit
+       variants from the opposite TFM inner build never leak across. -->
+  <Target Name="GenerateDnaFromTemplate" BeforeTargets="ExcelDnaBuild">
+    <ItemGroup>
+      <_StaleDna Include="Analytics-AddIn*.dna" />
+    </ItemGroup>
+    <Delete Files="@(_StaleDna)" ContinueOnError="true" />
+    <Copy Condition="'$(TargetFramework)' == 'net8.0-windows'"
+          SourceFiles="Analytics-AddIn-net8.dna.tpl"
+          DestinationFiles="Analytics-AddIn-net8.0.dna" />
+    <Copy Condition="'$(TargetFramework)' == 'net48'"
+          SourceFiles="Analytics-AddIn-net48.dna.tpl"
+          DestinationFiles="Analytics-AddIn-net48.dna" />
+  </Target>
+  <Target Name="CleanupDnaAfterBuild" AfterTargets="ExcelDnaPack">
+    <ItemGroup>
+      <_GenDna Include="Analytics-AddIn*.dna" />
+    </ItemGroup>
+    <Delete Files="@(_GenDna)" ContinueOnError="true" />
+  </Target>
+
+  <!-- Patch VERSIONINFO in packed .xll files so Excel add-in manager
+       shows meaningful descriptions instead of Excel-DNA defaults. -->
+  <Target Name="PatchXllVersionInfo" AfterTargets="ExcelDnaPack" Condition="'$(Configuration)' == 'Release'">
+    <Exec Condition="'$(TargetFramework)' == 'net48'" Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\Analytics-AddIn-net48-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" ContinueOnError="true" />
+    <Exec Condition="'$(TargetFramework)' == 'net48'" Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\Analytics-AddIn-net48-64-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" ContinueOnError="true" />
+    <Exec Condition="'$(TargetFramework)' == 'net8.0-windows'" Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\Analytics-AddIn-net8.0-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" ContinueOnError="true" />
+    <Exec Condition="'$(TargetFramework)' == 'net8.0-windows'" Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\Analytics-AddIn-net8.0-64-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" ContinueOnError="true" />
+  </Target>
+
+  <!-- 打包后验证：检查 .xll 产物完整性 -->
+  <Target Name="VerifyPackOutput" AfterTargets="ExcelDnaPack"
+          Condition="'$(Configuration)' == 'Release'">
+    <Message Text="[VerifyPack] Analytics $(TargetFramework) — 检查打包产物..." Importance="high" />
+    <Exec Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\verify-pack.ps1&quot; -PublishDir &quot;$(OutDir)publish&quot; -Module Analytics -Tfm &quot;$(TargetFramework)&quot;"
+          ContinueOnError="true">
+      <Output TaskParameter="ExitCode" PropertyName="_VerifyExitCode" />
+    </Exec>
+    <Warning Text="[VerifyPack] 验证发现问题，请检查上述输出。" Condition="$(_VerifyExitCode) != 0" />
+  </Target>
+
+</Project>

@@ -1,0 +1,13 @@
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.xll
+*.deps.json
+*.runtimeconfig.json
+TestResults/
+src/**/Analytics-AddIn.dna
+src/**/DataToolkit-AddIn.dna
+__pycache__/
+.claude/reviews/

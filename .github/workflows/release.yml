@@ -1,0 +1,126 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build-test:
+    name: Build & Test (Release)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build (Release)
+        run: dotnet build -c Release --no-restore
+
+      - name: Test (Release, all TFMs)
+        run: dotnet test -c Release --no-build --verbosity normal
+
+  cross-val:
+    name: Cross-Validation
+    runs-on: windows-latest
+    needs: build-test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: pip install numpy scipy scikit-learn
+
+      - name: Build CrossValRunner
+        run: dotnet build tests/CrossValRunner/CrossValRunner.csproj -c Release
+
+      - name: Run verify-manual.py
+        run: python scripts/verify-manual.py
+
+  pack-release:
+    name: Pack & Release
+    runs-on: windows-latest
+    needs: cross-val
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+
+      - name: Extract version from tag
+        id: version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $version = $tag -replace '^v', ''
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Build (Release)
+        run: dotnet build -c Release
+
+      - name: Collect XLL artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts
+          Get-ChildItem -Recurse -Filter "*-packed.xll" -Path "src" |
+            Where-Object { $_.DirectoryName -match "Release" } |
+            Copy-Item -Destination artifacts/
+          Get-ChildItem artifacts/
+
+      - name: Pack NuGet (Foundation)
+        run: dotnet pack src/Foundation/Foundation.csproj -c Release --no-build -o artifacts/nupkg
+
+      - name: Push to GitHub Packages
+        run: |
+          dotnet nuget push "artifacts/nupkg/*.nupkg" --source "github" --api-key "${{ secrets.GITHUB_TOKEN }}" --skip-duplicate
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "ExcelFormulaLabs ${{ github.ref_name }}"
+          body: |
+            ## ExcelFormulaLabs ${{ github.ref_name }}
+
+            ### 安装
+            下载对应 `.xll` 文件，在 Excel 中加载即可使用。
+
+            | 文件 | 框架 | 说明 |
+            |------|------|------|
+            | Analytics-AddIn-net48-*-packed.xll | .NET Framework 4.8 | 免安装运行时 |
+            | Analytics-AddIn-net8.0-*-packed.xll | .NET 8 | 性能更优 |
+            | DataToolkit-AddIn-net48-*-packed.xll | .NET Framework 4.8 | 免安装运行时 |
+            | DataToolkit-AddIn-net8.0-*-packed.xll | .NET 8 | 性能更优 |
+
+            详见 [CHANGELOG](CHANGELOG.md)。
+          files: artifacts/*.xll
+          draft: false
+          prerelease: false

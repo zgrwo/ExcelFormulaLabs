@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <!-- Foundation -->
+  <data name="Input_NullOrEmpty" xml:space="preserve">
+    <value>Input cannot be null or empty.</value>
+  </data>
+  <data name="Convert_Not2DArray" xml:space="preserve">
+    <value>Cannot convert input to 2D array.</value>
+  </data>
+
+  <!-- FileSystem -->
+  <data name="FS_PathOutsideSandbox" xml:space="preserve">
+    <value>Path is outside the sandbox root.</value>
+  </data>
+  <data name="FS_SessionEnded" xml:space="preserve">
+    <value>[FileSystemCore] Session ended. Reload the add-in to use FS.* functions.</value>
+  </data>
+  <data name="FS_AlreadyInitialized" xml:space="preserve">
+    <value>[FileSystemCore] Sandbox already initialized. Configuration is immutable — reload the add-in to change sandbox settings.</value>
+  </data>
+  <data name="FS_ReadLimitExceeded" xml:space="preserve">
+    <value>File size exceeds maximum read limit of {0} bytes.</value>
+  </data>
+  <data name="FS_WriteLimitExceeded" xml:space="preserve">
+    <value>Content byte length exceeds maximum write limit of {0} bytes.</value>
+  </data>
+
+  <!-- DateTime -->
+  <data name="DT_InvalidDate" xml:space="preserve">
+    <value>Invalid date (likely from empty/error cell).</value>
+  </data>
+  <data name="DT_NaNTodate" xml:space="preserve">
+    <value>Cannot convert NaN to date.</value>
+  </data>
+  <data name="DT_UnknownUnit" xml:space="preserve">
+    <value>Unknown date unit '{0}'. Supported units: D (days), M (months), Y (years), W (weeks).</value>
+  </data>
+
+  <!-- Linalg -->
+  <data name="LINALG_RhsNotFinite" xml:space="preserve">
+    <value>Right-hand side vector contains NaN or Infinity. Solve requires finite values.</value>
+  </data>
+  <data name="LINALG_EigenNotSquare" xml:space="preserve">
+    <value>Eigenvalue decomposition requires a square matrix (got {0}x{1}).</value>
+  </data>
+
+  <!-- Stats -->
+  <data name="STATS_ZeroVariance" xml:space="preserve">
+    <value>Cannot compute z-scores for constant data (zero variance).</value>
+  </data>
+
+  <!-- Regression -->
+  <data name="REGRESS_YLengthMismatch" xml:space="preserve">
+    <value>y length ({0}) must match X row count ({1}).</value>
+  </data>
+  <data name="REGRESS_WeightLengthMismatch" xml:space="preserve">
+    <value>weights length ({0}) must match X row count ({1}).</value>
+  </data>
+  <data name="REGRESS_InvalidWeight" xml:space="preserve">
+    <value>Weight at index {0} is invalid ({1}). All weights must be >= 0 and finite.</value>
+  </data>
+  <data name="REGRESS_LambdaNotFinite" xml:space="preserve">
+    <value>Lambda must be a finite value (got {0}).</value>
+  </data>
+  <data name="REGRESS_RankDeficient" xml:space="preserve">
+    <value>Cannot fit OLS: design matrix X is rank-deficient (columns may be collinear). Check for linearly dependent predictors or constant columns.</value>
+  </data>
+
+  <!-- Pivot -->
+  <data name="PIVOT_UnknownAgg" xml:space="preserve">
+    <value>Unknown aggregation '{0}'. Supported: SUM, AVG, COUNT, MAX, MIN.</value>
+  </data>
+  <data name="PIVOT_ColumnOutOfRange" xml:space="preserve">
+    <value>Column index out of range. Data has {0} columns.</value>
+  </data>
+
+  <!-- RangeExport -->
+  <data name="RANGE_ColumnOutOfRange" xml:space="preserve">
+    <value>Column index out of range. Valid range: 0..{0}.</value>
+  </data>
+  <data name="RANGE_RowOutOfRange" xml:space="preserve">
+    <value>Row index out of range. Valid range: 0..{0}.</value>
+  </data>
+
+  <!-- Regex -->
+  <data name="REGEX_PatternTooLong" xml:space="preserve">
+    <value>Regex pattern exceeds maximum length of {0} characters.</value>
+  </data>
+
+  <!-- Array -->
+  <data name="ARR_StartOutOfRange" xml:space="preserve">
+    <value>start_index ({0}) is outside the valid range [{1}, {2}].</value>
+  </data>
+  <data name="ARR_LengthOutOfRange" xml:space="preserve">
+    <value>num_elements ({0}) is outside the valid range [{1}, {2}].</value>
+  </data>
+</root>

@@ -1,0 +1,85 @@
+// ============================================================================
+// {Name}CoreTests.cs — 脚手架模板
+// 使用方法：将 {Name} 替换为模块名
+// 放置位置：tests/{Module}.Tests/{Name}CoreTests.cs
+// ============================================================================
+using System;
+using ExcelFormulaLabs.{Module};
+using FluentAssertions;
+using Xunit;
+
+namespace ExcelFormulaLabs.{Module}.Tests
+{
+    public class {Name}CoreTests
+    {
+        // ====================================================================
+        // 正常路径测试
+        // ====================================================================
+
+        [Fact]
+        public void Compute_normal_input()
+            => {Name}Core.Compute(10.0).Should().BeApproximately(10.0, 1e-10);
+
+        [Fact]
+        public void Process_normal_input()
+            => {Name}Core.Process("hello").Should().Be("hello");
+
+        // ====================================================================
+        // 哨兵契约测试（L1-L5）
+        // ====================================================================
+
+        [Fact]
+        public void Compute_NaN_input_returns_NaN()
+            => {Name}Core.Compute(double.NaN).Should().Be(double.NaN);
+
+        [Fact]
+        public void Compute_PositiveInfinity_returns_NaN()
+            => {Name}Core.Compute(double.PositiveInfinity).Should().Be(double.NaN);
+
+        [Fact]
+        public void Compute_NegativeInfinity_returns_NaN()
+            => {Name}Core.Compute(double.NegativeInfinity).Should().Be(double.NaN);
+
+        [Fact]
+        public void Process_null_returns_empty()
+            => {Name}Core.Process(null).Should().BeEmpty();
+
+        [Fact]
+        public void Process_empty_returns_empty()
+            => {Name}Core.Process("").Should().BeEmpty();
+
+        // ====================================================================
+        // 边界条件测试
+        // ====================================================================
+
+        [Fact]
+        public void Compute_zero()
+            => {Name}Core.Compute(0.0).Should().Be(0.0);
+
+        [Fact]
+        public void Compute_max_value()
+        {
+            var result = {Name}Core.Compute(double.MaxValue);
+            // 应返回有效值或 NaN，不应抛异常
+            (double.IsNaN(result) || !double.IsInfinity(result)).Should().BeTrue();
+        }
+
+        [Fact]
+        public void Compute_min_value()
+        {
+            var result = {Name}Core.Compute(double.MinValue);
+            (double.IsNaN(result) || !double.IsInfinity(result)).Should().BeTrue();
+        }
+
+        // ====================================================================
+        // 异常路径测试（仅 L5 场景允许 throw）
+        // ====================================================================
+
+        // [Fact]
+        // public void Compute_invalid_type_throws()
+        // {
+        //     var act = () => {Name}Core.Compute(/* invalid */);
+        //     act.Should().Throw<ArgumentException>();
+        // }
+    }
+}

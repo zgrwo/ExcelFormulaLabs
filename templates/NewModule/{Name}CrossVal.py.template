@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+{Name}CrossVal.py — 脚手架模板
+使用方法：将 {Name}/{PREFIX} 替换为模块名/UDF前缀
+放置位置：追加到 scripts/verify-manual.py 对应 section 中
+
+规则：
+  - 数值类 UDF 必须使用 cross_check()（Python 独立计算 vs C# CrossValRunner）
+  - 禁止自校验 check(name, X, X)
+  - 非数值类可用 check() + 硬编码期望值
+"""
+
+import numpy as np
+from scipy import stats
+
+# ========================================================================
+# {PREFIX} ({N} UDFs)
+# ========================================================================
+# section("{PREFIX} — {模块描述}", {N})
+
+# ── 示例：数值类 UDF 交叉验证 ──
+# 使用 cross_check()：Python 独立计算 → 与 C# CrossValRunner 结果对比
+# cross_check("{PREFIX}.COMPUTE", np.mean([1, 2, 3, 4, 5]))
+
+# ── 示例：非数值类 UDF 验证 ──
+# 使用 check() + 硬编码期望值（不允许 actual == expected 同表达式）
+# check("{PREFIX}.PROCESS", "hello world".title(), "Hello World")
+
+# ── 示例：带容差的数值验证 ──
+# cross_check("{PREFIX}.STAT", float(stats.describe([1,2,3,4,5]).variance), tol=1e-8)
+
+# ========================================================================
+# CrossValRunner test_manifest.json 条目（需同步添加）：
+# ========================================================================
+# {
+#   "id": "{PREFIX}.COMPUTE",
+#   "module": "{PREFIX}",
+#   "udf": "{PREFIX}.COMPUTE",
+#   "args": [[1, 2, 3, 4, 5]],
+#   "tolerance": 1e-10
+# }

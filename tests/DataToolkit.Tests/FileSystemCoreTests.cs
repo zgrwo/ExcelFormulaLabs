@@ -1,0 +1,395 @@
+using ExcelFormulaLabs.DataToolkit;
+using FluentAssertions;
+using System;
+using Xunit;
+
+namespace ExcelFormulaLabs.DataToolkit.Tests
+{
+    // SandboxConfig is an immutable static field shared across all FileSystem tests.
+    // [Collection("Sandbox")] serializes FileSystemCoreTests + FileSystemUdfTests
+    // so no parallel test sees a concurrently mutated config.
+    // Use FileSystemCore.ResetForTesting() + Initialize() to change sandbox per test.
+    [CollectionDefinition("Sandbox", DisableParallelization = true)]
+    public class SandboxCollection { }
+
+    [Collection("Sandbox")]
+    public class FileSystemCoreTests
+    {
+        // Original tests
+        [Fact] public void PathCombine() => FileSystemCore.PathCombine("C:\\a","b.txt").Should().Be("C:\\a\\b.txt");
+        [Fact] public void GetFileName() => FileSystemCore.GetFileName("C:\\a\\b.txt").Should().Be("b.txt");
+        [Fact] public void GetBaseName() => FileSystemCore.GetBaseName("report.xlsx").Should().Be("report");
+        [Fact] public void GetExtension() => FileSystemCore.GetExtension("file.txt").Should().Be(".txt");
+        [Fact] public void GetFolderPath() => FileSystemCore.GetFolderPath("C:\\a\\b.txt").Should().Be("C:\\a");
+        [Fact] public void IsPathValid_true() => FileSystemCore.IsPathValid("C:\\").Should().BeTrue();
+        [Fact] public void IsPathValid_empty() => FileSystemCore.IsPathValid("").Should().BeFalse();
+        [Fact] public void CurrentFolder() => FileSystemCore.GetCurrentFolder().Should().NotBeEmpty();
+        [Fact] public void TempPath() => FileSystemCore.GetTempPath().Should().NotBeEmpty();
+        [Fact] public void TempFile() => FileSystemCore.GetTempFileName().Should().NotBeEmpty();
+
+        // FileExists tests
+        [Fact] public void FileExists_true() => FileSystemCore.FileExists(@"C:\Windows\System32\notepad.exe").Should().BeTrue();
+        [Fact] public void FileExists_false() => FileSystemCore.FileExists(@"C:\nonexistent\file.txt").Should().BeFalse();
+        [Fact] public void FileExists_empty() => FileSystemCore.FileExists("").Should().BeFalse();
+
+        // GetFileSize tests
+        [Fact] public void GetFileSize_knownFile() => FileSystemCore.GetFileSize(@"C:\Windows\System32\notepad.exe").Should().BeGreaterThan(0);
+        [Fact] public void GetFileSize_nonexistent() { var a = () => FileSystemCore.GetFileSize(@"C:\nonexistent\file.txt"); a.Should().Throw<System.IO.FileNotFoundException>(); }
+
+        // FolderExists tests
+        [Fact] public void FolderExists_true() => FileSystemCore.FolderExists(@"C:\Windows").Should().BeTrue();
+        [Fact] public void FolderExists_false() => FileSystemCore.FolderExists(@"C:\nonexistent\folder").Should().BeFalse();
+        [Fact] public void FolderExists_empty() => FileSystemCore.FolderExists("").Should().BeFalse();
+
+        // NormalizePath tests
+        [Fact] public void NormalizePath_forwardSlash() => FileSystemCore.NormalizePath(@"C:/Windows/System32").Should().EndWith("System32");
+        [Fact] public void NormalizePath_noExcept() => FileSystemCore.NormalizePath(@"C:\Windows\").Should().NotBeNullOrEmpty();
+
+        // EnsureFolder test
+        [Fact] public void EnsureFolder_createsAndExists()
+        {
+            var path = FileSystemCore.PathCombine(FileSystemCore.GetTempPath(), "test_" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                FileSystemCore.EnsureFolder(path).Should().BeTrue();
+                FileSystemCore.FolderExists(path).Should().BeTrue();
+            }
+            finally { if (FileSystemCore.FolderExists(path)) FileSystemCore.DeleteFolder(path); }
+        }
+
+        // GetDrives test
+        [Fact] public void GetDrives_returnsArray() => FileSystemCore.GetDrives().Should().NotBeEmpty();
+
+        // ListFiles test
+        [Fact] public void ListFiles_onSystem32()
+        {
+            var files = FileSystemCore.ListFiles(@"C:\Windows\System32", "notepad*");
+            files.Should().Contain(f => f.EndsWith("notepad.exe", StringComparison.OrdinalIgnoreCase));
+        }
+
+        // ListFolders test
+        [Fact] public void ListFolders_onWindows()
+        {
+            var folders = FileSystemCore.ListFolders(@"C:\Windows", "System*");
+            folders.Should().Contain(f => f.EndsWith("System32", StringComparison.OrdinalIgnoreCase));
+        }
+
+        // WriteTextFile + ReadTextFile test
+        [Fact] public void WriteAndReadTextFile()
+        {
+            var path = FileSystemCore.GetTempFileName();
+            try
+            {
+                FileSystemCore.WriteTextFile(path, "Hello World").Should().BeTrue();
+                FileSystemCore.ReadTextFile(path).Should().Be("Hello World");
+            }
+            finally { if (FileSystemCore.FileExists(path)) FileSystemCore.DeleteFile(path); }
+        }
+
+        // WriteTextFile + ReadAllLines test
+        [Fact] public void WriteAndReadAllLines()
+        {
+            var path = FileSystemCore.GetTempFileName();
+            try
+            {
+                FileSystemCore.WriteTextFile(path, "Line1\r\nLine2").Should().BeTrue();
+                var lines = FileSystemCore.ReadAllLines(path);
+                lines.Should().HaveCount(2);
+                lines[0].Should().Be("Line1");
+                lines[1].Should().Be("Line2");
+            }
+            finally { if (FileSystemCore.FileExists(path)) FileSystemCore.DeleteFile(path); }
+        }
+
+        // AppendTextFile test
+        [Fact] public void AppendTextFile_appends()
+        {
+            var path = FileSystemCore.GetTempFileName();
+            try
+            {
+                FileSystemCore.WriteTextFile(path, "First").Should().BeTrue();
+                FileSystemCore.AppendTextFile(path, "Second").Should().BeTrue();
+                FileSystemCore.ReadTextFile(path).Should().Be("FirstSecond");
+            }
+            finally { if (FileSystemCore.FileExists(path)) FileSystemCore.DeleteFile(path); }
+        }
+
+        // DeleteFile test
+        [Fact] public void DeleteFile_removes()
+        {
+            var path = FileSystemCore.GetTempFileName();
+            FileSystemCore.FileExists(path).Should().BeTrue();
+            FileSystemCore.DeleteFile(path).Should().BeTrue();
+            FileSystemCore.FileExists(path).Should().BeFalse();
+        }
+
+        // CopyFile test
+        [Fact] public void CopyFile_copies()
+        {
+            var src = FileSystemCore.GetTempFileName();
+            var dst = FileSystemCore.GetTempFileName();
+            try
+            {
+                FileSystemCore.WriteTextFile(src, "CopyTest").Should().BeTrue();
+                FileSystemCore.CopyFile(src, dst, true).Should().BeTrue();
+                FileSystemCore.FileExists(dst).Should().BeTrue();
+                FileSystemCore.ReadTextFile(dst).Should().Be("CopyTest");
+            }
+            finally { FileSystemCore.DeleteFile(src); FileSystemCore.DeleteFile(dst); }
+        }
+
+        // MoveFile test
+        [Fact] public void MoveFile_moves()
+        {
+            var src = FileSystemCore.GetTempFileName();
+            var dst = FileSystemCore.PathCombine(FileSystemCore.GetTempPath(), "moved_" + Guid.NewGuid().ToString("N") + ".tmp");
+            try
+            {
+                FileSystemCore.WriteTextFile(src, "MoveTest").Should().BeTrue();
+                FileSystemCore.MoveFile(src, dst).Should().BeTrue();
+                FileSystemCore.FileExists(src).Should().BeFalse();
+                FileSystemCore.FileExists(dst).Should().BeTrue();
+                FileSystemCore.ReadTextFile(dst).Should().Be("MoveTest");
+            }
+            finally { FileSystemCore.DeleteFile(src); FileSystemCore.DeleteFile(dst); }
+        }
+
+        // DeleteFolder recursive test
+        [Fact] public void DeleteFolder_recursive()
+        {
+            var root = FileSystemCore.PathCombine(FileSystemCore.GetTempPath(), "deltest_" + Guid.NewGuid().ToString("N"));
+            var sub = FileSystemCore.PathCombine(root, "sub");
+            try
+            {
+                FileSystemCore.EnsureFolder(sub);
+                FileSystemCore.WriteTextFile(FileSystemCore.PathCombine(sub, "f.txt"), "x");
+                FileSystemCore.DeleteFolder(root, true).Should().BeTrue();
+                FileSystemCore.FolderExists(root).Should().BeFalse();
+            }
+            finally { if (FileSystemCore.FolderExists(root)) FileSystemCore.DeleteFolder(root, true); }
+        }
+
+        // PathCombine edge cases
+        [Fact] public void PathCombine_emptySecond() => FileSystemCore.PathCombine(@"C:\a", "").Should().Be(@"C:\a");
+        [Fact] public void PathCombine_secondIsRooted() => FileSystemCore.PathCombine(@"C:\a", @"D:\b").Should().Be(@"D:\b");
+
+        // GetBaseName edge: no extension
+        [Fact] public void GetBaseName_noExtension() => FileSystemCore.GetBaseName("README").Should().Be("README");
+
+        // GetExtension edge: double extension (.tar.gz)
+        [Fact] public void GetExtension_doubleExt() => FileSystemCore.GetExtension("file.tar.gz").Should().Be(".gz");
+        [Fact] public void Sandbox_blocks_path_traversal()
+        {
+            var tmp = FileSystemCore.GetTempPath();
+            FileSystemCore.ResetForTesting();
+            FileSystemCore.Initialize(new SandboxConfig(tmp));
+            try { var a = () => FileSystemCore.ReadTextFile(@"..\..\outside.txt"); a.Should().Throw<UnauthorizedAccessException>(); }
+            finally { FileSystemCore.ResetForTesting(); }
+        }
+        [Fact] public void Sandbox_blocks_sibling_directory()
+        {
+            var tmp = FileSystemCore.GetTempPath();
+            var root = System.IO.Path.Combine(tmp, "Sandbox");
+            var evil = root + "Evil";  // C:\...\SandboxEvil should NOT match C:\...\Sandbox\
+            FileSystemCore.ResetForTesting();
+            FileSystemCore.Initialize(new SandboxConfig(root));
+            try
+            {
+                var act = () => FileSystemCore.ValidatePath(evil);
+                act.Should().Throw<UnauthorizedAccessException>();
+            }
+            finally { FileSystemCore.ResetForTesting(); }
+        }
+
+        // =====================================================================
+        // SANDBOX EDGE CASES
+        // =====================================================================
+
+        [Fact] public void Sandbox_null_root_allows_access()
+        {
+            FileSystemCore.ResetForTesting();
+            // Default config has Root=null — unrestricted
+            var act = () => FileSystemCore.ValidatePath(@"C:\any\path");
+            act.Should().NotThrow();
+        }
+
+        [Fact] public void Sandbox_path_exactly_equals_root()
+        {
+            var tmp = FileSystemCore.GetTempPath();
+            FileSystemCore.ResetForTesting();
+            FileSystemCore.Initialize(new SandboxConfig(tmp));
+            try
+            {
+                var act = () => FileSystemCore.ValidatePath(tmp);
+                act.Should().NotThrow();
+            }
+            finally { FileSystemCore.ResetForTesting(); }
+        }
+
+        [Fact] public void Sandbox_empty_string_root()
+        {
+            FileSystemCore.ResetForTesting();
+            FileSystemCore.Initialize(new SandboxConfig(""));
+            try
+            {
+                var act = () => FileSystemCore.ValidatePath(@"C:\temp");
+                act.Should().NotThrow();
+            }
+            finally { FileSystemCore.ResetForTesting(); }
+        }
+
+        [Fact] public void ValidatePath_normalized_same()
+        {
+            var tmp = FileSystemCore.GetTempPath();
+            FileSystemCore.ResetForTesting();
+            FileSystemCore.Initialize(new SandboxConfig(tmp));
+            try
+            {
+                var act = () => FileSystemCore.ValidatePath(tmp + System.IO.Path.DirectorySeparatorChar + ".");
+                act.Should().NotThrow();
+            }
+            finally { FileSystemCore.ResetForTesting(); }
+        }
+
+        [Fact] public void Sandbox_FileExists_outside_root_throws()
+        {
+            var tmp = FileSystemCore.GetTempPath();
+            FileSystemCore.ResetForTesting();
+            FileSystemCore.Initialize(new SandboxConfig(tmp));
+            try
+            {
+                var act = () => FileSystemCore.FileExists(@"C:\Windows\System32\kernel32.dll");
+                act.Should().Throw<UnauthorizedAccessException>().WithMessage("*outside*sandbox*");
+            }
+            finally { FileSystemCore.ResetForTesting(); }
+        }
+
+        [Fact] public void Sandbox_GetFileSize_outside_root_throws()
+        {
+            var tmp = FileSystemCore.GetTempPath();
+            FileSystemCore.ResetForTesting();
+            FileSystemCore.Initialize(new SandboxConfig(tmp));
+            try
+            {
+                var act = () => FileSystemCore.GetFileSize(@"C:\Windows\notepad.exe");
+                act.Should().Throw<UnauthorizedAccessException>().WithMessage("*outside*sandbox*");
+            }
+            finally { FileSystemCore.ResetForTesting(); }
+        }
+
+        [Fact] public void Sandbox_FolderExists_outside_root_throws()
+        {
+            var tmp = FileSystemCore.GetTempPath();
+            FileSystemCore.ResetForTesting();
+            FileSystemCore.Initialize(new SandboxConfig(tmp));
+            try
+            {
+                var act = () => FileSystemCore.FolderExists(@"C:\Windows\System32");
+                act.Should().Throw<UnauthorizedAccessException>().WithMessage("*outside*sandbox*");
+            }
+            finally { FileSystemCore.ResetForTesting(); }
+        }
+
+        [Fact] public void Sandbox_NormalizePath_outside_root_throws()
+        {
+            var tmp = System.IO.Path.GetTempPath();
+            FileSystemCore.ResetForTesting();
+            FileSystemCore.Initialize(new SandboxConfig(tmp));
+            try
+            {
+                var act = () => FileSystemCore.NormalizePath(System.IO.Path.Combine(tmp, "..", "outside.txt"));
+                act.Should().Throw<UnauthorizedAccessException>().WithMessage("*outside*sandbox*");
+            }
+            finally { FileSystemCore.ResetForTesting(); }
+        }
+
+        // =====================================================================
+        // DELETE FOLDER EDGE CASES (regression coverage)
+        // =====================================================================
+
+        [Fact] public void DeleteFolder_recursive_empty_directory()
+        {
+            var root = FileSystemCore.PathCombine(FileSystemCore.GetTempPath(), "deltest_empty_" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                FileSystemCore.EnsureFolder(root);
+                FileSystemCore.FolderExists(root).Should().BeTrue();
+                FileSystemCore.DeleteFolder(root, true).Should().BeTrue();
+                FileSystemCore.FolderExists(root).Should().BeFalse();
+            }
+            finally { if (FileSystemCore.FolderExists(root)) FileSystemCore.DeleteFolder(root, true); }
+        }
+
+        [Fact] public void DeleteFolder_recursive_file_only()
+        {
+            var root = FileSystemCore.PathCombine(FileSystemCore.GetTempPath(), "deltest_fileonly_" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                FileSystemCore.EnsureFolder(root);
+                FileSystemCore.WriteTextFile(FileSystemCore.PathCombine(root, "f.txt"), "x");
+                FileSystemCore.DeleteFolder(root, true).Should().BeTrue();
+                FileSystemCore.FolderExists(root).Should().BeFalse();
+            }
+            finally { if (FileSystemCore.FolderExists(root)) FileSystemCore.DeleteFolder(root, true); }
+        }
+
+        [Fact] public void DeleteFolder_recursive_deep_nesting()
+        {
+            var root = FileSystemCore.PathCombine(FileSystemCore.GetTempPath(), "deltest_deep_" + Guid.NewGuid().ToString("N"));
+            var l1 = FileSystemCore.PathCombine(root, "L1");
+            var l2 = FileSystemCore.PathCombine(l1, "L2");
+            var l3 = FileSystemCore.PathCombine(l2, "L3");
+            try
+            {
+                FileSystemCore.EnsureFolder(l3);
+                FileSystemCore.WriteTextFile(FileSystemCore.PathCombine(root, "root.txt"), "a");
+                FileSystemCore.WriteTextFile(FileSystemCore.PathCombine(l1, "l1.txt"), "b");
+                FileSystemCore.WriteTextFile(FileSystemCore.PathCombine(l3, "l3.txt"), "c");
+                FileSystemCore.FolderExists(root).Should().BeTrue();
+                FileSystemCore.DeleteFolder(root, true).Should().BeTrue();
+                FileSystemCore.FolderExists(root).Should().BeFalse();
+            }
+            finally { if (FileSystemCore.FolderExists(root)) FileSystemCore.DeleteFolder(root, true); }
+        }
+
+        /// <summary>Sandbox must reject paths that cross NTFS junction points,
+        /// since Path.GetFullPath does not resolve them but System.IO follows them.</summary>
+        [Fact] public void Sandbox_rejects_junction_path()
+        {
+            var tmp = FileSystemCore.GetTempPath();
+            var root = System.IO.Path.Combine(tmp, "Sandbox_" + Guid.NewGuid().ToString("N").Substring(0, 8));
+            var inner = System.IO.Path.Combine(root, "inner");
+            var link  = System.IO.Path.Combine(root, "link");   // junction → inner
+            try
+            {
+                System.IO.Directory.CreateDirectory(inner);
+                // Create junction: link → inner (works without admin on Windows for directories)
+                var psi = new System.Diagnostics.ProcessStartInfo("cmd.exe",
+                    $"/c mklink /J \"{link}\" \"{inner}\"")
+                {
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
+                using var proc = System.Diagnostics.Process.Start(psi)!;
+                proc.WaitForExit(5000);
+                FileSystemCore.ResetForTesting();
+                FileSystemCore.Initialize(new SandboxConfig(root));
+                // Traversing the junction should be blocked by the reparse-point check
+                var act = () => FileSystemCore.NormalizePath(System.IO.Path.Combine(link, "test.txt"));
+                act.Should().Throw<UnauthorizedAccessException>()
+                    .WithMessage("*junction*");
+            }
+            finally
+            {
+                FileSystemCore.ResetForTesting();
+                // Delete junction (it's a reparse point, not followed by our code)
+                if (System.IO.Directory.Exists(link))
+                { System.IO.File.SetAttributes(link, System.IO.FileAttributes.Directory); System.IO.Directory.Delete(link); }
+                if (System.IO.Directory.Exists(root))
+                { System.IO.Directory.Delete(root, true); }
+            }
+        }
+    }
+}
