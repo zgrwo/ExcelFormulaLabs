@@ -7,9 +7,21 @@ on:
     branches: [master, main]
 
 jobs:
+  redline-check:
+    name: Red-line Static Checks
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run pre-commit checks
+        run: ./scripts/pre-commit-check.ps1
+
   test:
     name: Build & Test (Debug, net8.0)
     runs-on: windows-latest
+    needs: redline-check
 
     steps:
       - name: Checkout
@@ -33,6 +45,7 @@ jobs:
   test-net48:
     name: Build & Test (Debug, net48)
     runs-on: windows-latest
+    needs: redline-check
 
     steps:
       - name: Checkout
@@ -108,11 +121,29 @@ jobs:
           dotnet-version: |
             8.0.x
 
-      - name: Build (Release)
-        run: dotnet build -c Release
+      - name: Restore
+        run: dotnet restore
 
-      - name: Test (Release)
+      - name: Build (Release)
+        run: dotnet build -c Release --no-restore
+
+      - name: Test (Release, net8.0)
         run: dotnet test -c Release --no-build --verbosity normal
+
+      - name: Build (Release, net48)
+        run: |
+          dotnet build --no-restore src/Foundation/Foundation.csproj -c Release -f net48
+          dotnet build --no-restore src/Analytics/Analytics.csproj -c Release -f net48
+          dotnet build --no-restore src/DataToolkit/DataToolkit.csproj -c Release -f net48
+          dotnet build --no-restore tests/Foundation.Tests/Foundation.Tests.csproj -c Release -f net48
+          dotnet build --no-restore tests/Analytics.Tests/Analytics.Tests.csproj -c Release -f net48
+          dotnet build --no-restore tests/DataToolkit.Tests/DataToolkit.Tests.csproj -c Release -f net48
+
+      - name: Test (Release, net48)
+        run: |
+          dotnet test --no-build tests/Foundation.Tests/Foundation.Tests.csproj -c Release -f net48 --verbosity normal
+          dotnet test --no-build tests/Analytics.Tests/Analytics.Tests.csproj -c Release -f net48 --verbosity normal
+          dotnet test --no-build tests/DataToolkit.Tests/DataToolkit.Tests.csproj -c Release -f net48 --verbosity normal
 
       - name: Verify NuGet pack
         run: dotnet pack src/Foundation/Foundation.csproj -c Release --no-build -o nupkg
