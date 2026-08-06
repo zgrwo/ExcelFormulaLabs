@@ -46,7 +46,7 @@ description: Excel-DNA 加载项开发全流程 — 创建、打包、测试、�
 
 ## 本项目架构
 
-三层双文件结构（Foundation → Analytics → DataToolkit），调用链和模块职责详见 [项目 skill](excel-dna-project.md#架构)。
+三层双文件结构（Foundation → Analytics → DataToolkit），调用链和模块职责详见 [项目 skill](../excel-dna-project/SKILL.md#架构)。
 
 
 ## 新 UDF 实现清单
@@ -91,7 +91,7 @@ public static object UDF_STR_REV(
 | 文档 | 角色 | 内容 |
 |------|------|------|
 | [agents.md](../../agents.md) | 项目宪法 | 架构分层、红线规则、开发流程 |
-| [skill: excel-dna-project](excel-dna-project.md) | 编码规范 | MapOver 选型、预防规则、测试模式 |
+| [skill: excel-dna-project](../excel-dna-project/SKILL.md) | 编码规范 | MapOver 选型、预防规则、测试模式 |
 | [README.md](../../README.md) | 用户入口 | 安装、模块速览、安全说明 |
 | [API 参考](../../rules/api-reference.md) | 数字唯一信源 | UDF 完整签名、参数说明、错误表 |
 | [用户手册](../../rules/user-manual.md) | 学习教程 | 每函数详细示例 + 结果解读指南 |

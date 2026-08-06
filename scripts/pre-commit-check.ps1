@@ -8,6 +8,8 @@
     2. Self-validation check(name, X, X) - false negative
     3. IntelliSense code in net8.0 - framework isolation
     4. Core layer referencing ExcelDna - architecture violation
+    5. NaN/Inf guard missing in Core files with division
+    6. hasHeaders parameter missing for object[,] Core methods
 .NOTES
     Usage: .\scripts\pre-commit-check.ps1
 #>
@@ -22,7 +24,7 @@ Write-Host "============================================================"
 
 # -- Check 1: Bare catch {} --
 Write-Host ""
-Write-Host "[1/4] Checking bare catch {} ..."
+Write-Host "[1/6] Checking bare catch {} ..."
 
 $bareCatch = Get-ChildItem -Path "$repoRoot/src" -Recurse -Filter "*.cs" |
     Select-String -Pattern "catch\s*\{" -AllMatches
@@ -38,7 +40,7 @@ if ($bareCatch) {
 
 # -- Check 2: Self-validation pattern --
 Write-Host ""
-Write-Host "[2/4] Checking self-validation pattern ..."
+Write-Host "[2/6] Checking self-validation pattern ..."
 
 $verifyScript = Join-Path $repoRoot "scripts\verify-manual.py"
 if (Test-Path $verifyScript) {
@@ -67,7 +69,7 @@ if (Test-Path $verifyScript) {
 
 # -- Check 3: IntelliSense in net8.0 --
 Write-Host ""
-Write-Host "[3/4] Checking IntelliSense isolation ..."
+Write-Host "[3/6] Checking IntelliSense isolation ..."
 
 $allCs = Get-ChildItem -Path "$repoRoot/src" -Recurse -Filter "*.cs"
 $intelliHits = $allCs | Select-String -Pattern "ExcelDna\.IntelliSense"
@@ -98,7 +100,7 @@ if ($leaked.Count -gt 0) {
 
 # -- Check 4: Core layer ExcelDna reference --
 Write-Host ""
-Write-Host "[4/4] Checking Core layer isolation ..."
+Write-Host "[4/6] Checking Core layer isolation ..."
 
 $coreFiles = Get-ChildItem -Path "$repoRoot/src" -Recurse -Filter "*Core.cs"
 $coreHits = $coreFiles | Select-String -Pattern "ExcelDna"
@@ -110,6 +112,73 @@ if ($coreHits) {
     Write-Host "  [FAIL] Found $($coreHits.Count) ExcelDna refs in Core" -ForegroundColor Red
 } else {
     Write-Host "  [OK] Core layer has zero Excel dependency" -ForegroundColor Green
+}
+
+# -- Check 5: NaN/Inf guard in Core files --
+Write-Host ""
+Write-Host "[5/6] Checking NaN/Inf guards in Core files ..."
+
+$coreModules = @("StatsCore", "LinalgCore", "RegressionCore", "PhyChemCore")
+$nanInfMissing = @()
+
+foreach ($mod in $coreModules) {
+    $files = $allCs | Where-Object { $_.Name -eq "$mod.cs" }
+    foreach ($f in $files) {
+        $content = Get-Content $f.FullName -Raw
+        $hasDivision = $content -match '/\s*(?!0\b)\w+'
+        if ($hasDivision) {
+            $hasGuard = ($content -match 'double\.IsNaN') -or
+                        ($content -match 'double\.IsInfinity') -or
+                        ($content -match 'ArgumentException') -or
+                        ($content -match 'double\.NaN')
+            if (-not $hasGuard) {
+                $nanInfMissing += $f.FullName
+                $violations += "NAN_INF_GUARD: $($f.FullName)"
+            }
+        }
+    }
+}
+
+if ($nanInfMissing.Count -gt 0) {
+    Write-Host "  [FAIL] Found $($nanInfMissing.Count) Core file(s) without NaN/Inf guard" -ForegroundColor Red
+} else {
+    Write-Host "  [OK] All Core files with division have NaN/Inf guards" -ForegroundColor Green
+}
+
+# -- Check 6: hasHeaders parameter for object[,] Core methods --
+Write-Host ""
+Write-Host "[6/6] Checking hasHeaders contract ..."
+
+$allCoreCs = Get-ChildItem -Path "$repoRoot/src" -Recurse -Filter "*Core.cs"
+$hasHeaderViolations = @()
+# Structural transformation exemptions (don't interpret header semantics)
+$structuralExempt = @('Transpose','SelectColumns','SelectRows','CrossJoin','Flatten2D','Count',
+                       'Frequency','Dict','JsonToTable','XmlToTable','RegexCaptureGroups')
+
+foreach ($f in $allCoreCs) {
+    $content = Get-Content $f.FullName -Raw
+    # Match method signatures with object[,] as PARAMETER (not return type)
+    # Use broader pattern to include access modifiers
+    $paramMatches = [regex]::Matches($content, '(private|internal|public)\s+(?:static\s+)?\S+\s+(\w+)\s*\([^)]*object\s*\[,\s*\][^)]*\)')
+    foreach ($pm in $paramMatches) {
+        $sig = $pm.Value
+        $accessMod = $pm.Groups[1].Value
+        $methodName = $pm.Groups[2].Value
+        # Skip private helpers (not part of hasHeaders contract)
+        if ($accessMod -eq 'private') { continue }
+        # Skip structural transformation exemptions
+        if ($structuralExempt -contains $methodName) { continue }
+        # Skip if method already has hasHeaders
+        if ($sig -match 'hasHeaders') { continue }
+        $hasHeaderViolations += "$($f.FullName):$methodName"
+        $violations += "HAS_HEADERS: $($f.FullName):$methodName"
+    }
+}
+
+if ($hasHeaderViolations.Count -gt 0) {
+    Write-Host "  [FAIL] Found $($hasHeaderViolations.Count) Core file(s) with object[,] but no hasHeaders" -ForegroundColor Red
+} else {
+    Write-Host "  [OK] All Core files with object[,] have hasHeaders parameter" -ForegroundColor Green
 }
 
 # -- Summary --

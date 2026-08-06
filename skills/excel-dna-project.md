@@ -309,7 +309,7 @@ xUnit `[Fact]` + FluentAssertions 6.12.0。每 Core 方法覆盖：正常路径 
 
 ## 哨兵契约 L1-L5
 
-> 规则声明见 [agents.md §5](../../agents.md#5-哨兵契约inputnormalizer-l1-l5)。本表为实施细节。
+> 规则声明见 [agents.md §5](../../agents.md#5-哨兵契约l1-l5)。本表为实施细节。
 
 | 层级 | 职责 | ✅ DO | ❌ DON'T | 违反后果 |
 | :--- | :--- | :--- | :--- | :--- |
@@ -321,7 +321,7 @@ xUnit `[Fact]` + FluentAssertions 6.12.0。每 Core 方法覆盖：正常路径 
 
 ## 闭环验证
 
-> 规则声明见 [agents.md §6](../../agents.md#6-闭环验证强制python--c--手册)。本表为实施对照。
+> 规则声明见 [agents.md §6](../../agents.md#6-闭环验证python--c--手册)。本表为实施对照。
 
 ### 验证流程
 
