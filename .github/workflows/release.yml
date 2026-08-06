@@ -100,8 +100,11 @@ jobs:
         run: dotnet pack src/Foundation/Foundation.csproj -c Release --no-build -o artifacts/nupkg
 
       - name: Push to GitHub Packages
+        shell: pwsh
         run: |
-          dotnet nuget push "artifacts/nupkg/*.nupkg" --source "github" --api-key "${{ secrets.GITHUB_TOKEN }}" --skip-duplicate
+          Get-ChildItem "artifacts/nupkg/*.nupkg" | ForEach-Object {
+            dotnet nuget push $_.FullName --source "github" --api-key "${{ secrets.GITHUB_TOKEN }}" --skip-duplicate
+          }
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
