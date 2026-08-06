@@ -72,7 +72,7 @@ namespace ExcelFormulaLabs.Analytics
         public static object UDF_LINALG_COND([ExcelArgument(Name="array", Description="A range or 2D array")] object d)
             => OutputWrapper.WrapError(() => LinalgCore.ConditionNumber(M(d)));
 
-        [ExcelFunction(Name = "LINALG.RANK", Description = "Numerical rank. Tolerance is an absolute threshold for singular values; default 1e-10.")]
+        [ExcelFunction(Name = "LINALG.RANK", Description = "Numerical rank. Tolerance = absolute singular-value threshold; default 1e-10.")]
         public static object UDF_LINALG_RANK([ExcelArgument(Name="array", Description="A range or 2D array")] object d, [ExcelArgument(Name="[tolerance]", Description="Tolerance threshold for numerical rank detection; default 1e-10")] object tol=null)
             => OutputWrapper.WrapError(() => (long)LinalgCore.Rank(M(d), tol==null||tol is ExcelDna.Integration.ExcelMissing?1e-10:InputNormalizer.ToDouble(tol)));
 

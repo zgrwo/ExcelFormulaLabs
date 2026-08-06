@@ -208,5 +208,12 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void CrossVal_HtmlEncode_quote() => StringCore.HtmlEncode("\"quoted\"").Should().Contain("&quot;");
         [Fact] public void CrossVal_HtmlEncode_normal() => StringCore.HtmlEncode("normal text").Should().Be("normal text");
         [Fact] public void CrossVal_HtmlEncode_empty() => StringCore.HtmlEncode("").Should().Be("");
+
+        // ── Release-review regression guards ────────────────────────────────
+        // NthIdx negative branch: |n| exceeding occurrence count must return the
+        // original string (no ArgumentOutOfRangeException), symmetric with positive n.
+        [Fact] public void LeftOf_negative_n_exceeds_no_throw() => StringCore.LeftOf("aa", "a", -3).Should().Be("aa");
+        [Fact] public void RightOf_negative_n_exceeds_no_throw() => StringCore.RightOf("aa", "a", -3).Should().Be("aa");
+        [Fact] public void LeftOf_negative_n_at_index_zero_no_throw() => StringCore.LeftOf("aba", "a", -3).Should().Be("aba");
     }
 }

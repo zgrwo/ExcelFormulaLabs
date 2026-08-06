@@ -48,8 +48,12 @@ namespace ExcelFormulaLabs.Analytics
         internal static double Max(double[] d) =>
             d.Length == 0 ? double.NaN : Statistics.Maximum(d);
 
-        internal static double Range(double[] d) =>
-            d.Length == 0 ? double.NaN : Max(d) - Min(d);
+        internal static double Range(double[] d)
+        {
+            if (d.Length == 0) return double.NaN;
+            var r = Max(d) - Min(d);
+            return double.IsInfinity(r) ? double.NaN : r; // overflow guard: extreme Max-Min → NaN
+        }
 
         /// <summary>
         /// Sum of array elements. NaN/Inf input is guarded upstream by <see cref="AnalyticsHelpers.PrepV"/>
@@ -89,6 +93,7 @@ namespace ExcelFormulaLabs.Analytics
         internal static double CovarianceP(double[] a, double[] b)
         {
             if (a.Length != b.Length || a.Length < 1) return double.NaN;
+            if (a.Length == 1) return 0.0; // single-point population covariance is 0 (MathNet sample form would yield 0/0=NaN)
             return Statistics.Covariance(a, b) * (a.Length - 1) / a.Length;
         }
 

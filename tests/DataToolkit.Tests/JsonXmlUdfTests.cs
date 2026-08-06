@@ -70,5 +70,13 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void JsonToTable_null_input() => JsonXmlUdf.UDF_JSON_TOTABLE(null!).Should().Be(ExcelError.Value);
         [Fact] public void XmlXPath_null_input() => ((object[])JsonXmlUdf.UDF_XML_XPATH(null!, "//x")).Should().BeEmpty();
         [Fact] public void XmlValidate_null_input() => ((bool)JsonXmlUdf.UDF_XML_VALIDATE(null!)).Should().BeFalse();
+
+        // ── Release-review regression guards ────────────────────────────────
+        // Malformed dot-path with a dangling '[' must not throw (Substring guard).
+        [Fact] public void JsonQuery_malformed_index_path_no_throw()
+        {
+            var act = () => JsonXmlUdf.UDF_JSON_QUERY("{\"store\":[1,2]}", "store[");
+            act.Should().NotThrow();
+        }
     }
 }

@@ -257,5 +257,12 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void UnixTs_epoch() { var ts=(double)DateTimeUdf.UDF_DT_UXTS(OA(1970,1,1)); Math.Abs(ts).Should().BeLessThan(86400); }
         [Fact] public void DateDiff_null_unit() => DateTimeUdf.UDF_DT_DDIFF(null!, OA(2024,1,1), OA(2024,1,10)).Should().Be(ExcelError.Value);
         [Fact] public void AddWkd_zero() => ((double)DateTimeUdf.UDF_DT_AWKD(OA(2024,6,17), 0)).Should().Be(OA(2024,6,17));
+
+        // ── Release-review regression guards ────────────────────────────────
+        // start_day outside 0-6 must surface as #VALUE!, not silently wrong dates.
+        [Fact] public void Sow_start_day_out_of_range_returns_error() => DateTimeUdf.UDF_DT_SOW(OA(2024,6,17), 7).Should().Be(ExcelError.Value);
+        [Fact] public void Eow_start_day_negative_returns_error() => DateTimeUdf.UDF_DT_EOW(OA(2024,6,17), -1).Should().Be(ExcelError.Value);
+        [Fact] public void Wom_start_day_out_of_range_returns_error() => DateTimeUdf.UDF_DT_WOM(OA(2024,6,17), 9).Should().Be(ExcelError.Value);
+        [Fact] public void Sow_start_day_sunday_ok() => DateTimeUdf.UDF_DT_SOW(OA(2024,6,17), 0).Should().Be(OA(2024,6,16));
     }
 }

@@ -30,8 +30,8 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static string NormalizeWhitespace(string t) { t ??= ""; return WhitespaceRx.Replace(t.Trim(), " "); }
         internal static string StripHtml(string t) { t ??= ""; return HtmlTagRx.Replace(t, ""); }
         internal static string ToTitleCase(string t) { t ??= ""; return CultureInfo.InvariantCulture.TextInfo.ToTitleCase(t.ToLowerInvariant()); }
-        internal static string RemoveChars(string t, string chars) { t ??= ""; var set = new System.Collections.Generic.HashSet<char>(chars); var sb = new System.Text.StringBuilder(t.Length); foreach (char c in t) if (!set.Contains(c)) sb.Append(c); return sb.ToString(); }
-        internal static string KeepChars(string t, string keep) { t ??= ""; var set = new System.Collections.Generic.HashSet<char>(keep); var sb = new StringBuilder(t.Length); foreach (char c in t) if (set.Contains(c)) sb.Append(c); return sb.ToString(); }
+        internal static string RemoveChars(string t, string chars) { t ??= ""; chars ??= ""; var set = new System.Collections.Generic.HashSet<char>(chars); var sb = new System.Text.StringBuilder(t.Length); foreach (char c in t) if (!set.Contains(c)) sb.Append(c); return sb.ToString(); }
+        internal static string KeepChars(string t, string keep) { t ??= ""; keep ??= ""; var set = new System.Collections.Generic.HashSet<char>(keep); var sb = new StringBuilder(t.Length); foreach (char c in t) if (set.Contains(c)) sb.Append(c); return sb.ToString(); }
 
         internal static string PadLeft(string t, int len, char pad = ' ')
         { t ??= ""; if (t.Length >= len) return t; return new string(pad, len - t.Length) + t; }
@@ -52,10 +52,10 @@ namespace ExcelFormulaLabs.DataToolkit
         }
 
         internal static bool StartsWithStr(string t, string p, bool cs = true)
-        { t ??= ""; return t.StartsWith(p, cs ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase); }
+        { t ??= ""; p ??= ""; return t.StartsWith(p, cs ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase); }
 
         internal static bool EndsWithStr(string t, string s, bool cs = true)
-        { t ??= ""; return t.EndsWith(s, cs ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase); }
+        { t ??= ""; s ??= ""; return t.EndsWith(s, cs ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase); }
 
         internal static string LeftOf(string t, string d, long n=1)
         { t ??= ""; int i=NthIdx(t,d,n); return i<0?t:t.Substring(0,i); }
@@ -160,6 +160,7 @@ namespace ExcelFormulaLabs.DataToolkit
                 int i = t.Length;
                 for (long j = 0; j < absN; j++)
                 {
+                    if (i <= 0) return -1;             // |n| exceeds occurrences (guards LastIndexOf(startIndex=-1))
                     i = t.LastIndexOf(s, i - 1);       // search backward
                     if (i < 0) return -1;
                 }

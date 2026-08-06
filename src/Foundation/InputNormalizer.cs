@@ -306,7 +306,8 @@ namespace ExcelFormulaLabs.Foundation
                 if (bool.TryParse(s, out bool bResult)) return bResult;
                 if (s == "1") return true;
                 if (s == "0") return false;
-                if (double.TryParse(s, out double dVal)) return dVal != 0.0;
+                if (double.TryParse(s, NumberStyles.Float | NumberStyles.AllowThousands,
+                    CultureInfo.InvariantCulture, out double dVal)) return dVal != 0.0;
                 return false;
             }
             try { return Convert.ToBoolean(value, CultureInfo.InvariantCulture); }

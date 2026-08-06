@@ -13,6 +13,12 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void FitOLS_keys() => RegressionCore.FitOLS(X,y).Should().ContainKeys("coefficients","sse","r_squared","t_stats","p_values");
         [Fact] public void FitOLS_r2() => ((double)RegressionCore.FitOLS(X,y)["r_squared"]).Should().BeApproximately(1.0,1e-10);
         [Fact] public void FitOLS_coef() { var c=(double[])RegressionCore.FitOLS(X,y)["coefficients"]; c[0].Should().BeApproximately(2.0,1e-8); c[1].Should().BeApproximately(3.0,1e-8); }
+        [Fact] public void FitOLS_perfect_fit_tstats_finite_or_NaN()
+        {
+            // Perfect fit → sse=0 → se=0; t_stats must never leak Infinity (L4 sentinel).
+            var t = (double[])RegressionCore.FitOLS(X, y)["t_stats"];
+            foreach (var v in t) double.IsInfinity(v).Should().BeFalse();
+        }
         [Fact] public void FitRidge_keys() => RegressionCore.FitRidge(X,y,0.1).Should().ContainKeys("coefficients","sse","r_squared","lambda");
         [Fact] public void AnovaOneWay_keys() => RegressionCore.AnovaOneWay(new[]{new[]{5.0,6,7},new[]{8.0,9,10}}).Should().ContainKeys("ss_between","f_stat","p_value");
         [Fact] public void FactorImportance() { var r=RegressionCore.FactorImportance(new double[,]{{1},{2},{3}},y); r.Length.Should().Be(1); }

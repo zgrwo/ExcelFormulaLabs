@@ -78,5 +78,32 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             var r = (object[,])SqlUdf.UDF_SQL_QUERY(d, "SELECT * FROM data");
             r.GetLength(0).Should().Be(2);
         }
+
+        // ── Release-review regression guards ────────────────────────────────
+        [Fact] public void Query_replace_scalar_function_allowed()
+        {
+            // SQLite built-in REPLACE(X,Y,Z) must NOT be blocked by the DML blacklist
+            var r = (object[,])SqlUdf.UDF_SQL_QUERY(Data, "SELECT REPLACE(Name,'li','LI') FROM data");
+            r[1, 0].Should().Be("ALIce");
+        }
+
+        [Fact] public void Query_replace_into_rejected() =>
+            SqlUdf.UDF_SQL_QUERY(Data, "REPLACE INTO data VALUES ('x', 1)").Should().Be(ExcelError.Value);
+
+        [Fact] public void Query_literal_containing_keyword_rejected()
+        {
+            // Known trade-off (documented in api-reference): whole-word keywords
+            // inside string literals are rejected too — frozen to prevent accidental loosening.
+            SqlUdf.UDF_SQL_QUERY(Data, "SELECT * FROM data WHERE Name = 'do not delete'").Should().Be(ExcelError.Value);
+        }
+
+        [Fact] public void Query_has_headers_false_generates_columns()
+        {
+            var noHdr = new object[,] { { "Alice", 30.0 }, { "Bob", 25.0 } };
+            var r = (object[,])SqlUdf.UDF_SQL_QUERY(noHdr, "SELECT Col1 FROM data", hh: false);
+            r.GetLength(0).Should().Be(3); // generated header + 2 data rows
+            r[0, 0].Should().Be("Col1");
+            r[1, 0].Should().Be("Alice");
+        }
     }
 }

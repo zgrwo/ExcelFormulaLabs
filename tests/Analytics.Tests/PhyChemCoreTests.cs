@@ -139,5 +139,9 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void ConvertMass_Inf_returns_NaN() => PhyChemCore.ConvertMass(double.PositiveInfinity, "kg", "g").Should().Be(double.NaN);
         [Fact] public void IdealGasLaw_NaN_pressure_returns_NaN() => PhyChemCore.IdealGasLaw(p: double.NaN, v: 22.4, n: 1).Should().Be(double.NaN);
         [Fact] public void IdealGasLaw_Infinity_volume_returns_NaN() => PhyChemCore.IdealGasLaw(p: 1, v: double.PositiveInfinity, n: 1).Should().Be(double.NaN);
+
+        // ── Release-review regression guards ────────────────────────────────
+        [Fact] public void GasToSTP_negative_pressure_returns_NaN() => PhyChemCore.GasToSTP(10.0, 25.0, -1.0).Should().Be(double.NaN);
+        [Fact] public void GasToSTP_zero_pressure_returns_NaN() => PhyChemCore.GasToSTP(10.0, 25.0, 0.0).Should().Be(double.NaN);
     }
 }

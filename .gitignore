@@ -11,3 +11,6 @@ src/**/Analytics-AddIn.dna
 src/**/DataToolkit-AddIn.dna
 __pycache__/
 .claude/reviews/
+BenchmarkDotNet.Artifacts/
+.qoder/better-harness/
+logs/

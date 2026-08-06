@@ -26,12 +26,27 @@ namespace ExcelFormulaLabs.DataToolkit
                 | System.Text.RegularExpressions.RegexOptions.Compiled,
                 TimeSpan.FromSeconds(5));
 
-        internal static object[,]? SqlQuery(object[,] range, string sql, Dictionary<string, object[,]>? extra = null)
+        /// <summary>Blacklist of statement-modifying keywords anywhere in the query.
+        /// SQLite allows data-modifying CTEs (e.g. "WITH x AS (SELECT 1) DELETE FROM data"),
+        /// which would pass the <see cref="SelectOnly"/> prefix check — this second
+        /// scan closes that bypass. REPLACE is matched only in its DML statement
+        /// form ("REPLACE INTO ...") so the scalar function REPLACE(X,Y,Z) stays usable.</summary>
+        private static readonly System.Text.RegularExpressions.Regex ForbiddenKeyword =
+            new(@"\b(INSERT|UPDATE|DELETE|REPLACE\s+INTO|ATTACH|DETACH|PRAGMA|DROP|CREATE|ALTER|VACUUM|REINDEX)\b",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase
+                | System.Text.RegularExpressions.RegexOptions.Compiled,
+                TimeSpan.FromSeconds(5));
+
+        internal static object[,]? SqlQuery(object[,] range, string sql, Dictionary<string, object[,]>? extra = null, bool hasHeaders = true)
         {
             if (!SelectOnly.IsMatch(sql))
                 throw new ArgumentException(
                     "Only SELECT statements are allowed for security. " +
                     "Use a dedicated database tool for DDL/DML operations.");
+            if (ForbiddenKeyword.IsMatch(sql))
+                throw new ArgumentException(
+                    "Data-modifying or schema statements (INSERT/UPDATE/DELETE/DDL/PRAGMA/ATTACH) " +
+                    "are forbidden inside SQL queries, including WITH (CTE) prefixes.");
             // Reject semicolons to prevent multi-statement injection
             // (e.g. SELECT 1; ATTACH DATABASE …).  SQLite single-statement
             // execution doesn't require a terminating semicolon, and the
@@ -43,8 +58,8 @@ namespace ExcelFormulaLabs.DataToolkit
                     "Multi-statement queries are blocked to prevent data exfiltration.");
             using var conn = new SqlConn("Data Source=:memory:");
             conn.Open();
-            CreateTable(conn, "data", range);
-            if (extra != null) foreach (var kv in extra) CreateTable(conn, kv.Key, kv.Value);
+            CreateTable(conn, "data", range, hasHeaders);
+            if (extra != null) foreach (var kv in extra) CreateTable(conn, kv.Key, kv.Value, hasHeaders);
             using var cmd = conn.CreateCommand(); cmd.CommandText = sql; cmd.CommandTimeout = SqlTimeoutSeconds;
             using var reader = cmd.ExecuteReader();
             int cols = reader.FieldCount; var rows = new List<object[]>(); var hdr = new object[cols];
@@ -53,15 +68,16 @@ namespace ExcelFormulaLabs.DataToolkit
             var result = new object[rows.Count, cols]; for (int r = 0; r < rows.Count; r++) for (int c = 0; c < cols; c++) result[r, c] = rows[r][c]; return result;
         }
 
-        private static void CreateTable(SqlConn conn, string name, object[,] data)
+        private static void CreateTable(SqlConn conn, string name, object[,] data, bool hasHeaders = true)
         {
             int rows = data.GetLength(0), cols = data.GetLength(1); if (rows == 0) return;
             name = Sanitize(name, 0);  // table name gets the same sanitisation as column names
+            int firstDataRow = hasHeaders ? 1 : 0;   // header contract: row 0 = column names when hasHeaders
             var names = new string[cols]; var types = new string[cols];
             var usedNames = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
             for (int c = 0; c < cols; c++)
             {
-                string raw = InputNormalizer.ToString(data[0, c]); string baseName = Sanitize(raw, c);
+                string raw = hasHeaders ? InputNormalizer.ToString(data[0, c]) : ""; string baseName = Sanitize(raw, c);
                 // De-duplicate: append _2, _3... if sanitised names collide
                 string colName = baseName;
                 for (int dedup = 2; !usedNames.Add(colName); dedup++)
@@ -74,9 +90,9 @@ namespace ExcelFormulaLabs.DataToolkit
                 // still allows storing text in INTEGER columns, but comparisons may
                 // behave unexpectedly. For critical data, use explicit TEXT columns.
                 const int maxScan = 10;
-                int scanEnd = Math.Min(rows, 1 + maxScan);
+                int scanEnd = Math.Min(rows, firstDataRow + maxScan);
                 bool hasReal = false, hasInt = false;
-                for (int r = 1; r < scanEnd; r++)
+                for (int r = firstDataRow; r < scanEnd; r++)
                 {
                     object v = data[r, c];
                     if (v == null || v is DBNull || InputNormalizer.IsExcelEmptyValue(v) || v is ExcelError) continue;
@@ -92,7 +108,7 @@ namespace ExcelFormulaLabs.DataToolkit
             var ph = new string[cols]; for (int c = 0; c < cols; c++) ph[c] = $"@p{c}";
             using var ins = conn.CreateCommand(); ins.CommandText = $"INSERT INTO \"{name}\" VALUES ({string.Join(",", ph)})"; ins.CommandTimeout = SqlTimeoutSeconds;
             for (int c = 0; c < cols; c++) ins.Parameters.Add(new SqlParam($"@p{c}", types[c] == "INTEGER" ? System.Data.DbType.Int64 : types[c] == "REAL" ? System.Data.DbType.Double : System.Data.DbType.String));
-            for (int r = 1; r < rows; r++) { for (int c = 0; c < cols; c++) { object v = data[r, c]; ins.Parameters[$"@p{c}"].Value = (v == null || v is DBNull || InputNormalizer.IsExcelEmptyValue(v) || v is ExcelError) ? DBNull.Value : v; } ins.ExecuteNonQuery(); }
+            for (int r = firstDataRow; r < rows; r++) { for (int c = 0; c < cols; c++) { object v = data[r, c]; ins.Parameters[$"@p{c}"].Value = (v == null || v is DBNull || InputNormalizer.IsExcelEmptyValue(v) || v is ExcelError) ? DBNull.Value : v; } ins.ExecuteNonQuery(); }
             tx.Commit();
         }
 

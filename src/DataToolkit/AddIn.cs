@@ -76,11 +76,11 @@ namespace ExcelFormulaLabs.DataToolkit
                         using (var fs = new FileStream(tempPath, FileMode.Create, FileAccess.Write))
                             stream.CopyTo(fs);
                         try { File.Move(tempPath, extractedPath); }
-                        catch (IOException)
+                        catch (IOException ex) when (ExceptionFilters.IsCatchable(ex))
                         {
                             // 另一 Excel 实例已完成提取；清理临时文件后使用已有 DLL。
                             try { File.Delete(tempPath); }
-                            catch (Exception ex) when (ExceptionFilters.IsCatchable(ex))
+                            catch (Exception cleanupEx) when (ExceptionFilters.IsCatchable(cleanupEx))
                             { /* best-effort */ }
                         }
                     }

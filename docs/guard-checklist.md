@@ -22,7 +22,7 @@
 - [ ] **负数开方**：`Math.Sqrt(负数)` → 返回 `double.NaN`
 - [ ] **对数非正**：`Math.Log(<=0)` → 返回 `double.NaN`
 - [ ] **溢出**：`checked` 或结果 `double.IsInfinity` → 返回 `double.NaN`（L4 哨兵）
-- [ ] **空集合统计**：Mean/Std/Var 空输入 → 返回 `double.NaN`
+- [ ] **空集合统计**：Mean/Std/Var 空输入 → 返回 `double.NaN`（豁免：`StatsCore.Sum`→0.0、`StatsCore.Product`→1.0，对齐 Excel SUM/PRODUCT 空区域语义，有意设计）
 - [ ] **单元素方差**：n=1 时 Var/Std → 返回 `double.NaN` 或 0（视 ddof）
 
 ## 输出守卫（结果验证）

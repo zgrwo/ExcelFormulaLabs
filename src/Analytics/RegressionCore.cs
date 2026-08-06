@@ -82,8 +82,14 @@ namespace ExcelFormulaLabs.Analytics
             var pVal = new double[p];
             for (int j = 0; j < p; j++)
             {
-                se[j] = Math.Sqrt(sigma2 * XtXInv[j, j]);
+                // Clamp tiny negative diagonal values from numerical noise before sqrt —
+                // otherwise NaN would silently leak into t_stats/p_values.
+                double varJ = sigma2 * XtXInv[j, j];
+                se[j] = Math.Sqrt(varJ > 0.0 ? varJ : 0.0);
                 tStat[j] = beta[j] / se[j];
+                // L4 output sentinel: se==0 (perfect fit / degenerate diagonal) yields
+                // ±Inf or 0/0 — normalise to NaN so no non-finite value leaks out.
+                if (double.IsNaN(tStat[j]) || double.IsInfinity(tStat[j])) tStat[j] = double.NaN;
                 pVal[j] = StatsCore.TStatPValue(Math.Abs(tStat[j]), df);
             }
 

@@ -2138,7 +2138,7 @@ end_date 默认今天。
 
 **语法**：`=REGEX.REPLACE(text, pattern, replacement, [ignore_case], [instance_num])`
 
-0/省略=替换全部（默认），1=第一个，-1=最后一个。
+0/省略=替换全部（默认），1=第一个，-1=最后一个。替换串按**字面量**插入，不解释 `$1`/`$&` 等组替换模式（所有 instance_num 取值行为一致）。
 
 **示例**：
 ```
@@ -2800,7 +2800,10 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 <a id="sql-query"></a> ### SQL.QUERY — 单表 SQL
 
-**语法**：`=SQL.QUERY(source_range, sql_query)`
+**语法**：`=SQL.QUERY(source_range, sql_query, [has_headers])`
+
+默认 `has_headers=TRUE`：首行为列名；传 `FALSE` 时首行按数据处理，列名自动生成 `Col1..ColN`。
+仅允许只读查询（SELECT/WITH）；INSERT/UPDATE/DELETE/DDL/PRAGMA/ATTACH 等关键字在整条语句中被拒绝（字符串字面量含整词也会被拒，安全取舍）。
 
 **示例 1** — 条件筛选：
 ```

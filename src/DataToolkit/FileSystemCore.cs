@@ -95,9 +95,7 @@ namespace ExcelFormulaLabs.DataToolkit
         /// </summary>
         internal static void ValidatePath(string path)
         {
-            if (_sessionEnded)
-                throw new InvalidOperationException(
-                    "[FileSystemCore] Session ended. Reload the add-in to use FS.* functions.");
+            EnsureSessionActive();
 
             var root = _config.Root; // single read — immutable, no race
             if (string.IsNullOrEmpty(root))
@@ -111,6 +109,15 @@ namespace ExcelFormulaLabs.DataToolkit
                 return;
             }
             NormalizePath(path); // sandbox check (throws UnauthorizedAccessException if outside sandbox)
+        }
+
+        /// <summary>Throws <see cref="InvalidOperationException"/> after AutoClose —
+        /// shared by ValidatePath and the session-aware info/temp helpers below.</summary>
+        private static void EnsureSessionActive()
+        {
+            if (_sessionEnded)
+                throw new InvalidOperationException(
+                    "[FileSystemCore] Session ended. Reload the add-in to use FS.* functions.");
         }
 
         internal static string NormalizePath(string p)
@@ -224,6 +231,7 @@ namespace ExcelFormulaLabs.DataToolkit
         /// returns only the sandbox root drive to limit filesystem reconnaissance.</summary>
         internal static string[] GetDrives()
         {
+            EnsureSessionActive();
             var root = _config.Root;
             if (!string.IsNullOrEmpty(root))
                 return new[] { Path.GetPathRoot(Path.GetFullPath(root))! };
@@ -233,6 +241,7 @@ namespace ExcelFormulaLabs.DataToolkit
         /// returns the sandbox root to avoid leaking the real working directory.</summary>
         internal static string GetCurrentFolder()
         {
+            EnsureSessionActive();
             var root = _config.Root;
             return !string.IsNullOrEmpty(root) ? Path.GetFullPath(root) : Directory.GetCurrentDirectory();
         }
@@ -240,6 +249,7 @@ namespace ExcelFormulaLabs.DataToolkit
         /// returns the sandbox root so temp files created outside FS.* stay within the sandbox.</summary>
         internal static string GetTempPath()
         {
+            EnsureSessionActive();
             var root = _config.Root;
             return !string.IsNullOrEmpty(root) ? Path.GetFullPath(root) : Path.GetTempPath();
         }
@@ -249,6 +259,7 @@ namespace ExcelFormulaLabs.DataToolkit
         /// </summary>
         internal static string GetTempFileName()
         {
+            EnsureSessionActive();
             var root = _config.Root;
             if (!string.IsNullOrEmpty(root))
             {

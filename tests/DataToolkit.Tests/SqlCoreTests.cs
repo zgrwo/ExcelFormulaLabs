@@ -370,5 +370,47 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             r![2, 0].Should().Be("Charlie");
             r![2, 1].Should().Be(ExcelEmpty.Value); // no match → DBNull → ExcelEmpty
         }
+
+        // ─────────────────────────────────────────────────────────────
+        // RELEASE-REVIEW REGRESSION GUARDS
+        // ─────────────────────────────────────────────────────────────
+
+        [Fact]
+        public void With_cte_delete_is_rejected()
+        {
+            var data = new object[,] { { "Name" }, { "Alice" } };
+            var act = () => SqlCore.SqlQuery(data, "WITH x AS (SELECT 1) DELETE FROM data");
+            act.Should().Throw<ArgumentException>(); // data-modifying CTE bypass closed
+        }
+
+        [Fact]
+        public void With_cte_update_is_rejected()
+        {
+            var data = new object[,] { { "Name" }, { "Alice" } };
+            var act = () => SqlCore.SqlQuery(data, "WITH x AS (SELECT 1) UPDATE data SET Name='x'");
+            act.Should().Throw<ArgumentException>();
+        }
+
+        [Fact]
+        public void With_cte_select_is_allowed()
+        {
+            var data = new object[,] { { "Name", "Age" }, { "Alice", 30.0 } };
+            var r = SqlCore.SqlQuery(data, "WITH t AS (SELECT * FROM data) SELECT Name FROM t");
+            r!.GetLength(0).Should().Be(2); // header + 1 row
+            r[1, 0].Should().Be("Alice");
+        }
+
+        [Fact]
+        public void SqlQuery_without_headers_generates_column_names()
+        {
+            // hasHeaders=false: row 0 is data, columns get generated Col1..ColN names
+            var data = new object[,] { { "Alice", 30.0 }, { "Bob", 25.0 } };
+            var r = SqlCore.SqlQuery(data, "SELECT Col1, Col2 FROM data", hasHeaders: false);
+            r!.GetLength(0).Should().Be(3); // generated header + 2 data rows
+            r[0, 0].Should().Be("Col1");
+            r[0, 1].Should().Be("Col2");
+            r[1, 0].Should().Be("Alice");
+            r[2, 1].Should().Be(25.0);
+        }
     }
 }

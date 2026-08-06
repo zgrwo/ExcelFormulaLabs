@@ -604,5 +604,9 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void CrossVal_Bi_Stdev() => StatsCore.Stdev(DsBimodal).Should().BeApproximately(BiStdev, 1e-6);
         [Fact] public void CrossVal_Bi_Skew() => StatsCore.Skewness(DsBimodal).Should().BeApproximately(BiSkew, 1e-8);
         [Fact] public void CrossVal_Bi_Pct50() => StatsCore.Percentile(DsBimodal, 50).Should().BeApproximately(BiPct50, 1e-10);
+
+        // ── Release-review regression guards ──────────────────────────────────
+        [Fact] public void CovarianceP_single_element_returns_zero() => StatsCore.CovarianceP(new[] { 5.0 }, new[] { 3.0 }).Should().Be(0.0);
+        [Fact] public void Range_extreme_values_overflow_returns_NaN() => StatsCore.Range(new[] { -double.MaxValue, double.MaxValue }).Should().Be(double.NaN);
     }
 }

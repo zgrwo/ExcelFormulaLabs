@@ -221,7 +221,7 @@ namespace ExcelFormulaLabs.Analytics
                 return double.NaN;
             double tK = ConvertTemperature(temp, tUnit, "K");
             double pAtm = ConvertPressure(press, pUnit, "atm");
-            if (double.IsNaN(tK) || double.IsNaN(pAtm) || tK <= 0)
+            if (double.IsNaN(tK) || double.IsNaN(pAtm) || tK <= 0 || pAtm <= 0)
                 return double.NaN;
             return vol * pAtm * (273.15 / tK);
         }

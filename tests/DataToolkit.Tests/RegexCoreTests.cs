@@ -198,5 +198,11 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             var act = () => RegexCore.RegexTest("test", maxPattern);
             act.Should().NotThrow();
         }
+
+        // ── Release-review regression guards ────────────────────────────────
+        // Literal replacement semantics: '$' patterns are NOT interpreted, for every n.
+        [Fact] public void Replace_all_dollar_is_literal() => RegexCore.RegexReplace("a1b2", @"\d", "$1").Should().Be("a$1b$1");
+        [Fact] public void Replace_first_dollar_is_literal() => RegexCore.RegexReplace("a1b2", @"\d", "$1", n: 1).Should().Be("a$1b2");
+        [Fact] public void Replace_nth_dollar_is_literal() => RegexCore.RegexReplace("a1b2", @"\d", "$&", n: -1).Should().Be("a1b$&");
     }
 }

@@ -343,13 +343,16 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 
 ## SQL.* -- SQL 查询
 
-> 数据通过参数化 INSERT 插入内存 SQLite 临时表，列名经字母数字消毒。⚠️ SQL 语句可执行 DDL/DML（`DROP TABLE`、`ATTACH DATABASE` 等），请在可信输入上使用。
+> 数据通过参数化 INSERT 插入内存 SQLite 临时表，列名经字母数字消毒。
+> **安全契约**：仅允许只读查询（`SELECT` / `WITH` 前缀）；整条语句中出现 `INSERT`/`UPDATE`/`DELETE`/`REPLACE INTO`/DDL（CREATE/ALTER/DROP）/`PRAGMA`/`ATTACH`/`DETACH`/`VACUUM`/`REINDEX` 关键字即拒绝（含 WITH 数据修改型 CTE），分号一律禁止。
+> 已知取舍：字符串字面量中恰好出现上述整词（如 `WHERE Note='do not delete'`）也会被拒绝。
+> 表头契约：默认 `has_headers=TRUE`，首行为列名；传 `FALSE` 时首行按数据处理，列名自动生成 `Col1..ColN`。
 
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
-| `SQL.QUERY` | (source_range, sql_query) | `object[,]` | 对区域执行 SQL。表名 = `data` |
-| `SQL.JOIN` | (source_range, join_table, sql_query) | `object[,]` | 两个表的 SQL。第一个表名 = `data`，第二个表名 = `extra` |
-| `SQL.QUERY3` | (table1, table2, table3, sql_query) | `object[,]` | 三个表的 SQL。表名依次为 `data`、`b`、`c` |
+| `SQL.QUERY` | (source_range, sql_query, [has_headers]) | `object[,]` | 对区域执行 SQL。表名 = `data` |
+| `SQL.JOIN` | (source_range, join_table, sql_query, [has_headers]) | `object[,]` | 两个表的 SQL。第一个表名 = `data`，第二个表名 = `extra` |
+| `SQL.QUERY3` | (table1, table2, table3, sql_query, [has_headers]) | `object[,]` | 三个表的 SQL。表名依次为 `data`、`b`、`c` |
 
 ---
 

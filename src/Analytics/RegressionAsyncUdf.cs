@@ -14,7 +14,7 @@ namespace ExcelFormulaLabs.Analytics
         private static double[] V(object d) => AnalyticsHelpers.PrepV(d);
 
         [ExcelFunction(Name = "REGRESS.OLS_ASYNC",
-          Description = "OLS regression (async). Same output as REGRESS.OLS but computed on a background thread. Use for large datasets.")]
+          Description = "OLS regression, computed asynchronously on a background thread.")]
         public static object UDF_REGRESS_OLS_ASYNC(
             [ExcelArgument(Name = "known_y", Description = "The Y variable range (dependent variable)")] object y,
             [ExcelArgument(Name = "known_x", Description = "The X variable range (independent variables)")] object X)
@@ -22,7 +22,7 @@ namespace ExcelFormulaLabs.Analytics
                 OutputWrapper.WrapError(() => AnalyticsHelpers.DictToReport(RegressionCore.FitOLS(M(X), V(y)))));
 
         [ExcelFunction(Name = "REGRESS.WLS_ASYNC",
-          Description = "Weighted Least Squares (async). Same output as REGRESS.WLS but computed on a background thread. Use for large datasets.")]
+          Description = "Weighted Least Squares, computed asynchronously on a background thread.")]
         public static object UDF_REGRESS_WLS_ASYNC(
             [ExcelArgument(Name = "known_y", Description = "The Y variable range (dependent variable)")] object y,
             [ExcelArgument(Name = "known_x", Description = "The X variable range (independent variables)")] object X,
@@ -31,7 +31,7 @@ namespace ExcelFormulaLabs.Analytics
                 OutputWrapper.WrapError(() => AnalyticsHelpers.DictToReport(RegressionCore.FitWLS(M(X), V(y), V(w)))));
 
         [ExcelFunction(Name = "REGRESS.RIDGE_ASYNC",
-          Description = "Ridge regression (async). Same output as REGRESS.RIDGE but computed on a background thread. Use for large datasets.")]
+          Description = "Ridge regression, computed asynchronously on a background thread.")]
         public static object UDF_REGRESS_RIDGE_ASYNC(
             [ExcelArgument(Name = "known_y", Description = "The Y variable range (dependent variable)")] object y,
             [ExcelArgument(Name = "known_x", Description = "The X variable range (independent variables)")] object X,

@@ -185,4 +185,9 @@ public class ComRangeExtractionTests
         InputNormalizer.TryExtractComRangeValue(42, out var value).Should().BeFalse();
         value.Should().Be(42);
     }
+
+    // ── Release-review regression guards ──────────────────────────────────
+    // ToBool numeric-string fallback must use InvariantCulture (like ToDouble).
+    [Fact] public void ToBool_numeric_string_invariant_true() => InputNormalizer.ToBool("1.5").Should().BeTrue();
+    [Fact] public void ToBool_numeric_string_invariant_false() => InputNormalizer.ToBool("0.0").Should().BeFalse();
 }

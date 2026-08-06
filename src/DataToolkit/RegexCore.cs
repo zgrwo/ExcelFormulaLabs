@@ -54,12 +54,17 @@ namespace ExcelFormulaLabs.DataToolkit
         /// Replace the nth regex match. n=0 (default) = replace all.
         /// n=1 = first match, n=-1 = last match.
         /// Returns original string unchanged if |n| exceeds match count.
+        /// The replacement string is inserted LITERALLY for every n value —
+        /// '$1'/'$&amp;' substitution patterns are NOT interpreted (consistent
+        /// semantics across the n=0 / n=1 / general paths).
         /// n=1 uses Regex.Match (single-scan) for the common fast path.
         /// </summary>
         internal static string RegexReplace(string i, string p, string r, long n, bool ic=true)
         {
             ValidatePattern(p);
-            if (n == 0) return Regex.Replace(i, p, r, FC(ic), Timeout);
+            // Literal evaluator keeps the single-scan Regex.Replace fast path
+            // while disabling '$' group substitution (matches n≠0 behaviour).
+            if (n == 0) return Regex.Replace(i, p, _ => r, FC(ic), Timeout);
             // Fast path: replace first match only
             if (n == 1) { var m = Regex.Match(i, p, FC(ic), Timeout); return m.Success ? i.Substring(0, m.Index) + r + i.Substring(m.Index + m.Length) : i; }
             // General path: need a specific index → compute all matches

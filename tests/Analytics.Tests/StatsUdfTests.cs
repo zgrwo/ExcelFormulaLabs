@@ -95,7 +95,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void Log10_negative_NaN() => ((double)StatsUdf.UDF_STAT_LOG10(-1.0)).Should().Be(double.NaN);
         [Fact] public void Exp_one() => ((double)StatsUdf.UDF_STAT_EXP(1.0)).Should().BeApproximately(Math.E,1e-10);
         [Fact] public void Exp_negative() => ((double)StatsUdf.UDF_STAT_EXP(-10.0)).Should().BeApproximately(Math.Exp(-10),1e-10);
-        [Fact] public void Exp_large_infinity() => ((double)StatsUdf.UDF_STAT_EXP(1000.0)).Should().Be(double.PositiveInfinity);
+        [Fact] public void Exp_large_overflow_NaN() => ((double)StatsUdf.UDF_STAT_EXP(1000.0)).Should().Be(double.NaN); // output guard: never Infinity
         [Fact] public void Sign_positive() => ((long)StatsUdf.UDF_STAT_SGN(42.0)).Should().Be(1L);
         [Fact] public void Sign_negative() => ((long)StatsUdf.UDF_STAT_SGN(-7.0)).Should().Be(-1L);
         [Fact] public void Sign_zero() => ((long)StatsUdf.UDF_STAT_SGN(0.0)).Should().Be(0L);
@@ -127,5 +127,9 @@ namespace ExcelFormulaLabs.Analytics.Tests
         // TTest: single value (n<2) -> NaN; mismatch -> NaN
         [Fact] public void T1_single_value() => ((double)StatsUdf.UDF_STAT_T1(new double[]{5.0},0.0)).Should().Be(double.NaN);
         [Fact] public void T2_mismatch() => ((double)StatsUdf.UDF_STAT_T2(X, new double[]{1.0})).Should().Be(double.NaN);
+
+        // ── Release-review regression guards ────────────────────────────────
+        [Fact] public void Exp_overflow_returns_NaN_not_Infinity() => ((double)StatsUdf.UDF_STAT_EXP(710.0)).Should().Be(double.NaN);
+        [Fact] public void Exp_normal_value() => ((double)StatsUdf.UDF_STAT_EXP(1.0)).Should().BeApproximately(Math.E, 1e-10);
     }
 }
