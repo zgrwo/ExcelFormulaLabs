@@ -1,0 +1,8 @@
+#!/bin/sh
+# ============================================================================
+# commit-msg — git commit-msg hook（Conventional Commits 校验）
+# 安装：git config core.hooksPath scripts/git-hooks
+#       或复制到 .git/hooks/commit-msg
+# ============================================================================
+repo_root=$(git rev-parse --show-toplevel)
+exec sh "$repo_root/scripts/validate-commit-msg.sh" "$1"

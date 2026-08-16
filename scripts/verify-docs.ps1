@@ -1,20 +1,53 @@
-# verify-docs.ps1 - Document consistency verification (PowerShell equivalent of verify-docs.sh)
-# Usage: .\scripts\verify-docs.ps1
-# Checks: UDF count, UDF coverage, skill terms, version match, bare catch, .dna templates
+﻿# verify-docs.ps1 - 文档一致性验证（唯一实现；verify-docs.sh 为包装器）
+# ============================================================================
+# 用法：.\scripts\verify-docs.ps1 [-RepoRoot <path>]
+# 15 项检查：
+#   1.  UDF 数量：api-reference.md 为准，与源码 [ExcelFunction] 一致
+#   2.  UDF 全覆盖：每个源码 UDF 在 api-reference.md 有条目
+#   3.  skill.md 含 RangeExport（数据工具模块技能覆盖）
+#   4.  架构术语：skill.md 含 MapOver；README 无内部类名（ElementWiseMapper）
+#   5.  版本匹配：context.md 与 Analytics.csproj 的 MathNet.Numerics 版本一致
+#   6.  无裸 catch {}（红线）
+#   7.  .dna 模板完整（net48 / net8）
+#   8.  无残留生成 .dna
+#   9.  README 无硬编码数量徽章（tests-/UDFs-，数字只能来自 api-reference）
+#  10.  CHANGELOG 覆盖全部 v* git tag；Directory.Build.props 版本 == 最新 tag
+#  11.  模块 csproj Description 函数数量 == 该模块 [ExcelFunction] 计数
+#  12.  Markdown 相对链接无断链（排除 http/https/mailto/#/Windows 绝对路径）
+#  13.  .qoder skills 镜像与 skills/ 一致（变换后字节比对，见 sync-qoder-skills.ps1）
+#  14.  project-structure.md 目录树声明的条目全部真实存在
+#  15.  AGENTS.md 与 project-structure.md 顶层目录集合一致（双目录树防漂移）
+#
+# 注意：文件一律用显式 UTF-8 读取（本脚本兼容 Windows PowerShell 5.1 与 pwsh 7）。
+# ============================================================================
+param(
+    [string]$RepoRoot = (Split-Path -Parent $PSScriptRoot)
+)
 $ErrorActionPreference = "Continue"
-$root = Split-Path -Parent $PSScriptRoot
-Set-Location $root
-
 $script:pass = 0; $script:fail = 0
+
+function Read-Utf8 {
+    param([string]$Path)
+    if (-not (Test-Path $Path)) { return $null }
+    return [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::UTF8)
+}
+
 function Check {
     param([string]$Label, [string]$Result)
     if ($Result -eq "OK") { Write-Host "  [PASS] $Label"; $script:pass++ }
     else { Write-Host "  [FAIL] ${Label}: ${Result}"; $script:fail++ }
 }
 
-# 1. UDF count: api-reference.md as source of truth
-$docUdfs = (Select-String -Path "rules\api-reference.md" -Pattern '^\| `[A-Z]+\.[A-Z]' | Measure-Object).Count
-$codeUdfs = (Get-ChildItem -Path src -Recurse -Filter "*.cs" |
+# SKIP 分支（如无 git 环境）：不计数失败，仅提示
+function Check-Skip {
+    param([string]$Label, [string]$Reason)
+    Write-Host "  [SKIP] $Label ($Reason)"
+    $script:pass++
+}
+
+# ---------- 1. UDF 数量 ----------
+$docUdfs = (Select-String -Path (Join-Path $RepoRoot "rules\api-reference.md") -Pattern '^\| `[A-Z]+\.[A-Z]' | Measure-Object).Count
+$codeUdfs = (Get-ChildItem -Path (Join-Path $RepoRoot "src") -Recurse -Filter "*.cs" |
     Where-Object { $_.FullName -notmatch "\\obj\\" -and $_.FullName -notmatch "\\bin\\" } |
     Select-String -Pattern 'ExcelFunction\(Name\s*=\s*"([^"]*)"' -AllMatches |
     ForEach-Object { $_.Matches } | ForEach-Object { $_.Groups[1].Value } |
@@ -22,10 +55,10 @@ $codeUdfs = (Get-ChildItem -Path src -Recurse -Filter "*.cs" |
 if ($docUdfs -eq $codeUdfs) { Check "UDF count ($docUdfs)" "OK" }
 else { Check "UDF count" "doc=$docUdfs code=$codeUdfs" }
 
-# 2. Every code UDF has an entry in api-reference.md
-$apiContent = Get-Content "rules\api-reference.md" -Raw
+# ---------- 2. UDF 全覆盖 ----------
+$apiContent = Read-Utf8 (Join-Path $RepoRoot "rules\api-reference.md")
 $missing = @()
-Get-ChildItem -Path src -Recurse -Filter "*.cs" |
+Get-ChildItem -Path (Join-Path $RepoRoot "src") -Recurse -Filter "*.cs" |
     Where-Object { $_.FullName -notmatch "\\obj\\" -and $_.FullName -notmatch "\\bin\\" } |
     Select-String -Pattern 'ExcelFunction\(Name\s*=\s*"([^"]*)"' -AllMatches |
     ForEach-Object { $_.Matches } | ForEach-Object { $_.Groups[1].Value } |
@@ -35,44 +68,191 @@ Get-ChildItem -Path src -Recurse -Filter "*.cs" |
 if ($missing.Count -eq 0) { Check "UDF full coverage" "OK" }
 else { Check "UDF full coverage" "missing: $($missing -join ', ')" }
 
-# 3. skill.md contains RangeExport
-$skillContent = Get-Content "skills\excel-dna-project.md" -Raw -ErrorAction SilentlyContinue
+# ---------- 3. skill.md 含 RangeExport ----------
+$skillContent = Read-Utf8 (Join-Path $RepoRoot "skills\excel-dna-project.md")
 if ($skillContent -match 'RangeExport') { Check "skill.md RangeExport" "OK" }
 else { Check "skill.md RangeExport" "missing" }
 
-# 4. Architecture terminology
+# ---------- 4. 架构术语 ----------
 if ($skillContent -match 'MapOver') { Check "skill.md MapOver term" "OK" }
 else { Check "skill.md MapOver term" "missing" }
-$readmeContent = Get-Content "README.md" -Raw -ErrorAction SilentlyContinue
+$readmeContent = Read-Utf8 (Join-Path $RepoRoot "README.md")
 if ($readmeContent -match 'ElementWiseMapper') { Check "README no internal class names" "should use MapOver not internal class" }
 else { Check "README no internal impl details" "OK" }
 
-# 5. Version match (context.md vs csproj)
-$docVer = if ((Get-Content "rules\context.md" -Raw) -match 'MathNet\.Numerics\s+([0-9.]+)') { $Matches[1] } else { "?" }
-$csprojVer = if ((Get-Content "src\Analytics\Analytics.csproj" -Raw) -match 'MathNet\.Numerics.*Version="([0-9.]+)"') { $Matches[1] } else { "?" }
+# ---------- 5. MathNet 版本匹配 ----------
+$docVer = if ((Read-Utf8 (Join-Path $RepoRoot "rules\context.md")) -match 'MathNet\.Numerics\s+([0-9.]+)') { $Matches[1] } else { "?" }
+$csprojVer = if ((Read-Utf8 (Join-Path $RepoRoot "src\Analytics\Analytics.csproj")) -match 'MathNet\.Numerics.*Version="([0-9.]+)"') { $Matches[1] } else { "?" }
 if ($docVer -eq $csprojVer) { Check "MathNet version ($docVer)" "OK" }
 else { Check "MathNet version" "doc=$docVer csproj=$csprojVer" }
 
-# 6. No bare catch blocks
-$bareCatches = Get-ChildItem -Path src -Recurse -Filter "*.cs" |
+# ---------- 6. 无裸 catch ----------
+$bareCatches = Get-ChildItem -Path (Join-Path $RepoRoot "src") -Recurse -Filter "*.cs" |
     Where-Object { $_.FullName -notmatch "\\obj\\" -and $_.FullName -notmatch "\\bin\\" } |
     Select-String -Pattern 'catch\s*\{'
 if ($bareCatches.Count -eq 0) { Check "No bare catch" "OK" }
 else { Check "No bare catch" "$($bareCatches.Count) found" }
 
-# 7. .dna templates exist
-if (Test-Path "src\DataToolkit\DataToolkit-AddIn-net8.dna.tpl") { Check "net8 .dna template" "OK" }
+# ---------- 7. .dna 模板完整 ----------
+if (Test-Path (Join-Path $RepoRoot "src\DataToolkit\DataToolkit-AddIn-net8.dna.tpl")) { Check "net8 .dna template" "OK" }
 else { Check "net8 .dna template" "missing" }
-if (Test-Path "src\DataToolkit\DataToolkit-AddIn-net48.dna.tpl") { Check "net48 .dna template" "OK" }
+if (Test-Path (Join-Path $RepoRoot "src\DataToolkit\DataToolkit-AddIn-net48.dna.tpl")) { Check "net48 .dna template" "OK" }
 else { Check "net48 .dna template" "missing" }
 
-# 8. No residual generated .dna
-$residual = Get-ChildItem -Path "src\DataToolkit" -Filter "DataToolkit-AddIn.dna" -File -ErrorAction SilentlyContinue |
+# ---------- 8. 无残留生成 .dna ----------
+$residual = Get-ChildItem -Path (Join-Path $RepoRoot "src\DataToolkit") -Filter "DataToolkit-AddIn.dna" -File -ErrorAction SilentlyContinue |
     Where-Object { $_.Name -notlike "*.tpl" }
 if (-not $residual) { Check "No residual .dna" "OK" }
 else { Check "No residual .dna" "found residual" }
 
-# Summary
+# ---------- 9. README 无硬编码数量徽章 ----------
+$badgeHits = @()
+if ($readmeContent -match 'badge/tests-') { $badgeHits += "tests-" }
+if ($readmeContent -match 'badge/UDFs-') { $badgeHits += "UDFs-" }
+if ($badgeHits.Count -eq 0) { Check "README no hardcoded count badges" "OK" }
+else { Check "README no hardcoded count badges" "found $($badgeHits -join ', ')（数量只能见 api-reference.md）" }
+
+# ---------- 10. CHANGELOG 覆盖全部 v* tag + props 版本 == 最新 tag ----------
+$changelog = Read-Utf8 (Join-Path $RepoRoot "CHANGELOG.md")
+$tags = & git -C $RepoRoot tag --list "v*" 2>$null
+if ($LASTEXITCODE -ne 0) {
+    Check-Skip "CHANGELOG covers all tags" "no git"
+} elseif (-not $tags) {
+    Check-Skip "CHANGELOG covers all tags" "no v* tags"
+} else {
+    # 只检查语义化版本 tag（vX.Y.Z），跳过 v1.0.0-net8.0 这类历史命名
+    $semverTags = @($tags | Where-Object { $_ -match '^v\d+\.\d+\.\d+$' })
+    $untracked = @()
+    foreach ($t in $semverTags) {
+        $ver = $t -replace '^v', ''
+        if ($changelog -notmatch [regex]::Escape("## [$ver]")) { $untracked += $t }
+    }
+    if ($untracked.Count -eq 0) { Check "CHANGELOG covers all tags ($($semverTags.Count) tags)" "OK" }
+    else { Check "CHANGELOG covers all tags" "missing entries: $($untracked -join ', ')" }
+
+    $latestTag = $semverTags | Sort-Object -Descending | Select-Object -First 1
+    $props = Read-Utf8 (Join-Path $RepoRoot "src\Directory.Build.props")
+    $propsVer = if ($props -match '<Version>([0-9.]+)</Version>') { $Matches[1] } else { "?" }
+    $latestVer = $latestTag -replace '^v', ''
+    if ($propsVer -eq $latestVer) { Check "Directory.Build.props version == latest tag ($latestVer)" "OK" }
+    else { Check "Directory.Build.props version" "props=$propsVer latest-tag=$latestVer" }
+}
+
+# ---------- 11. 模块 csproj 描述数量 == [ExcelFunction] 计数 ----------
+foreach ($module in @("Analytics", "DataToolkit")) {
+    $count = (Select-String -Path (Join-Path $RepoRoot "src\$module\*.cs") -Pattern '\[ExcelFunction' -AllMatches | Measure-Object).Count
+    $csprojText = Read-Utf8 (Join-Path $RepoRoot "src\$module\$module.csproj")
+    $descNum = if ($csprojText -match '(\d+)\s*个') { [int]$Matches[1] } else { -1 }
+    if ($descNum -eq $count) { Check "$module csproj description count ($count)" "OK" }
+    else { Check "$module csproj description count" "desc=$descNum code=$count" }
+}
+
+# ---------- 12. Markdown 相对链接断链扫描 ----------
+$mdFiles = Get-ChildItem -Path $RepoRoot -Recurse -Filter "*.md" |
+    Where-Object { $_.FullName -notmatch '\\\.git\\|\\bin\\|\\obj\\|\\\.qoder\\|\\TestResults\\|\\logs\\' }
+$broken = @()
+foreach ($f in $mdFiles) {
+    $text = Read-Utf8 $f.FullName
+    if (-not $text) { continue }
+    foreach ($m in [regex]::Matches($text, '\]\(([^)]+)\)')) {
+        $target = $m.Groups[1].Value.Trim()
+        if ($target -match '^(https?://|mailto:|#|ftp://|file://)') { continue }
+        if ($target -match '^[A-Za-z]:[\\/]') { continue }  # Windows 绝对路径不检查
+        $pathPart = ($target -split '#')[0].Trim()
+        if ($pathPart -eq '') { continue }
+        $candidate = Join-Path $f.DirectoryName $pathPart
+        try { $resolved = [System.IO.Path]::GetFullPath($candidate) } catch { continue }
+        if (-not (Test-Path $resolved)) {
+            $broken += "$($f.Name) -> $target"
+        }
+    }
+}
+if ($broken.Count -eq 0) { Check "Markdown broken links" "OK" }
+else { Check "Markdown broken links" "$($broken.Count): $($broken -join ' | ')" }
+
+# ---------- 13. .qoder skills 镜像一致性（本地工具镜像，不入库；缺失则跳过）----------
+if (Test-Path (Join-Path $RepoRoot ".qoder\skills")) {
+    $psExe = if ($PSVersionTable.PSEdition -eq 'Core') { 'pwsh' } else { 'powershell' }
+    & $psExe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $RepoRoot "scripts\sync-qoder-skills.ps1") -CheckOnly 2>&1 | ForEach-Object { Write-Host "      $_" }
+    if ($LASTEXITCODE -eq 0) { Check ".qoder skills mirror" "OK" }
+    else { Check ".qoder skills mirror" "drifted (run scripts/sync-qoder-skills.ps1)" }
+} else {
+    Check-Skip ".qoder skills mirror" "not present (local-only tool mirror)"
+}
+
+# ---------- 14. project-structure.md 目录树条目存在性 ----------
+function Get-TreeEntries {
+    param([string]$TreeText)
+    $entries = @()
+    $stack = New-Object System.Collections.Stack
+    foreach ($line in ($TreeText -split "`n")) {
+        if ($line -notmatch '[├└]──') { continue }
+        $parts = $line -split '[├└]──'
+        $indent = $parts[0].Length
+        $name = ($parts[1] -split '#')[0].Trim().TrimEnd()
+        if ($name -eq '' -or $name -eq '...' -or $name.StartsWith('(')) { continue }
+        while ($stack.Count -gt 0 -and $stack.Peek().Indent -ge $indent) { [void]$stack.Pop() }
+        $parent = if ($stack.Count -gt 0) { $stack.Peek().Path } else { '' }
+        if ($name.EndsWith('/')) {
+            $dirName = $name.TrimEnd('/')
+            $path = if ($parent) { "$parent/$dirName" } else { $dirName }
+            $stack.Push([pscustomobject]@{ Indent = $indent; Path = $path })
+            $entries += [pscustomobject]@{ Path = $path; IsDir = $true }
+        } else {
+            foreach ($part in ($name -split ' / ')) {
+                $path = if ($parent) { "$parent/$part" } else { $part }
+                $entries += [pscustomobject]@{ Path = $path; IsDir = $false }
+            }
+        }
+    }
+    return $entries
+}
+
+function Get-TreeBlock {
+    param([string]$Text)
+    $m = [regex]::Match($Text, '```\s*\r?\n(ExcelFormulaLabs/.*?)```', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+    if (-not $m.Success) { return $null }
+    return $m.Groups[1].Value
+}
+
+$structText = Read-Utf8 (Join-Path $RepoRoot "rules\project-structure.md")
+$structBlock = Get-TreeBlock $structText
+$structEntries = if ($structBlock) { Get-TreeEntries $structBlock } else { @() }
+if (-not $structEntries) {
+    Check "project-structure.md tree" "unparseable (no tree block)"
+} else {
+    $missingEntries = @()
+    foreach ($e in $structEntries) {
+        $local = $e.Path -replace '/', '\'
+        if (-not (Test-Path (Join-Path $RepoRoot $local))) { $missingEntries += $e.Path }
+    }
+    if ($missingEntries.Count -eq 0) { Check "project-structure.md tree entries ($($structEntries.Count) entries)" "OK" }
+    else { Check "project-structure.md tree entries" "missing: $($missingEntries -join ', ')" }
+}
+
+# ---------- 15. AGENTS.md 与 project-structure.md 顶层目录一致 ----------
+$agentsText = Read-Utf8 (Join-Path $RepoRoot "AGENTS.md")
+$agentsBlock = Get-TreeBlock $agentsText
+$agentsDirs = @()
+$structDirs = @()
+if ($agentsBlock) { $agentsDirs = @(Get-TreeEntries $agentsBlock | Where-Object { $_.IsDir -and $_.Path -notmatch '/' } | ForEach-Object { $_.Path }) }
+if ($structBlock) { $structDirs = @(Get-TreeEntries $structBlock | Where-Object { $_.IsDir -and $_.Path -notmatch '/' } | ForEach-Object { $_.Path }) }
+if (-not $agentsBlock -or -not $structBlock) {
+    Check "AGENTS/project-structure top dirs" "unparseable tree"
+} else {
+    $missingInAgents = @($structDirs | Where-Object { $_ -notin $agentsDirs })
+    $missingInStruct = @($agentsDirs | Where-Object { $_ -notin $structDirs })
+    if ($missingInAgents.Count -eq 0 -and $missingInStruct.Count -eq 0) {
+        Check "AGENTS/project-structure top dirs ($($structDirs.Count) dirs)" "OK"
+    } else {
+        $detail = @()
+        if ($missingInAgents) { $detail += "AGENTS 缺: $($missingInAgents -join ',')" }
+        if ($missingInStruct) { $detail += "structure 缺: $($missingInStruct -join ',')" }
+        Check "AGENTS/project-structure top dirs" ($detail -join '; ')
+    }
+}
+
+# ---------- 汇总 ----------
 Write-Host ""
 Write-Host "=== Pass: $($script:pass)  Fail: $($script:fail) ==="
 if ($script:fail -gt 0) { exit 1 } else { exit 0 }

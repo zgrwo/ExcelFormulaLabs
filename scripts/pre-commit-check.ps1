@@ -1,32 +1,73 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     ExcelFormulaLabs pre-commit check script
 .DESCRIPTION
     Blocks commits with common violations:
     1. Bare catch {} - red line
-    2. Self-validation check(name, X, X) - false negative
+    2. Self-validation check(name, X, X) - false negative（括号平衡解析，支持嵌套调用/数组参数）
     3. IntelliSense code in net8.0 - framework isolation
     4. Core layer referencing ExcelDna - architecture violation
     5. NaN/Inf guard missing in Core files with division
     6. hasHeaders parameter missing for object[,] Core methods
 .NOTES
-    Usage: .\scripts\pre-commit-check.ps1
+    Usage: .\scripts\pre-commit-check.ps1 [-RepoRoot <path>]
+    自测：tests/scripts/test_precommit_check.ps1（回归守卫，CI 强制执行）
 #>
+param(
+    [string]$RepoRoot = (Split-Path -Parent $PSScriptRoot)
+)
 
 $ErrorActionPreference = "Stop"
-$repoRoot = Split-Path -Parent $PSScriptRoot
 $violations = @()
 
-Write-Host "============================================================"
-Write-Host "  ExcelFormulaLabs Pre-Commit Check"
-Write-Host "============================================================"
+function Read-Utf8Text {
+    param([string]$Path)
+    if (-not (Test-Path $Path)) { return $null }
+    return [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::UTF8)
+}
+
+# 从一行中提取 check( 调用的顶层参数列表（括号/引号平衡，支持嵌套调用）
+function Split-TopLevelArgs {
+    param([string]$Line, [int]$StartIndex)
+    $args = New-Object System.Collections.Generic.List[string]
+    $depth = 1          # 已处于 check( 括号内：深度 1 为顶层参数层
+    $inStr = $null      # 当前引号字符（' 或 "）
+    $buf = New-Object System.Text.StringBuilder
+    $i = $StartIndex
+    while ($i -lt $Line.Length) {
+        $ch = $Line[$i]
+        if ($inStr) {
+            if ($ch -eq $inStr) {
+                if ($i + 1 -lt $Line.Length -and $Line[$i+1] -eq $inStr) { [void]$buf.Append($ch); $i++ }
+                else { $inStr = $null }
+            } elseif ($ch -eq '\' -and $inStr -eq '"') {
+                [void]$buf.Append($ch)
+                if ($i + 1 -lt $Line.Length) { [void]$buf.Append($Line[$i+1]); $i++ }
+            } else { [void]$buf.Append($ch) }
+        } else {
+            if ($ch -eq '"') { $inStr = '"'; [void]$buf.Append($ch) }
+            elseif ($ch -eq "'") { $inStr = "'"; [void]$buf.Append($ch) }
+            elseif ($ch -eq '(') { $depth++; [void]$buf.Append($ch) }
+            elseif ($ch -eq ')') {
+                $depth--
+                if ($depth -eq 0) { break }   # 最外层 check( 闭合，结束
+                [void]$buf.Append($ch)
+            }
+            elseif ($ch -eq ',' -and $depth -eq 1) { $args.Add($buf.ToString()); [void]$buf.Clear() }
+            else { [void]$buf.Append($ch) }
+        }
+        $i++
+    }
+    if ($buf.Length -gt 0) { $args.Add($buf.ToString()) }
+    return $args
+}
 
 # -- Check 1: Bare catch {} --
 Write-Host ""
 Write-Host "[1/6] Checking bare catch {} ..."
 
-$bareCatch = Get-ChildItem -Path "$repoRoot/src" -Recurse -Filter "*.cs" |
+$bareCatch = Get-ChildItem -Path "$RepoRoot/src" -Recurse -Filter "*.cs" -ErrorAction SilentlyContinue |
     Select-String -Pattern "catch\s*\{" -AllMatches
 
 if ($bareCatch) {
@@ -38,28 +79,35 @@ if ($bareCatch) {
     Write-Host "  [OK] No bare catch" -ForegroundColor Green
 }
 
-# -- Check 2: Self-validation pattern --
+# -- Check 2: Self-validation pattern (check(name, X, X)) --
 Write-Host ""
 Write-Host "[2/6] Checking self-validation pattern ..."
 
-$verifyScript = Join-Path $repoRoot "scripts\verify-manual.py"
+$verifyScript = Join-Path $RepoRoot "scripts\verify-manual.py"
 if (Test-Path $verifyScript) {
-    $lines = Get-Content $verifyScript
+    # @() 强制数组：单行文件时 Get-Content 返回标量 string，索引会得到 char
+    $lines = @(Get-Content $verifyScript)
+    $selfHits = @()
     for ($i = 0; $i -lt $lines.Count; $i++) {
-        if ($lines[$i] -match "check\(") {
-            # Extract 2nd and 3rd args - simple heuristic for same-expression
-            if ($lines[$i] -match "check\([^,]+,\s*(.+?),\s*(.+?)\s*[,)]") {
-                $arg2 = $Matches[1].Trim()
-                $arg3 = $Matches[2].Trim()
-                if ($arg2 -eq $arg3 -and $arg2.Length -gt 3) {
-                    $violations += "SELF_CHECK: verify-manual.py:$($i+1)"
+        $line = $lines[$i]
+        $idx = $line.IndexOf("check(")
+        while ($idx -ge 0) {
+            $args = Split-TopLevelArgs $line ($idx + 6)
+            # check(name, X, X)：第 2、3 个顶层参数完全相同且非平凡长度
+            if ($args.Count -ge 3) {
+                $a2 = $args[1].Trim()
+                $a3 = $args[2].Trim()
+                if ($a2 -eq $a3 -and $a2.Length -gt 3) {
+                    $selfHits += "verify-manual.py:$($i+1) ($a2)"
+                    break
                 }
             }
+            $idx = $line.IndexOf("check(", $idx + 1)
         }
     }
-    $selfCount = ($violations | Where-Object { $_ -like "SELF_CHECK*" }).Count
-    if ($selfCount -gt 0) {
-        Write-Host "  [FAIL] Found $selfCount self-validation" -ForegroundColor Red
+    if ($selfHits.Count -gt 0) {
+        foreach ($h in $selfHits) { $violations += "SELF_CHECK: $h" }
+        Write-Host "  [FAIL] Found $($selfHits.Count) self-validation" -ForegroundColor Red
     } else {
         Write-Host "  [OK] No self-validation" -ForegroundColor Green
     }
@@ -71,12 +119,12 @@ if (Test-Path $verifyScript) {
 Write-Host ""
 Write-Host "[3/6] Checking IntelliSense isolation ..."
 
-$allCs = Get-ChildItem -Path "$repoRoot/src" -Recurse -Filter "*.cs"
+$allCs = Get-ChildItem -Path "$RepoRoot/src" -Recurse -Filter "*.cs" -ErrorAction SilentlyContinue
 $intelliHits = $allCs | Select-String -Pattern "ExcelDna\.IntelliSense"
 $leaked = @()
 
 foreach ($hit in $intelliHits) {
-    $content = Get-Content $hit.Path
+    $content = @(Get-Content $hit.Path)
     $lineIdx = $hit.LineNumber - 1
     $inNet48 = $false
     $start = [Math]::Max(0, $lineIdx - 10)
@@ -102,7 +150,7 @@ if ($leaked.Count -gt 0) {
 Write-Host ""
 Write-Host "[4/6] Checking Core layer isolation ..."
 
-$coreFiles = Get-ChildItem -Path "$repoRoot/src" -Recurse -Filter "*Core.cs"
+$coreFiles = Get-ChildItem -Path "$RepoRoot/src" -Recurse -Filter "*Core.cs" -ErrorAction SilentlyContinue
 $coreHits = $coreFiles | Select-String -Pattern "ExcelDna"
 
 if ($coreHits) {
@@ -124,7 +172,7 @@ $nanInfMissing = @()
 foreach ($mod in $coreModules) {
     $files = $allCs | Where-Object { $_.Name -eq "$mod.cs" }
     foreach ($f in $files) {
-        $content = Get-Content $f.FullName -Raw
+        $content = Read-Utf8Text $f.FullName
         $hasDivision = $content -match '/\s*(?!0\b)\w+'
         if ($hasDivision) {
             $hasGuard = ($content -match 'double\.IsNaN') -or
@@ -149,16 +197,15 @@ if ($nanInfMissing.Count -gt 0) {
 Write-Host ""
 Write-Host "[6/6] Checking hasHeaders contract ..."
 
-$allCoreCs = Get-ChildItem -Path "$repoRoot/src" -Recurse -Filter "*Core.cs"
+$allCoreCs = Get-ChildItem -Path "$RepoRoot/src" -Recurse -Filter "*Core.cs" -ErrorAction SilentlyContinue
 $hasHeaderViolations = @()
 # Structural transformation exemptions (don't interpret header semantics)
 $structuralExempt = @('Transpose','SelectColumns','SelectRows','CrossJoin','Flatten2D','Count',
                        'Frequency','Dict','JsonToTable','XmlToTable','RegexCaptureGroups')
 
 foreach ($f in $allCoreCs) {
-    $content = Get-Content $f.FullName -Raw
+    $content = Read-Utf8Text $f.FullName
     # Match method signatures with object[,] as PARAMETER (not return type)
-    # Use broader pattern to include access modifiers
     $paramMatches = [regex]::Matches($content, '(private|internal|public)\s+(?:static\s+)?\S+\s+(\w+)\s*\([^)]*object\s*\[,\s*\][^)]*\)')
     foreach ($pm in $paramMatches) {
         $sig = $pm.Value
