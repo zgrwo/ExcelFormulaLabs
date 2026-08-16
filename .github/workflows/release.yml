@@ -5,6 +5,10 @@ on:
     tags:
       - 'v*'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
   packages: write
@@ -13,6 +17,7 @@ jobs:
   build-test:
     name: Build & Test (Release)
     runs-on: windows-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -37,6 +42,7 @@ jobs:
     name: Cross-Validation
     runs-on: windows-latest
     needs: build-test
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -65,6 +71,7 @@ jobs:
     name: Pack & Release
     runs-on: windows-latest
     needs: cross-val
+    timeout-minutes: 30
 
     steps:
       - name: Checkout

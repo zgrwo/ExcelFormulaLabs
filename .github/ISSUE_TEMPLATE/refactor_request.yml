@@ -1,0 +1,43 @@
+name: 重构/质量改进
+description: 提出代码重构、质量或架构改进建议（不改变外部行为）
+title: "[refactor] "
+labels: ["refactor"]
+body:
+  - type: input
+    id: goal
+    attributes:
+      label: 目标
+      description: 一句话说明想达到的效果（如：降低模块耦合 / 消除重复代码 / 提升可读性）
+      placeholder: 期望达到的效果
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: 现状
+      description: 当前代码/结构的问题，附文件路径与行号
+      placeholder: 问题描述 + 文件:行号
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案
+      description: 简述重构思路（如：提取公共方法 / 调整分层 / 引入 xxx）
+      placeholder: 重构思路
+    validations:
+      required: true
+  - type: checkboxes
+    id: impact
+    attributes:
+      label: 影响范围
+      options:
+        - label: 影响公开 API 签名（❌ 不允许，见 AGENTS.md 红线规则）
+        - label: 涉及文档同步（api-reference / user-manual）
+        - label: 需要回归测试覆盖
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准（可选）
+      description: 可量化的完成标准，如：重构前后全部测试通过 + 模块行数减少 20%
+      placeholder: 可量化的完成标准

@@ -1,0 +1,38 @@
+name: 功能建议
+description: 提出新功能或改进建议
+title: "[FEATURE] 简述建议"
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: 需求描述
+      description: 这个功能解决什么问题？目标用户是谁？
+      placeholder: 说明要解决的问题与目标用户
+    validations:
+      required: true
+  - type: textarea
+    id: scenario
+    attributes:
+      label: 使用场景示例
+      description: 用户如何触发/使用该功能
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案（可选）
+      description: 实现思路、涉及模块、接口草案
+      placeholder: 简述实现思路
+  - type: checkboxes
+    id: acceptance
+    attributes:
+      label: 验收标准（可选）
+      description: 可验证的验收点
+      options:
+        - label: 验收点 1（请改写为可验证标准）
+        - label: 验收点 2

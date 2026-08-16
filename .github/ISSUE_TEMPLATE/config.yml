@@ -1,0 +1,10 @@
+# ============================================================================
+# ISSUE_TEMPLATE/config.yml — Issue 表单配置
+# 说明：关闭空白 Issue，强制走四类模板。
+# ============================================================================
+blank_issues_enabled: false
+
+contact_links:
+  - name: 项目讨论区
+    url: https://github.com/zgrwo/ExcelFormulaLabs/discussions
+    about: 提问、想法交流请走 Discussions（非缺陷/改进的讨论勿开 Issue）

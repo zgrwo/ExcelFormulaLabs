@@ -1,0 +1,29 @@
+# ============================================================================
+# stale.yml — 自动关闭僵尸 Issue/PR
+# 触发：每日零点定时
+# 策略：60 天无活动标记 stale → 再 14 天无活动自动关闭
+# 维护人员评论或打标签可避免误关
+# ============================================================================
+name: Stale
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          stale-issue-message: "此 issue 已 60 天无活动，14 天后将自动关闭。如需继续处理请回复。"
+          stale-pr-message: "此 PR 已 60 天无活动，14 天后将自动关闭。如需继续处理请回复。"
+          days-before-stale: 60
+          days-before-close: 14
+          exempt-issue-labels: "bug,enhancement,security"
+          exempt-pr-labels: "dependencies,security"
+          operations-per-run: 100

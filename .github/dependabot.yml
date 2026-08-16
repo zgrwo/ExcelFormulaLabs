@@ -1,0 +1,23 @@
+# ============================================================================
+# dependabot.yml — 依赖自动更新
+# 使用方式：直接启用（GitHub 自动读取）
+#   - nuget: 仓库含 *.sln / *.csproj（本仓库）
+#   - github-actions: workflow 文件存在
+# ============================================================================
+version: 2
+updates:
+  # --- .NET NuGet 依赖 ---
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies"]
+
+  # --- GitHub Actions 自身 ---
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    labels: ["dependencies"]

@@ -1,0 +1,39 @@
+name: 文档改进
+description: 报告文档问题或提出文档改进建议（README / rules/ / skills/ / docs/）
+title: "[docs] "
+labels: ["documentation"]
+body:
+  - type: input
+    id: location
+    attributes:
+      label: 文档位置
+      description: 文件路径 + 章节（如 rules/api-reference.md 第 3 节）
+      placeholder: 路径:章节
+    validations:
+      required: true
+  - type: checkboxes
+    id: issue_type
+    attributes:
+      label: 问题类型
+      options:
+        - label: 内容错误（与实现不符）
+        - label: 信息缺失（找不到 XX 的说明）
+        - label: 断链（链接指向不存在的文件/章节）
+        - label: 表述不清（难以理解）
+        - label: 其他
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望内容
+      description: 希望文档达到的效果
+      placeholder: 描述期望内容
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 依据（可选）
+      description: 如为内容错误，附实现代码位置或验证命令
+      placeholder: 实现代码位置 / 验证命令

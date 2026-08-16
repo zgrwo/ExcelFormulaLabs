@@ -5,23 +5,55 @@ on:
     branches: [master, main]
   pull_request:
     branches: [master, main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   redline-check:
-    name: Red-line Static Checks
+    name: Red-line & Governance Checks
     runs-on: windows-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Run pre-commit checks
         run: ./scripts/pre-commit-check.ps1
+
+      - name: 提交规范检查（Conventional Commits）
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          count=0
+          for sha in $(git rev-list --no-merges "$base..HEAD"); do
+            count=$((count + 1))
+            if ! git show -s --format=%B "$sha" | bash scripts/validate-commit-msg.sh >/dev/null 2>&1; then
+              echo "❌ 提交 ${sha:0:7} 不符合 Conventional Commits 规范："
+              git show -s --format='   %s' "$sha"
+              echo "   规则见 scripts/validate-commit-msg.sh 与 CONTRIBUTING「提交规范」"
+              exit 1
+            fi
+          done
+          echo "✅ 全部 $count 个提交符合规范"
+
+      - name: 治理脚本自测（tests/scripts）
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tests/scripts/run-tests.ps1
 
   test:
     name: Build & Test (Debug, net8.0)
     runs-on: windows-latest
     needs: redline-check
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -46,6 +78,7 @@ jobs:
     name: Build & Test (Debug, net48)
     runs-on: windows-latest
     needs: redline-check
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -79,6 +112,7 @@ jobs:
     name: Cross-Validation (Python ↔ C#)
     runs-on: windows-latest
     needs: test
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -110,6 +144,7 @@ jobs:
     name: Release Build (packaging)
     runs-on: windows-latest
     needs: test
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -152,6 +187,7 @@ jobs:
     name: Verify Docs
     runs-on: ubuntu-latest
     needs: test
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -159,3 +195,30 @@ jobs:
 
       - name: Run verify-docs.sh
         run: bash scripts/verify-docs.sh
+
+  coverage:
+    name: Coverage Gate (net8.0)
+    runs-on: windows-latest
+    needs: test
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Coverage (Foundation)
+        run: dotnet test tests/Foundation.Tests -f net8.0 --no-build -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:CoverletOutput=coverage/foundation -p:Threshold=75 -p:ThresholdType=line
+
+      - name: Coverage (Analytics)
+        run: dotnet test tests/Analytics.Tests -f net8.0-windows --no-build -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:CoverletOutput=coverage/analytics -p:Threshold=50 -p:ThresholdType=line
+
+      - name: Coverage (DataToolkit)
+        run: dotnet test tests/DataToolkit.Tests -f net8.0-windows --no-build -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:CoverletOutput=coverage/datatoolkit -p:Threshold=42 -p:ThresholdType=line

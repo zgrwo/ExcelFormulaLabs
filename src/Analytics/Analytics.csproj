@@ -4,12 +4,13 @@
     <TargetFrameworks>net8.0-windows;net48</TargetFrameworks>
     <RootNamespace>ExcelFormulaLabs.Analytics</RootNamespace>
     <AssemblyName>Analytics</AssemblyName>
-    <Description>统计 · 线性代数 · 回归 · 物理化学 — 76 个科学计算函数</Description>
+    <Description>统计 · 线性代数 · 回归 · 物理化学 — 88 个科学计算函数</Description>
     <Product>Excel 函数增强库</Product>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <EnableDynamicLoading>true</EnableDynamicLoading>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>CS1591;CS8625;NU1701</NoWarn>
     <ExcelAddInFileName Condition="'$(TargetFramework)' == 'net48'">Analytics-AddIn-net48</ExcelAddInFileName>

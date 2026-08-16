@@ -1,0 +1,43 @@
+# ============================================================================
+# security.yml — CodeQL 安全扫描
+# 触发：main 推送 / 每周一凌晨 2 点定时
+# 前置：仓库 Settings → Code security → CodeQL 默认设置关闭（避免重复），
+#       或保持默认设置启用并删除本文件（二选一）。
+# 说明：C# 为编译型语言，autobuild 需要可构建的源码树；本仓库 .sln 在
+#       ubuntu 上可构建（src 项目均引用 net48 reference assemblies 包；
+#       EnableWindowsTargeting 允许非 Windows 构建 windows TFM）。
+#       若 CodeQL autobuild 失败，请在下方 autobuild 步骤改为显式
+#       `dotnet build ExcelFormulaLabs.sln`。
+# ============================================================================
+name: Security
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 2 * * 1"
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [csharp]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-and-quality
+      - uses: github/codeql-action/autobuild@v3
+      - uses: github/codeql-action/analyze@v3

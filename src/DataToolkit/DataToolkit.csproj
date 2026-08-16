@@ -10,6 +10,7 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <EnableDynamicLoading>true</EnableDynamicLoading>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>CS1573;CS1591;CS8509;CS8603;CS8625;NU1701</NoWarn>
     <ExcelAddInFileName Condition="'$(TargetFramework)' == 'net48'">DataToolkit-AddIn-net48</ExcelAddInFileName>
