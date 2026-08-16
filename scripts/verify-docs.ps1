@@ -218,11 +218,15 @@ function Get-TreeBlock {
 $structText = Read-Utf8 (Join-Path $RepoRoot "rules\project-structure.md")
 $structBlock = Get-TreeBlock $structText
 $structEntries = if ($structBlock) { Get-TreeEntries $structBlock } else { @() }
+# 「不入库」目录（.gitignore 覆盖，如 logs/）：干净 checkout 下不存在，豁免存在性检查
+$ignoredDirs = @("logs")
 if (-not $structEntries) {
     Check "project-structure.md tree" "unparseable (no tree block)"
 } else {
     $missingEntries = @()
     foreach ($e in $structEntries) {
+        $top = ($e.Path -split '/')[0]
+        if ($top -in $ignoredDirs) { continue }
         $local = $e.Path -replace '/', '\'
         if (-not (Test-Path (Join-Path $RepoRoot $local))) { $missingEntries += $e.Path }
     }

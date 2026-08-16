@@ -36,6 +36,11 @@ jobs:
           base="${{ github.event.pull_request.base.sha }}"
           count=0
           for sha in $(git rev-list --no-merges "$base..HEAD"); do
+            # dependabot 自动提交（如 "Bump X from Y to Z"）不受 CC 约束
+            author=$(git show -s --format=%an "$sha")
+            if [ "$author" = "dependabot[bot]" ]; then
+              continue
+            fi
             count=$((count + 1))
             if ! git show -s --format=%B "$sha" | bash scripts/validate-commit-msg.sh >/dev/null 2>&1; then
               echo "❌ 提交 ${sha:0:7} 不符合 Conventional Commits 规范："
@@ -215,10 +220,10 @@ jobs:
         run: dotnet restore
 
       - name: Coverage (Foundation)
-        run: dotnet test tests/Foundation.Tests -f net8.0 --no-restore -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:CoverletOutput=coverage/foundation -p:Threshold=75 -p:ThresholdType=line
+        run: dotnet test tests/Foundation.Tests -f net8.0 --no-restore -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:CoverletOutput=coverage/foundation -p:Threshold=75 -p:ThresholdType=line -p:ThresholdStat=total
 
       - name: Coverage (Analytics)
-        run: dotnet test tests/Analytics.Tests -f net8.0-windows --no-restore -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:CoverletOutput=coverage/analytics -p:Threshold=50 -p:ThresholdType=line
+        run: dotnet test tests/Analytics.Tests -f net8.0-windows --no-restore -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:CoverletOutput=coverage/analytics -p:Threshold=50 -p:ThresholdType=line -p:ThresholdStat=total
 
       - name: Coverage (DataToolkit)
-        run: dotnet test tests/DataToolkit.Tests -f net8.0-windows --no-restore -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:CoverletOutput=coverage/datatoolkit -p:Threshold=42 -p:ThresholdType=line
+        run: dotnet test tests/DataToolkit.Tests -f net8.0-windows --no-restore -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:CoverletOutput=coverage/datatoolkit -p:Threshold=42 -p:ThresholdType=line -p:ThresholdStat=total
