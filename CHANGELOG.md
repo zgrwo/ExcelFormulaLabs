@@ -6,6 +6,24 @@
 
 > 版本一致性：每个 `v*` git tag 必须在本文档有对应条目（`verify-docs.ps1` 强制检查，见规则 [documentation.md](rules/documentation.md)）。
 
+## [2.1.0] - 2026-08-16
+
+### Changed
+- ExcelDna.AddIn / Integration / IntelliSense 升级 1.8.0 → 1.9.0（框架修复，重新打包 .xll）
+- 测试栈升级：Microsoft.NET.Test.Sdk 18.9.0 / xunit 2.9.3 / xunit.runner.visualstudio 4.0.0 / FluentAssertions 8.10.0 / coverlet.msbuild 10.0.1 / ClosedXML 0.105.1 / BenchmarkDotNet 0.15.8
+- GitHub Actions 升级：checkout v7 / setup-dotnet v6 / setup-python v7 / codeql-action v4 / action-gh-release v3 / stale v11
+
+### Added
+- CI 覆盖率门禁（coverlet，Foundation ≥75% / Analytics ≥50% / DataToolkit ≥42% 行覆盖）
+- CodeQL 安全扫描（security.yml）、dependabot 依赖自动更新（nuget + github-actions）、stale 僵尸清理
+- 结构化 Issue 模板（bug/feature/docs/refactor 四类 yml）
+
+### Fixed
+- System.Text.Json 8.0.4 → 8.0.5：**修复 CVE-2024-43485（DoS 漏洞）**（net48 兼容；10.x 不支持 netstandard2.0）
+- CI 覆盖率门禁误判：显式 ThresholdStat=total（coverlet 默认 minimum 取最低模块）
+- verify-docs 对不入库目录（logs/）的误报豁免
+- CI 提交规范检查跳过 dependabot 自动提交
+
 ## [2.0.1] - 2026-08-06
 
 ### Added
@@ -130,6 +148,7 @@
 - IntelliSense 自动补全（net48）
 - MIT License
 
+[2.1.0]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v1.0.8...v2.0.0
 [1.0.8]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v1.0.7...v1.0.8
