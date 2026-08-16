@@ -1,0 +1,49 @@
+# ============================================================================
+# .pre-commit-config.yaml — 提交前质量门禁（可选启用）
+#
+# 使用方式（需 Python 3.10+）：
+#   pip install pre-commit
+#   pre-commit install           # 安装 git hooks
+#   pre-commit run --all-files   # 全量运行
+#   pre-commit run --files <f>   # 单文件运行
+#
+# 注意：
+#   - pre-commit 与 scripts/git-hooks/commit-msg 可共存（pre-commit 管代码质量，
+#     commit-msg 管 Conventional Commits 格式）
+#   - 项目红线检查（裸 catch/自校验/Core 隔离等）以 scripts/pre-commit-check.ps1 为准
+# ============================================================================
+
+repos:
+  # --- 基础通用 hooks ---
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace        # 行尾空白
+        exclude: '\.ps1$'               # PowerShell 脚本保持 CRLF + BOM
+      - id: end-of-file-fixer          # 文件末尾统一换行
+        exclude: '\.ps1$'
+      - id: check-yaml                 # YAML 语法（.github/ 下 workflow 配置）
+        exclude: '\.github/ISSUE_TEMPLATE/.*\.yml$'  # 表单含 {{ }} 占位符
+      - id: check-merge-conflict       # 冲突标记残留
+      - id: detect-private-key         # 误提交私钥检测
+      - id: mixed-line-ending          # 换行符统一（与 .gitattributes 配合）
+        args: ['--fix=lf']
+      - id: check-case-conflict        # 大小写冲突（跨平台文件名）
+      - id: check-added-large-files    # 大文件检测（防止误提交二进制）
+        args: ['--maxkb=500']
+
+  # --- 项目本地红线门禁（Windows PowerShell）---
+  - repo: local
+    hooks:
+      - id: excelformulalabs-redline
+        name: ExcelFormulaLabs 红线检查（6 项）
+        entry: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pre-commit-check.ps1
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+      - id: excelformulalabs-docs
+        name: ExcelFormulaLabs 文档一致性（15 项）
+        entry: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-docs.ps1
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]

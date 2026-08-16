@@ -4,6 +4,20 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+> 版本一致性：每个 `v*` git tag 必须在本文档有对应条目（`verify-docs.ps1` 强制检查，见规则 [documentation.md](rules/documentation.md)）。
+
+## [2.0.1] - 2026-08-06
+
+### Added
+- CI 接入红线检查门禁（pre-commit-check.ps1：裸 catch / 自校验 / IntelliSense 隔离 / Core 零依赖 / NaN 守卫 / hasHeaders 契约）
+- Release 流水线补全 net48 测试覆盖；项目级 Skills 体系（skills/ 单一信源 + .qoder 本地镜像）
+
+### Fixed
+- Release 流水线 NuGet push 通配符在 pwsh 下不展开的问题
+- verify-manual.py 交叉验证路径兼容 Debug/Release 构建，更新 RIDGE fallback 期望值
+- 发版前全量审查修复（P1×3 / P2×4 / P3×9 + 三视角复审项）
+- net48 构建限定支持项目 + ResultSerializer 补 string[] 序列化
+
 ## [2.0.0] - 2026-08-01
 
 ### Changed
@@ -116,6 +130,7 @@
 - IntelliSense 自动补全（net48）
 - MIT License
 
+[2.0.1]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v1.0.8...v2.0.0
 [1.0.8]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v1.0.7...v1.0.8
 [1.0.7]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v1.0.6...v1.0.7

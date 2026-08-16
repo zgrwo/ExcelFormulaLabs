@@ -1,7 +1,7 @@
 # context.md — 项目术语表
 
 > 领域词汇的精确定义。AI 在对话中应使用这些术语，避免近义词。
-> 链接索引见 [agents.md](../agents.md#参考)。
+> 链接索引见 [AGENTS.md](../AGENTS.md#参考)。
 
 ## 层（Layer）
 

@@ -12,5 +12,7 @@ src/**/DataToolkit-AddIn.dna
 __pycache__/
 .claude/reviews/
 BenchmarkDotNet.Artifacts/
-.qoder/better-harness/
+.qoder/                        # Qoder 本地工具配置/技能镜像（不入库，本地保留）
 logs/
+coverage*/
+nupkg/

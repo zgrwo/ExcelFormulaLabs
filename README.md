@@ -4,10 +4,8 @@
 [![Release](https://github.com/zgrwo/ExcelFormulaLabs/actions/workflows/release.yml/badge.svg)](https://github.com/zgrwo/ExcelFormulaLabs/actions/workflows/release.yml)
 [![GitHub release](https://img.shields.io/github/v/release/zgrwo/ExcelFormulaLabs)](https://github.com/zgrwo/ExcelFormulaLabs/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-4436%20passed-brightgreen)](https://github.com/zgrwo/ExcelFormulaLabs/actions)
-[![UDFs](https://img.shields.io/badge/UDFs-220%2B-blue)](rules/api-reference.md)
 
-**在 Excel 里直接用 `=STATS.MEAN()`、`=STR.REVERSE()`、`=JSON.PARSE()` 等函数。** 基于 C# 高性能实现，Python 级精度。自带 IntelliSense 自动补全，VBA 中可通过 `Application.Run` 直接调用。
+**在 Excel 里直接用 `=STATS.MEAN()`、`=STR.REVERSE()`、`=JSON.PARSE()` 等函数。** 基于 C# 高性能实现，Python 级精度。自带 IntelliSense 自动补全，VBA 中可通过 `Application.Run` 直接调用。完整函数清单与数量见 [API 参考](rules/api-reference.md)（数字唯一信源，测试状态见上方 CI 徽章）。
 
 ---
 
@@ -206,10 +204,11 @@ dotnet test
 
 | 文档 | 角色 | 内容 |
 |------|------|------|
+| [README.en.md](README.en.md) | 英文入口 | English entry for international users |
 | [API 参考](rules/api-reference.md) | 数字唯一信源 | 函数完整签名、参数说明、错误表 |
 | [用户手册](rules/user-manual.md) | 学习教程 | 每个函数详细示例 + 结果解读指南 |
 | [context.md](rules/context.md) | 术语表 | 所有术语唯一定义 |
-| [agents.md](agents.md) | 项目宪法 | 架构分层、红线规则、开发流程 |
+| [AGENTS.md](AGENTS.md) | 项目宪法 | 架构分层、红线规则、开发流程 |
 | [skill: excel-dna-project](skills/excel-dna-project.md) | 编码规范 | MapOver 选型、预防规则、测试模式 |
 | [skill: excel-dna-addins](skills/excel-dna-addins.md) | 打包分发 | UDF 声明、黄金法则、.xll 打包 |
 
@@ -221,7 +220,7 @@ dotnet test
 
 | 文件 | 面向 | 职责 |
 |------|------|------|
-| `agents.md` | AI 编程助手 | 项目宪法——架构、红线、编码准则、防幻觉铁律 |
+| `AGENTS.md` | AI 编程助手 | 项目宪法——架构、红线、编码准则、防幻觉铁律 |
 | `readme.md` | 人类用户 | 功能指南——安装、模块速览、使用模式（本文件） |
 | `rules/` | AI + 人类 | 规范文档——API 参考、用户手册、术语表、审查模板 |
 | `skills/` | AI 编码 | 技能定义——语言陷阱、编码模式、重构守则 |

@@ -5,11 +5,11 @@ description: 本项目编码规范与架构参考 — Foundation/Analytics/DataT
 
 # SKILL.md
 
-> 术语定义见 [context.md](../../rules/context.md)。
+> 术语定义见 [context.md](../rules/context.md)。
 
 ## 项目结构
 
-> 完整目录树、文件清单及路径路由见 **[agents.md § 仓库目录树](../../agents.md#仓库目录树)**（唯一信源）。以下为架构分层摘要：
+> 完整目录树、文件清单及路径路由见 **[AGENTS.md § 仓库目录树](../AGENTS.md#仓库目录树)**（唯一信源）。以下为架构分层摘要：
 
 ```
 src/
@@ -36,7 +36,7 @@ rules/
 
 ## 架构
 
-> 详见 [agents.md § 架构分层](../../agents.md#架构分层)。
+> 详见 [AGENTS.md § 架构分层](../AGENTS.md#架构分层)。
 
 ### MapOver 选型
 
@@ -309,7 +309,7 @@ xUnit `[Fact]` + FluentAssertions 6.12.0。每 Core 方法覆盖：正常路径 
 
 ## 哨兵契约 L1-L5
 
-> 规则声明见 [agents.md §5](../../agents.md#5-哨兵契约l1-l5)。本表为实施细节。
+> 规则声明见 [AGENTS.md §5](../AGENTS.md#5-哨兵契约l1-l5)。本表为实施细节。
 
 | 层级 | 职责 | ✅ DO | ❌ DON'T | 违反后果 |
 | :--- | :--- | :--- | :--- | :--- |
@@ -321,7 +321,7 @@ xUnit `[Fact]` + FluentAssertions 6.12.0。每 Core 方法覆盖：正常路径 
 
 ## 闭环验证
 
-> 规则声明见 [agents.md §6](../../agents.md#6-闭环验证python--c--手册)。本表为实施对照。
+> 规则声明见 [AGENTS.md §6](../AGENTS.md#6-闭环验证python--c--手册)。本表为实施对照。
 
 ### 验证流程
 

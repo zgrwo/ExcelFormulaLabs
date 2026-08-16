@@ -423,4 +423,4 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 
 ---
 
-> **架构**：术语定义见 [context.md](context.md)，UDF 调用链与分层详见 [agents.md](../agents.md#架构分层)。
+> **架构**：术语定义见 [context.md](context.md)，UDF 调用链与分层详见 [AGENTS.md](../AGENTS.md#架构分层)。

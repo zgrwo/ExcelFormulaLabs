@@ -1,0 +1,46 @@
+# ============================================================================
+# .gitattributes — 换行符统一与二进制标记
+# ============================================================================
+
+# 文档 → LF（web 渲染友好）
+*.md text eol=lf
+*.txt text eol=lf
+
+# Python / Shell 脚本 → LF
+*.py text eol=lf
+*.sh text eol=lf
+*.bash text eol=lf
+
+# 脚手架模板文件（源码级占位符，复制到 src/ 使用）→ LF
+*.template text eol=lf
+
+# TOML / 无扩展名根配置 → LF（防 Windows autocrlf 漂移）
+*.toml text eol=lf
+.editorconfig text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+LICENSE text eol=lf
+nuget.config text eol=lf
+
+# git hooks（无扩展名，POSIX 脚本，core.hooksPath）→ LF
+scripts/git-hooks/* text eol=lf
+
+# PowerShell 脚本 → CRLF（Windows 惯例，配合 UTF-8 with BOM）
+*.ps1 text eol=crlf
+
+# C# / 配置 → LF
+*.cs text eol=lf
+*.csproj text eol=lf
+*.sln text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.xml text eol=lf
+*.resx text eol=lf
+
+# 二进制 → 不做任何转换
+*.xll binary
+*.xlsx binary
+*.dll binary
+*.snupkg binary
+*.nupkg binary

@@ -1,4 +1,4 @@
-# agents.md — ExcelFormulaLabs 项目宪法
+# AGENTS.md — ExcelFormulaLabs 项目宪法
 
 > Excel 函数增强库：232 UDF，基于 C# / Excel-DNA，双 TFM (net48 + net8.0)。
 > 本文件面向 AI 编程助手，编码细节按需加载 Skill。术语见 [context.md](rules/context.md)。
@@ -80,15 +80,36 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 ```
 ExcelFormulaLabs/
 ├── src/                          # 源码（Foundation / Analytics / DataToolkit）
-├── tests/                        # 测试 + CrossVal
-├── rules/                        # 规范文档
-├── skills/                       # Skill 定义
-├── tools/                        # 构建/验证脚本
-├── build/                        # CI/CD 配置
-├── agents.md                     # 本文件
+├── tests/                        # 测试 + CrossVal + 脚本自测（tests/scripts）
+├── rules/                        # 规范文档（含 adr/ 架构决策记录）
+├── skills/                       # Skill 定义（单一信源；.qoder 本地镜像不入库）
+├── scripts/                      # 构建/验证/治理脚本
+├── templates/                    # 模块脚手架（NewModule）
+├── docs/                         # 设计文档
+├── examples/                     # 示例
+├── benchmarks/                   # 性能基准（BenchmarkDotNet）
+├── build/                        # 构建配置说明
+├── tools/                        # 辅助工具
+├── .github/                      # CI 工作流 + Issue/PR 模板 + CODEOWNERS + dependabot
+├── logs/                         # 日志（不入库）
+├── AGENTS.md                     # 本文件
 ├── README.md                     # 用户向功能指南
-└── .gitignore
+├── README.en.md                  # 英文入口
+├── CHANGELOG.md                  # 版本变更记录（每个 v* tag 必须有条目，verify-docs 强制）
+├── CONTRIBUTING.md               # 贡献指南（提交规范 + 发版流程）
+├── CODE_OF_CONDUCT.md            # 行为准则
+├── SECURITY.md                   # 安全政策
+├── LICENSE                       # MIT
+├── FUNDING.yml                   # 资助信息
+├── nuget.config                  # NuGet 源
+├── ExcelFormulaLabs.sln          # 解决方案
+├── .editorconfig                 # 编辑器统一风格
+├── .gitattributes                # 换行符/二进制标记
+├── .gitignore                    # 排除规则
+└── .pre-commit-config.yaml       # 提交前 lint（可选启用）
 ```
+
+> **目录树变更管控**：顶层目录与 AGENTS.md / project-structure.md 双树必须同步（verify-docs 检查 15 强制）。
 
 ## 红线规则
 
@@ -137,6 +158,25 @@ ExcelFormulaLabs/
 | 日常构建 | `dotnet restore && dotnet build && dotnet test` |
 | 分发构建 | `dotnet build -c Release` |
 | 全量测试 | ① verify-docs ② dotnet test ③ CrossVal ④ verify-manual.py ⑤ Release build |
+| 文档一致性（15 项） | `powershell -File scripts/verify-docs.ps1` |
+| 提交前红线（6 项） | `powershell -File scripts/pre-commit-check.ps1` |
+| 治理脚本自测 | `powershell -File tests/scripts/run-tests.ps1` |
+| 本地 Qoder 技能镜像 | `powershell -File scripts/sync-qoder-skills.ps1`（可选，本地工具用，不入库） |
+
+## 提交规范（Conventional Commits）
+
+- 所有提交信息必须符合 Conventional Commits：`type(scope): 描述`。
+- 允许类型：`feat fix docs style refactor test chore build ci perf revert release`。
+- 校验脚本：`scripts/validate-commit-msg.sh`（本地 hook：`scripts/git-hooks/commit-msg`；CI 对 PR 内每个提交强制执行）。
+- 发版流程：bump `src/Directory.Build.props` 版本 + 更新 `CHANGELOG.md` + 打 `vX.Y.Z` tag → release.yml 自动构建发布。
+- **版本一致性**：最新 `v*` tag 必须等于 `Directory.Build.props` 的 `<Version>`，且 CHANGELOG 必须有对应条目（verify-docs 检查 10 强制）。
+
+## AGENTS.md 生态兼容
+
+- 本文件即 `AGENTS.md`（大写）——2026 年跨工具事实标准（Codex / Copilot / Windsurf / JetBrains / Gemini / QoderCN 均可直接读取）。
+- Claude Code 需要 `CLAUDE.md` 副本：`Copy-Item AGENTS.md CLAUDE.md`（每次修改 AGENTS.md 后需重新创建；CLAUDE.md 不入库登记）。
+- 子目录级 AGENTS.md（多模块仓库时）：写清「你只管 X，不要碰 Y」，越靠近当前目录优先级越高。
+- **Agent 看不见的事实**（写在文档而不依赖代码推断）：包管理/构建工具选择（dotnet SDK 8.0）、生成文件目录（bin/ obj/ BenchmarkDotNet.Artifacts/ 禁止手改）、聚焦测试命令（改单模块先跑 `tests/<Module>.Tests`）、安全边界（FS 沙箱默认关闭、NuGet push 与 Release 需人工确认）、修改模块边界前必读 `rules/api-reference.md`。
 
 ## 历史经验（从 diff 提炼）
 
@@ -223,10 +263,13 @@ ExcelFormulaLabs/
 | 文档 | 角色 | 内容 |
 | :--- | :--- | :--- |
 | [README.md](README.md) | 用户入口 | 安装、模块速览、使用模式 |
+| [README.en.md](README.en.md) | 英文入口 | 国际用户入口 |
 | [context.md](rules/context.md) | 术语表 | 所有术语唯一定义 |
+| [specification.md](rules/specification.md) | 技术规格 | 项目概述、模块清单、功能规格 |
 | [api-reference.md](rules/api-reference.md) | 数字唯一信源 | 232 UDF 签名、参数、错误行为 |
 | [user-manual.md](rules/user-manual.md) | 学习教程 | 每函数详细示例 + 结果解读 |
 | [project-structure.md](rules/project-structure.md) | 结构地图 | 文件职责与层级关系 |
 | [documentation.md](rules/documentation.md) | 文档职责 | 各文档分工与维护规则 |
-| [code-review-prompt.md](rules/code-review-prompt.md) | 审查模板 | 深度代码审查 Prompt |
-| [refactoring-plan.md](rules/refactoring-plan.md) | 重构计划 | Phase 0-4 重构路线图 |
+| [adr/](rules/adr/adr-template.md) | 决策记录 | 架构决策 ADR 0001-0005 |
+| [CHANGELOG.md](CHANGELOG.md) | 变更记录 | 版本变更历史（与 tag 强制一致） |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | 贡献指南 | 开发/PR/发版流程 |

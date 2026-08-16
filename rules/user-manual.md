@@ -3312,5 +3312,5 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 |------|------|------|
 | [API 参考](api-reference.md) | 数字唯一信源 | UDF 完整签名、参数说明、错误表 |
 | [README](../README.md) | 用户入口 | 安装、模块速览、安全说明 |
-| [agents.md](../agents.md) | 项目宪法 | 架构分层、红线规则、开发流程 |
+| [AGENTS.md](../AGENTS.md) | 项目宪法 | 架构分层、红线规则、开发流程 |
 | [context.md](context.md) | 术语表 | 所有术语唯一定义 |

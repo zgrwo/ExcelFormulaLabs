@@ -1,7 +1,7 @@
 ---
-description: "项目规划效果审查 — 8 维度评估 refactoring-plan 的质量与可执行性。"
+description: "项目规划效果审查 — 8 维度评估重构/规划文档的质量与可执行性。"
 name: "项目规划效果审查"
-argument-hint: "[审查对象: refactoring-plan.md] [--focus 可执行性|验收标准]"
+argument-hint: "[审查对象: 重构计划文档] [--focus 可执行性|验收标准]"
 ---
 
 # 项目规划效果审查 — ExcelFormulaLabs
@@ -15,7 +15,7 @@ argument-hint: "[审查对象: refactoring-plan.md] [--focus 可执行性|验收
 - **成熟度**：★★★★☆ 成熟（283 commits）
 - **架构**：UDF → Core → Foundation（3 层）
 - **测试**：CrossVal + 单元测试 + 文档验证
-- **重构计划**：rules/refactoring-plan.md（Phase 0-4）
+- **重构计划**：按需创建（如 PRD/计划文档），Phase 0-4 方法论
 
 ---
 
