@@ -63,7 +63,7 @@
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
     <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />
-    <PackageReference Include="System.Text.Json" Version="8.0.4" />
+    <PackageReference Include="System.Text.Json" Version="10.0.11" />
     <!-- 将原生 SQLite.Interop.dll 嵌入为托管资源，运行时按需提取，
          使 net48 XLL 真正自包含（单文件） -->
     <EmbeddedResource Include="$(NuGetPackageRoot)stub.system.data.sqlite.core.netframework\1.0.119\build\net46\x86\SQLite.Interop.dll">
