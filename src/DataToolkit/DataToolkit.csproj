@@ -46,7 +46,7 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.30" />
     <!-- 将原生 e_sqlite3.dll 嵌入为托管资源，运行时按需提取。
          ExcelDnaPack 虽已将其打包为 NATIVE_LIBRARY_LZMA，但 SQLitePCLRaw
          的自定义加载器可能无法发现 ExcelDNA 提取的临时文件。
