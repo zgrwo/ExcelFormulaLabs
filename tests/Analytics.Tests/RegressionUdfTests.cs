@@ -48,7 +48,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
             var r = (object[,])RegressionUdf.UDF_REGRESS_OLS(y_test, X_test);
             // Report: N fields × (maxLen+1) columns. 11 fields for OLS.
             r.GetLength(0).Should().Be(11);
-            r.GetLength(1).Should().BeGreaterOrEqualTo(2);
+            r.GetLength(1).Should().BeGreaterThanOrEqualTo(2);
             // Coefficients are unpacked scalars across columns 1+
             var coef = FindRow(r, "coefficients");
             coef.Should().HaveCount(2);
@@ -75,7 +75,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         {
             var r = (object[,])RegressionUdf.UDF_REGRESS_ANOVA1(new double[,] { { 5, 8 }, { 6, 9 }, { 7, 10 } });
             r.GetLength(0).Should().Be(12);
-            r.GetLength(1).Should().BeGreaterOrEqualTo(2);
+            r.GetLength(1).Should().BeGreaterThanOrEqualTo(2);
             var fStat = FindScalar(r, "f_stat");
             fStat.Should().BeGreaterThan(0);
         }

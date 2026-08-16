@@ -1,4 +1,5 @@
 using System;
+using System.Text.RegularExpressions;
 using ExcelFormulaLabs.DataToolkit;
 using FluentAssertions;
 using Xunit;
@@ -30,7 +31,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Soundex() => StringCore.Soundex("Robert").Should().Be("R163");
         [Fact] public void UrlEncode() => StringCore.UrlEncode("hello world").Should().Contain("%20");
         [Fact] public void Base64_roundtrip() => StringCore.Base64Decode(StringCore.Base64Encode("test")).Should().Be("test");
-        [Fact] public void UUID_has_dashes() => StringCore.UUID().Should().MatchRegex(@"^[0-9a-f-]{36}$");
+        [Fact] public void UUID_has_dashes() => Regex.IsMatch(StringCore.UUID(), @"^[0-9a-f-]{36}$").Should().BeTrue();
         [Fact] public void RandomString_length() => StringCore.RandomString(10).Length.Should().Be(10);
         [Fact] public void IsNullOrEmpty() { StringCore.IsNullOrEmptyStr("").Should().BeTrue(); StringCore.IsNullOrEmptyStr("x").Should().BeFalse(); }
         [Fact] public void TextJoin() => StringCore.TextJoin(",",false,new[]{"a","b","c"}).Should().Be("a,b,c");
@@ -42,7 +43,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Coalesce_first() => StringCore.Coalesce("hello","world").Should().Be("hello");
         [Fact] public void Coalesce_null() => StringCore.Coalesce(null!,"fallback").Should().Be("fallback");
         [Fact] public void Coalesce_empty() => StringCore.Coalesce("","fallback").Should().Be("");
-        [Fact] public void RandomString_custom_charset() => StringCore.RandomString(100,"ABC").Should().MatchRegex("^[ABC]+$");
+        [Fact] public void RandomString_custom_charset() => Regex.IsMatch(StringCore.RandomString(100,"ABC"), "^[ABC]+$").Should().BeTrue();
 
         // =====================================================================
         // EDGE CASE & ERROR BEHAVIOR TESTS

@@ -1,4 +1,5 @@
 using ExcelFormulaLabs.DataToolkit;
+using System.Text.RegularExpressions;
 using ExcelFormulaLabs.Foundation;
 using FluentAssertions;
 #pragma warning disable CS8625 // null literal for UDF null-input testing
@@ -306,7 +307,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         // ══════════════════════════════════════════════════════════════════
         [Fact] public void Rnd_correct_length() => StringUdf.UDF_STR_RND(10, "").ToString().Should().HaveLength(10);
         [Fact] public void Rnd_zero_length() => StringUdf.UDF_STR_RND(0, "").ToString().Should().BeEmpty();
-        [Fact] public void Rnd_only_from_charset() { var s=StringUdf.UDF_STR_RND(20, "AB").ToString()!; s.Should().MatchRegex("^[AB]+$"); }
+        [Fact] public void Rnd_only_from_charset() { var s=StringUdf.UDF_STR_RND(20, "AB").ToString()!; Regex.IsMatch(s, "^[AB]+$").Should().BeTrue(); }
         [Fact] public void Rnd_long_string() => StringUdf.UDF_STR_RND(1000, "x").ToString().Should().HaveLength(1000);
         [Fact] public void Rnd_null_charset() => StringUdf.UDF_STR_RND(10, null!).ToString().Should().HaveLength(10);
 
@@ -315,7 +316,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         // ══════════════════════════════════════════════════════════════════
         [Fact] public void RndA_length() => StringUdf.UDF_STR_RNDA(15).ToString().Should().HaveLength(15);
         [Fact] public void RndA_zero() => StringUdf.UDF_STR_RNDA(0).ToString().Should().BeEmpty();
-        [Fact] public void RndA_alpha_only() { var s=StringUdf.UDF_STR_RNDA(50).ToString()!; s.Should().MatchRegex("^[A-Za-z]+$"); }
+        [Fact] public void RndA_alpha_only() { var s=StringUdf.UDF_STR_RNDA(50).ToString()!; Regex.IsMatch(s, "^[A-Za-z]+$").Should().BeTrue(); }
         [Fact] public void RndA_not_null() => StringUdf.UDF_STR_RNDA(10).Should().NotBeNull();
         [Fact] public void RndA_long() => StringUdf.UDF_STR_RNDA(500).ToString().Should().HaveLength(500);
 
@@ -324,7 +325,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         // ══════════════════════════════════════════════════════════════════
         [Fact] public void RndN_length() => StringUdf.UDF_STR_RNDN(8).ToString().Should().HaveLength(8);
         [Fact] public void RndN_zero() => StringUdf.UDF_STR_RNDN(0).ToString().Should().BeEmpty();
-        [Fact] public void RndN_digits_only() { var s=StringUdf.UDF_STR_RNDN(30).ToString()!; s.Should().MatchRegex("^[0-9]+$"); }
+        [Fact] public void RndN_digits_only() { var s=StringUdf.UDF_STR_RNDN(30).ToString()!; Regex.IsMatch(s, "^[0-9]+$").Should().BeTrue(); }
         [Fact] public void RndN_not_null() => StringUdf.UDF_STR_RNDN(5).Should().NotBeNull();
         [Fact] public void RndN_long() => StringUdf.UDF_STR_RNDN(100).ToString().Should().HaveLength(100);
 

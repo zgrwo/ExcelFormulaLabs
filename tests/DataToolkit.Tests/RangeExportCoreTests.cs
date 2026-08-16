@@ -279,7 +279,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         {
             var md = RangeExportCore.RangeToMarkdown(BasicData);
             var lines = md.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
-            lines.Length.Should().BeGreaterOrEqualTo(3); // header + sep + at least 1 data row
+            lines.Length.Should().BeGreaterThanOrEqualTo(3); // header + sep + at least 1 data row
             lines[1].Should().Contain("---");
         }
 

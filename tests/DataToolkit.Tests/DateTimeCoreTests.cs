@@ -137,7 +137,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             // Start after end → negative result
             var a = new DateTime(2025, 6, 20);
             var b = new DateTime(2025, 6, 15);
-            DateTimeCore.WorkdaysBetween(a, b).Should().BeLessOrEqualTo(0);
+            DateTimeCore.WorkdaysBetween(a, b).Should().BeLessThanOrEqualTo(0);
         }
 
         [Fact] public void DateDiff_year()
