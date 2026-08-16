@@ -215,10 +215,10 @@ jobs:
         run: dotnet restore
 
       - name: Coverage (Foundation)
-        run: dotnet test tests/Foundation.Tests -f net8.0 --no-build -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:CoverletOutput=coverage/foundation -p:Threshold=75 -p:ThresholdType=line
+        run: dotnet test tests/Foundation.Tests -f net8.0 --no-restore -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:CoverletOutput=coverage/foundation -p:Threshold=75 -p:ThresholdType=line
 
       - name: Coverage (Analytics)
-        run: dotnet test tests/Analytics.Tests -f net8.0-windows --no-build -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:CoverletOutput=coverage/analytics -p:Threshold=50 -p:ThresholdType=line
+        run: dotnet test tests/Analytics.Tests -f net8.0-windows --no-restore -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:CoverletOutput=coverage/analytics -p:Threshold=50 -p:ThresholdType=line
 
       - name: Coverage (DataToolkit)
-        run: dotnet test tests/DataToolkit.Tests -f net8.0-windows --no-build -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:CoverletOutput=coverage/datatoolkit -p:Threshold=42 -p:ThresholdType=line
+        run: dotnet test tests/DataToolkit.Tests -f net8.0-windows --no-restore -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:CoverletOutput=coverage/datatoolkit -p:Threshold=42 -p:ThresholdType=line

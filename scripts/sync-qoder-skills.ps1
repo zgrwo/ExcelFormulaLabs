@@ -5,13 +5,11 @@
 #   .\scripts\sync-qoder-skills.ps1 -CheckOnly   # 只校验一致性（verify-docs 调用）
 #
 # 背景：
-#   skills/*.md 是技能唯一定义（根级相对链接，如 rules/context.md）。
-#   .qoder/skills/<name>/SKILL.md 是 Qoder 工具加载的镜像副本，链接需适配
+#   skills/*.md 是技能唯一定义（父级相对链接，如 ../rules/context.md）。
+#   .qoder/skills/<name>/SKILL.md 是 Qoder 本地工具的镜像副本（不入库），链接需适配
 #   嵌套目录布局（如 ../../rules/context.md）。
-#   本脚本执行「复制 + 链接重写」；verify-docs.ps1 通过 -CheckOnly 强制
-#   镜像与源一致（变换结果必须与 .qoder 副本逐字节相同）。
-#
-# 修改技能内容后必须重新运行本脚本（不带 -CheckOnly）；CI 门禁会拦截未同步提交。
+#   本脚本执行「复制 + 链接重写」；本机存在 .qoder 时 verify-docs.ps1 检查 13 会
+#   以 -CheckOnly 校验镜像一致性（CI 环境无 .qoder 自动跳过，不视为失败）。
 # ============================================================================
 param(
     [switch]$CheckOnly
