@@ -18,7 +18,7 @@ jobs:
   stale:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/stale@v9
+      - uses: actions/stale@v11
         with:
           stale-issue-message: "此 issue 已 60 天无活动，14 天后将自动关闭。如需继续处理请回复。"
           stale-pr-message: "此 PR 已 60 天无活动，14 天后将自动关闭。如需继续处理请回复。"
