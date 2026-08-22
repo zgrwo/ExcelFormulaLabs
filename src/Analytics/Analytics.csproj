@@ -16,6 +16,9 @@
     <ExcelAddInFileName Condition="'$(TargetFramework)' == 'net48'">Analytics-AddIn-net48</ExcelAddInFileName>
     <ExcelAddInFileName Condition="'$(TargetFramework)' == 'net8.0-windows'">Analytics-AddIn-net8.0</ExcelAddInFileName>
     <ExcelDna64BitAddInSuffix>-64</ExcelDna64BitAddInSuffix>
+    <!-- P1-3 (pre-release review): serialise inner TFM builds — shared generated .dna file
+         raced under parallel inner builds (net8.0 xll observed inside net48 publish dir). -->
+    <BuildInParallel>false</BuildInParallel>
   </PropertyGroup>
 
   <ItemGroup>
@@ -62,7 +65,7 @@
        Excel-DNA auto-discovers dependencies via deps.json; without this the DLL
        would be packed into the net8.0 .xll even though the .dna.tpl omits it. -->
   <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
-    <ExcelDnaPackDependenciesToExclude>ExcelDna.IntelliSense.dll</ExcelDnaPackDependenciesToExclude>
+    <ExcelDnaPackExcludeDependencies>ExcelDna.IntelliSense.dll</ExcelDnaPackExcludeDependencies>
   </PropertyGroup>
 
   <!-- Generate correct .dna from templates per target before ExcelDnaBuild,

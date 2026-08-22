@@ -16,6 +16,10 @@
     <ExcelAddInFileName Condition="'$(TargetFramework)' == 'net48'">DataToolkit-AddIn-net48</ExcelAddInFileName>
     <ExcelAddInFileName Condition="'$(TargetFramework)' == 'net8.0-windows'">DataToolkit-AddIn-net8.0</ExcelAddInFileName>
     <ExcelDna64BitAddInSuffix>-64</ExcelDna64BitAddInSuffix>
+    <!-- P1-3 (pre-release review): inner TFM builds share the generated .dna file in the
+         project dir; parallel inner builds raced (observed net8.0 xll inside net48 publish).
+         Serialise inner builds to eliminate the delete/rebuild race. -->
+    <BuildInParallel>false</BuildInParallel>
   </PropertyGroup>
 
   <ItemGroup>
@@ -82,10 +86,10 @@
        project manifest and fails when absent from net48 output. Likewise for
        net8.0-windows, System.Data.SQLite.Core is a net48-only stub. -->
   <PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
-    <ExcelDnaPackDependenciesToExclude>Microsoft.Data.Sqlite.dll</ExcelDnaPackDependenciesToExclude>
+    <ExcelDnaPackExcludeDependencies>Microsoft.Data.Sqlite.dll</ExcelDnaPackExcludeDependencies>
   </PropertyGroup>
   <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
-    <ExcelDnaPackDependenciesToExclude>System.Data.SQLite.dll;System.Data.SQLite.Core.dll;ExcelDna.IntelliSense.dll</ExcelDnaPackDependenciesToExclude>
+    <ExcelDnaPackExcludeDependencies>System.Data.SQLite.dll;System.Data.SQLite.Core.dll;ExcelDna.IntelliSense.dll</ExcelDnaPackExcludeDependencies>
   </PropertyGroup>
 
   <!-- Generate correct .dna from templates per target before ExcelDnaBuild,
@@ -124,16 +128,24 @@
   <!-- 将 SQLite 原生 interop DLL 复制到 publish 目录。
        System.Data.SQLite 需要在 XLL 同目录的 x86\ 或 x64\ 子目录下找到
        SQLite.Interop.dll，供 AddIn.AutoOpen 中的 LoadLibrary 预加载。 -->
+  <!-- P1-11 (pre-release review): this target ran right after ExcelDnaPack, but the
+       stub.system.data.sqlite.core.netframework package copies SQLite.Interop.dll into
+       $(OutDir)x86|x64 during the AfterBuild phase — so on a CLEAN Release build the
+       source files did not exist yet (MSB3030 + missing publish fallback). Debug builds
+       looked fine only because stale files were left over. Run after AfterBuild instead. -->
   <Target Name="CopySQLiteInteropToPublish" AfterTargets="ExcelDnaPack"
           Condition="'$(TargetFramework)' == 'net48'">
-    <Copy SourceFiles="$(OutDir)x86\SQLite.Interop.dll"
+    <!-- P1-11 (pre-release review): copy directly from the NuGet package layout instead
+         of $(OutDir)x86|x64 — the stub package's CopySQLiteInteropFiles target runs later
+         in the build chain, so on a CLEAN Release build the output copies did not exist
+         yet (MSB3030 + missing publish fallback). Debug builds only looked fine because
+         stale files were left over. Same source as the EmbeddedResource entries above. -->
+    <Copy SourceFiles="$(NuGetPackageRoot)stub.system.data.sqlite.core.netframework\1.0.119\build\net46\x86\SQLite.Interop.dll"
           DestinationFolder="$(OutDir)publish\x86\"
-          SkipUnchangedFiles="true"
-          ContinueOnError="true" />
-    <Copy SourceFiles="$(OutDir)x64\SQLite.Interop.dll"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(NuGetPackageRoot)stub.system.data.sqlite.core.netframework\1.0.119\build\net46\x64\SQLite.Interop.dll"
           DestinationFolder="$(OutDir)publish\x64\"
-          SkipUnchangedFiles="true"
-          ContinueOnError="true" />
+          SkipUnchangedFiles="true" />
     <Warning Text="x86\SQLite.Interop.dll 未找到，publish 产物可能缺少 SQLite 原生依赖。"
              Condition="!Exists('$(OutDir)publish\x86\SQLite.Interop.dll')" />
     <Message Text="已复制 SQLite 原生 interop DLL 到 publish 目录。" Importance="high"

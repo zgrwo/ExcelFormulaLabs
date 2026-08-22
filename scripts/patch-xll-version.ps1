@@ -51,6 +51,7 @@ $resolvedPath = (Resolve-Path $XllPath).Path
 $cs = @'
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -64,6 +65,9 @@ public static class VersionInfoPatcher
 
     [DllImport("kernel32.dll", SetLastError = true)]
     static extern IntPtr FindResourceW(IntPtr hModule, IntPtr lpName, IntPtr lpType);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    static extern IntPtr FindResourceExW(IntPtr hModule, IntPtr lpType, IntPtr lpName, ushort wLanguage);
 
     [DllImport("kernel32.dll", SetLastError = true)]
     static extern IntPtr LoadResource(IntPtr hModule, IntPtr hResInfo);
@@ -112,7 +116,8 @@ public static class VersionInfoPatcher
     {
         // 1. Read VERSIONINFO resource bytes
         byte[] data;
-        if (!TryReadVersionResource(filePath, out data))
+        ushort language;
+        if (!TryReadVersionResource(filePath, out data, out language))
         {
             Console.Error.WriteLine("ERROR: Cannot read VERSIONINFO resource.");
             return 3;
@@ -122,11 +127,10 @@ public static class VersionInfoPatcher
         //    ancestor wLength chains.
         var entries = new List<StringEntry>();
         var ancestors = new Dictionary<string, List<WLengthEntry>>(StringComparer.OrdinalIgnoreCase);
-
         try { WalkTree(data, 0, data.Length, new List<WLengthEntry>(), entries, ancestors); }
         catch (Exception ex)
         {
-            Console.Error.WriteLine("ERROR: Walk failed — " + ex.Message);
+            Console.Error.WriteLine("ERROR: Walk failed - " + ex.Message);
             return 4;
         }
 
@@ -134,21 +138,26 @@ public static class VersionInfoPatcher
         updates["FileDescription"] = newFileDescription;
         updates["ProductName"] = newProductName;
 
+        // 3. Patch each target entry in value-offset order. VERSIONINFO structures are
+        //    stored sequentially, so after expanding/contracting entry N, every field of
+        //    entry N+1 (ValueOffset, wLengthOff, wValueLengthOff) has moved by the
+        //    accumulated delta - track it as shift. Ancestor wLength fields (root,
+        //    StringFileInfo, StringTable) always sit BEFORE the first patched String,
+        //    so their offsets never move; only their values accumulate deltas.
+        int shift = 0;
         int patched = 0;
-        int totalDelta = 0;
-
-        foreach (var entry in entries)
+        foreach (var entry in entries.OrderBy(e => e.ValueOffset))
         {
             string newValue;
             if (!updates.TryGetValue(entry.Key, out newValue))
                 continue;
 
-            string oldValue;
-            try { oldValue = Encoding.Unicode.GetString(data, entry.ValueOffset, entry.ValueBytes).TrimEnd('\0'); }
-            catch { oldValue = "(binary)"; }
+            int vo = entry.ValueOffset + shift;
+            int wLengthOff = entry.wLengthOff + shift;
+            int wValueLengthOff = entry.wValueLengthOff + shift;
 
             byte[] newBytes = Encoding.Unicode.GetBytes(newValue + "\0");
-            // Ensure WORD alignment (value is stored as wValueLength WORDS)
+            // Ensure WORD alignment (value length is stored in WORDS)
             if (newBytes.Length % 2 != 0)
             {
                 byte[] p = new byte[newBytes.Length + 1];
@@ -156,41 +165,39 @@ public static class VersionInfoPatcher
                 newBytes = p;
             }
 
-            int delta = newBytes.Length - entry.ValueBytes;
-            int newValLenWords = newBytes.Length / 2;
-
-            // Patch wValueLength in-place
-            WriteU16(data, entry.wValueLengthOff, (ushort)newValLenWords);
-
-            // Expand/contract buffer if necessary
+            // Expand/contract at the ALIGNED end of the old value so subsequent
+            // structures keep their 4-byte alignment.
+            int oldEnd = vo + entry.ValueBytes;
+            int oldEndAligned = Align4(oldEnd);
+            int newEndAligned = Align4(vo + newBytes.Length);
+            int delta = newEndAligned - oldEndAligned;
             if (delta != 0)
+                data = ExpandBuffer(data, oldEndAligned, delta);
+
+            // Write the new value; zero-fill any padding up to the aligned end.
+            Buffer.BlockCopy(newBytes, 0, data, vo, newBytes.Length);
+            int paddedEnd = Align4(vo + newBytes.Length);
+            for (int i = vo + newBytes.Length; i < paddedEnd; i++)
+                data[i] = 0;
+
+            // Patch wValueLength (WORDS) - offset never moves (before the value).
+            WriteU16(data, wValueLengthOff, (ushort)(newBytes.Length / 2));
+
+            // Patch wLength of the String node itself and every ancestor.
+            ushort selfLen = BitConverter.ToUInt16(data, wLengthOff);
+            WriteU16(data, wLengthOff, (ushort)(selfLen + delta));
+            if (ancestors.ContainsKey(entry.Key))
             {
-                data = ExpandBuffer(data, entry.ValueOffset + entry.ValueBytes, delta);
-                totalDelta += delta;
-                // Adjust all subsequent offsets tracked in ancestors
-                // (All other StringEntry offsets for later entries are now off)
-                // For simplicity, we patch one entry at a time and exit.
-                // Since we only have 2 entries, we handle both sequentially.
+                foreach (var wle in ancestors[entry.Key])
+                {
+                    // Ancestor offsets never shift (they precede all String values).
+                    ushort cur = BitConverter.ToUInt16(data, wle.wLengthOff);
+                    WriteU16(data, wle.wLengthOff, (ushort)Math.Min(ushort.MaxValue, Math.Max(0, cur + delta)));
+                }
             }
 
-            // Copy new value bytes in-place
-            Buffer.BlockCopy(newBytes, 0, data, entry.ValueOffset, newBytes.Length);
-            // Zero out extra space if new is shorter
-            if (delta < 0)
-            {
-                for (int i = entry.ValueOffset + newBytes.Length; i < entry.ValueOffset + entry.ValueBytes; i++)
-                    data[i] = 0;
-            }
-
-            // Update tracked offsets for subsequent entries (shift by delta)
-            if (delta != 0 && ancestors.ContainsKey(entry.Key))
-            {
-                // Just update wLength chain; offsets in entries beyond this one
-                // have already shifted by our ExpandBuffer above (it shifted the tail).
-                UpdateWLengthChain(data, ancestors[entry.Key], delta);
-            }
-
-            Console.WriteLine("  '{0}': '{1}' => '{2}'", entry.Key, oldValue, newValue);
+            Console.WriteLine("  [{0}] patched (delta {1})", entry.Key, delta);
+            shift += delta;
             patched++;
         }
 
@@ -200,17 +207,16 @@ public static class VersionInfoPatcher
             return 0;
         }
 
-        // 3. Write back via UpdateResource
-        if (!WriteVersionResource(filePath, data))
+        // 4. Write back via UpdateResource
+        if (!WriteVersionResource(filePath, data, language))
         {
             Console.Error.WriteLine("ERROR: UpdateResource failed (file in use?).");
             return 5;
         }
 
-        Console.WriteLine("VERSIONINFO patched successfully.");
+        Console.WriteLine(string.Format("VERSIONINFO patched successfully (language 0x{0:X4}).", language));
         return 0;
     }
-
     // ---------------------------------------------------------------
     // Tree walker — finds String entries and tracks wLength ancestor chain.
     // ---------------------------------------------------------------
@@ -334,33 +340,55 @@ public static class VersionInfoPatcher
     // P/Invoke wrappers
     // ---------------------------------------------------------------
 
-    static bool TryReadVersionResource(string path, out byte[] data)
+    static bool TryReadVersionResource(string path, out byte[] data, out ushort language)
     {
         data = null;
+        language = 0;
         IntPtr hModule = LoadLibraryExW(path, IntPtr.Zero, LOAD_LIBRARY_AS_DATAFILE);
         if (hModule == IntPtr.Zero) return false;
         try
         {
-            IntPtr hRes = FindResourceW(hModule, VS_VERSION_INFO, RT_VERSION);
-            if (hRes == IntPtr.Zero) return false;
-            uint size = SizeofResource(hModule, hRes);
-            if (size == 0) return false;
-            IntPtr hLock = LockResource(LoadResource(hModule, hRes));
-            if (hLock == IntPtr.Zero) return false;
-            data = new byte[size];
-            Marshal.Copy(hLock, data, 0, (int)size);
+            // Find the resource language explicitly. UpdateResourceW writes back with the
+            // SAME language; writing with language=0 creates a duplicate resource that
+            // FileVersionInfo/Explorer (which read 0x0409) never see — the historical
+            // "VERSIONINFO patched successfully but reads empty" bug.
+            foreach (ushort lang in new ushort[] { 0x0409, 0x0000, 0x0400, 0x0804, 0x0C09, 0x0411, 0x0809 })
+            {
+                IntPtr hRes = FindResourceExW(hModule, RT_VERSION, VS_VERSION_INFO, lang);
+                if (hRes == IntPtr.Zero) continue;
+                uint size = SizeofResource(hModule, hRes);
+                if (size == 0) continue;
+                IntPtr hLock = LockResource(LoadResource(hModule, hRes));
+                if (hLock == IntPtr.Zero) continue;
+                data = new byte[size];
+                Marshal.Copy(hLock, data, 0, (int)size);
+                language = lang;
+                return true;
+            }
+            // Fallback: language-agnostic lookup
+            IntPtr hRes2 = FindResourceW(hModule, VS_VERSION_INFO, RT_VERSION);
+            if (hRes2 == IntPtr.Zero) return false;
+            uint size2 = SizeofResource(hModule, hRes2);
+            if (size2 == 0) return false;
+            IntPtr hLock2 = LockResource(LoadResource(hModule, hRes2));
+            if (hLock2 == IntPtr.Zero) return false;
+            data = new byte[size2];
+            Marshal.Copy(hLock2, data, 0, (int)size2);
+            language = 0;
             return true;
         }
         finally { FreeLibrary(hModule); }
     }
 
-    static bool WriteVersionResource(string path, byte[] resource)
+    static bool WriteVersionResource(string path, byte[] resource, ushort language)
     {
         IntPtr hUpdate = BeginUpdateResourceW(path, false);
         if (hUpdate == IntPtr.Zero) return false;
         try
         {
-            if (!UpdateResourceW(hUpdate, RT_VERSION, VS_VERSION_INFO, 0,
+            // P1-12 (review): write back with the ORIGINAL language — language=0 produced a
+            // duplicate resource invisible to standard readers (FileVersionInfo/Explorer).
+            if (!UpdateResourceW(hUpdate, RT_VERSION, VS_VERSION_INFO, language,
                 resource, (uint)resource.Length)) return false;
             return EndUpdateResourceW(hUpdate, false);
         }
