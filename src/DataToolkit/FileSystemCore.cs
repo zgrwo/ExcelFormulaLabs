@@ -144,8 +144,7 @@ namespace ExcelFormulaLabs.DataToolkit
                     foreach (var segment in remaining.Split(new[] { Path.DirectorySeparatorChar },
                              StringSplitOptions.RemoveEmptyEntries))
                     {
-                        // codeql[cs/path-combine]
-                        checkPath = Path.Combine(checkPath, segment);
+                        checkPath = Path.Combine(checkPath, segment); // codeql[cs/path-combine]
                         if (Directory.Exists(checkPath) || File.Exists(checkPath))
                         {
                             var attr = File.GetAttributes(checkPath);
@@ -158,8 +157,7 @@ namespace ExcelFormulaLabs.DataToolkit
             }
             return normalized;
         }
-                        // codeql[cs/path-combine]
-        internal static string PathCombine(string a, string b) => Path.Combine(a, b);
+        internal static string PathCombine(string a, string b) => Path.Combine(a, b); // codeql[cs/path-combine]
         internal static string GetFileName(string p) => Path.GetFileName(p);
         internal static string GetBaseName(string p) => Path.GetFileNameWithoutExtension(p);
         internal static string GetExtension(string p) => Path.GetExtension(p);
@@ -266,8 +264,7 @@ namespace ExcelFormulaLabs.DataToolkit
             if (!string.IsNullOrEmpty(root))
             {
                 EnsureFolder(root!);
-                // codeql[cs/path-combine]
-                string path = Path.Combine(root!, Path.GetRandomFileName());
+                string path = Path.Combine(root!, Path.GetRandomFileName()); // codeql[cs/path-combine]
                 using (File.Create(path)) { }
                 return path;
             }

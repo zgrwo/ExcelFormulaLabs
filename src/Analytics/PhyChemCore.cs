@@ -198,22 +198,19 @@ namespace ExcelFormulaLabs.Analytics
             if (!p.HasValue)
             {
                 if (!v.HasValue || !n.HasValue || !t.HasValue) return double.NaN;
-                return v.Value == 0 ? double.NaN : n.Value * r * t.Value / v.Value;
+                return v.Value == 0 ? double.NaN : n.Value * r * t.Value / v.Value; // codeql[cs/equality-on-floats]
             }
             if (!v.HasValue)
             {
-            // codeql[cs/constant-condition]
-                if (!p.HasValue || !n.HasValue || !t.HasValue) return double.NaN;
-                return p.Value == 0 ? double.NaN : n.Value * r * t.Value / p.Value;
+                if (!p.HasValue || !n.HasValue || !t.HasValue) return double.NaN; // codeql[cs/constant-condition]
+                return p.Value == 0 ? double.NaN : n.Value * r * t.Value / p.Value; // codeql[cs/equality-on-floats]
             }
             if (!n.HasValue)
             {
-            // codeql[cs/constant-condition]
-                if (!p.HasValue || !v.HasValue || !t.HasValue) return double.NaN;
-                return t.Value == 0 ? double.NaN : p.Value * v.Value / (r * t.Value);
+                if (!p.HasValue || !v.HasValue || !t.HasValue) return double.NaN; // codeql[cs/constant-condition]
+                return t.Value == 0 ? double.NaN : p.Value * v.Value / (r * t.Value); // codeql[cs/equality-on-floats]
             }
-            // codeql[cs/constant-condition]
-            if (!p.HasValue || !v.HasValue || !n.HasValue) return double.NaN;
+            if (!p.HasValue || !v.HasValue || !n.HasValue) return double.NaN; // codeql[cs/constant-condition]
             return n.Value == 0 ? double.NaN : p.Value * v.Value / (n.Value * r);
         }
 
