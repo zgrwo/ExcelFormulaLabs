@@ -156,6 +156,12 @@ FileSystemCore.Initialize(new SandboxConfig(@"C:\Users\Public\Documents"));
 
 > **变通方案**：选中含函数名的单元格后按 `Ctrl+Shift+A` 插入参数名占位符；或使用 Excel 的 `fx` 按钮查看函数参数对话框。
 
+### SyncMacro 间歇性错误（Excel-DNA 上游问题）
+
+极少数情况下 Excel 会报 `Unexpected error trying to run SyncMacro for queued macro execution`（AccessViolationException / TargetInvocationException）——这是 Excel-DNA 框架的已知问题（[Excel-DNA Issue #390](https://github.com/Excel-DNA/ExcelDna/issues/390)，open 状态），与 Excel 语言版本（非英语环境更易触发）、Office Click-to-Run 版本及计算时序相关，**与本加载项的函数逻辑无关**。本地 120 秒压力测试（含 `*_ASYNC` 异步 UDF 持续重算）未复现。
+
+如频繁出现可尝试：① 卸载后重新加载加载项；② 避免在复杂工作簿中反复使用 `*_ASYNC` 函数；③ 临时禁用 net48 IntelliSense（注释 `AddIn.AutoOpen` 中的 `IntelliSenseServer.Install()` 后重新打包）。本加载项仅通过 Excel-DNA 官方机制使用异步队列（net48 IntelliSense 安装 + 异步 UDF 结果回传），未排队任何业务宏。
+
 ### 统计函数不跳过空白单元格
 
 `STATS.*`/`REGRESS.*` 等统计函数对空白单元格按哨兵 NaN 传播（区域含空 → `#NUM!`），与 Excel 原生 `AVERAGE`/`SUM` 的"跳过空值"不同。需要跳过时请先用 `FILTER`/`IF` 或 `ARR.FILTER` 清洗数据。
