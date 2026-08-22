@@ -128,12 +128,13 @@ namespace ExcelFormulaLabs.DataToolkit
             // crash. Reject overlong format strings and huge alignment widths up front.
             if (fmt.Length > 1000)
                 throw new ArgumentException("Format string too long (max 1000 chars).");
-            foreach (System.Text.RegularExpressions.Match m in AlignmentWidthRx.Matches(fmt))
-            {
-                var g = m.Groups[1];
-                if (g.Success && long.TryParse(g.Value, out long width) && width > 100_000)
-                    throw new ArgumentException($"Alignment width {width} exceeds the 100,000 limit.");
-            }
+            var huge = AlignmentWidthRx.Matches(fmt).Cast<System.Text.RegularExpressions.Match>()
+                .Select(m => m.Groups[1])
+                .Where(g => g.Success && long.TryParse(g.Value, out long width) && width > 100_000)
+                .Select(g => long.Parse(g.Value))
+                .FirstOrDefault();
+            if (huge > 100_000)
+                throw new ArgumentException($"Alignment width {huge} exceeds the 100,000 limit.");
             string fs = fmt.Contains('{') ? fmt : $"{{0:{fmt}}}";
             try
             {
