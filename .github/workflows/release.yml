@@ -32,17 +32,6 @@ jobs:
       - name: Restore
         run: dotnet restore
 
-      - name: Verify version consistency (tag == Directory.Build.props)
-        shell: pwsh
-        run: |
-          $props = [xml](Get-Content src/Directory.Build.props)
-          $propsVersion = $props.Project.PropertyGroup.Version
-          if ("${{ steps.version.outputs.VERSION }}" -ne $propsVersion) {
-            Write-Error "Tag version ${{ steps.version.outputs.VERSION }} does not match Directory.Build.props <Version>$propsVersion</Version>. Bump src/Directory.Build.props before tagging."
-            exit 1
-          }
-          Write-Host "Version OK: $propsVersion"
-
       - name: Build (Release)
         run: dotnet build -c Release --no-restore
 
@@ -114,6 +103,17 @@ jobs:
           $tag = "${{ github.ref_name }}"
           $version = $tag -replace '^v', ''
           echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Verify version consistency (tag == Directory.Build.props)
+        shell: pwsh
+        run: |
+          $props = [xml](Get-Content src/Directory.Build.props)
+          $propsVersion = $props.Project.PropertyGroup.Version
+          if ("${{ steps.version.outputs.VERSION }}" -ne $propsVersion) {
+            Write-Error "Tag version ${{ steps.version.outputs.VERSION }} does not match Directory.Build.props <Version>$propsVersion</Version>. Bump src/Directory.Build.props before tagging."
+            exit 1
+          }
+          Write-Host "Version OK: $propsVersion"
 
       - name: Build (Release)
         run: dotnet build -c Release
