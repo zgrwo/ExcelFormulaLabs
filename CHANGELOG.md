@@ -6,7 +6,12 @@
 
 > 版本一致性：每个 `v*` git tag 必须在本文档有对应条目（`verify-docs.ps1` 强制检查，见规则 [documentation.md](rules/documentation.md)）。
 
-## [Unreleased] - 即将发布
+## [2.1.1] - 2026-08-22
+
+### Changed（v2.1.0 发布后补全项）
+- DataToolkit ExcelDna 1.8.0 → 1.9.0 补全（v2.1.0 发布时遗漏，现与 Analytics 一致）
+- Microsoft.Data.Sqlite 8.0.30（适配 SQLitePCLRaw e_sqlite3 2.1.12 嵌入路径）
+- coverlet.msbuild 统一 10.0.1（Foundation/DataToolkit 测试项目）
 
 ### Fixed
 - **P0**：真实 Excel 错误单元格（#VALUE!/#DIV/0!/#N/A 等）此前被静默转换为枚举底层数值（15/7/42）参与计算——现按 L3 哨兵契约在 MapOver 层透传、转换器返回哨兵（发行前深度审查 P0-1）
@@ -179,6 +184,7 @@
 - IntelliSense 自动补全（net48）
 - MIT License
 
+[2.1.1]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v1.0.8...v2.0.0
