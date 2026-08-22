@@ -11,7 +11,7 @@ public class SortTests
     // (Null → Empty → values → Error). Unify on the documented order.
     [Fact] public void Sorted_with_null_sorts_null_first()
     {
-        var result = ArrayOperations.Sorted<object>(new object[] { 2.0, null, 1.0 });
+        var result = ArrayOperations.Sorted<object>(new object[] { 2.0, null!, 1.0 });
         result[0].Should().BeNull();
         result[1].Should().Be(1.0);
         result[2].Should().Be(2.0);
