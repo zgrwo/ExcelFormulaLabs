@@ -202,14 +202,17 @@ namespace ExcelFormulaLabs.Analytics
             }
             if (!v.HasValue)
             {
+            // codeql[cs/constant-condition]
                 if (!p.HasValue || !n.HasValue || !t.HasValue) return double.NaN;
                 return p.Value == 0 ? double.NaN : n.Value * r * t.Value / p.Value;
             }
             if (!n.HasValue)
             {
+            // codeql[cs/constant-condition]
                 if (!p.HasValue || !v.HasValue || !t.HasValue) return double.NaN;
                 return t.Value == 0 ? double.NaN : p.Value * v.Value / (r * t.Value);
             }
+            // codeql[cs/constant-condition]
             if (!p.HasValue || !v.HasValue || !n.HasValue) return double.NaN;
             return n.Value == 0 ? double.NaN : p.Value * v.Value / (n.Value * r);
         }
