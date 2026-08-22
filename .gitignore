@@ -7,8 +7,10 @@ obj/
 *.deps.json
 *.runtimeconfig.json
 TestResults/
-src/**/Analytics-AddIn.dna
-src/**/DataToolkit-AddIn.dna
+# P2 (review): generated .dna files carry TFM suffixes (*-net48.dna / *-net8.0.dna);
+# the old no-suffix patterns missed stale files when CleanupDnaAfterBuild was interrupted.
+src/**/*.dna
+!src/**/*.dna.tpl
 __pycache__/
 .claude/reviews/
 BenchmarkDotNet.Artifacts/
@@ -17,3 +19,5 @@ BenchmarkDotNet.Artifacts/
 logs/
 coverage*/
 nupkg/
+.vs/
+artifacts/

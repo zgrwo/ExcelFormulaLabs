@@ -4,7 +4,7 @@
 verify-manual.py — Verify ALL UDF examples against Python with hardcoded expected values.
 
 Every numerical check compares Python computation against a constant cross-validated
-with C# MathNet. Never use self-checks (actual == same expression as expected). — Verify ALL 220 UDF examples in rules/user-manual.md against Python.
+with C# MathNet. Never use self-checks (actual == same expression as expected). — Verify ALL 232 UDF examples in rules/user-manual.md against Python (sync variants; *_ASYNC share Core methods).
 
 Usage: python scripts/verify-manual.py
 """
@@ -23,7 +23,7 @@ if sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
 EPS = 1e-10; EPS_LOOSE = 1e-6
-PASS = 0; FAIL = 0
+PASS = 0; FAIL = 0; SKIP = 0  # P1-9 (review): missing C# reference is now a hard-fail signal
 TOTAL_UDF = 0  # track unique UDFs verified
 
 def check(name, actual, expected, tol=EPS):
@@ -86,9 +86,12 @@ def csharp_results():
 
 def cross_check(name, python_computed, tol=EPS):
     """Compare Python computation against C# CrossValRunner reference. Hard fail on mismatch."""
-    global PASS, FAIL
+    global PASS, FAIL, SKIP
     ref = csharp_results().get(name)
     if ref is None:
+        # P1-9 (review): a missing C# reference must fail the run, not silently degrade
+        # the cross-validation loop into Python-only self-checks.
+        SKIP += 1
         print(f"  SKIP {name}: no C# reference (manifest may need update)")
         return
     if ref["status"] != "ok":
@@ -106,8 +109,10 @@ def cross_check(name, python_computed, tol=EPS):
 
 def cross_check_dict(name, py_dict, csharp_id, keys, tol=EPS):
     """Compare Python dict entries against C# regression result dict entries."""
+    global SKIP
     ref = csharp_results().get(csharp_id)
     if ref is None or ref["status"] != "ok":
+        SKIP += 1
         print(f"  SKIP {name}: C# reference unavailable for {csharp_id}")
         return
     cs = ref["result"]
@@ -343,12 +348,14 @@ if cs_gas and cs_gas["status"] == "ok" and cs_gas["result"] is not None:
     check("PHYCHEM.IDEALGAS(V) vs C#", Vstp, cs_gas["result"], tol=1e-2)
 else:
     check("PHYCHEM.IDEALGAS(V)", Vstp, 22.41386955, tol=1e-2)
-# IDEALGAS(P≈1): solve for P with V=Vstp→P=nRT/V.  Vstp = 1*Rg*273.15/1.0 = Rg*273.15.
-# The check verifies that solving PV=nRT for P with V=Rg*273.15 yields ≈1 atm.
-# This is NOT self-validation: actual is computed from the ideal-gas formula, expected is 1.0.
-check("PHYCHEM.IDEALGAS(P≈1)", 1 * Rg * 273.15 / Vstp, 1.0, tol=1e-3)
+# P1-10 (review): removed PHYCHEM.IDEALGAS(P≈1) — it was an algebraic identity
+# (Vstp ≡ Rg*273.15 so actual ≡ 1.0 unconditionally). Real cross-validation is
+# covered by the PHYCHEM.IDEALGAS_V cross_check above.
 cross_check("PHYCHEM.GASSTP_Kelvin", 10*1.5/1.0*273.15/300.0, tol=1e-3)
-check("PHYCHEM.DENSITY(100,2)", 50.0, 50); check("PHYCHEM.DENSITY(50,0.5)", 100.0, 100)
+# P1-10 (review): literal-vs-literal checks verified nothing — use the formula.
+# C# behaviour is covered by PhyChemUdfTests.Density_* (DENSITY is inline in the UDF layer).
+check("PHYCHEM.DENSITY(100,2)", 100.0/2.0, 50.0, tol=1e-10)
+check("PHYCHEM.DENSITY(50,0.5)", 50.0/0.5, 100.0, tol=1e-10)
 
 # ========================================================================
 # STR (34 UDFs)
@@ -787,11 +794,13 @@ check("RANGE.SELROWS[0]", selr[0][0], "Alice")
 # Count unique UDFs verified:
 udf_count = (34 + 19 + 7 + 16 + 34 + 25 + 9 + 22 + 8 + 8 + 4 + 3 + 22 + 9)
 print(f"\n{'='*60}")
-print(f"  RESULTS: {PASS} passed, {FAIL} failed ({(PASS+FAIL)} checks)")
-print(f"  UDF coverage: {udf_count} of 220 UDFs covered")
+print(f"  RESULTS: {PASS} passed, {FAIL} failed, {SKIP} skipped ({(PASS+FAIL)} checks)")
+# P2-5 (review): project has 232 UDFs; the 12 *_ASYNC variants share Core methods
+# (verified indirectly), LINALG.LU_P is covered via reconstruction.
+print(f"  UDF coverage: {udf_count} of 232 UDFs covered (sync variants)")
 print(f"{'='*60}")
-if FAIL>0:
-    print(f"\n  FAILURES DETECTED. Review discrepancies above.")
+if FAIL>0 or SKIP>0:
+    print(f"\n  FAILURES DETECTED (failures={FAIL}, skipped={SKIP}). Review discrepancies above.")
     sys.exit(1)
 else:
     print(f"\n  All verifications PASSED. Manual examples are correct.")

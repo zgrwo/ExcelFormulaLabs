@@ -76,6 +76,22 @@ if (Test-Path (Join-Path $repo ".qoder\skills")) {
     $script:passCount++
 }
 
+# --- 场景 E：api-reference UDF 计数漂移（检查 1）---
+Write-Host "[E] api-reference UDF 计数漂移应 FAIL（检查 1）"
+$fixtureE = Copy-RepoFixture
+$apiRef = Join-Path $fixtureE "rules\api-reference.md"
+[System.IO.File]::AppendAllText($apiRef, "`r`n" + '| `TEST.FAKE` | (x) | `double` | 测试条目（不应存在） |' + "`r`n", (New-Object System.Text.UTF8Encoding($false)))
+Run-VerifyDocs $fixtureE "UDF count" $true
+
+# --- 场景 F：csproj 描述函数计数漂移（检查 11）---
+Write-Host "[F] csproj 描述函数计数漂移应 FAIL（检查 11）"
+$fixtureF = Copy-RepoFixture
+$csproj = Join-Path $fixtureF "src\DataToolkit\DataToolkit.csproj"
+$content = [System.IO.File]::ReadAllText($csproj, (New-Object System.Text.UTF8Encoding($false)))
+$content = $content -replace '144 个数据处理函数', '143 个数据处理函数'
+[System.IO.File]::WriteAllText($csproj, $content, (New-Object System.Text.UTF8Encoding($false)))
+Run-VerifyDocs $fixtureF "DataToolkit csproj description count" $true
+
 # --- 汇总 ---
 Remove-Item -Recurse -Force $tmpRoot
 Write-Host ""

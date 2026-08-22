@@ -14,10 +14,11 @@ updates:
     open-pull-requests-limit: 5
     labels: ["dependencies"]
     ignore:
-      # Microsoft.Data.Sqlite 大版本升级需人工适配 DataToolkit.csproj 的
-      # e_sqlite3.dll 原生资源嵌入路径（SQLitePCLRaw 版本耦合，见 PR#8）
+      # Microsoft.Data.Sqlite 升级需人工适配 DataToolkit.csproj 的 e_sqlite3.dll
+      # 原生资源嵌入路径（SQLitePCLRaw 版本耦合，见 PR#8）——patch/minor 升级同样会
+      # 改变 SQLitePCLRaw bundle 版本（P2 审查修复：semver-major → semver-minor）
       - dependency-name: "Microsoft.Data.Sqlite"
-        update-types: ["version-update:semver-major"]
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
 
   # --- GitHub Actions 自身 ---
   - package-ecosystem: "github-actions"

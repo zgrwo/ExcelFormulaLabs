@@ -100,7 +100,9 @@ if (Test-Path (Join-Path $RepoRoot "src\DataToolkit\DataToolkit-AddIn-net48.dna.
 else { Check "net48 .dna template" "missing" }
 
 # ---------- 8. 无残留生成 .dna ----------
-$residual = Get-ChildItem -Path (Join-Path $RepoRoot "src\DataToolkit") -Filter "DataToolkit-AddIn.dna" -File -ErrorAction SilentlyContinue |
+# P2 (review): generated .dna files carry TFM suffixes (*-net48.dna / *-net8.0.dna);
+# the old no-suffix pattern missed stale files from interrupted builds.
+$residual = Get-ChildItem -Path (Join-Path $RepoRoot "src\DataToolkit") -Filter "*.dna" -File -ErrorAction SilentlyContinue |
     Where-Object { $_.Name -notlike "*.tpl" }
 if (-not $residual) { Check "No residual .dna" "OK" }
 else { Check "No residual .dna" "found residual" }

@@ -3,6 +3,8 @@
     <TargetFrameworks>net8.0-windows;net48</TargetFrameworks>
     <LangVersion>latest</LangVersion>
     <RootNamespace>ExcelFormulaLabs.DataToolkit.Tests</RootNamespace>
+    <!-- P1-2 (review): allow Ubuntu/CodeQL builds of net8.0-windows TFMs -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsTestProject>true</IsTestProject>
@@ -13,7 +15,7 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0"><IncludeAssets>runtime;build;native;contentfiles;analyzers;buildtransitive</IncludeAssets><PrivateAssets>all</PrivateAssets></PackageReference>
     <PackageReference Include="FluentAssertions" Version="8.10.0" />

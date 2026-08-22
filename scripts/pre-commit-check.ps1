@@ -166,7 +166,7 @@ if ($coreHits) {
 Write-Host ""
 Write-Host "[5/6] Checking NaN/Inf guards in Core files ..."
 
-$coreModules = @("StatsCore", "LinalgCore", "RegressionCore", "PhyChemCore")
+$coreModules = @("StatsCore", "LinalgCore", "RegressionCore", "PhyChemCore", "PivotCore", "JsonXmlCore")  # P2 (review): DataToolkit division paths now gated too
 $nanInfMissing = @()
 
 foreach ($mod in $coreModules) {

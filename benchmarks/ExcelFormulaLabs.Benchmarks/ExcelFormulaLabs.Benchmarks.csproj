@@ -5,6 +5,8 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
+    <!-- P1-2 (review): allow Ubuntu/CodeQL builds of net8.0-windows TFMs -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 

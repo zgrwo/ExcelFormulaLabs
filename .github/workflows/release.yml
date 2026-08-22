@@ -32,11 +32,35 @@ jobs:
       - name: Restore
         run: dotnet restore
 
+      - name: Verify version consistency (tag == Directory.Build.props)
+        shell: pwsh
+        run: |
+          $props = [xml](Get-Content src/Directory.Build.props)
+          $propsVersion = $props.Project.PropertyGroup.Version
+          if ("${{ steps.version.outputs.VERSION }}" -ne $propsVersion) {
+            Write-Error "Tag version ${{ steps.version.outputs.VERSION }} does not match Directory.Build.props <Version>$propsVersion</Version>. Bump src/Directory.Build.props before tagging."
+            exit 1
+          }
+          Write-Host "Version OK: $propsVersion"
+
       - name: Build (Release)
         run: dotnet build -c Release --no-restore
 
       - name: Test (Release, all TFMs)
         run: dotnet test -c Release --no-build --verbosity normal
+
+  verify-docs:
+    name: Verify Docs
+    runs-on: ubuntu-latest
+    needs: build-test
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Run verify-docs.sh
+        run: bash scripts/verify-docs.sh
 
   cross-val:
     name: Cross-Validation
@@ -70,7 +94,7 @@ jobs:
   pack-release:
     name: Pack & Release
     runs-on: windows-latest
-    needs: cross-val
+    needs: [cross-val, verify-docs]
     timeout-minutes: 30
 
     steps:
