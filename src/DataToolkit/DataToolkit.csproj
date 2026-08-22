@@ -38,24 +38,24 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ExcelDna.Integration" Version="1.8.0" />
-    <PackageReference Include="ExcelDna.AddIn" Version="1.8.0">
+    <PackageReference Include="ExcelDna.Integration" Version="1.9.0" />
+    <PackageReference Include="ExcelDna.AddIn" Version="1.9.0">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="ExcelDna.IntelliSense" Version="1.8.0" Condition="'$(TargetFramework)' == 'net48'" />
+    <PackageReference Include="ExcelDna.IntelliSense" Version="1.9.0" Condition="'$(TargetFramework)' == 'net48'" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.30" />
     <!-- 将原生 e_sqlite3.dll 嵌入为托管资源，运行时按需提取。
          ExcelDnaPack 虽已将其打包为 NATIVE_LIBRARY_LZMA，但 SQLitePCLRaw
          的自定义加载器可能无法发现 ExcelDNA 提取的临时文件。
          嵌入资源方案确保 100% 可靠加载。 -->
-    <EmbeddedResource Include="$(NuGetPackageRoot)sqlitepclraw.lib.e_sqlite3\2.1.6\runtimes\win-x86\native\e_sqlite3.dll">
+    <EmbeddedResource Include="$(NuGetPackageRoot)sqlitepclraw.lib.e_sqlite3\2.1.12\runtimes\win-x86\native\e_sqlite3.dll">
       <LogicalName>sqlite_native_x86</LogicalName>
       <Visible>false</Visible>
     </EmbeddedResource>
-    <EmbeddedResource Include="$(NuGetPackageRoot)sqlitepclraw.lib.e_sqlite3\2.1.6\runtimes\win-x64\native\e_sqlite3.dll">
+    <EmbeddedResource Include="$(NuGetPackageRoot)sqlitepclraw.lib.e_sqlite3\2.1.12\runtimes\win-x64\native\e_sqlite3.dll">
       <LogicalName>sqlite_native_x64</LogicalName>
       <Visible>false</Visible>
     </EmbeddedResource>
