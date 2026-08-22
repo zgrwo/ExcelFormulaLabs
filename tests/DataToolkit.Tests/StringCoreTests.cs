@@ -9,6 +9,38 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
     // Python ref: encoding→base64/urllib.parse/html, uuid→uuid, lev→python-Levenshtein, soundex→jellyfish
     public class StringCoreTests
     {
+        // P2 (pre-release review): unbounded padding/alignment lengths allowed ~GB
+        // allocations → OutOfMemoryException (not catchable) → Excel crash.
+        [Fact] public void PadLeft_excessive_length_throws()
+        {
+            var act = () => StringCore.PadLeft("hi", 100_001);
+            act.Should().Throw<ArgumentOutOfRangeException>();
+        }
+
+        [Fact] public void PadLeft_negative_length_throws()
+        {
+            var act = () => StringCore.PadLeft("hi", -1);
+            act.Should().Throw<ArgumentOutOfRangeException>();
+        }
+
+        [Fact] public void PadRight_excessive_length_throws()
+        {
+            var act = () => StringCore.PadRight("hi", 100_001);
+            act.Should().Throw<ArgumentOutOfRangeException>();
+        }
+
+        [Fact] public void FormatValue_huge_alignment_throws()
+        {
+            // {0,999999999} would allocate ~1 GB before failing with an uncatchable OOM.
+            var act = () => StringCore.FormatValue(1.0, "{0,1000000}");
+            act.Should().Throw<ArgumentException>();
+        }
+
+        [Fact] public void FormatValue_overlong_format_string_throws()
+        {
+            var act = () => StringCore.FormatValue(1.0, new string('x', 2001));
+            act.Should().Throw<ArgumentException>();
+        }
         [Fact] public void Reverse() => StringCore.ReverseString("hello").Should().Be("olleh");
         [Fact] public void Reverse_empty() => StringCore.ReverseString("").Should().Be("");
         [Fact] public void NormalizeWs() => StringCore.NormalizeWhitespace("  a   b  ").Should().Be("a b");

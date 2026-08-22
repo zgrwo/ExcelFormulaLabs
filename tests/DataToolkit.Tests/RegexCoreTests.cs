@@ -177,9 +177,9 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
             {
                 // Timeout is the expected path for this evil pattern on 5s timeout.
-                // Verify the timeout didn't fire instantly (which would indicate a misconfiguration).
-                sw.ElapsedMilliseconds.Should().BeGreaterThan(1000,
-                    "timeout should not trigger instantly — must be a real backtracking scenario");
+                // P2 (review): removed the elapsed>1000ms lower-bound assertion — it depends
+                // on engine internals (fast-reject paths in newer .NET can fail earlier) and
+                // machine speed; the only contract is: bounded wall-clock time (below).
             }
             // In either case, wall-clock time must be bounded (timeout prevents infinite hang)
             sw.ElapsedMilliseconds.Should().BeLessThan(7000, "5s timeout + 2s tolerance");

@@ -15,6 +15,8 @@ namespace ExcelFormulaLabs.DataToolkit
     {
         private static readonly Regex WhitespaceRx = new(@"\s+", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
         private static readonly Regex HtmlTagRx = new(@"<[^>]+>", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
+        private static readonly Regex AlignmentWidthRx = new(
+            @"\{\d+(?:,\s*(\d+))?[^}]*\}", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
 
         internal static string ReverseString(string t)
         {
@@ -34,10 +36,18 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static string KeepChars(string t, string keep) { t ??= ""; keep ??= ""; var set = new System.Collections.Generic.HashSet<char>(keep); var sb = new StringBuilder(t.Length); foreach (char c in t) if (set.Contains(c)) sb.Append(c); return sb.ToString(); }
 
         internal static string PadLeft(string t, int len, char pad = ' ')
-        { t ??= ""; if (t.Length >= len) return t; return new string(pad, len - t.Length) + t; }
+        { t ??= ""; GuardPadLength(len); if (t.Length >= len) return t; return new string(pad, len - t.Length) + t; }
 
         internal static string PadRight(string t, int len, char pad = ' ')
-        { t ??= ""; if (t.Length >= len) return t; return t + new string(pad, len - t.Length); }
+        { t ??= ""; GuardPadLength(len); if (t.Length >= len) return t; return t + new string(pad, len - t.Length); }
+
+        /// <summary>P2 (pre-release review): unbounded padding allocated ~GB → uncatchable OOM.
+        /// Mirror RandomString's 0–100,000 contract.</summary>
+        private static void GuardPadLength(int len)
+        {
+            if (len < 0 || len > 100_000)
+                throw new ArgumentOutOfRangeException(nameof(len), $"Length must be 0–100,000 (got {len}).");
+        }
 
         internal static string Truncate(string t, int max, string suffix = "...")
         { t ??= ""; if (max <= 0) return ""; if (t.Length <= max) return t; int keep = max - suffix.Length; if (keep <= 0) return t.Substring(0, max); return t.Substring(0, keep) + suffix; }
@@ -113,6 +123,17 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static string FormatValue(object? value, string fmt)
         {
             if (string.IsNullOrEmpty(fmt)) return value?.ToString() ?? "";
+            // P2 (pre-release review): alignment specifiers like {0,999999999} attempt
+            // ~GB allocations → OutOfMemoryException (excluded by ExceptionFilters) → Excel
+            // crash. Reject overlong format strings and huge alignment widths up front.
+            if (fmt.Length > 1000)
+                throw new ArgumentException("Format string too long (max 1000 chars).");
+            foreach (System.Text.RegularExpressions.Match m in AlignmentWidthRx.Matches(fmt))
+            {
+                var g = m.Groups[1];
+                if (g.Success && long.TryParse(g.Value, out long width) && width > 100_000)
+                    throw new ArgumentException($"Alignment width {width} exceeds the 100,000 limit.");
+            }
             string fs = fmt.Contains('{') ? fmt : $"{{0:{fmt}}}";
             try
             {

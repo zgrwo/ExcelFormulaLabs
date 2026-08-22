@@ -185,8 +185,20 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static bool MoveFile(string s, string d) { ValidatePath(s); ValidatePath(d); File.Move(s, d); return true; }
         internal static bool FolderExists(string p) { ValidatePath(p); return Directory.Exists(p); }
         internal static bool EnsureFolder(string p) { ValidatePath(p); if (!Directory.Exists(p)) Directory.CreateDirectory(p); return true; }
-        internal static string[] ListFiles(string p, string pat = "*") { ValidatePath(p); return Directory.GetFiles(p, pat); }
-        internal static string[] ListFolders(string p, string pat = "*") { ValidatePath(p); return Directory.GetDirectories(p, pat); }
+        internal static string[] ListFiles(string p, string pat = "*") { ValidatePath(p); GuardSearchPattern(pat); return Directory.GetFiles(p, pat); }
+        internal static string[] ListFolders(string p, string pat = "*") { ValidatePath(p); GuardSearchPattern(pat); return Directory.GetDirectories(p, pat); }
+
+        /// <summary>P2 (pre-release review): a pattern like "..\*.txt" can resolve through
+        /// the parent segment on unpatched .NET Framework runtimes (FindFirstFile resolves
+        /// ".." before validation), escaping the sandbox root. Reject ".." segments explicitly.</summary>
+        private static void GuardSearchPattern(string pat)
+        {
+            if (string.IsNullOrEmpty(pat)) return;
+            var segments = pat.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 0; i < segments.Length; i++)
+                if (segments[i] == "..")
+                    throw new ArgumentException("Search pattern must not contain '..' path segments.");
+        }
         internal static bool DeleteFolder(string p, bool r = false)
         {
             ValidatePath(p);

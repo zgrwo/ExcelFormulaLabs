@@ -1,6 +1,7 @@
 using ExcelFormulaLabs.DataToolkit;
 using FluentAssertions;
 using System;
+using System.IO;
 using Xunit;
 
 namespace ExcelFormulaLabs.DataToolkit.Tests
@@ -28,12 +29,27 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void TempFile() => FileSystemCore.GetTempFileName().Should().NotBeEmpty();
 
         // FileExists tests
-        [Fact] public void FileExists_true() => FileSystemCore.FileExists(@"C:\Windows\System32\notepad.exe").Should().BeTrue();
+        // P2 (review): replaced hardcoded notepad.exe (missing on some Windows images) with
+        // a self-contained temp file so the test is deterministic on any machine.
+        [Fact] public void FileExists_true()
+        {
+            var tmp = Path.Combine(Path.GetTempPath(), "efl_" + Guid.NewGuid().ToString("N") + ".txt");
+            File.WriteAllText(tmp, "x");
+            try { FileSystemCore.FileExists(tmp).Should().BeTrue(); }
+            finally { File.Delete(tmp); }
+        }
         [Fact] public void FileExists_false() => FileSystemCore.FileExists(@"C:\nonexistent\file.txt").Should().BeFalse();
         [Fact] public void FileExists_empty() => FileSystemCore.FileExists("").Should().BeFalse();
 
         // GetFileSize tests
-        [Fact] public void GetFileSize_knownFile() => FileSystemCore.GetFileSize(@"C:\Windows\System32\notepad.exe").Should().BeGreaterThan(0);
+        [Fact] public void GetFileSize_knownFile()
+        {
+            // P2 (review): self-contained temp file with known content (deterministic size).
+            var tmp = Path.Combine(Path.GetTempPath(), "efl_" + Guid.NewGuid().ToString("N") + ".bin");
+            File.WriteAllBytes(tmp, new byte[1234]);
+            try { FileSystemCore.GetFileSize(tmp).Should().Be(1234); }
+            finally { File.Delete(tmp); }
+        }
         [Fact] public void GetFileSize_nonexistent() { var a = () => FileSystemCore.GetFileSize(@"C:\nonexistent\file.txt"); a.Should().Throw<System.IO.FileNotFoundException>(); }
 
         // FolderExists tests
@@ -60,18 +76,52 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         // GetDrives test
         [Fact] public void GetDrives_returnsArray() => FileSystemCore.GetDrives().Should().NotBeEmpty();
 
-        // ListFiles test
-        [Fact] public void ListFiles_onSystem32()
+    
+        // P2 (pre-release review): search patterns containing .. segments can traverse
+        // outside the sandbox root on unpatched .NET Framework runtimes (FindFirstFile
+        // resolves .. before Directory.GetFiles validates); reject them explicitly.
+        [Fact] public void ListFiles_dotdot_pattern_throws()
         {
-            var files = FileSystemCore.ListFiles(@"C:\Windows\System32", "notepad*");
-            files.Should().Contain(f => f.EndsWith("notepad.exe", StringComparison.OrdinalIgnoreCase));
+            var act = () => FileSystemCore.ListFiles(Path.GetTempPath(), "..\\*.txt");
+            act.Should().Throw<ArgumentException>();
+        }
+
+        [Fact] public void ListFolders_dotdot_pattern_throws()
+        {
+            var act = () => FileSystemCore.ListFolders(Path.GetTempPath(), "..\\*");
+            act.Should().Throw<ArgumentException>();
+        }
+    // ListFiles test
+        [Fact] public void ListFiles_in_temp_dir()
+        {
+            // P2 (review): System32/notepad was machine-dependent — use a temp dir.
+            var dir = Path.Combine(Path.GetTempPath(), "efl_ls_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            try
+            {
+                File.WriteAllText(Path.Combine(dir, "alpha.txt"), "a");
+                File.WriteAllText(Path.Combine(dir, "beta.log"), "b");
+                var files = FileSystemCore.ListFiles(dir, "*.txt");
+                files.Should().ContainSingle(f => Path.GetFileName(f) == "alpha.txt");
+                files.Should().NotContain(f => Path.GetFileName(f) == "beta.log");
+            }
+            finally { Directory.Delete(dir, true); }
         }
 
         // ListFolders test
-        [Fact] public void ListFolders_onWindows()
+        [Fact] public void ListFolders_in_temp_dir()
         {
-            var folders = FileSystemCore.ListFolders(@"C:\Windows", "System*");
-            folders.Should().Contain(f => f.EndsWith("System32", StringComparison.OrdinalIgnoreCase));
+            // P2 (review): C:\Windows scan was machine-dependent — use a temp dir.
+            var dir = Path.Combine(Path.GetTempPath(), "efl_lsd_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path.Combine(dir, "subA"));
+            Directory.CreateDirectory(Path.Combine(dir, "subB"));
+            try
+            {
+                var folders = FileSystemCore.ListFolders(dir, "sub*");
+                folders.Should().Contain(f => Path.GetFileName(f) == "subA");
+                folders.Should().Contain(f => Path.GetFileName(f) == "subB");
+            }
+            finally { Directory.Delete(dir, true); }
         }
 
         // WriteTextFile + ReadTextFile test
