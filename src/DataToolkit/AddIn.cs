@@ -13,7 +13,7 @@ namespace ExcelFormulaLabs.DataToolkit
     public class AddIn : IExcelAddIn
     {
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-        private static extern IntPtr LoadLibrary(string lpFileName); // codeql[cs/unmanaged-code]
+        private static extern IntPtr LoadLibrary(string lpFileName);
 
         /// <summary>
         /// 预加载 SQLite 原生 DLL。
@@ -41,7 +41,7 @@ namespace ExcelFormulaLabs.DataToolkit
                 string resX86 = "sqlite_native_x86";
                 string resX64 = "sqlite_native_x64";
 #endif
-                string dllPath = Path.Combine(xllDir, arch, dllName); // codeql[cs/path-combine]
+                string dllPath = Path.Combine(xllDir, arch, dllName);
 
                 // 1) 文件系统优先（非打包模式）
                 if (File.Exists(dllPath))
@@ -55,11 +55,11 @@ namespace ExcelFormulaLabs.DataToolkit
                 using var stream = typeof(AddIn).Assembly.GetManifestResourceStream(resName);
                 if (stream != null)
                 {
-                    string localDir = Path.Combine( // codeql[cs/path-combine]
+                    string localDir = Path.Combine(
                         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                         "ExcelFormulaLabs", "DataToolkit");
                     Directory.CreateDirectory(localDir);
-                    string extractedPath = Path.Combine(localDir, dllName); // codeql[cs/path-combine]
+                    string extractedPath = Path.Combine(localDir, dllName);
 
                     // 简单版本检查：文件大小一致则跳过提取
                     bool needExtract = true;
@@ -100,7 +100,7 @@ namespace ExcelFormulaLabs.DataToolkit
 
         private static void LoadNativeLibrary(string path)
         {
-            IntPtr handle = LoadLibrary(path); // codeql[cs/call-to-unmanaged-code]
+            IntPtr handle = LoadLibrary(path);
             if (handle == IntPtr.Zero)
                 System.Diagnostics.Debug.WriteLine(
                     $"[AddIn] LoadLibrary 失败 (err {Marshal.GetLastWin32Error()}): {path}");
