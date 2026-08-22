@@ -127,7 +127,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
-| `PHYCHEM.MOLWT` | (formula_text) | `double` | 分子量计算，如 `"H2SO4"` → 98.079 |
+| `PHYCHEM.MOLWT` | (formula_text) | `double` | 分子量计算，如 `"H2SO4"` → 98.078 |
 | `PHYCHEM.TEMP` | (number, from_unit, to_unit) | `double` | 温度换算：C, F, K。对标 Excel CONVERT |
 | `PHYCHEM.PRESS` | (number, from_unit, to_unit) | `double` | 压力换算：ATM, PSI, PA, KPA, BAR, MMHG, TORR |
 | `PHYCHEM.VOL` | (number, from_unit, to_unit) | `double` | 体积换算：L, GAL, ML, M3, QT, FT3 |

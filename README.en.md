@@ -7,7 +7,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/zgrwo/ExcelFormulaLabs)](https://github.com/zgrwo/ExcelFormulaLabs/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Use functions like `=STATS.MEAN()`, `=STR.REVERSE()`, `=JSON.PARSE()` directly in Excel.** Built on a high-performance C# implementation with Python-level precision. Ships with IntelliSense auto-completion, and can be called directly from VBA via `Application.Run`. See the [API Reference](rules/api-reference.md) for the complete function list and count (the single source of truth for numbers; test status is shown in the CI badges above).
+**Use functions like `=STATS.MEAN()`, `=STR.REVERSE()`, `=JSON.PARSE()` directly in Excel.** Built on a high-performance C# implementation with Python-level precision. The net48 build ships with IntelliSense parameter hints (the net8.0 build does not, due to a known Excel-DNA issue — see [Known Limitations](#known-limitations)), and all functions can be called directly from VBA via `Application.Run`. See the [API Reference](rules/api-reference.md) for the complete function list and count (the single source of truth for numbers; test status is shown in the CI badges above).
 
 ---
 
@@ -206,6 +206,7 @@ Artifacts: `src/*/bin/Release/{net8.0-windows|net48}/publish/`
 
 | Document | Role | Content |
 |------|------|------|
+| [README.en.md](README.en.md) | English entry | This page — entry point for international users |
 | [API Reference](rules/api-reference.md) | Single source of truth for numbers | Complete function signatures, parameter descriptions, error tables |
 | [User Manual](rules/user-manual.md) | Learning tutorial | Detailed examples for every function + result interpretation guide |
 | [context.md](rules/context.md) | Glossary | Single definition of every term |

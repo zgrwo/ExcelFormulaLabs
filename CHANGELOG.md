@@ -6,6 +6,37 @@
 
 > 版本一致性：每个 `v*` git tag 必须在本文档有对应条目（`verify-docs.ps1` 强制检查，见规则 [documentation.md](rules/documentation.md)）。
 
+## [Unreleased] - 即将发布
+
+### Fixed
+- **P0**：真实 Excel 错误单元格（#VALUE!/#DIV/0!/#N/A 等）此前被静默转换为枚举底层数值（15/7/42）参与计算——现按 L3 哨兵契约在 MapOver 层透传、转换器返回哨兵（发行前深度审查 P0-1）
+- STATS.HARMEAN 非正输入返回 NaN（此前 -1,1 → +∞、混合符号 → 无意义值）
+- REGRESS.OLS/RIDGE 对数值不稳定输入（平方溢出）显式抛错，不再静默泄漏 NaN/Inf 到 r_squared/sse
+- LINALG.SOLVE 奇异矩阵显式抛错（此前静默返回 NaN/±Inf 向量）
+- REGRESS.RIDGE 负 lambda 拒绝（文档契约 lambda ≥ 0）
+- RANGE.TOCSV 分隔符按文档可选（缺省逗号），不再静默空分隔符拼接
+- STR.FORMAT 对齐宽度与格式串长度上限（防 OOM 崩溃）；STR.PADLEFT/PADRIGHT 长度上限 0–100,000
+- ARR/FS 排序 null 语义统一为 VBA 顺序（null 最前）
+- FS.LS/LSDIR 搜索模式显式拒绝 .. 段（防未打补丁 net48 沙箱逃逸）
+- FilterUtils.FilterPasses 空操作符显式抛错；ToDateTime 不再把 bool 当日期
+- MapOver 支持 typed array 输入（double[] 等逐元素映射）
+- DataToolkit net48 打包：SQLite.Interop.dll fallback 复制改为直接取自 NuGet 包路径（干净 Release 构建不再缺文件）
+- patch-xll-version.ps1 重写：正确语言（0x0409）写回 + 多条目偏移重算——XLL 版本信息现可被标准读取器读取
+
+### Added
+- 12 个 *_ASYNC UDF 的注册契约测试 + DictToReport 测试（此前零覆盖）
+- verify-manual.py：C# 交叉验证缺失引用时 SKIP 计失败（exit 1），不再静默降级
+- verify-docs 自测新增 UDF 计数（检查 1）与 csproj 描述计数（检查 11）注入式 FAIL 场景
+
+### Changed
+- pre-commit-check.ps1 NaN 门禁扩展至 DataToolkit Core（PivotCore/JsonXmlCore）
+- Analytics/DataToolkit 内层 TFM 构建串行化（BuildInParallel=false，消除 .dna 跨 TFM 竞态）
+- 测试/基准项目补 EnableWindowsTargeting（修复 CodeQL ubuntu autobuild）
+- release.yml 增加版本一致性校验（tag == Directory.Build.props）与 verify-docs 门禁
+- ci.yml verify-docs checkout fetch-depth=0（版本一致性检查不再被跳过）；覆盖率门禁按模块隔离（Include 过滤）
+- Foundation.Tests/DataToolkit.Tests Microsoft.NET.Test.Sdk 统一 18.9.0
+- dependabot 忽略 Microsoft.Data.Sqlite 大/小版本升级（e_sqlite3 嵌入路径耦合）
+
 ## [2.1.0] - 2026-08-16
 
 ### Changed
@@ -45,7 +76,7 @@
 - 用户手册和规格文档版本号升级至 2.0.0
 
 ### Added
-- verify-docs.ps1 文档一致性验证脚本（PowerShell 版本，10 项检查）
+- verify-docs.ps1 文档一致性验证脚本（PowerShell 版本，15 项检查）
 
 ### Fixed
 - verify-docs.sh 中 skill 文件路径引用错误（skills/excel-dna-project/skill.md → skills/excel-dna-project.md）

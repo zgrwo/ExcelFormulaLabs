@@ -1,4 +1,4 @@
-# Cross-Validation Report — ExcelFormulaLabs v1.0.0
+# Cross-Validation Report — ExcelFormulaLabs v2.1.0
 
 > **Python 3.12 + scipy/numpy** | **C# MathNet.Numerics 5.0.0** | **2026-07-01**
 >

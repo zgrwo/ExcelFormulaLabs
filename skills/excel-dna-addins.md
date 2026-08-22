@@ -27,7 +27,7 @@ description: Excel-DNA 加载项开发全流程 — 创建、打包、测试、�
 
 ## 本项目技术栈
 
-- Excel-DNA 版本：1.8.0（通过 NuGet ExcelDna.AddIn）
+- Excel-DNA 版本：1.9.0（通过 NuGet ExcelDna.AddIn）
 - 目标框架：多目标 `net8.0-windows;net48`（Analytics/DataToolkit）/ `net8.0;net48`（Foundation）
 - 语言：C#，SDK 风格 .csproj，`LangVersion=latest`
 - 输出：每个模块产出两套 .xll（net8.0-windows + net48）
@@ -99,4 +99,3 @@ public static object UDF_STR_REV(
 | Excel-DNA 官方文档 | https://github.com/Excel-DNA/ExcelDna | |
 
 > 测试数据：`tests/TestData/Cross_Validation_vs_Python.xlsx`（Python 交叉验证参考值）
-

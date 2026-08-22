@@ -1,6 +1,6 @@
 # ExcelFormulaLabs 用户手册
 
-> **版本**：2.0.0 | **更新日期**：2026-08-01
+> **版本**：2.1.0 | **更新日期**：2026-08-22
 > 完整签名见 [API 参考](api-reference.md)；安装说明见 [README](../README.md)
 
 ---
@@ -1179,10 +1179,10 @@ L2 正则化（防过拟合）。λ 默认 1.0。不返回标准误/t值/p值（
 
 **示例**：
 ```
-=PHYCHEM.MOLWT("H2SO4")              → 98.079
+=PHYCHEM.MOLWT("H2SO4")              → 98.078
 =PHYCHEM.MOLWT("NaCl")               → 58.443
 =PHYCHEM.MOLWT("C6H12O6")           → 180.156
-=PHYCHEM.MOLWT("Fe4[Fe(CN)6]3")     → 859.245
+=PHYCHEM.MOLWT("Fe4[Fe(CN)6]3")     → 859.239
 =PHYCHEM.MOLWT("CaCO3")             → 100.086
 ```
 

@@ -5,7 +5,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/zgrwo/ExcelFormulaLabs)](https://github.com/zgrwo/ExcelFormulaLabs/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**在 Excel 里直接用 `=STATS.MEAN()`、`=STR.REVERSE()`、`=JSON.PARSE()` 等函数。** 基于 C# 高性能实现，Python 级精度。自带 IntelliSense 自动补全，VBA 中可通过 `Application.Run` 直接调用。完整函数清单与数量见 [API 参考](rules/api-reference.md)（数字唯一信源，测试状态见上方 CI 徽章）。
+**在 Excel 里直接用 `=STATS.MEAN()`、`=STR.REVERSE()`、`=JSON.PARSE()` 等函数。** 基于 C# 高性能实现，Python 级精度。net48 版本自带 IntelliSense 参数提示（net8.0 版本因 Excel-DNA 已知问题不提供，见[已知限制](#已知限制)），VBA 中可通过 `Application.Run` 直接调用。完整函数清单与数量见 [API 参考](rules/api-reference.md)（数字唯一信源，测试状态见上方 CI 徽章）。
 
 ---
 
@@ -226,4 +226,3 @@ dotnet test
 | `skills/` | AI 编码 | 技能定义——语言陷阱、编码模式、重构守则 |
 
 **核心原则**：SSOT（信息只在一处定义）、Skill-first（修改代码前加载技能）、四条核心准则。
-

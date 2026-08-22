@@ -251,7 +251,7 @@ dotnet test --no-build -v q
 
 ### 测试模式
 
-xUnit `[Fact]` + FluentAssertions 6.12.0。每 Core 方法覆盖：正常路径 + 退化输入（空/null/零/单元素/全等值/边界值）。UDF 层测试覆盖：Core guard → `WrapError` → `ExcelError.Value` 链路。
+xUnit `[Fact]` + FluentAssertions 8.10.0。每 Core 方法覆盖：正常路径 + 退化输入（空/null/零/单元素/全等值/边界值）。UDF 层测试覆盖：Core guard → `WrapError` → `ExcelError.Value` 链路。
 
 ```csharp
 // Core 层

@@ -1,10 +1,10 @@
 # ExcelFormulaLabs — 项目规格文档
 
-> 版本：v2.0.0 | 最后更新：2026-08-01 | 状态：稳定发行中
+> 版本：v2.1.0 | 最后更新：2026-08-22 | 状态：稳定发行中
 
 ## 1. 项目概述
 
-**ExcelFormulaLabs** 是一个基于 C# / Excel-DNA 的 Excel 函数增强库，提供 220+ 个高性能 UDF（用户定义函数），覆盖统计分析、线性代数、回归、物理化学、字符串、日期时间、正则、数组、字典、JSON/XML、透视表、SQL、文件系统、范围导出等 14 个模块。
+**ExcelFormulaLabs** 是一个基于 C# / Excel-DNA 的 Excel 函数增强库，提供 232 个高性能 UDF（用户定义函数，数量以 [api-reference.md](api-reference.md) 为唯一信源），覆盖统计分析、线性代数、回归、物理化学、字符串、日期时间、正则、数组、字典、JSON/XML、透视表、SQL、文件系统、范围导出等 14 个模块。
 
 ### 核心价值
 
@@ -26,20 +26,20 @@
 
 | 模块 | 前缀 | 函数数 | 产出 XLL | 说明 |
 |------|------|--------|----------|------|
-| 统计 | STATS.* | ~40 | Analytics | 均值/方差/分位数/t检验/相关/ANOVA |
-| 线性代数 | LINALG.* | ~20 | Analytics | 行列式/求逆/特征值/SVD/QR/LU |
-| 回归 | REGRESS.* | ~10 | Analytics | OLS/WLS/岭回归/因子重要性 |
-| 物理化学 | PHYCHEM.* | ~15 | Analytics | 分子量/温度/压力/气体定律 |
+| 统计 | STATS.* | 34 | Analytics | 均值/方差/分位数/t检验/相关/ANOVA |
+| 线性代数 | LINALG.* | 28 | Analytics | 行列式/求逆/特征值/SVD/QR/LU |
+| 回归 | REGRESS.* | 10 | Analytics | OLS/WLS/岭回归/因子重要性 |
+| 物理化学 | PHYCHEM.* | 16 | Analytics | 分子量/温度/压力/气体定律 |
 | 字符串 | STR.* | ~34 | DataToolkit | 反转/提取/编解码/编辑距离 |
-| 日期时间 | DT.* | ~15 | DataToolkit | ISO周/工作日/年龄/时间戳 |
-| 正则 | REGEX.* | ~5 | DataToolkit | 匹配/替换/捕获组（5秒超时） |
-| 数组 | ARR.* | ~22 | DataToolkit | 排序/筛选/去重/切片/打乱 |
-| 字典 | DICT.* | ~10 | DataToolkit | 频率/交集/并集/键值查找 |
-| JSON/XML | JSON.*/XML.* | ~8 | DataToolkit | 解析/XPath查询 |
-| 透视表 | PIVOT.* | ~6 | DataToolkit | 透视/逆透视/分组聚合/交叉连接 |
-| SQL | SQL.* | ~5 | DataToolkit | 对Excel区域写SQL查询 |
-| 文件系统 | FS.* | ~12 | DataToolkit | 读写文件/列目录（沙箱保护） |
-| 范围导出 | RANGE.* | ~6 | DataToolkit | 导出HTML/JSON/MD/CSV |
+| 日期时间 | DT.* | 25 | DataToolkit | ISO周/工作日/年龄/时间戳 |
+| 正则 | REGEX.* | 9 | DataToolkit | 匹配/替换/捕获组（5秒超时） |
+| 数组 | ARR.* | 22 | DataToolkit | 排序/筛选/去重/切片/打乱 |
+| 字典 | DICT.* | 8 | DataToolkit | 频率/交集/并集/键值查找 |
+| JSON/XML | JSON.*/XML.* | 8 | DataToolkit | 解析/XPath查询 |
+| 透视表 | PIVOT.* | 4 | DataToolkit | 透视/逆透视/分组聚合/交叉连接 |
+| SQL | SQL.* | 3 | DataToolkit | 对Excel区域写SQL查询 |
+| 文件系统 | FS.* | 22 | DataToolkit | 读写文件/列目录（沙箱保护） |
+| 范围导出 | RANGE.* | 9 | DataToolkit | 导出HTML/JSON/MD/CSV |
 
 ### 2.2 关键技术特性
 
@@ -72,7 +72,7 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 
 ### 3.3 依赖
 
-- Excel-DNA 1.8.0
+- Excel-DNA 1.9.0
 - MathNet.Numerics 5.0.0
 - System.Data.SQLite (net48) / Microsoft.Data.Sqlite (net8.0)
 - ExcelDna.IntelliSense (仅 net48)
@@ -81,7 +81,7 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 
 ### 4.1 测试体系
 
-- 1,299+ 单元测试（xUnit + FluentAssertions）
+- 2,246 单元测试（xUnit + FluentAssertions，[Fact]/[Theory] 实测计数）
 - Python 交叉验证（scipy/numpy 独立计算，容差 1e-10）
 - 手册示例验证（verify-manual.py 全 UDF 覆盖）
 - XLL 加载/卸载自动化测试
@@ -103,9 +103,9 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 
 | 阶段 | 时间 |  commits | 关键事件 |
 |------|------|----------|----------|
-| 初始版本 | 06-22 | 1 | 214 UDF + 1299 测试一次性提交 |
+| 初始版本 | 06-22 | 1 | 232 UDF + 2,246 测试（现计数） |
 | 审查修复期 | 06-22 ~ 07-05 | ~60 | 多轮深度审查，NaN守卫/安全加固/文档体系 |
 | 功能扩展期 | 07-05 ~ 07-15 | ~30 | CORRMATRIX/交叉验证/IntelliSense |
 | 稳定发行期 | 07-15 ~ 07-23 | ~47 | v1.0.4→v1.0.7，审查修复+性能优化 |
 
-**总计**：138 commits，从 2026-06-22 到 2026-07-23（31 天）
+**总计**：持续演进（2026-06-22 起；历史经多次深度审查迭代，提交数不在此硬编码——以 git 为准）

@@ -20,7 +20,7 @@ Core 层 (internal static, 纯逻辑)       ← 零 Excel 依赖
 Foundation (共享工具)                    ← InputNormalizer, ElementWiseMapper
 ```
 
-- 当前 3 层，成熟项目（138 commits），层数合理
+- 当前 3 层，成熟项目（持续演进（数量以 git 为准）），层数合理
 - 新增层级必须通过 YAGNI 四问
 
 ---
