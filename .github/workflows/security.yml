@@ -8,6 +8,12 @@
 #       EnableWindowsTargeting 允许非 Windows 构建 windows TFM）。
 #       若 CodeQL autobuild 失败，请在下方 autobuild 步骤改为显式
 #       `dotnet build ExcelFormulaLabs.sln`。
+# 经验（2026-08-16 实测）：`// codeql[cs/rule-id]` 抑制注释在本仓库
+#       codeql-action v4 环境下不生效（上一行/行尾格式均无效，重扫后
+#       生成新编号警报）。quality 级警报（constant-condition/path-combine/
+#       equality-on-floats/local-shadows-member 等 note/warning）按 dismiss
+#       流程处理（false positive / won't fix / used in tests），勿再尝试
+#       源码内抑制注释。
 # ============================================================================
 name: Security
 
