@@ -108,7 +108,7 @@ Win10/11 自带 .NET Framework 4.8，直接加载 net48 版本的 `.xll`：
 函数返回两类错误值：**`#VALUE!`**（输入/执行错误，用户可修正）和 **`#NUM!`**（计算结果无定义，数据本身不满足数学条件）。
 
 - Excel 错误值（`#N/A`、`#DIV/0!` 等）在 MapOver 层透传，在统计函数中被跳过
-- 空白单元格跳过不计
+- 空白单元格：MapOver 函数中透传为空；统计函数中按哨兵 NaN 处理（区域含空 → `#NUM!`，**不**跳过——与 Excel `AVERAGE` 跳过空值不同，见[已知限制](#已知限制)）
 - 非数值单元格经类型转换后返回哨兵值（`0`/`false`/`""`），不视为错误
 - 所有输入被过滤时返回 `#VALUE!` 或 `NaN`
 
@@ -155,6 +155,10 @@ FileSystemCore.Initialize(new SandboxConfig(@"C:\Users\Public\Documents"));
 - **net8.0 加载项**：无参数提示。这是 Excel-DNA 已知 bug（[Issue #343](https://github.com/Excel-DNA/ExcelDna/issues/343)）——.NET 8 下 `ExcelSynchronizationContext.Post` 内部空引用。UDF 函数计算、公式列表完全不受影响。
 
 > **变通方案**：选中含函数名的单元格后按 `Ctrl+Shift+A` 插入参数名占位符；或使用 Excel 的 `fx` 按钮查看函数参数对话框。
+
+### 统计函数不跳过空白单元格
+
+`STATS.*`/`REGRESS.*` 等统计函数对空白单元格按哨兵 NaN 传播（区域含空 → `#NUM!`），与 Excel 原生 `AVERAGE`/`SUM` 的"跳过空值"不同。需要跳过时请先用 `FILTER`/`IF` 或 `ARR.FILTER` 清洗数据。
 
 ### 双加载项同时卸载
 

@@ -184,7 +184,10 @@ namespace ExcelFormulaLabs.Foundation
         {
             if (cell == null) return cell!;
             if (cell is DBNull) return ExcelEmpty.Value;
-            if (InputNormalizer.IsExcelEmptyValue(cell)) return ExcelEmpty.Value;
+            // P1-7 (review): return the ORIGINAL empty sentinel — Excel-DNA renders its own
+            // ExcelEmpty as an empty cell, while Foundation.ExcelEmpty (a custom class outside
+            // the Excel-DNA marshalling allow-list) rendered as #NUM! in real Excel.
+            if (InputNormalizer.IsExcelEmptyValue(cell)) return cell!;
             if (InputNormalizer.IsExcelErrorValue(cell)) return cell;
 
             return MapValue(cell, mapper);
@@ -199,8 +202,9 @@ namespace ExcelFormulaLabs.Foundation
             if (cell2 == null) return cell2!;
             if (cell1 is DBNull) return ExcelEmpty.Value;
             if (cell2 is DBNull) return ExcelEmpty.Value;
-            if (InputNormalizer.IsExcelEmptyValue(cell1)) return ExcelEmpty.Value;
-            if (InputNormalizer.IsExcelEmptyValue(cell2)) return ExcelEmpty.Value;
+            // P1-7: pass through the original empty sentinel (Excel-DNA renders as empty).
+            if (InputNormalizer.IsExcelEmptyValue(cell1)) return cell1!;
+            if (InputNormalizer.IsExcelEmptyValue(cell2)) return cell2!;
 
             return MapValue(cell1, cell2, mapper);
         }
@@ -218,9 +222,10 @@ namespace ExcelFormulaLabs.Foundation
             if (cell1 is DBNull) return ExcelEmpty.Value;
             if (cell2 is DBNull) return ExcelEmpty.Value;
             if (cell3 is DBNull) return ExcelEmpty.Value;
-            if (InputNormalizer.IsExcelEmptyValue(cell1)) return ExcelEmpty.Value;
-            if (InputNormalizer.IsExcelEmptyValue(cell2)) return ExcelEmpty.Value;
-            if (InputNormalizer.IsExcelEmptyValue(cell3)) return ExcelEmpty.Value;
+            // P1-7: pass through the original empty sentinel (Excel-DNA renders as empty).
+            if (InputNormalizer.IsExcelEmptyValue(cell1)) return cell1!;
+            if (InputNormalizer.IsExcelEmptyValue(cell2)) return cell2!;
+            if (InputNormalizer.IsExcelEmptyValue(cell3)) return cell3!;
 
             return MapValue(cell1, cell2, cell3, mapper);
         }
