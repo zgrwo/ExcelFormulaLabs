@@ -193,7 +193,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         //   from scipy import stats
         //
         //   wb = openpyxl.load_workbook(
-        //       r'D:\Workspace\zgrwo\VBA\DeepSeek\ClaudeCode\ExcelFormulaLabs'
+        //       r'tests/TestData'
         //       r'\tests\TestData\Cross_Validation_vs_Python.xlsx')
         //   ws = wb['SourceData']
         //
@@ -360,6 +360,10 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void GeometricMean_with_zero() => StatsCore.GeometricMean(new[]{1.0,0,3}).Should().Be(0.0);
         [Fact] public void GeometricMean_with_negative() => StatsCore.GeometricMean(new[]{1.0,-2,3}).Should().Be(double.NaN);
         [Fact] public void HarmonicMean_with_zero() => StatsCore.HarmonicMean(new[]{1.0,0,3}).Should().Be(0.0);
+        // P1-5 (pre-release review): harmonic mean of non-positive input must be NaN,
+        // not +Inf ([-1,1] → 2/0) or a meaningless positive value ([1,-2,3] → 3.6).
+        [Fact] public void HarmonicMean_mixed_sign_returns_NaN() => StatsCore.HarmonicMean(new[]{1.0,-2,3}).Should().Be(double.NaN);
+        [Fact] public void HarmonicMean_opposite_plus_minus_returns_NaN() => StatsCore.HarmonicMean(new[]{-1.0,1}).Should().Be(double.NaN);
         // Edge: insufficient data
         [Fact] public void Kurtosis_insufficient_n() => StatsCore.Kurtosis(new[]{1.0,2,3}).Should().Be(double.NaN);
         [Fact] public void Skewness_insufficient_n() => StatsCore.Skewness(new[]{1.0,2}).Should().Be(double.NaN);

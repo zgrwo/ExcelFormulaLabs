@@ -10,7 +10,12 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void H2O() => PhyChemCore.MolecularWeight("H2O").Should().BeApproximately(18.016,0.01);
         [Fact] public void CO2() => PhyChemCore.MolecularWeight("CO2").Should().BeApproximately(44.01,0.01);
         [Fact] public void CaOH2_paren() => PhyChemCore.MolecularWeight("Ca(OH)2").Should().BeApproximately(74.094,0.01);
-        [Fact] public void Fe4FeCN6_3_bracket() => PhyChemCore.MolecularWeight("Fe4[Fe(CN)6]3").Should().BeGreaterThan(500);
+        [Fact] public void Fe4FeCN6_3_bracket() => PhyChemCore.MolecularWeight("Fe4[Fe(CN)6]3").Should().BeApproximately(859.239, 1e-3);
+        // P3 (review): exact golden values — the bracket/paren parsing correctness currently
+        // depends on fragile regex intermediate states; exact assertions guard regressions
+        // (a >500 sanity check would let a wrong 679 pass).
+        [Fact] public void H2SO4_exact() => PhyChemCore.MolecularWeight("H2SO4").Should().BeApproximately(98.078, 1e-3);
+        [Fact] public void FeCN6_bracket_exact() => PhyChemCore.MolecularWeight("[Fe(CN)6]").Should().BeApproximately(211.953, 1e-3);
         [Fact] public void Unknown_element_NaN() => PhyChemCore.MolecularWeight("Xx2").Should().Be(double.NaN);
         [Fact] public void C_to_F() => PhyChemCore.ConvertTemperature(0,"C","F").Should().BeApproximately(32,1e-10);
         [Fact] public void F_to_C() => PhyChemCore.ConvertTemperature(212,"F","C").Should().BeApproximately(100,1e-4);

@@ -18,8 +18,16 @@ namespace ExcelFormulaLabs.Analytics
         internal static double GeometricMean(double[] d) =>
             d.Length == 0 ? double.NaN : Statistics.GeometricMean(d);
 
-        internal static double HarmonicMean(double[] d) =>
-            d.Length == 0 ? double.NaN : Statistics.HarmonicMean(d);
+        internal static double HarmonicMean(double[] d)
+        {
+            if (d.Length == 0) return double.NaN;
+            // P1-5: harmonic mean is undefined for negative input (scipy → nan, Excel → #NUM!).
+            // MathNet returns +Inf for [-1,1] (2/0) and a meaningless value for [1,-2,3].
+            for (int i = 0; i < d.Length; i++)
+                if (d[i] < 0) return double.NaN;
+            var r = Statistics.HarmonicMean(d);
+            return double.IsInfinity(r) ? double.NaN : r;  // output cap (file convention)
+        }
 
         internal static double Median(double[] d) =>
             d.Length == 0 ? double.NaN : Statistics.Median(d);

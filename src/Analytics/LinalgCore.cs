@@ -178,7 +178,15 @@ namespace ExcelFormulaLabs.Analytics
             NumericGuard.AgainstNonFinite(A);
             if (b.Any(v => double.IsNaN(v) || double.IsInfinity(v)))
                 throw new ArgumentException(ErrorMsg.Get("LINALG_RhsNotFinite"));
-            return Matrix<double>.Build.DenseOfArray(A).Solve(Vector<double>.Build.Dense(b)).ToArray();
+            var x = Matrix<double>.Build.DenseOfArray(A).Solve(Vector<double>.Build.Dense(b));
+            var arr = x.ToArray();
+            // P2 (pre-release review): MathNet Solve silently returns NaN/±Inf for singular
+            // systems; the api-reference contract says singular → #VALUE! (guard, not
+            // silent propagation — 防错原则1).
+            for (int i = 0; i < arr.Length; i++)
+                if (double.IsNaN(arr[i]) || double.IsInfinity(arr[i]))
+                    throw new ArgumentException(ErrorMsg.Get("LINALG_SingularMatrix"));
+            return arr;
         }
 
         internal static double[,] Cholesky(double[,] m)

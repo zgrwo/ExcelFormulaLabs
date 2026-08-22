@@ -19,6 +19,14 @@ namespace ExcelFormulaLabs.Analytics.Tests
             var t = (double[])RegressionCore.FitOLS(X, y)["t_stats"];
             foreach (var v in t) double.IsInfinity(v).Should().BeFalse();
         }
+
+        // P2 (pre-release review): negative lambda must be rejected (documented as >= 0);
+        // previously it silently produced a non-positive-definite ridge matrix.
+        [Fact] public void FitRidge_negative_lambda_throws()
+        {
+            var act = () => RegressionCore.FitRidge(X, y, -1000.0);
+            act.Should().Throw<ArgumentException>().WithMessage("*lambda*");
+        }
         [Fact] public void FitRidge_keys() => RegressionCore.FitRidge(X,y,0.1).Should().ContainKeys("coefficients","sse","r_squared","lambda");
         [Fact] public void AnovaOneWay_keys() => RegressionCore.AnovaOneWay(new[]{new[]{5.0,6,7},new[]{8.0,9,10}}).Should().ContainKeys("ss_between","f_stat","p_value");
         [Fact] public void FactorImportance() { var r=RegressionCore.FactorImportance(new double[,]{{1},{2},{3}},y); r.Length.Should().Be(1); }
@@ -115,6 +123,16 @@ namespace ExcelFormulaLabs.Analytics.Tests
             act.Should().Throw<ArgumentException>().WithMessage("*at least 2 groups*");
         }
 
+
+        // P1-6 (pre-release review): numerically unstable tss (Inf-Inf=NaN under the
+        // unstable form) must throw, not silently leak NaN into r_squared.
+        [Fact] public void FitOLS_extreme_y_throws_numerically_unstable()
+        {
+            var extX = new double[3, 1] { { 1.0 }, { 2.0 }, { 3.0 } };
+            var extY = new double[] { 1e200, 1e200, 2e200 };  // squares overflow double
+            var act = () => RegressionCore.FitOLS(extX, extY);
+            act.Should().Throw<ArgumentException>();
+        }
         [Fact] public void FitOLS_constant_y_throws()
         {
             // tss=0 → constant response → R² undefined (P0 guard)

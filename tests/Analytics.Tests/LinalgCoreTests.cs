@@ -99,17 +99,25 @@ namespace ExcelFormulaLabs.Analytics.Tests
             I.GetLength(1).Should().Be(0);
         }
 
-        [Fact] public void Solve_singular_inconsistent_returns_infinity()
+        [Fact] public void Solve_singular_inconsistent_throws()
         {
-            // Singular 2×2 with inconsistent RHS:
-            //   x1+x2=1, x1+x2=2  has no solution.
-            // MathNet Solve → LU factorization fails → returns ±∞ components.
-            var x = LinalgCore.Solve(
+            // Singular 2×2 with inconsistent RHS (x1+x2=1, x1+x2=2) has no solution.
+            // P2 (pre-release review): MathNet Solve silently returned ±∞ components;
+            // the api-reference contract says singular → #VALUE!, so the Core guard
+            // must throw instead of silently propagating non-finite values.
+            var act = () => LinalgCore.Solve(
                 new double[,] { { 1, 1 }, { 1, 1 } },
                 new[] { 1.0, 2.0 });
-            x.Length.Should().Be(2);
-            // Singular inconsistent: result contains non-finite values
-            x.Should().Contain(v => double.IsInfinity(v));
+            act.Should().Throw<ArgumentException>().WithMessage("*singular*");
+        }
+
+        [Fact] public void Solve_singular_dependent_rows_throws()
+        {
+            // Linearly dependent rows ([[1,2],[2,4]]) — same guard path.
+            var act = () => LinalgCore.Solve(
+                new double[,] { { 1, 2 }, { 2, 4 } },
+                new[] { 3.0, 6.0 });
+            act.Should().Throw<ArgumentException>().WithMessage("*singular*");
         }
 
         [Fact] public void Eigen_non_symmetric_throws()

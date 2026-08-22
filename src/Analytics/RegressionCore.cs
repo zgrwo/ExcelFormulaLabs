@@ -61,6 +61,10 @@ namespace ExcelFormulaLabs.Analytics
             var residuals = vecY - fitted;
             double sse = residuals.DotProduct(residuals);
             double tss = vecY.DotProduct(vecY) - Math.Pow(vecY.Sum(), 2) / n;
+            if (double.IsNaN(tss) || double.IsInfinity(tss))
+                throw new ArgumentException(
+                    "Cannot fit OLS: total sum of squares is numerically unstable " +
+                    "(response values too large for double precision).");
             if (Math.Abs(tss) < 1e-15)
                 throw new ArgumentException(
                     "Cannot fit OLS: total sum of squares is zero (constant response variable y).");
@@ -77,6 +81,13 @@ namespace ExcelFormulaLabs.Analytics
                     throw new ArgumentException(
                         "Cannot fit OLS: design matrix X is near-singular (highly collinear columns). " +
                         "Consider removing redundant predictors or using ridge regression (REGRESS.RIDGE).");
+            // P1-6: defence-in-depth — residual squares can still overflow for extreme
+            // y values even when X is stable (guard placed after the near-singular
+            // check so the more specific X diagnosis wins).
+            if (double.IsNaN(sse) || double.IsInfinity(sse))
+                throw new ArgumentException(
+                    "Cannot fit OLS: residual sum of squares is numerically unstable " +
+                    "(response values too large for double precision).");
             var se = new double[p];
             var tStat = new double[p];
             var pVal = new double[p];
@@ -191,6 +202,11 @@ namespace ExcelFormulaLabs.Analytics
             NumericGuard.AgainstNonFinite(X, y);
             if (double.IsNaN(lambda) || double.IsInfinity(lambda))
                 throw new ArgumentException(ErrorMsg.Get("REGRESS_LambdaNotFinite", lambda));
+            // P2 (pre-release review): negative lambda makes XtX+λI non-positive-definite
+            // and silently returns wrong coefficients; documented contract is lambda >= 0.
+            if (lambda < 0)
+                throw new ArgumentException(
+                    $"Cannot fit Ridge: lambda must be non-negative (got {lambda}).");
             int n = X.GetLength(0), origP = X.GetLength(1);
             int p; double[,] Xaug;
             if (addIntercept) { p = origP + 1; Xaug = PrependIntercept(X); }
@@ -218,6 +234,15 @@ namespace ExcelFormulaLabs.Analytics
             var residuals = vecY - fitted;
             double sse = residuals.DotProduct(residuals);
             double tss = vecY.DotProduct(vecY) - Math.Pow(vecY.Sum(), 2) / n;
+            // P1-6: same numerical-stability guard as FitOLSCore (Inf−Inf=NaN silent leak).
+            if (double.IsNaN(sse) || double.IsInfinity(sse))
+                throw new ArgumentException(
+                    "Cannot fit Ridge: residual sum of squares is numerically unstable " +
+                    "(response values too large for double precision).");
+            if (double.IsNaN(tss) || double.IsInfinity(tss))
+                throw new ArgumentException(
+                    "Cannot fit Ridge: total sum of squares is numerically unstable " +
+                    "(response values too large for double precision).");
             if (Math.Abs(tss) < 1e-15)
                 throw new ArgumentException(
                     "Cannot fit Ridge: total sum of squares is zero (constant response variable y).");
