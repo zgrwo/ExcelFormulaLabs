@@ -160,7 +160,7 @@ namespace ExcelFormulaLabs.Foundation
             if (IsExcelEmptyValue(value)) return false;
             if (value is bool) return false;         // VBA: Boolean is NOT numeric for cell purposes
             if (value is DateTime) return false;     // VBA: Date is NOT numeric for cell purposes
-            if (value is ExcelError) return false;
+            if (IsExcelErrorValue(value)) return false;
 
             if (value is int || value is long || value is float || value is double
                 || value is decimal || value is short || value is byte
@@ -212,13 +212,25 @@ namespace ExcelFormulaLabs.Foundation
         }
 
         /// <summary>
+        /// Detect Excel error signals: Foundation <see cref="ExcelError"/> sentinel
+        /// and <c>ExcelDna.Integration.ExcelError</c> (enum arriving from real Excel
+        /// error cells) without a hard assembly reference.
+        /// </summary>
+        public static bool IsExcelErrorValue(object? value)
+        {
+            if (value == null) return false;
+            return value is ExcelError
+                || value.GetType().FullName == "ExcelDna.Integration.ExcelError";
+        }
+
+        /// <summary>
         /// Safe conversion to string. Error/Null/Empty → "".
         /// </summary>
         public static string ToString(object? value)
         {
             if (value == null || value is DBNull || IsExcelMissing(value)) return "";
             if (IsExcelEmptyValue(value)) return "";
-            if (value is ExcelError) return "";
+            if (IsExcelErrorValue(value)) return "";
             if (value is string s) return s;
             return Convert.ToString(value, CultureInfo.InvariantCulture) ?? "";
         }
@@ -231,7 +243,7 @@ namespace ExcelFormulaLabs.Foundation
         {
             if (value == null || value is DBNull || IsExcelMissing(value)) return double.NaN;
             if (IsExcelEmptyValue(value)) return double.NaN;
-            if (value is ExcelError) return double.NaN;
+            if (IsExcelErrorValue(value)) return double.NaN;
             if (value is double d) return (double.IsNaN(d) || double.IsInfinity(d)) ? double.NaN : d; // L1 NaN/Inf guard
             if (value is int i) return i;
             if (value is long l) return l;
@@ -256,7 +268,7 @@ namespace ExcelFormulaLabs.Foundation
         {
             if (value == null || value is DBNull || IsExcelMissing(value)) return 0;
             if (IsExcelEmptyValue(value)) return 0;
-            if (value is ExcelError) return 0;
+            if (IsExcelErrorValue(value)) return 0;
             if (value is long l) return l;
             if (value is int i) return i;
             if (value is double d)
@@ -294,7 +306,7 @@ namespace ExcelFormulaLabs.Foundation
         {
             if (value == null || value is DBNull || IsExcelMissing(value)) return false;
             if (IsExcelEmptyValue(value)) return false;
-            if (value is ExcelError) return false;
+            if (IsExcelErrorValue(value)) return false;
             if (value is bool b) return b;
             if (value is double d) return double.IsNaN(d) ? false : d != 0.0; // L1 NaN guard
             if (value is int i) return i != 0;
@@ -326,7 +338,7 @@ namespace ExcelFormulaLabs.Foundation
         {
             if (value == null || value is DBNull || IsExcelMissing(value)) return sentinelValue;
             if (IsExcelEmptyValue(value)) return sentinelValue;
-            if (value is ExcelError) return sentinelValue;
+            if (IsExcelErrorValue(value)) return sentinelValue;
             return ToBool(value);
         }
 
@@ -338,7 +350,7 @@ namespace ExcelFormulaLabs.Foundation
         {
             if (value == null || value is DBNull || IsExcelMissing(value)) return DateTime.MinValue;
             if (IsExcelEmptyValue(value)) return DateTime.MinValue;
-            if (value is ExcelError) return DateTime.MinValue;
+            if (IsExcelErrorValue(value)) return DateTime.MinValue;
             if (value is DateTime dt) return dt;
             // Handle all numeric types (int/long/short/byte/float/decimal/…) as Excel
             // OLE serial dates (epoch: 1899-12-30). Convert.ToDouble unifies the
@@ -346,7 +358,7 @@ namespace ExcelFormulaLabs.Foundation
             // NOTE: Excel 1900 leap year bug (serial 60 = fake Feb 29, 1900) is NOT corrected.
             // For dates >= 1900-03-01 (serial >= 61) results are correct.
             // Serial 1-59 are off by 1 day; serial 60 maps to Feb 28 instead of non-existent Feb 29.
-            if (value is IConvertible && value is not string)
+            if (value is IConvertible && value is not string && value is not bool)  // P2: bool is not a date (VBA cell semantics)
             {
                 double d = Convert.ToDouble(value);
                 if (d >= 0 && !double.IsNaN(d) && !double.IsInfinity(d))

@@ -40,6 +40,10 @@ namespace ExcelFormulaLabs.Foundation
         /// </summary>
         public static bool FilterPasses(object? element, object? matchValue, string op)
         {
+            // P2 (pre-release review): a null operator previously produced an NRE that was
+            // swallowed by WrapError into a misleading #VALUE!; reject it explicitly.
+            if (string.IsNullOrEmpty(op))
+                throw new ArgumentException("Filter operator must not be null or empty.");
             string opLower = op.ToLowerInvariant();
             switch (opLower)
             {
@@ -49,12 +53,12 @@ namespace ExcelFormulaLabs.Foundation
 
             // All other operators: reject Error/Null/Object/Array elements and matchValues
             if (element == null || element is DBNull) return false;
-            if (element is ExcelError) return false;
+            if (InputNormalizer.IsExcelErrorValue(element)) return false;
             if (element is Array) return false;
             if (element is not string && Marshal.IsComObject(element)) return false;
 
             if (matchValue == null || matchValue is DBNull) return false;
-            if (matchValue is ExcelError) return false;
+            if (InputNormalizer.IsExcelErrorValue(matchValue)) return false;
             if (matchValue is Array) return false;
             if (matchValue is not string && Marshal.IsComObject(matchValue)) return false;
 
@@ -120,17 +124,18 @@ namespace ExcelFormulaLabs.Foundation
             try
             {
                 var regex = RegexCache.GetOrAdd(pattern, p =>
+                    new Regex(p, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
+                        RegexTimeout));
+                // P2 (pre-release review): evict OUTSIDE the GetOrAdd factory — eviction
+                // inside the factory raced other threads (non-deterministic victim, possible
+                // eviction of a pattern another thread just cached). Best-effort single
+                // eviction after a successful add keeps the cache bounded.
+                if (RegexCache.Count > MaxCachedRegex)
                 {
-                    // Evict one entry when cache exceeds limit — avoids cache-stampede
-                    // that Clear() would cause when many threads repopulate at once.
-                    if (RegexCache.Count > MaxCachedRegex)
-                    {
-                        var first = RegexCache.Keys.FirstOrDefault();
-                        if (first != null) RegexCache.TryRemove(first, out _);
-                    }
-                    return new Regex(p, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
-                        RegexTimeout);
-                });
+                    var first = RegexCache.Keys.FirstOrDefault();
+                    if (first != null && first != pattern)
+                        RegexCache.TryRemove(first, out _);
+                }
                 return regex.IsMatch(InputNormalizer.ToString(element));
             }
             catch (Exception ex) when (ExceptionFilters.IsCatchable(ex))

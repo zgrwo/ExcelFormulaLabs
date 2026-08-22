@@ -54,11 +54,14 @@ namespace ExcelFormulaLabs.Foundation
             if (aEmpty && bEmpty) return true;
             if (aEmpty || bEmpty) return false;
 
-            // 3. Both Error
+            // 3. Both Error — Foundation sentinels compare by code;
+            //    Excel-DNA enum errors are all treated as the same error group.
             if (a is ExcelError errA && b is ExcelError errB)
                 return errA.Code == errB.Code;
-            if (a is ExcelError || b is ExcelError)
-                return false;
+            bool aErr = InputNormalizer.IsExcelErrorValue(a);
+            bool bErr = InputNormalizer.IsExcelErrorValue(b);
+            if (aErr || bErr)
+                return aErr && bErr;
 
             // 4. Boolean — only equal if BOTH are boolean
             if (a is bool boolA && b is bool boolB)
@@ -126,7 +129,7 @@ namespace ExcelFormulaLabs.Foundation
         {
             if (value == null || value is DBNull) return 0;          // Null first
             if (InputNormalizer.IsExcelEmptyValue(value)) return 1;  // Empty second
-            if (value is ExcelError) return 5;                       // Error last
+            if (InputNormalizer.IsExcelErrorValue(value)) return 5;   // Error last
             return 2;  // Normal value
         }
 
@@ -135,7 +138,7 @@ namespace ExcelFormulaLabs.Foundation
         /// </summary>
         private static int CompareSameGroup(object a, object b)
         {
-            if (a is ExcelError && b is ExcelError)
+            if (InputNormalizer.IsExcelErrorValue(a) && InputNormalizer.IsExcelErrorValue(b))
                 return 0;  // All errors sort together
 
             if (a is DateTime dtA && b is DateTime dtB)

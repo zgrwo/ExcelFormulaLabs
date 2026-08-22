@@ -1,3 +1,4 @@
+using System;
 using ExcelFormulaLabs.Foundation;
 using FluentAssertions;
 using Xunit;
@@ -6,6 +7,13 @@ namespace ExcelFormulaLabs.Foundation.Tests;
 
 public class FilterPassesTests
 {
+    // P2 (pre-release review): null operator previously caused an NRE that was
+    // swallowed by WrapError into #VALUE!; the public API should reject it explicitly.
+    [Fact] public void FilterPasses_null_operator_throws()
+    {
+        var act = () => FilterUtils.FilterPasses(5.0, 5.0, null!);
+        act.Should().Throw<ArgumentException>();
+    }
     [Fact] public void Isblank_null_true() => FilterUtils.FilterPasses(null, null, "isblank").Should().BeTrue();
     [Fact] public void Isblank_empty_true() => FilterUtils.FilterPasses(ExcelEmpty.Value, null, "isblank").Should().BeTrue();
     [Fact] public void Isblank_whitespace_true() => FilterUtils.FilterPasses("   ", null, "isblank").Should().BeTrue();

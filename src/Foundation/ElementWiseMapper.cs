@@ -58,6 +58,13 @@ namespace ExcelFormulaLabs.Foundation
             if (input is object[] arr1D)
                 return Map1D(arr1D, mapper);
 
+            // P2 (pre-release review): typed arrays (double[], int[,], …) arrive from
+            // direct .NET callers; previously treated as a scalar cell → single NaN.
+            // Route through the normalizer (which handles typed arrays) for element-wise
+            // mapping, consistent with MapOverFlat/NormalizeTo1D behaviour.
+            if (input is Array typed)
+                return Map1D(InputNormalizer.NormalizeTo1D(typed), mapper);
+
             // Step 3: Scalar
             return MapSingleCell(input, mapper);
         }
@@ -178,7 +185,7 @@ namespace ExcelFormulaLabs.Foundation
             if (cell == null) return cell!;
             if (cell is DBNull) return ExcelEmpty.Value;
             if (InputNormalizer.IsExcelEmptyValue(cell)) return ExcelEmpty.Value;
-            if (cell is ExcelError) return cell;
+            if (InputNormalizer.IsExcelErrorValue(cell)) return cell;
 
             return MapValue(cell, mapper);
         }
@@ -186,8 +193,8 @@ namespace ExcelFormulaLabs.Foundation
         private static object MapSingleCell<T1, T2, TOutput>(
             object cell1, object cell2, Func<T1, T2, TOutput> mapper)
         {
-            if (cell1 is ExcelError) return cell1;
-            if (cell2 is ExcelError) return cell2;
+            if (InputNormalizer.IsExcelErrorValue(cell1)) return cell1;
+            if (InputNormalizer.IsExcelErrorValue(cell2)) return cell2;
             if (cell1 == null) return cell1!;
             if (cell2 == null) return cell2!;
             if (cell1 is DBNull) return ExcelEmpty.Value;
@@ -202,9 +209,9 @@ namespace ExcelFormulaLabs.Foundation
             object cell1, object cell2, object cell3,
             Func<T1, T2, T3, TOutput> mapper)
         {
-            if (cell1 is ExcelError) return cell1;
-            if (cell2 is ExcelError) return cell2;
-            if (cell3 is ExcelError) return cell3;
+            if (InputNormalizer.IsExcelErrorValue(cell1)) return cell1;
+            if (InputNormalizer.IsExcelErrorValue(cell2)) return cell2;
+            if (InputNormalizer.IsExcelErrorValue(cell3)) return cell3;
             if (cell1 == null) return cell1!;
             if (cell2 == null) return cell2!;
             if (cell3 == null) return cell3!;
@@ -285,6 +292,10 @@ namespace ExcelFormulaLabs.Foundation
             if (targetType == typeof(string)) return (T)(object)InputNormalizer.ToString(value);
             if (targetType == typeof(double)) return (T)(object)InputNormalizer.ToDouble(value);
             if (targetType == typeof(long)) return (T)(object)InputNormalizer.ToLong(value);
+            // P2 (pre-release review): documented L4 trade-off — ToLong's sentinel 0 applies
+            // to values unrepresentable as long; long values outside int range are CLAMPED
+            // (not zeroed) so index-style callers (SELCOLS/SELROWS/SLICE) fail loudly with
+            // a range error instead of silently selecting column 0.
             if (targetType == typeof(int)) { long lv = InputNormalizer.ToLong(value); int iv = lv < int.MinValue ? int.MinValue : lv > int.MaxValue ? int.MaxValue : (int)lv; return (T)(object)iv; }
             if (targetType == typeof(bool)) return (T)(object)InputNormalizer.ToBool(value);
             if (targetType == typeof(DateTime)) return (T)(object)InputNormalizer.ToDateTime(value);

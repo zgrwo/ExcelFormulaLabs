@@ -201,4 +201,13 @@ public class MapOverMultiThreeArgTests
             new object[] { 1, 2, 3 }, new object[] { 1, 2 }, new object[] { 1 },
             (int a, int b, int c) => a + b + c)
             .Should().Be(ExcelError.Value);
+
+    // P2 (pre-release review): typed arrays (double[]) were treated as a scalar cell,
+    // producing a single NaN; must map element-wise like NormalizeTo1D does.
+    [Fact] public void MapOver_double_array_maps_elementwise()
+    {
+        var result = (object[])ElementWiseMapper.MapOver<double, double>(
+            new double[] { 1.0, 2.0, 3.0 }, x => x * 10);
+        result.Should().Equal(10.0, 20.0, 30.0);
+    }
 }

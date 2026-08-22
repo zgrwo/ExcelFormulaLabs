@@ -59,6 +59,9 @@
   </data>
 
   <!-- Linalg -->
+  <data name="LINALG_SingularMatrix" xml:space="preserve">
+    <value>Matrix is singular or nearly singular; the system has no unique solution.</value>
+  </data>
   <data name="LINALG_RhsNotFinite" xml:space="preserve">
     <value>Right-hand side vector contains NaN or Infinity. Solve requires finite values.</value>
   </data>

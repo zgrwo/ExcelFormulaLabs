@@ -43,7 +43,7 @@ namespace ExcelFormulaLabs.Foundation
             foreach (object key in keys)
             {
                 if (key == null || key is DBNull) continue;
-                if (key is ExcelError) continue;
+                if (InputNormalizer.IsExcelErrorValue(key)) continue;
                 if (InputNormalizer.IsExcelEmptyValue(key)) continue;
                 if (key is Array) continue;
 

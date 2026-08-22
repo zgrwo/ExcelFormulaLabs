@@ -112,8 +112,10 @@ namespace ExcelFormulaLabs.Foundation
         private static int CompareElements<T>(T a, T b, ComparerMode mode)
         {
             if (a == null && b == null) return 0;
-            if (a == null) return 1;
-            if (b == null) return -1;
+            // P2 (pre-release review): null sorts FIRST — consistent with the documented
+            // VBA VariantKit order in ComparisonUtils.Compare (Null → Empty → values → Error).
+            if (a == null) return -1;
+            if (b == null) return 1;
             return mode switch
             {
                 ComparerMode.Numeric => CompareNumeric(a, b),

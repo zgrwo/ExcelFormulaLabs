@@ -61,6 +61,10 @@ public class CoercionTests
     [Fact] public void ToBool_infinity_input_returns_true() => InputNormalizer.ToBool(double.PositiveInfinity).Should().BeTrue();
     [Fact] public void ToDateTime_nan_input_returns_minvalue() => InputNormalizer.ToDateTime(double.NaN).Should().Be(DateTime.MinValue);
     [Fact] public void ToDateTime_zero_returns_epoch() => InputNormalizer.ToDateTime(0.0).Should().Be(new DateTime(1899,12,30));
+    // P2 (pre-release review): bool is NOT a date (IsNumericCell rejects bool with the
+    // "VBA: Boolean is not numeric" rationale); ToDateTime must not silently convert
+    // TRUE → 1899-12-31. Sentinel MinValue instead.
+    [Fact] public void ToDateTime_bool_returns_min_value() => InputNormalizer.ToDateTime(true).Should().Be(DateTime.MinValue);
 }
 
 public class NormalizationTests
