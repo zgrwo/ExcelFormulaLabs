@@ -6,6 +6,11 @@
 
 > 版本一致性：每个 `v*` git tag 必须在本文档有对应条目（`verify-docs.ps1` 强制检查，见规则 [documentation.md](rules/documentation.md)）。
 
+## [Unreleased]
+
+### Changed
+- README：补充 SyncMacro 间歇性错误为 Excel-DNA 上游已知问题（[Issue #390](https://github.com/Excel-DNA/ExcelDna/issues/390)）的说明
+
 ## [2.1.1] - 2026-08-22
 
 ### Changed（v2.1.0 发布后补全项）

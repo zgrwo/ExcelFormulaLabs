@@ -81,7 +81,7 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 
 ### 4.1 测试体系
 
-- 2,246 单元测试（xUnit + FluentAssertions，[Fact]/[Theory] 实测计数）
+- 2,290 单元测试（xUnit + FluentAssertions，[Fact]/[Theory] 实测计数）
 - Python 交叉验证（scipy/numpy 独立计算，容差 1e-10）
 - 手册示例验证（verify-manual.py 全 UDF 覆盖）
 - XLL 加载/卸载自动化测试
@@ -103,7 +103,7 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 
 | 阶段 | 时间 |  commits | 关键事件 |
 |------|------|----------|----------|
-| 初始版本 | 06-22 | 1 | 232 UDF + 2,246 测试（现计数） |
+| 初始版本 | 06-22 | 1 | 232 UDF + 2,290 测试（现计数） |
 | 审查修复期 | 06-22 ~ 07-05 | ~60 | 多轮深度审查，NaN守卫/安全加固/文档体系 |
 | 功能扩展期 | 07-05 ~ 07-15 | ~30 | CORRMATRIX/交叉验证/IntelliSense |
 | 稳定发行期 | 07-15 ~ 07-23 | ~47 | v1.0.4→v1.0.7，审查修复+性能优化 |

@@ -19,7 +19,7 @@ UDF → Core 的分发统一走 MapOver 三变体（见 ADR-0003）。
 
 ## 原因
 
-1. Core 零依赖 → 可独立单元测试（2246 个测试方法全在无 Excel 环境下运行）
+1. Core 零依赖 → 可独立单元测试（全部测试方法在无 Excel 环境下运行）
 2. 统计函数可与 Python numpy/scipy 独立实现比对（闭环验证红线 6）
 3. 分层边界可被 CI 静态检查（pre-commit-check.ps1 检查 4：`*Core.cs` 内出现 `ExcelDna` 即 FAIL）
 
