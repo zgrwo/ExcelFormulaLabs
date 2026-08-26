@@ -134,7 +134,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install Python dependencies
-        run: pip install numpy scipy scikit-learn
+        run: pip install numpy scipy scikit-learn pyDOE2
 
       - name: Build CrossValRunner
         run: dotnet build tests/CrossValRunner/CrossValRunner.csproj -c Debug
