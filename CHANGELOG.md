@@ -6,7 +6,7 @@
 
 > 版本一致性：每个 `v*` git tag 必须在本文档有对应条目（`verify-docs.ps1` 强制检查，见规则 [documentation.md](rules/documentation.md)）。
 
-## [Unreleased]
+## [2.2.0] - 2026-08-26
 
 ### Added
 - **DOE.* 实验设计与分析模块**（8 个函数，UDF 总数 232→236）：
