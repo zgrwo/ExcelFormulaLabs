@@ -17,6 +17,8 @@
 
 Windows 10/11 ship with .NET Framework 4.8, so you can load the net48 `.xll` directly:
 
+> ⚠️ **Unblock the `.xll` after downloading from GitHub**: Windows marks files downloaded from the internet as "from another computer". If Excel reports "This file came from another computer and might be blocked to help protect this computer", right-click the `.xll` → Properties → check "Unblock" under Security → OK, then follow the steps below.
+
 1. Excel → File → Options → Add-ins → Manage: Excel Add-ins → Go → Browse
 2. Select the `.xll` file and click OK
 3. Click "Enable" when the security prompt appears
