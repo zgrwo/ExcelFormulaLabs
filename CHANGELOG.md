@@ -8,8 +8,17 @@
 
 ## [Unreleased]
 
+### Added
+- **DOE.* 实验设计与分析模块**（8 个函数，UDF 总数 232→236）：
+  - `DOE.PLAN`：生成实验设计矩阵，支持全因子（`full`）、田口正交表（`taguchi`，L4/L8/L9/L12/L16/L18/L27/L32）、2水平 ½ 部分因子（`fractional`）、响应面 CCD（`rsm`，可旋转 α=2^(k/4)）、Box-Behnken（`bb`）
+  - `DOE.ANALYZE` / `DOE.ANOVA` / `DOE.PARETO`：效应估计、多因素 ANOVA、Pareto 排序（复用 `RegressionCore.FitOLS`，F=t²、SS=MSE×t²）
+  - 与 pyDOE2（fullfact/fracfact/ccdesign/bbdesign）及 scipy 独立实现交叉验证；因子编码 -1/0/+1，自实现 `XorShift64` PRNG 保证双 TFM 随机化序列一致
+  - 新增 ADR-0006 记录 DOE 类 UDF 的闭环验证信源
+
 ### Changed
 - README：补充 SyncMacro 间歇性错误为 Excel-DNA 上游已知问题（[Issue #390](https://github.com/Excel-DNA/ExcelDna/issues/390)）的说明
+- ci.yml / release.yml：交叉验证 job 增加 pyDOE2 依赖（DOE 交叉验证所需）
+- verify-manual.py：pyDOE2 import 改用 try/except 保护（本地缺依赖时 SKIP 而非崩溃）
 
 ## [2.1.1] - 2026-08-22
 
