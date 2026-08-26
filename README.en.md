@@ -23,8 +23,8 @@ Windows 10/11 ship with .NET Framework 4.8, so you can load the net48 `.xll` dir
 
 | File | Modules included |
 |------|---------|
-| `Analytics-AddIn-net48-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM (requires .NET Framework 4.8) |
-| `Analytics-AddIn-net8.0-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM (requires .NET 8 runtime) |
+| `Analytics-AddIn-net48-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM · DOE (requires .NET Framework 4.8) |
+| `Analytics-AddIn-net8.0-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM · DOE (requires .NET 8 runtime) |
 | `DataToolkit-AddIn-net48-packed.xll` | STR · DT · REGEX · ARR · DICT · JSON/XML · PIVOT · SQL · FS · RANGE (requires .NET Framework 4.8) |
 | `DataToolkit-AddIn-net8.0-packed.xll` | STR · DT · REGEX · ARR · DICT · JSON/XML · PIVOT · SQL · FS · RANGE (requires .NET 8 runtime) |
 
@@ -58,6 +58,7 @@ Type `=STATS.MEAN(` in any cell; if Excel pops up the function auto-completion, 
 | `LINALG.*` | Determinant/inverse/eigenvalues/SVD/QR/LU… | `=LINALG.SOLVE(A1:C3, D1:D3)` |
 | `REGRESS.*` | OLS/WLS/ridge regression/ANOVA/feature importance | `=REGRESS.OLS(A1:A100, B1:C100)` |
 | `PHYCHEM.*` | Molecular weight/temperature/pressure/volume/mass conversion | `=PHYCHEM.C_TO_F(100)` |
+| `DOE.*` | Design-of-experiments matrix (full factorial, Minitab/JMP-aligned) | `=DOE.PLAN(2,2,0,2,"full",FALSE)` |
 | `SQL.*` | Write SQL queries against Excel ranges | `=SQL.QUERY(A1:D100, "SELECT Col1, AVG(Col3) FROM data GROUP BY Col1")` |
 | `PIVOT.*` | Pivot/unpivot/grouped aggregation/cross join | `=PIVOT.GROUPBY(A1:C100, {1}, 3, "avg")` |
 | `RANGE.*` | Export HTML/JSON/Markdown/CSV | `=RANGE.TOMD(A1:D10, TRUE)` |

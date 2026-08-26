@@ -93,6 +93,17 @@
     {"id":"LINALG.CHOLESKY","module":"LINALG","coreClass":"LinalgCore","coreMethod":"Cholesky","args":[{"ref":"chol_2x2"}],"tolerance":1e-10},
     {"id":"LINALG.IDENTITY","module":"LINALG","coreClass":"LinalgCore","coreMethod":"Identity","args":[3],"tolerance":1e-10},
 
+    {"id":"DOE.FULL_2x2","module":"DOE","coreClass":"DoeCore","coreMethod":"FullFactorialCoded","args":[[2,2]],"tolerance":1e-10},
+    {"id":"DOE.FULL_2x3","module":"DOE","coreClass":"DoeCore","coreMethod":"FullFactorialCoded","args":[[2,3]],"tolerance":1e-10},
+    {"id":"DOE.FULL_3x3","module":"DOE","coreClass":"DoeCore","coreMethod":"FullFactorialCoded","args":[[3,3]],"tolerance":1e-10},
+    {"id":"DOE.FRAC_4","module":"DOE","coreClass":"DoeCore","coreMethod":"FractionalCoded","args":[4],"tolerance":1e-10},
+    {"id":"DOE.FRAC_5","module":"DOE","coreClass":"DoeCore","coreMethod":"FractionalCoded","args":[5],"tolerance":1e-10},
+    {"id":"DOE.FRAC_6","module":"DOE","coreClass":"DoeCore","coreMethod":"FractionalCoded","args":[6],"tolerance":1e-10},
+    {"id":"DOE.RSM_2","module":"DOE","coreClass":"DoeCore","coreMethod":"RsmCcd","args":[2],"tolerance":1e-10},
+    {"id":"DOE.RSM_3","module":"DOE","coreClass":"DoeCore","coreMethod":"RsmCcd","args":[3],"tolerance":1e-10},
+    {"id":"DOE.BB_3","module":"DOE","coreClass":"DoeCore","coreMethod":"RsmBb","args":[3],"tolerance":1e-10},
+    {"id":"DOE.BB_4","module":"DOE","coreClass":"DoeCore","coreMethod":"RsmBb","args":[4],"tolerance":1e-10},
+
     {"id":"DT.EASTER_2024","module":"DT","coreClass":"DateTimeCore","coreMethod":"Easter","args":[2024],"tolerance":0},
     {"id":"DT.EASTER_2025","module":"DT","coreClass":"DateTimeCore","coreMethod":"Easter","args":[2025],"tolerance":0},
     {"id":"DT.EASTER_2000","module":"DT","coreClass":"DateTimeCore","coreMethod":"Easter","args":[2000],"tolerance":0},

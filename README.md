@@ -21,8 +21,8 @@ Win10/11 自带 .NET Framework 4.8，直接加载 net48 版本的 `.xll`：
 
 | 文件 | 包含模块 |
 |------|---------|
-| `Analytics-AddIn-net48-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM（需 .NET Framework 4.8） |
-| `Analytics-AddIn-net8.0-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM（需 .NET 8 运行时） |
+| `Analytics-AddIn-net48-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM · DOE（需 .NET Framework 4.8） |
+| `Analytics-AddIn-net8.0-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM · DOE（需 .NET 8 运行时） |
 | `DataToolkit-AddIn-net48-packed.xll` | STR · DT · REGEX · ARR · DICT · JSON/XML · PIVOT · SQL · FS · RANGE（需 .NET Framework 4.8） |
 | `DataToolkit-AddIn-net8.0-packed.xll` | STR · DT · REGEX · ARR · DICT · JSON/XML · PIVOT · SQL · FS · RANGE（需 .NET 8 运行时） |
 
@@ -56,6 +56,7 @@ Win10/11 自带 .NET Framework 4.8，直接加载 net48 版本的 `.xll`：
 | `LINALG.*` | 行列式/求逆/特征值/SVD/QR/LU… | `=LINALG.SOLVE(A1:C3, D1:D3)` |
 | `REGRESS.*` | OLS/WLS/岭回归/ANOVA/因子重要性 | `=REGRESS.OLS(A1:A100, B1:C100)` |
 | `PHYCHEM.*` | 分子量/温度/压力/体积/质量换算 | `=PHYCHEM.C_TO_F(100)` |
+| `DOE.*` | 实验设计矩阵（全因子设计，对齐 Minitab/JMP） | `=DOE.PLAN(2,2,0,2,"full",FALSE)` |
 | `SQL.*` | 对 Excel 区域写 SQL 查询 | `=SQL.QUERY(A1:D100, "SELECT Col1, AVG(Col3) FROM data GROUP BY Col1")` |
 | `PIVOT.*` | 透视表/逆透视/分组聚合/交叉连接 | `=PIVOT.GROUPBY(A1:C100, {1}, 3, "avg")` |
 | `RANGE.*` | 导出 HTML/JSON/Markdown/CSV | `=RANGE.TOMD(A1:D10, TRUE)` |

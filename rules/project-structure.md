@@ -114,6 +114,8 @@ ExcelFormulaLabs/
 │   │   ├── LinalgCore.cs / LinalgUdf.cs        # LINALG.*（含 DecompCache）
 │   │   ├── RegressionCore.cs / RegressionUdf.cs # REGRESS.*
 │   │   ├── PhyChemCore.cs / PhyChemUdf.cs      # PHYCHEM.*
+│   │   ├── DoeCore.cs / DoeUdf.cs              # DOE.*（设计生成）
+│   │   ├── DoeAnalysisCore.cs / DoeAnalysisUdf.cs # DOE.*（效应/ANOVA/Pareto 分析）
 │   │   ├── LinalgAsyncUdf.cs       #     异步线性代数入口
 │   │   ├── RegressionAsyncUdf.cs   #     异步回归入口
 │   │   ├── Analytics-AddIn-net48.dna.tpl

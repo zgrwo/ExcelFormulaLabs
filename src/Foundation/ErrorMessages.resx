@@ -119,4 +119,42 @@
   <data name="ARR_LengthOutOfRange" xml:space="preserve">
     <value>num_elements ({0}) is outside the valid range [{1}, {2}].</value>
   </data>
+
+  <!-- DOE -->
+  <data name="DOE_NegativeQty" xml:space="preserve">
+    <value>Factor quantities must be &gt;= 0.</value>
+  </data>
+  <data name="DOE_InvalidLevel" xml:space="preserve">
+    <value>Factor level must be &gt;= 1 (level{0}={1}).</value>
+  </data>
+  <data name="DOE_NoFactors" xml:space="preserve">
+    <value>At least one factor is required (factor_qty1 + factor_qty2 &gt;= 1).</value>
+  </data>
+  <data name="DOE_TooManyRuns" xml:space="preserve">
+    <value>Design would produce more than {0} runs. Reduce factor quantities or levels.</value>
+  </data>
+  <data name="DOE_UnknownMethod" xml:space="preserve">
+    <value>Unknown DOE method '{0}'. Supported: FULL, TAGUCHI, FRACTIONAL, RSM, BB.</value>
+  </data>
+  <data name="DOE_TaguchiLevelUnsupported" xml:space="preserve">
+    <value>Taguchi supports only 2 or 3 levels per factor (got {0}).</value>
+  </data>
+  <data name="DOE_TaguchiTooManyFactors" xml:space="preserve">
+    <value>Too many factors ({0}) for the supported Taguchi orthogonal arrays.</value>
+  </data>
+  <data name="DOE_TaguchiMixedUnsupported" xml:space="preserve">
+    <value>Mixed 2/3-level Taguchi design supports at most 1 two-level and 7 three-level factors (got {0} two-level, {1} three-level).</value>
+  </data>
+  <data name="DOE_FractionalLevelUnsupported" xml:space="preserve">
+    <value>Fractional factorial supports only 2-level factors (got {0}).</value>
+  </data>
+  <data name="DOE_FractionalTooFewFactors" xml:space="preserve">
+    <value>Fractional factorial requires at least 4 factors (got {0}); use FULL for fewer factors.</value>
+  </data>
+  <data name="DOE_RsmTooFewFactors" xml:space="preserve">
+    <value>Response surface (CCD) requires at least 2 factors (got {0}).</value>
+  </data>
+  <data name="DOE_BbTooFewFactors" xml:space="preserve">
+    <value>Box-Behnken requires at least 3 factors (got {0}).</value>
+  </data>
 </root>

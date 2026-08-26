@@ -91,6 +91,16 @@ public static class Dispatcher
         Register("LinalgCore", "Lu", (a, _) => { var (L,U,P)=LinalgCore.Lu(ToDouble2D(a[0])); return new Dictionary<string,object>{{"L",L},{"U",U},{"P",P}}; });
         Register("LinalgCore", "PseudoInverse", (a, _) => LinalgCore.PseudoInverse(ToDouble2D(a[0])));
 
+        // ═══════════════════ DoeCore ═══════════════════
+        Register("DoeCore", "FullFactorialCoded", (a, _) =>
+            DoeCore.FullFactorialCoded(ToIntArray(a[0])));
+        Register("DoeCore", "FractionalCoded", (a, _) =>
+            DoeCore.FractionalCoded((int)ToLong(a[0])));
+        Register("DoeCore", "RsmCcd", (a, _) =>
+            DoeCore.RsmCcd((int)ToLong(a[0])));
+        Register("DoeCore", "RsmBb", (a, _) =>
+            DoeCore.RsmBb((int)ToLong(a[0])));
+
         // ═══════════════════ StringCore ═══════════════════
         Register("StringCore", "ReverseString", (a, _) => StringCore.ReverseString(ToString(a[0])));
         Register("StringCore", "LevenshteinDistance", (a, _) => StringCore.LevenshteinDistance(ToString(a[0]), ToString(a[1])));
@@ -144,6 +154,14 @@ public static class Dispatcher
         if (v is JsonElement je)
             return je.EnumerateArray().Select(e => e.GetDouble()).ToArray();
         throw new ArgumentException($"Cannot convert to double[].");
+    }
+
+    private static int[] ToIntArray(object? v)
+    {
+        if (v is int[] ia) return ia;
+        if (v is JsonElement je)
+            return je.EnumerateArray().Select(e => e.GetInt32()).ToArray();
+        throw new ArgumentException($"Cannot convert to int[].");
     }
 
     private static double[,] ToDouble2D(object? v)

@@ -146,6 +146,19 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 
 ---
 
+## DOE.* -- 实验设计与分析
+
+> 生成 DOE（实验设计）矩阵并分析结果：StandardOrder + RunOrder + 编码因子列，以及效应估计、多因素 ANOVA、Pareto 排序。因子水平编码为 -1/0/+1（coded 单位）。`randomize=FALSE` 时 RunOrder = StandardOrder，输出可复现、可对齐 Minitab/JMP 标准顺序。支持全因子（`full`）、田口正交表（`taguchi`）、2水平部分因子（`fractional`）、响应面（`rsm` CCD / `bb` Box-Behnken）。
+
+| 函数 | 参数 | 返回 | 说明 |
+|------|------|------|------|
+| `DOE.PLAN` | (factor_qty1, factor_level1, factor_qty2, factor_level2, method, [randomize], [seed]) | `object[,]` | 生成 DOE 实验设计矩阵。method=`"full"` 全因子（总运行数 = level1^qty1 × level2^qty2）；method=`"taguchi"` 田口正交表（仅支持 2/3 水平，自动选最小 L4/L8/L9/L12/L16/L18/L27/L32）；method=`"fractional"` 2水平 ½ 部分因子（需 ≥4 个因子，生成元：末因子=前面因子乘积）；method=`"rsm"` 响应面 CCD（中心复合，连续因子，可旋转 α=2^(k/4)）；method=`"bb"` Box-Behnken（三水平响应面，需 ≥3 因子）。返回带表头二维表：`StdOrder`、`RunOrder`、`A`、`B`…，因子编码 -1/0/+1。randomize 默认 TRUE，seed 固定随机种子（null=随机）。 |
+| `DOE.ANALYZE` | (design, response, [terms]) | `object[,]` | DOE 效应表。对编码设计矩阵（DOE.PLAN 的因子列）和响应列做 OLS 拟合，返回每项（主效应/交互/平方项）的 `Term`、`Coef`、`Effect`(2×Coef)、`t`、`p`。terms 默认 `"2way"`（主效应+2阶交互），可选 `"main"`、`"quadratic"`（含平方项，需 3 水平设计）。 |
+| `DOE.ANOVA` | (design, response, [terms]) | `object[,]` | 多因素 ANOVA 表。返回每项的 `Source`、`SS`、`df`、`MS`、`F`、`p`，加 Error 行和 Total 行。F = t²、SS = MSE×t²（单自由度效应）。 |
+| `DOE.PARETO` | (design, response, [terms]) | `object[,]` | DOE Pareto 排序。按 \|效应\| 降序返回每项的 `Term`、`Effect`，供 Pareto 图。 |
+
+---
+
 ## STR.* -- 字符串处理
 
 > 除 TEXTJOIN/UUID/RND* 外，其他函数支持数组公式（逐元素处理）。

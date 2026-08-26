@@ -1,0 +1,35 @@
+using ExcelFormulaLabs.Analytics;
+using ExcelFormulaLabs.Foundation;
+using FluentAssertions;
+using Xunit;
+
+namespace ExcelFormulaLabs.Analytics.Tests
+{
+    public class DoeUdfTests
+    {
+        [Fact] public void Plan_returns_matrix()
+        {
+            var r = (object[,])DoeUdf.UDF_DOE_PLAN(2, 2, 0, 2, "full", false, null!);
+            r.GetLength(0).Should().Be(5);
+            r.GetLength(1).Should().Be(4);
+            r[0, 0].Should().Be("StdOrder");
+        }
+
+        [Fact] public void Plan_default_randomize_true_with_seed_is_deterministic()
+        {
+            var a = (object[,])DoeUdf.UDF_DOE_PLAN(2, 2, 0, 2, "full", null!, 7);
+            var b = (object[,])DoeUdf.UDF_DOE_PLAN(2, 2, 0, 2, "full", null!, 7);
+            for (int i = 1; i <= 4; i++)
+                a[i, 1].Should().Be(b[i, 1]);
+        }
+
+        [Fact] public void Plan_zero_level_returns_error()
+            => DoeUdf.UDF_DOE_PLAN(1, 0, 0, 2, "full", false, null!).Should().Be(ExcelError.Value);
+
+        [Fact] public void Plan_no_factors_returns_error()
+            => DoeUdf.UDF_DOE_PLAN(0, 2, 0, 2, "full", false, null!).Should().Be(ExcelError.Value);
+
+        [Fact] public void Plan_unknown_method_returns_error()
+            => DoeUdf.UDF_DOE_PLAN(1, 2, 0, 2, "nope", false, null!).Should().Be(ExcelError.Value);
+    }
+}

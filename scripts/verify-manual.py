@@ -4,7 +4,7 @@
 verify-manual.py — Verify ALL UDF examples against Python with hardcoded expected values.
 
 Every numerical check compares Python computation against a constant cross-validated
-with C# MathNet. Never use self-checks (actual == same expression as expected). — Verify ALL 232 UDF examples in rules/user-manual.md against Python (sync variants; *_ASYNC share Core methods).
+with C# MathNet. Never use self-checks (actual == same expression as expected). — Verify ALL 236 UDF examples in rules/user-manual.md against Python (sync variants; *_ASYNC share Core methods).
 
 Usage: python scripts/verify-manual.py
 """
@@ -18,6 +18,7 @@ import numpy as np
 from scipy import stats
 from scipy import linalg as la
 from sklearn.linear_model import LinearRegression as LR, Ridge as RidgeLR
+from pyDOE2 import fullfact, fracfact, ccdesign, bbdesign
 
 if sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
@@ -789,15 +790,42 @@ selr=[rd[1],rd[3]]
 check("RANGE.SELROWS[0]", selr[0][0], "Alice")
 
 # ========================================================================
+# DOE (1 UDF)
+# ========================================================================
+section("DOE — Design of Experiments", 1)
+def doe_coded(levels):
+    idx = fullfact(levels)
+    coded = []
+    for row in idx:
+        coded_row = []
+        for j, L in zip(row, levels):
+            coded_row.append(0.0 if L <= 1 else 2.0*j/(L-1) - 1.0)
+        coded.append(coded_row)
+    return np.array(coded)
+cross_check("DOE.FULL_2x2", doe_coded([2, 2]))
+cross_check("DOE.FULL_2x3", doe_coded([2, 3]))
+cross_check("DOE.FULL_3x3", doe_coded([3, 3]))
+# Fractional factorial (2-level ½ fraction, Minitab default generator: last factor = product)
+cross_check("DOE.FRAC_4", fracfact('a b c abc'))
+cross_check("DOE.FRAC_5", fracfact('a b c d abcd'))
+cross_check("DOE.FRAC_6", fracfact('a b c d e abcde'))
+# Response surface (central composite, rotatable alpha = 2^(k/4))
+cross_check("DOE.RSM_2", ccdesign(2, alpha='rotatable'))
+cross_check("DOE.RSM_3", ccdesign(3, alpha='rotatable'))
+# Box-Behnken (response surface, 3-level)
+cross_check("DOE.BB_3", bbdesign(3))
+cross_check("DOE.BB_4", bbdesign(4))
+
+# ========================================================================
 # FINAL
 # ========================================================================
 # Count unique UDFs verified:
-udf_count = (34 + 19 + 7 + 16 + 34 + 25 + 9 + 22 + 8 + 8 + 4 + 3 + 22 + 9)
+udf_count = (34 + 19 + 7 + 16 + 34 + 25 + 9 + 22 + 8 + 8 + 4 + 3 + 22 + 9 + 4)
 print(f"\n{'='*60}")
 print(f"  RESULTS: {PASS} passed, {FAIL} failed, {SKIP} skipped ({(PASS+FAIL)} checks)")
-# P2-5 (review): project has 232 UDFs; the 12 *_ASYNC variants share Core methods
+# P2-5 (review): project has 236 UDFs; the 12 *_ASYNC variants share Core methods
 # (verified indirectly), LINALG.LU_P is covered via reconstruction.
-print(f"  UDF coverage: {udf_count} of 232 UDFs covered (sync variants)")
+print(f"  UDF coverage: {udf_count} of 236 UDFs covered (sync variants)")
 print(f"{'='*60}")
 if FAIL>0 or SKIP>0:
     print(f"\n  FAILURES DETECTED (failures={FAIL}, skipped={SKIP}). Review discrepancies above.")

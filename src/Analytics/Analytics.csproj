@@ -4,7 +4,7 @@
     <TargetFrameworks>net8.0-windows;net48</TargetFrameworks>
     <RootNamespace>ExcelFormulaLabs.Analytics</RootNamespace>
     <AssemblyName>Analytics</AssemblyName>
-    <Description>统计 · 线性代数 · 回归 · 物理化学 — 88 个科学计算函数</Description>
+    <Description>统计 · 线性代数 · 回归 · 物理化学 · 实验设计与分析 — 92 个科学计算函数</Description>
     <Product>Excel 函数增强库</Product>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>disable</ImplicitUsings>
