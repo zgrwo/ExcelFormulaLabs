@@ -28,6 +28,9 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void GasToSTP() => PhyChemCore.GasToSTP(22.4,0,1,"C","atm").Should().BeApproximately(22.4,0.01);
         [Fact] public void MolecularWeight_hydrate() => PhyChemCore.MolecularWeight("CuSO4.5H2O").Should().BeApproximately(249.69, 0.1);
         [Fact] public void MolecularWeight_overflow_count_throws() { var act = ()=>PhyChemCore.MolecularWeight("C9999999999H2"); act.Should().Throw<ArgumentException>().WithMessage("*9999999999*"); }
+        // review 2026-08-29（发行前 max level 复审）：水合物系数原用裸 int 逐位累积，unchecked 下
+        // 超 int.MaxValue 静默回绕为负数 → 错误的分子量。现与 ParseCount 对齐显式抛错。
+        [Fact] public void MolecularWeight_hydrate_coefficient_overflow_throws() { var act = () => PhyChemCore.MolecularWeight("H2O.10000000000H2O"); act.Should().Throw<ArgumentException>().WithMessage("*coefficient*"); }
         [Fact] public void GasToSTP_no_vUnit() => PhyChemCore.GasToSTP(22.4, 0, 1).Should().BeApproximately(22.4, 0.01);
         [Fact] public void GasToSTP_invalid_unit_returns_NaN() => PhyChemCore.GasToSTP(22.4, 0, 1, "XX").Should().Be(double.NaN);
 

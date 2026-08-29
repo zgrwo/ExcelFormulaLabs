@@ -6,6 +6,20 @@
 
 > 版本一致性：每个 `v*` git tag 必须在本文档有对应条目（`verify-docs.ps1` 强制检查，见规则 [documentation.md](rules/documentation.md)）。
 
+## [Unreleased]
+
+### 复审修复（2026-08-29 发行前 max level 全量深度审查，第三轮）
+- **安全（发行阻断）**：DOE 因子数（qty1+qty2）无上限——`PlanFull` 的 `new int[totalFactors]` 与 `RsmCcd` 的 `new int[k]` 在 qty 巨大（如 `=DOE.PLAN(10亿,2,0,1,"FULL")`）时可分配数 GB → 32 位 Excel OOM 崩溃（OOM 不可捕获）；新增 `MaxFactors=1000` 上限守卫（FullFractional/Taguchi/Fractional/Rsm/Bb 全部在按因子数分配数组前抛错）；`qty1+qty2` 求和改 long（原 int 回绕恒为负，错误落回 DOE_NoFactors 误导消息）
+- **数值正确性**：PhyChemCore 水合物系数原用裸 int 逐位累积（unchecked 静默回绕为负数→错误分子量），改与 ParseCount 一致的显式溢出抛错；Pivot/GroupBy 的 SUM/AVG 累加溢出为 ±Inf 原样泄漏进输出单元格（违反防错原则①），改 AggResult 对非有限累加值返回 NaN；RegressionCore.AnovaOneWay 有限极大值平方溢出可绕过后置守卫（`Abs(Inf)<1e-15` 恒 false）→ f=NaN 静默泄漏，补非有限平方和显式抛错；ArrayCore.Sequence 补 ±Inf 的 start/end/step 哨兵守卫（原仅挡 NaN，产生退化序列），并修复 `(int)d` 对 d≥2³¹/±Inf 回绕为 int.MinValue 的误导消息
+- **红线**：PhyChemCore `Regex.IsMatch` 补 `TimeSpan` 超时（原漏，违反「所有 Regex 调用带超时」红线）
+- **测试**：+18 个回归测试（DOE 超因子 8、Pivot/GroupBy 溢出 4、Sequence 4、水合物系数溢出 1、Anova 溢出 1），全部通过
+
+### 复审修复（2026-08-29 发行前第二轮，详见 git log 2568bef）
+- verify-manual.py 11 处 elif 分支 f-string 双花括号输出字面量而非实际错误消息——改单花括号（错误诊断恢复）
+- DoeCore cells 守卫改除法形式（`total > MaxCells/k` 防 `total×k` 乘法溢出，RsmBb 极端 k 下 edgePoints 逼近 long 溢出）
+- PivotCore.GroupBy maxCells 守卫移到数组分配前（原先 `new object[keyNames.Count, nG+1]` 再检查，1M 行 × 100 列 ≈ 800MB 可先 OOM）
+- 测试补强：DoeUdfTests +2（84 因子 FRAC / 700 因子 BB → #VALUE!）、PivotCoreTests +1（GroupBy 守卫前置）
+
 ## [2.2.1] - 2026-08-29
 
 ### Changed

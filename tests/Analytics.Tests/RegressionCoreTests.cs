@@ -239,6 +239,15 @@ namespace ExcelFormulaLabs.Analytics.Tests
             act.Should().Throw<ArgumentException>().WithMessage("*within-group sum of squares*");
         }
 
+        // review 2026-08-29（发行前 max level 复审）：输入虽拒绝 NaN/Inf，但有限极大值平方后
+        // 溢出为 Inf 可绕过后置守卫（Abs(Inf)<1e-15 == false）→ f=Inf/Inf=NaN 静默泄漏。
+        // 现对非有限平方和显式抛错。
+        [Fact] public void AnovaOneWay_ss_overflow_throws()
+        {
+            var act = () => RegressionCore.AnovaOneWay(new[] { new[] { 1e200, 2e200 }, new[] { 3e200, 4e200 } });
+            act.Should().Throw<ArgumentException>().WithMessage("*non-finite*");
+        }
+
         // =====================================================================
         // CROSS-VALIDATION: WLS & RIDGE (Python statsmodels/sklearn reference)
         //

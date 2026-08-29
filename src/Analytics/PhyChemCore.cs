@@ -61,8 +61,19 @@ namespace ExcelFormulaLabs.Analytics
                 for (int i = 1; i < parts.Length; i++)
                 {
                     string p = parts[i];
+                    // review 2026-08-29（发行前 max level 复审）：水合物系数用裸 int 逐位累积，
+                    // 编译未开 CheckForOverflowUnderflow → 超 int.MaxValue（≥10 位）时静默回绕为负数，
+                    // 产生错误的（可能负的）分子量。与 ParseCount 的溢出防护对齐，改为显式抛错。
                     int coeff = 0, j = 0;
-                    while (j < p.Length && char.IsDigit(p[j])) { coeff = coeff * 10 + (p[j] - '0'); j++; }
+                    while (j < p.Length && char.IsDigit(p[j]))
+                    {
+                        int digit = p[j] - '0';
+                        if (coeff > (int.MaxValue - digit) / 10)
+                            throw new ArgumentException(
+                                $"Hydrate coefficient '{p.Substring(0, j + 1)}…' is too large. The maximum supported coefficient is {int.MaxValue}.");
+                        coeff = coeff * 10 + digit;
+                        j++;
+                    }
                     if (coeff == 0) coeff = 1;
                     string sub = p.Substring(j);
                     double pm = MolecularWeight(sub, depth + 1);
@@ -108,7 +119,7 @@ namespace ExcelFormulaLabs.Analytics
             if (long.TryParse(s, out long big))
                 throw new ArgumentException(
                     $"Subscript '{s}' is too large. The maximum supported subscript is {int.MaxValue}.");
-            if (Regex.IsMatch(s, @"^\d+$")) // 纯数字但超 long 范围（>19 位）
+            if (Regex.IsMatch(s, @"^\d+$", RegexOptions.None, TimeSpan.FromSeconds(5))) // 纯数字但超 long 范围（>19 位）
                 throw new ArgumentException(
                     $"Subscript '{s}' is too large. The maximum supported subscript is {int.MaxValue}.");
             return 1; // non-numeric → treat as 1 (e.g. malformed token)

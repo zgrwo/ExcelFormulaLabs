@@ -37,7 +37,11 @@ namespace ExcelFormulaLabs.DataToolkit
         }
         internal static object[] Sequence(double start, double end, double step)
         {
-            if (double.IsNaN(start) || double.IsNaN(end) || double.IsNaN(step))
+            // review 2026-08-29（发行前 max level 复审）：原仅挡 NaN，±Inf 的 start/end/step 未挡，
+            // 会静默产生退化序列（如 step=+Inf 返回 [start]）或 `d` 溢出为 Inf 后错误地落入
+            // `d > 100_000` 抛错（误导性消息）。与 NaN 一致的哨兵契约：非有限输入 → 空数组。
+            if (double.IsNaN(start) || double.IsNaN(end) || double.IsNaN(step)
+                || double.IsInfinity(start) || double.IsInfinity(end) || double.IsInfinity(step))
                 return Array.Empty<object>();
             if (step == 0)
                 throw new ArgumentException(ErrorMsg.Get("ARR_StepZero"));
@@ -45,8 +49,12 @@ namespace ExcelFormulaLabs.DataToolkit
             if ((asc && start > end) || (!asc && start < end))
                 return Array.Empty<object>();
             double d = Math.Abs((end - start) / step);
-            if (d > 100_000)
-                throw new ArgumentException(ErrorMsg.Get("ARR_RangeTooLarge", (int)d, 100_000));
+            // review 2026-08-29（max level 复审）：(int)d 对 d≥2³¹ 或 ±Inf 在 unchecked 下回绕为
+            // int.MinValue（如 SEQUENCE(0,1e10,1) 或有限极端值 end-start 溢出为 Inf）→
+            // 消息「-2147483648 elements」误导。非有限 d 与超限 d 统一抛错，消息计数用可表示值。
+            if (double.IsNaN(d) || double.IsInfinity(d) || d > 100_000)
+                throw new ArgumentException(ErrorMsg.Get("ARR_RangeTooLarge",
+                    d > 100_000 && d <= int.MaxValue ? (int)d : 100_001, 100_000));
             int n = (int)Math.Floor(d) + 1;
             if (n < 1) n = 1;
             if (n > 100_000)

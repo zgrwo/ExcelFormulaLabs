@@ -163,6 +163,9 @@
   <data name="DOE_BbTooFewFactors" xml:space="preserve">
     <value>Box-Behnken requires at least 3 factors (got {0}).</value>
   </data>
+  <data name="DOE_TooManyFactors" xml:space="preserve">
+    <value>Design has {0} factors; maximum supported is {1}. Reduce the factor count.</value>
+  </data>
   <data name="ARR_CountOutOfRange" xml:space="preserve">
     <value>ARR.FILL would create {0} elements; maximum is {1}.</value>
   </data>

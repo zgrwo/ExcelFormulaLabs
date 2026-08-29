@@ -273,9 +273,22 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Sequence_start_gt_end_asc_empty() => ArrayCore.Sequence(5, 1, 1).Should().BeEmpty();
         [Fact] public void Sequence_single() => ArrayCore.Sequence(7, 7, 1).Should().Equal(7.0);
         [Fact] public void Sequence_nan_start_empty() => ArrayCore.Sequence(double.NaN, 5, 1).Should().BeEmpty();
+        // review 2026-08-29（发行前 max level 复审）：原仅挡 NaN，±Inf 的 start/end/step 未挡，
+        // 会静默产生退化序列或误导性抛错。现与 NaN 一致：非有限输入 → 空数组。
+        [Fact] public void Sequence_inf_step_empty() => ArrayCore.Sequence(0, 10, double.PositiveInfinity).Should().BeEmpty();
+        [Fact] public void Sequence_inf_start_empty() => ArrayCore.Sequence(double.PositiveInfinity, 10, 1).Should().BeEmpty();
+        [Fact] public void Sequence_neg_inf_end_empty() => ArrayCore.Sequence(0, double.NegativeInfinity, 1).Should().BeEmpty();
         [Fact] public void Sequence_step_zero_throws()
             => ((Action)(() => ArrayCore.Sequence(1, 3, 0))).Should().Throw<ArgumentException>();
         [Fact] public void Sequence_over_limit_throws()
             => ((Action)(() => ArrayCore.Sequence(0, 1_000_000_000, 1))).Should().Throw<ArgumentException>();
+        // review 2026-08-29（max level 复审）：end-start 在有限极端值下溢出为 Inf → d=Inf，
+        // 旧代码 (int)d 回绕为 int.MinValue → 消息「-2147483648 elements」误导。现按超限抛错。
+        [Fact] public void Sequence_extreme_range_has_sane_message()
+        {
+            var ex = Record.Exception(() => ArrayCore.Sequence(-double.MaxValue, double.MaxValue, 1));
+            ex.Should().BeOfType<ArgumentException>();
+            ex.Message.Should().NotContain("2147483648");
+        }
     }
 }

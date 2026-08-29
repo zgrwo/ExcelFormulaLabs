@@ -24,9 +24,13 @@ namespace ExcelFormulaLabs.DataToolkit
         /// <summary>Compute final aggregation cell value from accumulator and count.</summary>
         private static object AggResult(string agg, double val, long cnt) => agg switch
         {
-            "AVG"   => cnt == 0 ? double.NaN : val / cnt,
+            // review 2026-08-29（发行前 max level 复审）：SUM/AVG 累加 `current+incoming` 在极端值下
+            // 可溢出为 ±Inf，原实现原样返回 → PIVOT/GROUPBY 单元格泄漏 Inf，违反防错原则①
+            // （IEEE 传播无显式守卫，与 StatsCore.Sum/Product 的 Inf→NaN 约定不一致）。
+            // 累加产生非有限值时返回 NaN 而非透传 Inf。
+            "AVG"   => cnt == 0 ? double.NaN : (double.IsNaN(val) || double.IsInfinity(val) ? double.NaN : val / cnt),
             "COUNT" => (object)cnt,  // keep as long, not double
-            _       => val,          // SUM, MAX, MIN
+            _       => (double.IsNaN(val) || double.IsInfinity(val)) ? double.NaN : val,  // SUM, MAX, MIN
         };
 
         internal static object[,] Pivot(object[,] data, int keyCol, int pivotCol, int valueCol, string agg = "SUM", bool hasHeaders = true)

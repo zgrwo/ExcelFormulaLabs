@@ -39,5 +39,11 @@ namespace ExcelFormulaLabs.Analytics.Tests
 
         [Fact] public void Plan_bb_cells_guard_returns_error()
             => DoeUdf.UDF_DOE_PLAN(700, 2, 0, 2, "bb", false, null!).Should().Be(ExcelError.Value);
+
+        // review 2026-08-29（发行前 max level 复审）：超因子数在按因子分配数组前抛异常 → UDF 返回 #VALUE!
+        // 而非 32 位 Excel OOM 崩溃。此前 =DOE.PLAN(1000000000,2,0,1,"FULL") 会尝试 4GB 分配；
+        // 测试用 MaxFactors+1 避免回归时真实 4GB 分配。
+        [Fact] public void Plan_huge_factor_count_returns_error()
+            => DoeUdf.UDF_DOE_PLAN(DoeCore.MaxFactors + 1, 2, 0, 2, "full", false, null!).Should().Be(ExcelError.Value);
     }
 }

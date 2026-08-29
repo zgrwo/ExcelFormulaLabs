@@ -122,5 +122,40 @@ namespace ExcelFormulaLabs.Analytics.Tests
             a.GetLength(0).Should().Be(b.GetLength(0));
             a.GetLength(1).Should().Be(b.GetLength(1));
         }
+
+        // review 2026-08-29（发行前 max level 复审）：MaxRuns/MaxCells 只量 runs/cells，
+        // 不量因子数。此前 `PlanFull(巨大 qty, ...)` 在 `new int[totalFactors]` 处分配数 GB
+        // → 32 位 Excel OOM 崩溃。以下各守卫回归：必须在按因子数分配数组之前抛异常。
+        // 测试用 MaxFactors+1 而非 10 亿——守卫对任何超限值都在分配前抛错，且避免回归时
+        // 真实 4GB 分配 OOM 测试宿主。
+        [Fact] public void Full_huge_factor_count_throws_before_allocation()
+            => new Action(() => DoeCore.PlanFull(DoeCore.MaxFactors + 1, 2, 0, 2, false, null))
+                .Should().Throw<ArgumentException>().WithMessage("*factor*");
+
+        [Fact] public void Full_factors_over_max_throws()
+            => new Action(() => DoeCore.PlanFull(DoeCore.MaxFactors + 1, 2, 0, 2, false, null))
+                .Should().Throw<ArgumentException>().WithMessage("*factor*");
+
+        [Fact] public void Rsm_huge_factor_count_throws_before_allocation()
+            => new Action(() => DoeCore.PlanRsm(DoeCore.MaxFactors + 1, 2, 0, 2, false, null))
+                .Should().Throw<ArgumentException>().WithMessage("*factor*");
+
+        [Fact] public void Rsm_coded_huge_k_throws()
+            => new Action(() => DoeCore.RsmCcd(DoeCore.MaxFactors + 1))
+                .Should().Throw<ArgumentException>().WithMessage("*factor*");
+
+        [Fact] public void Fractional_huge_factor_count_throws()
+            => new Action(() => DoeCore.PlanFractional(DoeCore.MaxFactors + 1, 2, 0, 2, false, null))
+                .Should().Throw<ArgumentException>().WithMessage("*factor*");
+
+        [Fact] public void Bb_huge_factor_count_throws()
+            => new Action(() => DoeCore.PlanBb(DoeCore.MaxFactors + 1, 2, 0, 2, false, null))
+                .Should().Throw<ArgumentException>().WithMessage("*factor*");
+
+        // review 2026-08-29（max level 复审）：qty1+qty2 求和改 long——原 int 回绕恒为负
+        // （最大和 2³²-2 回绕后 ∈ [-2³¹,-2]），错误落回 DOE_NoFactors 误导消息；long 后正确报 TooManyFactors。
+        [Fact] public void Full_qty_sum_overflow_reports_too_many_factors()
+            => new Action(() => DoeCore.PlanFull(int.MaxValue, 2, int.MaxValue, 2, false, null))
+                .Should().Throw<ArgumentException>().WithMessage("*maximum supported*");
     }
 }

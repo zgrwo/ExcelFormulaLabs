@@ -261,6 +261,36 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             r[1, 1].Should().Be(30.0);  // NaN skipped, only 30 used
         }
 
+        // review 2026-08-29（发行前 max level 复审）：SUM/AVG 累加 `current+incoming` 溢出为 ±Inf，
+        // 原实现原样返回 → 单元格泄漏 Inf（违反防错原则）。现 AggResult 对非有限累加值返回 NaN。
+        [Fact] public void Pivot_sum_overflow_returns_nan()
+        {
+            var d = new object[,] { { "K", "P", "V" }, { "A", "X", double.MaxValue }, { "A", "X", double.MaxValue } };
+            var r = PivotCore.Pivot(d, 0, 1, 2);
+            double.IsNaN((double)r[1, 1]).Should().BeTrue();
+        }
+
+        [Fact] public void Pivot_avg_overflow_returns_nan()
+        {
+            var d = new object[,] { { "K", "P", "V" }, { "A", "X", double.MaxValue }, { "A", "X", double.MaxValue } };
+            var r = PivotCore.Pivot(d, 0, 1, 2, "AVG");
+            double.IsNaN((double)r[1, 1]).Should().BeTrue();
+        }
+
+        [Fact] public void GroupBy_sum_overflow_returns_nan()
+        {
+            var d = new object[,] { { "G", "V" }, { "A", double.MaxValue }, { "A", double.MaxValue } };
+            var r = PivotCore.GroupBy(d, new[] { 0 }, 1);
+            double.IsNaN((double)r[0, 1]).Should().BeTrue();
+        }
+
+        [Fact] public void GroupBy_avg_overflow_returns_nan()
+        {
+            var d = new object[,] { { "G", "V" }, { "A", double.MaxValue }, { "A", double.MaxValue } };
+            var r = PivotCore.GroupBy(d, new[] { 0 }, 1, "AVG");
+            double.IsNaN((double)r[0, 1]).Should().BeTrue();
+        }
+
         [Fact] public void Pivot_single_row_data()
         {
             var d = new object[,] { { "K", "P", "V" }, { "A", "X", 42 } };

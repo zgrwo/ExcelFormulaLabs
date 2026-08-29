@@ -15,6 +15,12 @@ namespace ExcelFormulaLabs.Analytics
     {
         /// <summary>Maximum number of runs a design may produce (safety guard).</summary>
         internal const long MaxRuns = 1_000_000;
+
+        // review 2026-08-29（发行前 max level 复审）：MaxRuns/MaxCells 只量 runs/cells，
+        // 不量因子数。PlanFull 的 `new int[totalFactors]` 与 RsmCcd 的 `new int[k]` 在
+        // qty 超大（如 =DOE.PLAN(1000000000,2,0,1,"FULL")→1e9 因子）时仍可分配数 GB →
+        // 32 位 Excel OOM 崩溃（OOM 被异常过滤器排除不可捕获）。须在按因子数分配前设上限。
+        internal const int MaxFactors = 1000;
         // review 2026-08-29：cells 上限（runs×k）。原守卫只量 runs——单公式如
         // =DOE.PLAN(84,2,0,2,"FRAC") 可分配 352MB+、"BB" 可到 5.5GB → 32 位 Excel OOM 崩溃
         // （OOM 被异常过滤器排除不可捕获）。
@@ -67,12 +73,15 @@ namespace ExcelFormulaLabs.Analytics
                 throw new ArgumentException(ErrorMsg.Get("DOE_InvalidLevel", 1, level1));
             if (level2 < 1)
                 throw new ArgumentException(ErrorMsg.Get("DOE_InvalidLevel", 2, level2));
-            int totalFactors = qty1 + qty2;
+            long totalFactors = (long)qty1 + qty2; // long 防 qty1+qty2 回绕（int 最大和 2³²-2 回绕为负 → 错误落回 DOE_NoFactors）
             if (totalFactors < 1)
                 throw new ArgumentException(ErrorMsg.Get("DOE_NoFactors"));
+            // 防超因子数 OOM：`new int[totalFactors]` 在 qty 巨大时可分配数 GB（32 位崩溃）。
+            if (totalFactors > MaxFactors)
+                throw new ArgumentException(ErrorMsg.Get("DOE_TooManyFactors", totalFactors, MaxFactors));
 
             // Per-factor level counts, group 1 factors first then group 2.
-            var levels = new int[totalFactors];
+            var levels = new int[(int)totalFactors];
             for (int i = 0; i < qty1; i++) levels[i] = level1;
             for (int i = 0; i < qty2; i++) levels[qty1 + i] = level2;
 
@@ -110,15 +119,17 @@ namespace ExcelFormulaLabs.Analytics
         {
             if (qty1 < 0 || qty2 < 0)
                 throw new ArgumentException(ErrorMsg.Get("DOE_NegativeQty"));
-            int totalFactors = qty1 + qty2;
+            long totalFactors = (long)qty1 + qty2; // long 防 qty1+qty2 回绕（int 回绕恒为负 → 错误落回 DOE_FractionalTooFewFactors）
             if (totalFactors < 4)
                 throw new ArgumentException(ErrorMsg.Get("DOE_FractionalTooFewFactors", totalFactors));
+            if (totalFactors > MaxFactors)
+                throw new ArgumentException(ErrorMsg.Get("DOE_TooManyFactors", totalFactors, MaxFactors));
             if (qty1 > 0 && level1 != 2)
                 throw new ArgumentException(ErrorMsg.Get("DOE_FractionalLevelUnsupported", level1));
             if (qty2 > 0 && level2 != 2)
                 throw new ArgumentException(ErrorMsg.Get("DOE_FractionalLevelUnsupported", level2));
 
-            return Assemble(FractionalCoded(totalFactors), randomize, seed);
+            return Assemble(FractionalCoded((int)totalFactors), randomize, seed);
         }
 
         // ─────────────────────────────────────────────────────────────
@@ -135,11 +146,13 @@ namespace ExcelFormulaLabs.Analytics
         {
             if (qty1 < 0 || qty2 < 0)
                 throw new ArgumentException(ErrorMsg.Get("DOE_NegativeQty"));
-            int k = qty1 + qty2;
+            long k = (long)qty1 + qty2; // long 防 qty1+qty2 回绕（int 回绕恒为负 → 错误落回 DOE_RsmTooFewFactors）
             if (k < 2)
                 throw new ArgumentException(ErrorMsg.Get("DOE_RsmTooFewFactors", k));
+            if (k > MaxFactors)
+                throw new ArgumentException(ErrorMsg.Get("DOE_TooManyFactors", k, MaxFactors));
 
-            return Assemble(RsmCcd(k), randomize, seed);
+            return Assemble(RsmCcd((int)k), randomize, seed);
         }
 
         // ─────────────────────────────────────────────────────────────
@@ -156,11 +169,13 @@ namespace ExcelFormulaLabs.Analytics
         {
             if (qty1 < 0 || qty2 < 0)
                 throw new ArgumentException(ErrorMsg.Get("DOE_NegativeQty"));
-            int k = qty1 + qty2;
+            long k = (long)qty1 + qty2; // long 防 qty1+qty2 回绕（int 回绕恒为负 → 错误落回 DOE_BbTooFewFactors）
             if (k < 3)
                 throw new ArgumentException(ErrorMsg.Get("DOE_BbTooFewFactors", k));
+            if (k > MaxFactors)
+                throw new ArgumentException(ErrorMsg.Get("DOE_TooManyFactors", k, MaxFactors));
 
-            return Assemble(RsmBb(k), randomize, seed);
+            return Assemble(RsmBb((int)k), randomize, seed);
         }
 
         // ─────────────────────────────────────────────────────────────
@@ -178,6 +193,8 @@ namespace ExcelFormulaLabs.Analytics
             int k = levels.Length;
             if (k < 1)
                 throw new ArgumentException(ErrorMsg.Get("DOE_NoFactors"));
+            if (k > MaxFactors)
+                throw new ArgumentException(ErrorMsg.Get("DOE_TooManyFactors", k, MaxFactors));
 
             long total = 1;
             for (int f = 0; f < k; f++)
@@ -217,13 +234,15 @@ namespace ExcelFormulaLabs.Analytics
         {
             if (qty1 < 0 || qty2 < 0)
                 throw new ArgumentException(ErrorMsg.Get("DOE_NegativeQty"));
-            int totalFactors = qty1 + qty2;
+            long totalFactors = (long)qty1 + qty2; // long 防 qty1+qty2 回绕（int 回绕恒为负 → 错误落回 DOE_NoFactors）
             if (totalFactors < 1)
                 throw new ArgumentException(ErrorMsg.Get("DOE_NoFactors"));
             if (qty1 > 0 && level1 < 1)
                 throw new ArgumentException(ErrorMsg.Get("DOE_InvalidLevel", 1, level1));
             if (qty2 > 0 && level2 < 1)
                 throw new ArgumentException(ErrorMsg.Get("DOE_InvalidLevel", 2, level2));
+            if (totalFactors > MaxFactors)
+                throw new ArgumentException(ErrorMsg.Get("DOE_TooManyFactors", totalFactors, MaxFactors));
 
             // Classify factors into 2-level and 3-level counts.
             int n2 = 0, n3 = 0;
@@ -243,7 +262,7 @@ namespace ExcelFormulaLabs.Analytics
             var (runs, twoCols, threeCols) = SelectOrthogonalArray(n2, n3);
 
             // Pick columns in factor order (group 1 first) and code to [-1, +1].
-            var coded = new double[runs, totalFactors];
+            var coded = new double[runs, (int)totalFactors];
             int twoIdx = 0, threeIdx = 0;
             int f = 0;
             for (int i = 0; i < qty1; i++, f++)
@@ -270,6 +289,8 @@ namespace ExcelFormulaLabs.Analytics
         {
             if (k < 4)
                 throw new ArgumentException(ErrorMsg.Get("DOE_FractionalTooFewFactors", k));
+            if (k > MaxFactors)
+                throw new ArgumentException(ErrorMsg.Get("DOE_TooManyFactors", k, MaxFactors));
 
             int indep = k - 1;
             // 防位移掩码回绕：1L<<indep 在 indep≥64 时按 63 掩码（1L<<83==1L<<19），守卫可被绕过。
@@ -305,6 +326,8 @@ namespace ExcelFormulaLabs.Analytics
         {
             if (k < 2)
                 throw new ArgumentException(ErrorMsg.Get("DOE_RsmTooFewFactors", k));
+            if (k > MaxFactors)
+                throw new ArgumentException(ErrorMsg.Get("DOE_TooManyFactors", k, MaxFactors));
 
             double alpha = Math.Pow(Math.Pow(2, k), 0.25); // rotatable: 2^(k/4)
 
@@ -357,6 +380,8 @@ namespace ExcelFormulaLabs.Analytics
         {
             if (k < 3)
                 throw new ArgumentException(ErrorMsg.Get("DOE_BbTooFewFactors", k));
+            if (k > MaxFactors)
+                throw new ArgumentException(ErrorMsg.Get("DOE_TooManyFactors", k, MaxFactors));
 
             var pairFactorial = FullFactorialCoded(new[] { 2, 2 }); // 4 × 2, coded ±1
 

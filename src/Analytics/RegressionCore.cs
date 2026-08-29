@@ -315,6 +315,13 @@ namespace ExcelFormulaLabs.Analytics
                 throw new ArgumentException(
                     $"ANOVA requires at least 2 observations per group (df_within={dfW}).");
 
+            // review 2026-08-29（发行前 max level 复审）：输入虽已拒绝 NaN/Inf，但有限极大值
+            // （如 1e200）平方后仍可溢出为 Inf。原守卫生效于 `Math.Abs(ssW)<1e-15`，而
+            // `Abs(Inf)<1e-15` 为 false → 绕过守卫 → f=Inf/Inf=NaN 静默泄漏（与 FitOLS/FitRidge 的 Inf 守卫不一致）。
+            if (double.IsNaN(ssB) || double.IsInfinity(ssB) || double.IsNaN(ssW) || double.IsInfinity(ssW))
+                throw new ArgumentException(
+                    "ANOVA failed: sums of squares are non-finite. Input values are too large in magnitude.");
+
             // Guard against degenerate data where all observations are identical
             // (within-group variance = 0 → F = 0/0 = NaN with no diagnostic message).
             if (Math.Abs(ssW) < 1e-15)
