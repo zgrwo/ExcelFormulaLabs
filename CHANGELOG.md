@@ -6,6 +6,17 @@
 
 > 版本一致性：每个 `v*` git tag 必须在本文档有对应条目（`verify-docs.ps1` 强制检查，见规则 [documentation.md](rules/documentation.md)）。
 
+## [Unreleased]
+
+### Fixed（v2.2.2 发布后 CI 事故修复，不影响 xll 产物）
+- verify-docs 检查 16/18 跨平台路径归一化（Linux 前导 `/` 致失配）→ 先 `-replace '\\','/'` 再 `TrimStart('/')`
+- verify-docs 路径规范化 `GetFullPath`（GitHub Actions 8.3 短路径 `RUNNER~1` vs 长名差 3 字符致 Substring 错位）
+- release H1 产物断言 pwsh7 兼容（.NET Core `FileInfo.ToString()` 返回全路径，对象比较恒 false）→ 纯字符串名 `-notin`
+- Python 依赖上限约束（numpy<2.5 / scipy<1.18 / sklearn<2，新版需 Python≥3.12 与 CI 3.11 冲突）；scikit-learn ≥1.9.0（PR #20）
+
+### Added（治理）
+- `skills/project-experience.md` 经验库（版本臆测/pwsh7 差异/8.3 短路径/数值溢出等高频陷阱 + 证据链）；sync-qoder-skills 改动态发现技能
+
 ## [2.2.2] - 2026-08-29
 
 ### Security
