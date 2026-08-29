@@ -86,7 +86,8 @@ ExcelFormulaLabs/
 │   ├── excel-dna-addins.md         #   Excel-DNA UDF/打包/分发
 │   ├── architecture-reviewer.md    #   架构审查（YAGNI 四问）
 │   ├── refactoring-guardian.md     #   重构守卫（Phase 安全网）
-│   └── project-plan-review.md      #   项目规划审查
+│   ├── project-plan-review.md      #   项目规划审查
+│   └── project-experience.md       #   经验库（高频陷阱/铁律/证据链）
 │
 ├── src/                            # 源码
 │   ├── Directory.Build.props       #   全局 MSBuild 属性（版本 + 包元数据）

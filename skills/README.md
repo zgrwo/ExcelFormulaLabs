@@ -13,6 +13,7 @@
 | [architecture-reviewer.md](architecture-reviewer.md) | 新增组件/层级/依赖前 | 架构审查（YAGNI 四问） |
 | [refactoring-guardian.md](refactoring-guardian.md) | 重构 Phase 开始/结束时 | 重构守卫（安全网） |
 | [project-plan-review.md](project-plan-review.md) | 里程碑复盘/规划评审 | 项目规划审查 |
+| [project-experience.md](project-experience.md) | 修改代码/依赖/门禁/发版前（速查） | 高频陷阱与铁律（版本臆测、pwsh7 差异、8.3 短路径、数值溢出等） |
 
 ## 过程技能策略（不 vendored）
 

@@ -19,12 +19,13 @@ $ErrorActionPreference = "Stop"
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 $root = Split-Path -Parent $PSScriptRoot
 
+# review-2026-08-29：改为动态扫描 skills/*.md（排除 README.md），新技能自动纳入同步与检查 13。
+# 旧硬编码列表曾漏掉 project-experience —— 硬编码名单是漂移源（经验库 C4）。
 $skillNames = @(
-    "excel-dna-project",
-    "excel-dna-addins",
-    "architecture-reviewer",
-    "refactoring-guardian",
-    "project-plan-review"
+    Get-ChildItem -Path (Join-Path $root "skills") -Filter "*.md" |
+        Where-Object { $_.Name -ne "README.md" } |
+        ForEach-Object { $_.BaseName } |
+        Sort-Object
 )
 
 # 链接重写表：顶层 skills/*.md 使用父级相对链接（../rules/...），
@@ -100,6 +101,8 @@ if ($mismatches.Count -gt 0) {
     foreach ($name in $skillNames) {
         $src = Join-Path $root "skills\$name.md"
         $dst = Join-Path $root ".qoder\skills\$name\SKILL.md"
+        $dstDir = Split-Path -Parent $dst
+        if (-not (Test-Path $dstDir)) { New-Item -ItemType Directory -Path $dstDir -Force | Out-Null }
         $content = [System.IO.File]::ReadAllText($src, $utf8NoBom)
         $converted = ConvertTo-QoderLinks $content
         [System.IO.File]::WriteAllText($dst, $converted, $utf8NoBom)

@@ -51,6 +51,7 @@
 | :--- | :--- | :--- |
 | Foundation / Analytics / DataToolkit / 编码规范 | `skills/excel-dna-project.md` | 编码规范、架构、MapOver 变体、表头/哨兵契约、测试模式 |
 | UDF / .xll 打包 / 分发 | `skills/excel-dna-addins.md` | UDF 声明规范、Excel-DNA 黄金法则、打包流程 |
+| 修改依赖/门禁/数值/发版（速查） | `skills/project-experience.md` | 高频陷阱与铁律（版本臆测、pwsh7 差异、8.3 短路径、数值溢出） |
 
 ### 专家 Skill（重构生命周期）
 
