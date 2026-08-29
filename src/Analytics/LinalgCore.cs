@@ -262,9 +262,11 @@ namespace ExcelFormulaLabs.Analytics
 
         internal static double[,] Identity(int n)
         {
-            if (n < 0 || n > 10_000)
+            // review 2026-08-29：上限 10000 → DenseIdentity(10000).ToArray() = 800MB，
+            // 32 位 Excel 单公式 OOM 风险。收紧至 2000（32MB）。
+            if (n < 0 || n > 2_000)
                 throw new ArgumentException(
-                    $"Identity matrix size must be between 0 and 10000 (got {n}).");
+                    $"Identity matrix size must be between 0 and 2000 (got {n}).");
             return Matrix<double>.Build.DenseIdentity(n).ToArray();
         }
 

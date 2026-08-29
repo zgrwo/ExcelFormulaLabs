@@ -136,13 +136,13 @@ namespace ExcelFormulaLabs.DataToolkit
             //   FileSystemCore.Initialize(new SandboxConfig(Path.Combine(
             //       Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             //       "ExcelFormulaLabs", "sandbox")));
-            // 未启用时输出醒目警告（加载即提示，而非首次 FS 调用才提示）。
+            // 未启用时输出警告。注意（2026-08-29 发行前审查）：Trace.WriteLine 默认无 TraceListener，
+            // 仅调试器/ETW 可见，对 Excel 终端用户不可见——用户警示由 README § 文件系统沙箱 与 SECURITY.md 承担。
             if (FileSystemCore.SandboxRoot == null)
             {
                 System.Diagnostics.Trace.WriteLine(
-                    "[FileSystemCore] ⚠ SandboxRoot is null — FS.* file operations are UNRESTRICTED. " +
-                    "Before loading untrusted workbooks, call FileSystemCore.Initialize(new SandboxConfig(\"...\")) in AutoOpen. " +
-                    "See README § 文件系统沙箱.");
+                    "[FileSystemCore] ⚠ SandboxRoot is null — FS.* file operations are UNRESTRICTED (debug-only; " +
+                    "user guidance: README § 文件系统沙箱).");
             }
 #if NET48
             ExcelAsyncUtil.QueueAsMacro(() => IntelliSenseServer.Install());

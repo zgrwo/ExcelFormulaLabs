@@ -42,7 +42,7 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
       - id: excelformulalabs-docs
-        name: ExcelFormulaLabs 文档一致性（15 项）
+        name: ExcelFormulaLabs 文档一致性（16 项）
         entry: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-docs.ps1
         language: system
         pass_filenames: false

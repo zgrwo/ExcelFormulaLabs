@@ -110,7 +110,25 @@
 
 ---
 
-## 5. Other Modules — `scripts/verify-manual.py` Results
+## 5. DOE — Design of Experiments (4 UDFs)
+
+> review 2026-08-29：补 DOE 小节——此前模块表缺 DOE 导致加总 232≠Total 236。
+> 验证：DOE.PLAN 设计矩阵（FULL/FRAC/RSM/BB）与 pyDOE2（fullfact/fracfact/ccdesign/bbdesign）交叉验证；
+> DOE.ANALYZE/ANOVA/PARETO 与独立 numpy OLS + scipy t 分布对照（verify-manual.py cross_check_matrix）。
+
+| Function | 对照 | Python | C# | OK |
+|---|---|---|---|---|
+| DOE.PLAN (FULL 2×2) | pyDOE2 fullfact | shape (4,2) | =Python | Y |
+| DOE.PLAN (FRAC 4) | pyDOE2 fracfact | shape (8,4) | =Python | Y |
+| DOE.PLAN (RSM 2) | pyDOE2 ccdesign | shape (16,2) | =Python | Y |
+| DOE.PLAN (BB 3) | pyDOE2 bbdesign | shape (15,3) | =Python | Y |
+| DOE.ANALYZE | numpy OLS + scipy t | effects/coef/t/p 匹配 | =Python | Y |
+| DOE.ANOVA | numpy OLS + scipy F | SS/df/MS/F/p 匹配 | =Python | Y |
+| DOE.PARETO | |effect| 降序 | 排序匹配 | =Python | Y |
+
+---
+
+## 6. Other Modules — `scripts/verify-manual.py` Results
 
 | Module | UDFs | Checks | Status |
 |---|---|---|---|

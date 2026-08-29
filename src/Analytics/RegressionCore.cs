@@ -60,7 +60,11 @@ namespace ExcelFormulaLabs.Analytics
             var fitted = matX * beta;
             var residuals = vecY - fitted;
             double sse = residuals.DotProduct(residuals);
-            double tss = vecY.DotProduct(vecY) - Math.Pow(vecY.Sum(), 2) / n;
+            // review 2026-08-29：TSS 改单遍中心化形式 Σ(y−ȳ)²——原两遍公式 y'y−(Σy)²/n 在
+            // 大均值 y（量级/散布比 ≥1e12）时灾难性抵消，R² 静默错误（DoeAnalysisCore 已用稳定形式）。
+            double yMean = vecY.Sum() / n;
+            double tss = 0;
+            for (int i = 0; i < n; i++) { double d = vecY[i] - yMean; tss += d * d; }
             if (double.IsNaN(tss) || double.IsInfinity(tss))
                 throw new ArgumentException(
                     "Cannot fit OLS: total sum of squares is numerically unstable " +
@@ -179,6 +183,13 @@ namespace ExcelFormulaLabs.Analytics
             if (Math.Abs(tssOrig) < 1e-15)
                 throw new ArgumentException(
                     "Cannot fit WLS: total sum of squares is zero (constant response variable y).");
+            // review 2026-08-29：sseOrig/tssOrig 平方溢出（y≈1e154 + 小权重）可致 r2Orig=1−Inf/Inf=NaN
+            // 静默泄漏（FitOLSCore/FitRidge 已守卫同场景）。
+            if (double.IsNaN(sseOrig) || double.IsInfinity(sseOrig) ||
+                double.IsNaN(tssOrig) || double.IsInfinity(tssOrig))
+                throw new ArgumentException(
+                    "Cannot fit WLS: residual/total sum of squares is numerically unstable " +
+                    "(response values too large for double precision).");
             double r2Orig = 1.0 - sseOrig / tssOrig;
             result["sse"] = sseOrig;
             result["r_squared"] = r2Orig;
@@ -233,7 +244,10 @@ namespace ExcelFormulaLabs.Analytics
             var fitted = matX * beta;
             var residuals = vecY - fitted;
             double sse = residuals.DotProduct(residuals);
-            double tss = vecY.DotProduct(vecY) - Math.Pow(vecY.Sum(), 2) / n;
+            // review 2026-08-29：TSS 改单遍中心化形式（同 FitOLSCore，防灾难性抵消）
+            double yMean = vecY.Sum() / n;
+            double tss = 0;
+            for (int i = 0; i < n; i++) { double d = vecY[i] - yMean; tss += d * d; }
             // P1-6: same numerical-stability guard as FitOLSCore (Inf−Inf=NaN silent leak).
             if (double.IsNaN(sse) || double.IsInfinity(sse))
                 throw new ArgumentException(

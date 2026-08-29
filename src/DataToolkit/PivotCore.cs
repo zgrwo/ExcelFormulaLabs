@@ -60,6 +60,13 @@ namespace ExcelFormulaLabs.DataToolkit
                 else { map[kv] = v; cnt[kv] = 1; }
             }
             var keys = keyList; var pivots = pivotList;
+            // review 2026-08-29：输出 cell 上限守卫（原仅 CrossJoin 有）。1M 行全异键值 → 1e12 cells OOM。
+            const long maxCells = 1_000_000;
+            long outCells = (long)(keys.Count + 1) * (pivots.Count + 1);
+            if (outCells > maxCells)
+                throw new ArgumentException(
+                    $"Pivot would produce {keys.Count + 1:N0} rows × {pivots.Count + 1:N0} cols = {outCells:N0} cells. " +
+                    $"Maximum is {maxCells:N0}. Reduce distinct key/pivot values.");
             var result = new object[keys.Count + 1, pivots.Count + 1];
             result[0, 0] = "Key \\ Pivot";
             for (int c = 0; c < pivots.Count; c++) result[0, c + 1] = pivots[c];
@@ -84,8 +91,15 @@ namespace ExcelFormulaLabs.DataToolkit
                 "Unpivot requires at least one data row (header + data).");
             if (!hasHeaders && rows < 1) throw new ArgumentException(
                 "Unpivot requires at least one data row.");
-            var result = new List<object[]>();
+            // review 2026-08-29：输出 cell 上限守卫（rows × valueCols 无上限会 OOM）
+            const long maxCells = 1_000_000;
             int outWidth = nId + 2;
+            long estRows = (long)(rows - dataStartRow) * valueCols.Length;
+            if (estRows * outWidth > maxCells)
+                throw new ArgumentException(
+                    $"Unpivot would produce {estRows:N0} rows × {outWidth} cols = {estRows * outWidth:N0} cells. " +
+                    $"Maximum is {maxCells:N0}. Reduce input rows or value fields.");
+            var result = new List<object[]>();
             for (int r = dataStartRow; r < rows; r++)
             {
                 foreach (int vc in valueCols)
@@ -124,6 +138,12 @@ namespace ExcelFormulaLabs.DataToolkit
                 else { groups[gks] = (v, 1); if (seen.Add(gks)) keyNames.Add(gk); }
             }
             var result = new object[keyNames.Count, nG + 1];
+            // review 2026-08-29：输出 cell 上限守卫（GroupBy 输出列 = 分组列+1，可被 nG 放大）
+            const long maxCells = 1_000_000;
+            if ((long)keyNames.Count * (nG + 1) > maxCells)
+                throw new ArgumentException(
+                    $"GroupBy would produce {keyNames.Count:N0} rows × {nG + 1} cols = {(long)keyNames.Count * (nG + 1):N0} cells. " +
+                    $"Maximum is {maxCells:N0}. Reduce group fields or input rows.");
             for (int i = 0; i < keyNames.Count; i++) { var kn = keyNames[i]; for (int j = 0; j < nG; j++) result[i, j] = kn[j]; var (val, cnt) = groups[MakeCompoundKey(kn)]; result[i, nG] = AggResult(agg, val, cnt); }
             return result;
         }

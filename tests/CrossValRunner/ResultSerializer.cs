@@ -35,6 +35,7 @@ public static class ResultSerializer
             long[] la => la.Cast<object>().ToArray(),
             double[,] d2 => MatrixToJagged(d2),
             object[,] o2 => ObjectMatrixToJagged(o2),
+            object[] oa => oa.Select(ToJsonFriendly).ToArray(),
             Dictionary<string, object> dict => DictToObject(dict),
             _ => TryTupleToObject(value)
         };

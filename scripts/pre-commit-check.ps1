@@ -207,7 +207,8 @@ $hasHeaderViolations = @()
 # review-2026-08-29 P2-7：原 11 项中的 Frequency/Dict/JsonToTable/XmlToTable/RegexCaptureGroups
 # 参数均为 object[]/string（非 object[,]），check 正则不匹配，属冗余项 → 收缩为与
 # AGENTS.md §4 表头行契约一致的 6 项（Transpose/SelectColumns/SelectRows/CrossJoin/Flatten2D/Count）。
-$structuralExempt = @('Transpose','SelectColumns','SelectRows','CrossJoin','Flatten2D','Count')
+# 2026-08-29 发行前审查补充：DictSetCore.Keys/Values 为列提取（与 SelectColumns 同类结构变换）→ 豁免。
+$structuralExempt = @('Transpose','SelectColumns','SelectRows','CrossJoin','Flatten2D','Count','Keys','Values')
 
 foreach ($f in $allCoreCs) {
     $content = Read-Utf8Text $f.FullName

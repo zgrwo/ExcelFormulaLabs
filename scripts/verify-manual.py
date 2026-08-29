@@ -139,7 +139,7 @@ cross_check("STATS.VARP", np.var(data, ddof=0))
 cross_check("STATS.VAR", np.var(data, ddof=1))
 cross_check("STATS.STDEVP", np.std(data, ddof=0))
 cross_check("STATS.STDEV", np.std(data, ddof=1))
-check("STATS.SKEW", abs(float(stats.skew(data, bias=False))) < 0.01, True)  # boolean check, no C# ref
+cross_check("STATS.SKEW", float(stats.skew(data, bias=False)), tol=1e-4)  # review 2026-08-29: 原布尔阈值无活体对照
 cross_check("STATS.KURT", float(stats.kurtosis(data, fisher=True, bias=False)), tol=1e-4)
 cross_check("STATS.MIN", np.min(data))
 cross_check("STATS.MAX", np.max(data))
@@ -154,7 +154,22 @@ cross_check("STATS.IQR", q75-q25)
 summary=[len(data),np.mean(data),np.std(data,ddof=1),np.min(data),q25,q50,q75,np.max(data),q75-q25]
 cross_check("STATS.SUMMARY", summary, tol=1e-8)
 check("STATS.SUMMARY[n]", summary[0], 20); check("STATS.SUMMARY[mean]", summary[1], 28.8)
-check("STATS.COUNT", len(data), 20)  # UDF wraps V().Length, no Core dispatch
+check("STATS.COUNT", len(data), 20)
+# review 2026-08-29：CountNumeric 独立语义对照（混类型输入，Excel COUNT 语义：跳过文本/空，bool 计入）
+def csharp_count_semantics(items):
+    n = 0
+    for x in items:
+        if x is None:
+            continue
+        if isinstance(x, bool):
+            n += 1  # C# ToDouble(true)=1.0
+        elif isinstance(x, (int, float)):
+            n += 1
+        elif isinstance(x, str):
+            try: float(x); n += 1
+            except ValueError: pass
+    return n
+cross_check("STATS.COUNT", float(csharp_count_semantics([1, "text", 2, None, 3.5, True, 4])))
 cross_check("STATS.MODE", float(stats.mode([1,2,2,3,4], keepdims=True).mode[0]))
 # All-unique MODE → NaN (tested implicitly: 20 unique values → NaN)
 xc=np.array([1.0,3,5,7,9]); yc=np.array([2.0,6,10,14,18])
@@ -190,6 +205,8 @@ if cs_solve and cs_solve["status"]=="ok":
     check("LINALG.SOLVE[1] vs C#", xs[1], cs[1], tol=1e-8)
     check("LINALG.SOLVE[2] vs C#", xs[2], cs[2], tol=1e-8)
     check("LINALG.SOLVE[3] vs C#", xs[3], cs[3], tol=1e-8)
+elif cs_solve is not None:
+    FAIL += 1; print(f"  FAIL LINALG.SOLVE[0]: C# error — {{cs_solve.get('error', 'unknown')}}")
 else:
     check("LINALG.SOLVE[0]", xs[0], 0.5714285714285714)
     check("LINALG.SOLVE[1]", xs[1], 1.2857142857142858)
@@ -208,6 +225,8 @@ if cs_svd and cs_svd["status"]=="ok":
     cs=cs_svd["result"]; cs_S=cs["S"]
     check("LINALG.SVD_S[0] vs C#", S_svd[0], cs_S[0], tol=1e-3)
     check("LINALG.SVD_S[1] vs C#", S_svd[1], cs_S[1], tol=1e-3)
+elif cs_svd is not None:
+    FAIL += 1; print(f"  FAIL LINALG.SVD_S[0]: C# error — {{cs_svd.get('error', 'unknown')}}")
 else:
     check("LINALG.SVD_S[0]", S_svd[0], 9.508032000586758, tol=1e-3)
     check("LINALG.SVD_S[1]", S_svd[1], 0.7728696356730957, tol=1e-3)
@@ -223,6 +242,8 @@ if cs_qr and cs_qr["status"]=="ok":
     check("LINALG.QR_R[0,0] vs C#", bool(abs(abs(Rr[0,0])-abs(cs_R[0][0]))<0.01), True)
     check("LINALG.QR_R[1,1] vs C#", bool(abs(abs(Rr[1,1])-abs(cs_R[1][1]))<0.01), True)
     check("LINALG.QR_R[2,2] vs C#", bool(abs(abs(Rr[2,2])-abs(cs_R[2][2]))<0.01), True)
+elif cs_qr is not None:
+    FAIL += 1; print(f"  FAIL LINALG.QR_R[0,0]: C# error — {{cs_qr.get('error', 'unknown')}}")
 else:
     check("LINALG.QR_R[0,0]", abs(Rr[0,0]+14)<0.01, True)
     check("LINALG.QR_R[1,1]", abs(Rr[1,1]+175)<0.1, True)
@@ -234,6 +255,8 @@ cs_lu=csharp_results().get("LINALG.LU")
 P_lu,L_lu,U_lu=la.lu(A)
 if cs_lu and cs_lu["status"]=="ok":
     check("LINALG.LU+ vs C#", bool(abs(U_lu[0,0]-cs_lu["result"]["U"][0][0])<0.01), True)
+elif cs_lu is not None:
+    FAIL += 1; print(f"  FAIL LINALG.LU_U[0,0]: C# error — {{cs_lu.get('error', 'unknown')}}")
 else:
     check("LINALG.LU_U[0,0]", abs(U_lu[0,0]-4.0)<0.01, True)
     check("LINALG.LU_U[1,1]", abs(U_lu[1,1]-4.25)<0.01, True)
@@ -248,6 +271,8 @@ if cs_pinv and cs_pinv["status"]=="ok":
     cs=cs_pinv["result"]
     check("LINALG.PINV[0,0] vs C#", bool(abs(Ap[0,0]-cs[0][0])<0.001), True)
     check("LINALG.PINV[1,0] vs C#", bool(abs(Ap[1,0]-cs[1][0])<0.001), True)
+elif cs_pinv is not None:
+    FAIL += 1; print(f"  FAIL LINALG.PINV[0,0]: C# error — {{cs_pinv.get('error', 'unknown')}}")
 else:
     check("LINALG.PINV[0,0]", abs(Ap[0,0]+0.9444)<0.001, True)
     check("LINALG.PINV[1,0]", abs(Ap[1,0]-0.4444)<0.001, True)
@@ -258,6 +283,8 @@ if cs_chol and cs_chol["status"]=="ok":
     cs=cs_chol["result"]
     check("LINALG.CHOLESKY[0,0] vs C#", Lc[0,0], cs[0][0], tol=1e-8)
     check("LINALG.CHOLESKY[1,0] vs C#", Lc[1,0], cs[1][0], tol=1e-8)
+elif cs_chol is not None:
+    FAIL += 1; print(f"  FAIL LINALG.CHOLESKY[0,0]: C# error — {{cs_chol.get('error', 'unknown')}}")
 else:
     check("LINALG.CHOLESKY[0,0]", Lc[0,0], 2.0); check("LINALG.CHOLESKY[1,0]", Lc[1,0], 1.0)
 cross_check("LINALG.IDENTITY", np.eye(3))
@@ -278,6 +305,8 @@ if cs_ols and cs_ols["status"] == "ok":
     check("REGRESS.COEF[2] vs C#", lr.coef_[1], cs.get("coefficients", [0,0,0])[2], tol=1e-8)
     check("REGRESS.R² vs C#", lr.score(Xr,yr), cs.get("r_squared", -1), tol=1e-10)
     check("REGRESS.SSE vs C#", 0.0, cs.get("sse", -1), tol=1e-10)
+elif cs_ols is not None:
+    FAIL += 1; print(f"  FAIL REGRESS.OLS(R2): C# error — {{cs_ols.get('error', 'unknown')}}")
 else:
     # fallback: hardcoded check if C# runner unavailable
     check("REGRESS.OLS(R2)", lr.score(Xr,yr), 1.0)
@@ -290,6 +319,8 @@ w=np.array([1.0,2,3,4,5]); lr_w=LR(fit_intercept=True); lr_w.fit(Xr,yr,sample_we
 cs_wls = csharp_results().get("REGRESS.FitWLS")
 if cs_wls and cs_wls["status"] == "ok":
     check("REGRESS.WLS(R²) vs C#", lr_w.score(Xr,yr,sample_weight=w), cs_wls["result"]["r_squared"], tol=1e-4)
+elif cs_wls is not None:
+    FAIL += 1; print(f"  FAIL REGRESS.WLS(R2): C# error — {{cs_wls.get('error', 'unknown')}}")
 else:
     check("REGRESS.WLS(R2)", lr_w.score(Xr,yr,sample_weight=w), 0.99999, tol=1e-4)
 # RIDGE — cross-validate
@@ -297,6 +328,8 @@ cs_ridge = csharp_results().get("REGRESS.FitRidge")
 if cs_ridge and cs_ridge["status"] == "ok":
     ridge=RidgeLR(alpha=0.1,fit_intercept=True); ridge.fit(Xr,yr)
     check("REGRESS.RIDGE(R²) vs C#", ridge.score(Xr,yr), cs_ridge["result"]["r_squared"], tol=1e-3)
+elif cs_ridge is not None:
+    FAIL += 1; print(f"  FAIL REGRESS.RIDGE(R²) sklearn: C# error — {{cs_ridge.get('error', 'unknown')}}")
 else:
     ridge=RidgeLR(alpha=0.1,fit_intercept=True); ridge.fit(Xr,yr)
     # Fallback (C# unavailable): hardcoded sklearn result for the current dataset.
@@ -305,6 +338,8 @@ else:
 cs_fi = csharp_results().get("REGRESS.FACTORIMP")
 if cs_fi and cs_fi["status"] == "ok":
     check("REGRESS.FACTORIMP vs C#", list(np.argsort(-np.abs(lr.coef_))), cs_fi["result"], tol=1e-10)
+elif cs_fi is not None:
+    FAIL += 1; print(f"  FAIL REGRESS.FACTORIMP: C# error — {{cs_fi.get('error', 'unknown')}}")
 else:
     check("REGRESS.FACTORIMP", list(np.argsort(-np.abs(lr.coef_))), [0,1])
 # ANOVA1 — cross-validate
@@ -313,6 +348,8 @@ if cs_anova and cs_anova["status"] == "ok":
     fs,pv=stats.f_oneway([10,12,14,11,13],[20,22,24,21,23],[15,17,16,18,14])
     check("REGRESS.ANOVA1 f vs C#", fs, cs_anova["result"]["f_stat"], tol=1e-2)
     check("REGRESS.ANOVA1 p vs C#", pv, cs_anova["result"]["p_value"], tol=1e-6)
+elif cs_anova is not None:
+    FAIL += 1; print(f"  FAIL REGRESS.ANOVA1 f: C# error — {{cs_anova.get('error', 'unknown')}}")
 else:
     fs,pv=stats.f_oneway([10,12,14,11,13],[20,22,24,21,23],[15,17,16,18,14])
     check("REGRESS.ANOVA1 f", fs, 50.666666666666664, tol=1e-2)
@@ -351,6 +388,8 @@ Rg=0.082057; Vstp=1*Rg*273.15/1.0
 cs_gas = csharp_results().get("PHYCHEM.IDEALGAS_V")
 if cs_gas and cs_gas["status"] == "ok" and cs_gas["result"] is not None:
     check("PHYCHEM.IDEALGAS(V) vs C#", Vstp, cs_gas["result"], tol=1e-2)
+elif cs_gas is not None:
+    FAIL += 1; print(f"  FAIL PHYCHEM.IDEALGAS_V: C# error — {cs_gas.get('error', 'unknown')}")
 else:
     check("PHYCHEM.IDEALGAS(V)", Vstp, 22.41386955, tol=1e-2)
 # P1-10 (review): removed PHYCHEM.IDEALGAS(P≈1) — it was an algebraic identity
@@ -593,6 +632,9 @@ check("ARR.COUNT", len(a5), 5)
 check("ARR.CONTAINS", "Banana" in ["Apple","Banana","Carrot"], True)
 check("ARR.FILL", ["Hello"]*5, ["Hello","Hello","Hello","Hello","Hello"])
 check("ARR.RANGE", list(range(1,11,2)), [1,3,5,7,9])
+# review 2026-08-29：ARR.RANGE/ARR.FILL（下沉 ArrayCore 后）接入活体对照
+cross_check("ARR.RANGE", [1.0, 2.0, 3.0, 4.0, 5.0])
+cross_check("ARR.FILL", ["x", "x", "x"])
 # SHUFFLE — Fisher-Yates format check
 # ARR.SHUFFLE: random output — format-only, verify length unchanged
 import random; shuffled=list(a5); random.shuffle(shuffled); check("ARR.SHUFFLE", len(shuffled), len(a5))
@@ -705,17 +747,20 @@ check("FS.BNAME", os.path.splitext(os.path.basename("C:\\Users\\Alice\\report.xl
 check("FS.EXT(.xlsx)", os.path.splitext("report.xlsx")[1], ".xlsx")
 check("FS.EXT(Makefile)", os.path.splitext("Makefile")[1], "")
 check("FS.FOLDER", os.path.dirname("C:\\Users\\Alice\\report.xlsx"), "C:\\Users\\Alice")
-# FEXISTS / FDEXISTS — test on known system paths
-check("FS.FEXISTS(notepad)", os.path.exists("C:\\Windows\\System32\\notepad.exe"), True)
+# FEXISTS / FDEXISTS — test on known system paths（review 2026-08-29：notepad.exe 在精简 Windows 镜像缺失，
+# 改 kernel32.dll——任何 Windows 必有）
+_k32 = os.path.join(os.environ.get("WINDIR", "C:\\Windows"), "System32", "kernel32.dll")
+check("FS.FEXISTS(kernel32)", os.path.exists(_k32), True)
 check("FS.FEXISTS(missing)", os.path.exists("C:\\nonexistent\\file.txt"), False)
 check("FS.FDEXISTS(Users)", os.path.isdir("C:\\Users"), True)
 check("FS.FDEXISTS(missing)", os.path.isdir("Z:\\Missing"), False)
-# FSIZE — test on known file
-if os.path.exists("C:\\Windows\\System32\\notepad.exe"):
-    sz=os.path.getsize("C:\\Windows\\System32\\notepad.exe")
+# FSIZE — test on known file（kernel32.dll 必存在）
+if os.path.exists(_k32):
+    sz=os.path.getsize(_k32)
     check("FS.FSIZE > 0", sz>0, True)
 else:
-    print("  SKIP FS.FSIZE: notepad.exe not found (non-Windows environment)")
+    SKIP += 1
+    print("  SKIP FS.FSIZE: kernel32.dll not found (non-Windows environment)")
 # MKDIR — test with temp dir
 td=os.path.join(tempfile.gettempdir(),"test_evl_mkdir_"+str(uuid.uuid4())[:8])
 try:

@@ -15,6 +15,10 @@ namespace ExcelFormulaLabs.Analytics
     {
         /// <summary>Maximum number of runs a design may produce (safety guard).</summary>
         internal const long MaxRuns = 1_000_000;
+        // review 2026-08-29：cells 上限（runs×k）。原守卫只量 runs——单公式如
+        // =DOE.PLAN(84,2,0,2,"FRAC") 可分配 352MB+、"BB" 可到 5.5GB → 32 位 Excel OOM 崩溃
+        // （OOM 被异常过滤器排除不可捕获）。
+        internal const long MaxCells = 1_000_000;
 
         /// <summary>
         /// Unified entry point. Dispatches on <paramref name="method"/> (case-insensitive).
@@ -180,10 +184,14 @@ namespace ExcelFormulaLabs.Analytics
             {
                 if (levels[f] < 1)
                     throw new ArgumentException(ErrorMsg.Get("DOE_InvalidLevel", f + 1, levels[f]));
+                if (levels[f] > MaxRuns / total) // 防乘法溢出（levels[f] 巨大或 total 累积溢出 long）
+                    throw new ArgumentException(ErrorMsg.Get("DOE_TooManyRuns", MaxRuns));
                 total *= levels[f];
                 if (total > MaxRuns)
                     throw new ArgumentException(ErrorMsg.Get("DOE_TooManyRuns", MaxRuns));
             }
+            if (total * k > MaxCells)
+                throw new ArgumentException(ErrorMsg.Get("DOE_TooManyCells", total, k, total * k, MaxCells));
 
             var m = new double[total, k];
             for (long r = 0; r < total; r++)
@@ -264,9 +272,13 @@ namespace ExcelFormulaLabs.Analytics
                 throw new ArgumentException(ErrorMsg.Get("DOE_FractionalTooFewFactors", k));
 
             int indep = k - 1;
-            long runs = 1L << indep;
+            // 防位移掩码回绕：1L<<indep 在 indep≥64 时按 63 掩码（1L<<83==1L<<19），守卫可被绕过。
+            // 2^31 已远超 MaxRuns，indep≥31 直接判超限。
+            long runs = indep >= 31 ? long.MaxValue : 1L << indep;
             if (runs > MaxRuns)
                 throw new ArgumentException(ErrorMsg.Get("DOE_TooManyRuns", MaxRuns));
+            if (runs * k > MaxCells)
+                throw new ArgumentException(ErrorMsg.Get("DOE_TooManyCells", runs, k, runs * k, MaxCells));
             var m = new double[runs, k];
             for (long r = 0; r < runs; r++)
             {
@@ -300,12 +312,14 @@ namespace ExcelFormulaLabs.Analytics
             for (int i = 0; i < k; i++) levels[i] = 2;
             var factorial = FullFactorialCoded(levels); // 2^k × k, coded ±1
 
-            long nf = 1L << k;
+            long nf = k >= 31 ? long.MaxValue : 1L << k; // 防位移回绕（同 FractionalCoded）
             int nAxial = 2 * k;
             const int centerPerBlock = 4;
             long total = nf + centerPerBlock + nAxial + centerPerBlock;
             if (total > MaxRuns)
                 throw new ArgumentException(ErrorMsg.Get("DOE_TooManyRuns", MaxRuns));
+            if (total * k > MaxCells)
+                throw new ArgumentException(ErrorMsg.Get("DOE_TooManyCells", total, k, total * k, MaxCells));
 
             var m = new double[total, k];
             long row = 0;
@@ -346,12 +360,14 @@ namespace ExcelFormulaLabs.Analytics
 
             var pairFactorial = FullFactorialCoded(new[] { 2, 2 }); // 4 × 2, coded ±1
 
-            int nPairs = k * (k - 1) / 2;
-            int edgePoints = nPairs * 4;
+            long nPairs = (long)k * (k - 1) / 2; // long 防 int 溢出（k 大时 k*(k-1) 溢出 int）
+            long edgePoints = nPairs * 4;
             int center = BoxBehnkenCenterPoints(k);
             long total = edgePoints + center;
             if (total > MaxRuns)
                 throw new ArgumentException(ErrorMsg.Get("DOE_TooManyRuns", MaxRuns));
+            if (total * k > MaxCells)
+                throw new ArgumentException(ErrorMsg.Get("DOE_TooManyCells", total, k, total * k, MaxCells));
 
             var m = new double[total, k];
             long row = 0;

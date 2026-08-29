@@ -297,11 +297,9 @@ namespace ExcelFormulaLabs.Foundation
             if (targetType == typeof(string)) return (T)(object)InputNormalizer.ToString(value);
             if (targetType == typeof(double)) return (T)(object)InputNormalizer.ToDouble(value);
             if (targetType == typeof(long)) return (T)(object)InputNormalizer.ToLong(value);
-            // P2 (pre-release review): documented L4 trade-off — ToLong's sentinel 0 applies
-            // to values unrepresentable as long; long values outside int range are CLAMPED
-            // (not zeroed) so index-style callers (SELCOLS/SELROWS/SLICE) fail loudly with
-            // a range error instead of silently selecting column 0.
-            if (targetType == typeof(int)) { long lv = InputNormalizer.ToLong(value); int iv = lv < int.MinValue ? int.MinValue : lv > int.MaxValue ? int.MaxValue : (int)lv; return (T)(object)iv; }
+            // review 2026-08-29：统一委托 InputNormalizer.ToInt32——原实现 CLAMP（截断后依赖下游
+            // 范围检查兜底），与 ToInt32 的 THROW 语义不一致（超 int 范围应显式失败而非静默钳制）。
+            if (targetType == typeof(int)) return (T)(object)InputNormalizer.ToInt32(value);
             if (targetType == typeof(bool)) return (T)(object)InputNormalizer.ToBool(value);
             if (targetType == typeof(DateTime)) return (T)(object)InputNormalizer.ToDateTime(value);
 

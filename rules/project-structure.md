@@ -62,7 +62,7 @@ ExcelFormulaLabs/
 │       └── 0005-sandboxconfig-immutable.md
 │
 ├── scripts/                        # 构建/验证脚本
-│   ├── verify-docs.ps1             #   文档一致性验证（15 项检查，唯一实现）
+│   ├── verify-docs.ps1             #   文档一致性验证（16 项检查，唯一实现）
 │   ├── verify-docs.sh              #   verify-docs.ps1 的 POSIX 包装器
 │   ├── verify-manual.py            #   全 UDF 手册示例验证（Python↔C#）
 │   ├── verify-all.ps1              #   一键 5 步验证门

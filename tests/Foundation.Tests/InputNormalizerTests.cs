@@ -194,4 +194,20 @@ public class ComRangeExtractionTests
     // ToBool numeric-string fallback must use InvariantCulture (like ToDouble).
     [Fact] public void ToBool_numeric_string_invariant_true() => InputNormalizer.ToBool("1.5").Should().BeTrue();
     [Fact] public void ToBool_numeric_string_invariant_false() => InputNormalizer.ToBool("0.0").Should().BeFalse();
+
+    // ── ToInt32（review-2026-08-29 P2-2 新增，此前零测试覆盖）──
+    [Fact] public void ToInt32_normal() => InputNormalizer.ToInt32(42).Should().Be(42);
+    [Fact] public void ToInt32_long_rounds() => InputNormalizer.ToInt32(3.7).Should().Be(4);
+    [Fact] public void ToInt32_string() => InputNormalizer.ToInt32("3.5").Should().Be(4);
+    [Fact] public void ToInt32_negative_rounds() => InputNormalizer.ToInt32(-2.5).Should().Be(-2);
+    [Fact] public void ToInt32_null_zero() => InputNormalizer.ToInt32(null).Should().Be(0);
+    [Fact] public void ToInt32_nan_zero() => InputNormalizer.ToInt32(double.NaN).Should().Be(0);
+    [Fact] public void ToInt32_max_ok() => InputNormalizer.ToInt32(int.MaxValue).Should().Be(int.MaxValue);
+    [Fact] public void ToInt32_min_ok() => InputNormalizer.ToInt32(int.MinValue).Should().Be(int.MinValue);
+    [Fact] public void ToInt32_above_int_range_throws()
+        => new Action(() => InputNormalizer.ToInt32(2_147_483_648L)).Should().Throw<ArgumentException>();
+    [Fact] public void ToInt32_below_int_range_throws()
+        => new Action(() => InputNormalizer.ToInt32(-2_147_483_649L)).Should().Throw<ArgumentException>();
+    [Fact] public void ToInt32_double_above_int_range_throws()
+        => new Action(() => InputNormalizer.ToInt32(3e9)).Should().Throw<ArgumentException>();
 }

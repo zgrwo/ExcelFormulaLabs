@@ -109,6 +109,11 @@ public static class Dispatcher
         Register("DoeAnalysisCore", "Pareto", (a, k) =>
             DoeAnalysisCore.Pareto(ToDouble2D(a[0]), ToDouble1D(a[1]), (int)ToLong(a[2]), Kwarg(k, "quadratic", false)));
 
+        // ═══════════════════ ArrayCore / StatsCore.CountNumeric（review 2026-08-29：ARR.* 与 COUNT 此前无活体对照）═══════════════
+        Register("ArrayCore", "Fill", (a, _) => ArrayCore.Fill(a[0], ToLong(a[1])));
+        Register("ArrayCore", "Sequence", (a, _) => ArrayCore.Sequence(ToDouble(a[0]), ToDouble(a[1]), ToDouble(a[2])));
+        Register("StatsCore", "CountNumeric", (a, _) => StatsCore.CountNumeric(ToObjectArray(a[0])));
+
         // ═══════════════════ StringCore ═══════════════════
         Register("StringCore", "ReverseString", (a, _) => StringCore.ReverseString(ToString(a[0])));
         Register("StringCore", "LevenshteinDistance", (a, _) => StringCore.LevenshteinDistance(ToString(a[0]), ToString(a[1])));
@@ -162,6 +167,22 @@ public static class Dispatcher
         if (v is JsonElement je)
             return je.EnumerateArray().Select(e => e.GetDouble()).ToArray();
         throw new ArgumentException($"Cannot convert to double[].");
+    }
+
+    /// <summary>Convert a manifest array (JsonElement) to object[] — for Core methods taking object (CountNumeric).</summary>
+    private static object[] ToObjectArray(object? v)
+    {
+        if (v is object[] oa) return oa;
+        if (v is JsonElement je && je.ValueKind == JsonValueKind.Array)
+            return je.EnumerateArray().Select<JsonElement, object?>(e => e.ValueKind switch
+            {
+                JsonValueKind.Number => e.GetDouble(),
+                JsonValueKind.String => e.GetString(),
+                JsonValueKind.True or JsonValueKind.False => e.GetBoolean(),
+                JsonValueKind.Null => null,
+                _ => e.ToString()
+            }).ToArray()!;
+        throw new ArgumentException($"Cannot convert to object[].");
     }
 
     private static int[] ToIntArray(object? v)

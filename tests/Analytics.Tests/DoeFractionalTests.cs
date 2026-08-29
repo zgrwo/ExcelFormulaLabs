@@ -99,6 +99,12 @@ namespace ExcelFormulaLabs.Analytics.Tests
             => new Action(() => DoeCore.FractionalCoded(21)) // 2^20 = 1,048,576 > MaxRuns
                 .Should().Throw<ArgumentException>().WithMessage("*runs*");
 
+        // review 2026-08-29：1L<<indep 在 indep≥64 时按 63 掩码回绕（1L<<83==1L<<19），
+        // 原守卫可被绕过 → 352MB 分配 → 32 位 Excel OOM 崩溃。修复后应抛异常。
+        [Fact] public void Shift_wrap_factors_throw()
+            => new Action(() => DoeCore.FractionalCoded(84))
+                .Should().Throw<ArgumentException>();
+
         [Fact] public void Non_2_level_throws()
             => new Action(() => DoeCore.PlanFractional(4, 3, 0, 2, false, null))
                 .Should().Throw<ArgumentException>().WithMessage("*3*");

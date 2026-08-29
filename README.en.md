@@ -113,7 +113,7 @@ Multi-argument functions broadcast automatically. Scalar arguments are broadcast
 Functions return two kinds of error values: **`#VALUE!`** (input/execution errors, fixable by the user) and **`#NUM!`** (the computed result is undefined — the data itself does not satisfy the mathematical conditions).
 
 - Excel error values (`#N/A`, `#DIV/0!`, etc.) are passed through at the MapOver layer and skipped in statistical functions
-- Blank cells are skipped and not counted
+- Blank cells follow sentinel NaN propagation in statistical functions — a range containing blanks yields `#NUM!` (unlike Excel's native `AVERAGE`/`SUM` which skip blanks; see Known Limitations). In MapOver layer functions blanks pass through unchanged
 - Non-numeric cells return sentinel values (`0`/`false`/`""`) after type conversion and are not treated as errors
 - When all inputs are filtered out, `#VALUE!` or `NaN` is returned
 
@@ -164,6 +164,12 @@ All `REGEX.*` functions have a built-in 5-second timeout to prevent ReDoS attack
 ### Uninstalling Both Add-ins Together
 
 When both add-ins (Analytics + DataToolkit) are loaded, it is recommended to uninstall them one at a time (uncheck one, click OK, then uncheck the other).
+
+### Intermittent SyncMacro Error (Excel-DNA upstream issue)
+
+In rare cases Excel reports `Unexpected error trying to run SyncMacro for queued macro execution` (AccessViolationException / TargetInvocationException) — a known Excel-DNA framework issue ([Issue #390](https://github.com/Excel-DNA/ExcelDna/issues/390), open), correlated with Excel language (non-English more likely), Office Click-to-Run version and calculation timing. It is **not related to this add-in's function logic**; a local 120-second stress test (including continuous `*_ASYNC` recalculation) did not reproduce it.
+
+If it occurs frequently: ① unload and reload the add-in; ② avoid heavy repeated use of `*_ASYNC` functions in complex workbooks; ③ temporarily disable net48 IntelliSense (comment out `IntelliSenseServer.Install()` in `AddIn.AutoOpen` and repack). This add-in only uses Excel-DNA's official async mechanisms (net48 IntelliSense install + async UDF result marshalling) and queues no business macros.
 
 ---
 

@@ -136,6 +136,9 @@
   <data name="DOE_TooManyRuns" xml:space="preserve">
     <value>Design would produce more than {0} runs. Reduce factor quantities or levels.</value>
   </data>
+  <data name="DOE_TooManyCells" xml:space="preserve">
+    <value>Design would generate {0} runs × {1} factors = {2:N0} cells; maximum is {3:N0}. Reduce factor count.</value>
+  </data>
   <data name="DOE_UnknownMethod" xml:space="preserve">
     <value>Unknown DOE method '{0}'. Supported: FULL, TAGUCHI, FRACTIONAL, RSM, BB.</value>
   </data>

@@ -45,10 +45,16 @@ namespace ExcelFormulaLabs.Analytics
             d.Length < 2 ? double.NaN : Math.Sqrt(Variance(d));
 
         internal static double Skewness(double[] d) =>
-            d.Length < 3 ? double.NaN : Statistics.Skewness(d);
+            d.Length < 3 ? double.NaN : Statistics.Skewness(d); // 无偏样本偏度（type 2，对应 Excel SKEW / scipy bias=False）
 
         internal static double Kurtosis(double[] d) =>
-            d.Length < 4 ? double.NaN : Statistics.Kurtosis(d);
+            d.Length < 4 ? double.NaN : Statistics.Kurtosis(d); // 无偏样本超额峰度（type 2，对应 Excel KURT / scipy fisher=True, bias=False）
+
+        // review 2026-08-29：逐元素数学函数下沉（原 L1 守卫写在 UDF lambda，红线① UDF 仅分发）
+        internal static double SqrtSafe(double x) => x < 0 ? double.NaN : Math.Sqrt(x);
+        internal static double LogSafe(double x) => x <= 0 ? double.NaN : Math.Log(x);
+        internal static double Log10Safe(double x) => x <= 0 ? double.NaN : Math.Log10(x);
+        internal static double ExpSafe(double x) { var r = Math.Exp(x); return double.IsInfinity(r) ? double.NaN : r; }
 
         internal static double Min(double[] d) =>
             d.Length == 0 ? double.NaN : Statistics.Minimum(d);

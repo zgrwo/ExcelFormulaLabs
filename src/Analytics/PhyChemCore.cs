@@ -103,7 +103,12 @@ namespace ExcelFormulaLabs.Analytics
             if (string.IsNullOrEmpty(s)) return 1;
             // Try int first for the common case; fall back to long for overflow detection
             if (int.TryParse(s, out int n)) return n;
+            // review 2026-08-29：long.TryParse 也失败（如超 19 位数字）时原实现静默返回 1
+            // （H99999999999999999999 → 1.008 按 H1 解析）——违反防错原则，改为显式抛错。
             if (long.TryParse(s, out long big))
+                throw new ArgumentException(
+                    $"Subscript '{s}' is too large. The maximum supported subscript is {int.MaxValue}.");
+            if (Regex.IsMatch(s, @"^\d+$")) // 纯数字但超 long 范围（>19 位）
                 throw new ArgumentException(
                     $"Subscript '{s}' is too large. The maximum supported subscript is {int.MaxValue}.");
             return 1; // non-numeric → treat as 1 (e.g. malformed token)
@@ -225,5 +230,8 @@ namespace ExcelFormulaLabs.Analytics
                 return double.NaN;
             return vol * pAtm * (273.15 / tK);
         }
+
+        // review 2026-08-29：DENSITY 下沉（原 L2 零分母守卫写在 UDF lambda，红线① UDF 仅分发）
+        internal static double Density(double m, double v) => v == 0 ? double.NaN : m / v;
     }
 }

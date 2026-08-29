@@ -41,7 +41,7 @@ python scripts/verify-manual.py
 ### 5 步验证（提交前必须通过）
 
 ```powershell
-# ① 文档一致性（15 项检查）
+# ① 文档一致性（16 项检查）
 powershell -File scripts/verify-docs.ps1
 
 # ② 全量单元测试（双 TFM）

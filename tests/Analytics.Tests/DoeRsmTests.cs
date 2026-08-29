@@ -100,5 +100,15 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void Fewer_than_2_factors_throws()
             => new Action(() => DoeCore.RsmCcd(1))
                 .Should().Throw<ArgumentException>().WithMessage("*2*");
+
+        // review 2026-08-29：位移回绕 + cells 守卫——原 `1L<<k` 在 k≥64 时掩码回绕可绕过守卫。
+        [Fact] public void RsmCcd_shift_wrap_throws()
+            => new Action(() => DoeCore.RsmCcd(83))
+                .Should().Throw<ArgumentException>();
+
+        // review 2026-08-29：BB 守卫原只量 runs（O(k²)）不量 cells——k=700 时分配可达 5.5GB。
+        [Fact] public void RsmBb_cells_guard_throws()
+            => new Action(() => DoeCore.RsmBb(700))
+                .Should().Throw<ArgumentException>();
     }
 }

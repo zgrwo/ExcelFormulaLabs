@@ -156,10 +156,10 @@ jobs:
 
             | 文件 | 框架 | 说明 |
             |------|------|------|
-            | Analytics-AddIn-net48-*-packed.xll | .NET Framework 4.8 | 免安装运行时 |
-            | Analytics-AddIn-net8.0-*-packed.xll | .NET 8 | 性能更优 |
-            | DataToolkit-AddIn-net48-*-packed.xll | .NET Framework 4.8 | 免安装运行时 |
-            | DataToolkit-AddIn-net8.0-*-packed.xll | .NET 8 | 性能更优 |
+            | Analytics-AddIn-net48-packed.xll / Analytics-AddIn-net48-64-packed.xll | .NET Framework 4.8 | 免安装运行时（×32/64 位，共 2 个） |
+            | Analytics-AddIn-net8.0-packed.xll / Analytics-AddIn-net8.0-64-packed.xll | .NET 8 | 性能更优（×32/64 位，共 2 个） |
+            | DataToolkit-AddIn-net48-packed.xll / DataToolkit-AddIn-net48-64-packed.xll | .NET Framework 4.8 | 免安装运行时（×32/64 位，共 2 个） |
+            | DataToolkit-AddIn-net8.0-packed.xll / DataToolkit-AddIn-net8.0-64-packed.xll | .NET 8 | 性能更优（×32/64 位，共 2 个） |
 
             详见 [CHANGELOG](CHANGELOG.md)。
           files: artifacts/*.xll

@@ -117,8 +117,9 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void StdevP_of_1_to_5() =>
             StatsCore.StdevP(D).Should().BeApproximately(1.4142135623730951, 1e-10);
 
-        // Python: from scipy.stats import kurtosis; kurtosis([1,2,3,4,9], fisher=True)
-        // MathNet Statistics.Kurtosis returns excess kurtosis (Fisher), matching scipy fisher=True.
+        // review 2026-08-29：MathNet Statistics.Kurtosis 为**无偏**超额峰度（Bessel 修正，type 2）。
+        // 对应 scipy kurtosis(x, fisher=True, bias=False) 与 Excel KURT——注意 scipy 默认 bias=True（有偏），
+        // 小样本 n<30 时两者差异显著。断言值 2.6750983101285986 已按无偏公式逐项验证。
         [Fact] public void Kurtosis_skewed() =>
             StatsCore.Kurtosis(D5).Should().BeApproximately(2.6750983101285986, 1e-10);
 
