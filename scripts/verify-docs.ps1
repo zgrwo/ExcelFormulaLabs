@@ -26,6 +26,11 @@
 param(
     [string]$RepoRoot = (Split-Path -Parent $PSScriptRoot)
 )
+# review-2026-08-29：统一为真实长路径——GitHub Actions 的 $env:TEMP 是 8.3 短名
+# （C:\Users\RUNNER~1\...），而 Get-ChildItem 返回长名（runneradmin），两者长度差
+# 3 字符，Substring($RepoRoot.Length) 前缀错位会让检查 16/18 的相对路径变成
+# "ure/src/..." 而全部失配（test_verify_docs 场景 A 在 CI 上复现）。
+$RepoRoot = [System.IO.Path]::GetFullPath($RepoRoot)
 $ErrorActionPreference = "Continue"
 $script:pass = 0; $script:fail = 0
 
