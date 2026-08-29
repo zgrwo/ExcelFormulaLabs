@@ -110,7 +110,7 @@ public static class Dispatcher
             DoeAnalysisCore.Pareto(ToDouble2D(a[0]), ToDouble1D(a[1]), (int)ToLong(a[2]), Kwarg(k, "quadratic", false)));
 
         // ═══════════════════ ArrayCore / StatsCore.CountNumeric（review 2026-08-29：ARR.* 与 COUNT 此前无活体对照）═══════════════
-        Register("ArrayCore", "Fill", (a, _) => ArrayCore.Fill(a[0], ToLong(a[1])));
+        Register("ArrayCore", "Fill", (a, _) => ArrayCore.Fill(a[0]!, ToLong(a[1])));
         Register("ArrayCore", "Sequence", (a, _) => ArrayCore.Sequence(ToDouble(a[0]), ToDouble(a[1]), ToDouble(a[2])));
         Register("StatsCore", "CountNumeric", (a, _) => StatsCore.CountNumeric(ToObjectArray(a[0])));
 
