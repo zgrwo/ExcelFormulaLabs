@@ -2,6 +2,6 @@
 # 版本由 dependabot 维护（.github/dependabot.yml pip ecosystem）；下限保证 CI 解析到可工作版本。
 # pyDOE2 最新发布为 1.3.0（PyPI 无 1.9+，2026-08-29 CrossVal CI 曾因 >=1.9 无法满足而失败）。
 numpy>=1.26
-scipy>=1.11
+scipy>=1.18.1
 scikit-learn>=1.4
 pyDOE2>=1.3
