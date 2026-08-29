@@ -824,6 +824,87 @@ else:
     SKIP += 1
     print("  SKIP DOE cross-check: pyDOE2 not installed (pip install pyDOE2)")
 
+# DOE.ANALYZE / DOE.ANOVA / DOE.PARETO — 分析函数 cross_check
+# review-2026-08-29 P2-4：此前分析函数仅 scipy golden 常量，无 Python 独立实现对照。
+# 独立实现：ExpandTerms（主效应+2-way 交互）+ 正规方程 OLS（与 C# FitOLS 同算法）+ t/p 统计。
+X_doe = np.array([[-1,-1],[1,-1],[-1,1],[1,1],[0,0],[0,0],[0,0],[0,0]], dtype=float)
+y_doe = np.array([3.1,5.9,5.2,8.4,5.0,5.1,4.9,5.0], dtype=float)
+
+
+def doe_expand(X, max_order=2, quadratic=False):
+    k = X.shape[1]
+    cols = [X[:, i] for i in range(k)]
+    if max_order >= 2:
+        cols += [X[:, i] * X[:, j] for i in range(k) for j in range(i+1, k)]
+    if max_order >= 3:
+        cols += [X[:, i] * X[:, j] * X[:, l] for i in range(k) for j in range(i+1, k) for l in range(j+1, k)]
+    if quadratic:
+        cols += [X[:, i] ** 2 for i in range(k)]
+    return np.column_stack(cols) if cols else np.empty((X.shape[0], 0))
+
+
+def doe_ols(Xe, y):
+    A = np.column_stack([np.ones(len(y)), Xe])
+    XtX = A.T @ A
+    beta = np.linalg.solve(XtX, A.T @ y)
+    n, p = A.shape
+    sse = float(np.sum((y - A @ beta) ** 2))
+    df = n - p
+    mse = sse / df
+    se = np.sqrt(np.maximum(mse * np.diag(np.linalg.inv(XtX)), 0.0))
+    t = beta / se
+    pval = 2 * (1 - stats.t.cdf(np.abs(t), df))
+    return beta, t, pval, sse, df
+
+
+def cross_check_matrix(name, py_rows):
+    """对比 C# 返回的 object[][]（行 0 = 表头，后续为数值行，首列为 Term 字符串）
+    与 Python 数值行（不含表头/Term 列）。None/NaN 视为相等。"""
+    ref = csharp_results().get(name)
+    if ref is None or ref["status"] != "ok":
+        global PASS, FAIL
+        FAIL += 1; print(f"  FAIL {name}: no C# reference")
+        return
+    cs = ref["result"]
+    if len(cs) != len(py_rows) + 1:
+        FAIL += 1; print(f"  FAIL {name}: row count mismatch C#={len(cs)} py={len(py_rows)+1}")
+        return
+    ok = True; maxdiff = 0.0
+    for r in range(1, len(cs)):
+        crow, prow = cs[r], py_rows[r-1]
+        if len(crow) != len(prow) + 1:
+            FAIL += 1; print(f"  FAIL {name}: col count mismatch row {r}")
+            return
+        for c in range(1, len(crow)):
+            cv, pv = crow[c], prow[c-1]
+            if cv is None and np.isnan(pv):
+                continue
+            if cv is None or pv is None or not np.isclose(float(cv), float(pv), atol=1e-6):
+                ok = False
+                maxdiff = max(maxdiff, abs(float(cv) - float(pv)) if cv is not None and pv is not None else 1e9)
+    if ok:
+        PASS += 1; print(f"  OK {name}: matrix match ({len(py_rows)} rows)")
+    else:
+        FAIL += 1; print(f"  FAIL {name}: max diff {maxdiff:.2e}")
+
+
+Xe_doe = doe_expand(X_doe)
+beta_doe, t_doe, pval_doe, sse_doe, df_doe = doe_ols(Xe_doe, y_doe)
+# DOE.ANALYZE: [Term, Coef, Effect=2×Coef, t, p]
+cross_check_matrix("DOE.ANALYZE",
+    np.column_stack([beta_doe[1:], 2*beta_doe[1:], t_doe[1:], pval_doe[1:]]))
+# DOE.ANOVA: 术语行 [Source, SS=mse·t², df=1, MS=SS, F=t², p] + Error/Total 附加行（C# 结构）
+mse_doe = sse_doe / df_doe
+term_rows = np.column_stack([mse_doe * t_doe[1:]**2, np.ones(len(t_doe)-1),
+                             mse_doe * t_doe[1:]**2, t_doe[1:]**2, pval_doe[1:]])
+tss_doe = float(np.sum((y_doe - y_doe.mean())**2))
+error_row = np.array([[sse_doe, df_doe, mse_doe, np.nan, np.nan]])
+total_row = np.array([[tss_doe, df_doe + len(t_doe) - 1, np.nan, np.nan, np.nan]])
+cross_check_matrix("DOE.ANOVA", np.vstack([term_rows, error_row, total_row]))
+# DOE.PARETO: 按 |effect| 降序，[Term, Effect]
+order_doe = np.argsort(-np.abs(2*beta_doe[1:]))
+cross_check_matrix("DOE.PARETO", (2*beta_doe[1:])[order_doe].reshape(-1, 1))
+
 # ========================================================================
 # FINAL
 # ========================================================================

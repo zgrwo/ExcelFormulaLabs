@@ -2807,7 +2807,7 @@ row_xpath 定义行节点。
 
 <a id="pivot-pivot"></a> ### PIVOT.PIVOT — 创建透视表
 
-**语法**：`=PIVOT.PIVOT(source_range, row_field, col_field, value_field, [aggregation])`
+**语法**：`=PIVOT.PIVOT(source_range, row_field, col_field, value_field, [aggregation], [has_headers])`
 
 aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
@@ -2827,7 +2827,7 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 <a id="pivot-unpivot"></a> ### PIVOT.UNPIVOT — 逆透视
 
-**语法**：`=PIVOT.UNPIVOT(source_range, id_fields, value_fields)`
+**语法**：`=PIVOT.UNPIVOT(source_range, id_fields, value_fields, [has_headers])`
 
 将宽列转为键值行。
 
@@ -2843,7 +2843,7 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 <a id="pivot-groupby"></a> ### PIVOT.GROUPBY — 分组聚合
 
-**语法**：`=PIVOT.GROUPBY(source_range, group_fields, agg_column, [aggregation])`
+**语法**：`=PIVOT.GROUPBY(source_range, group_fields, agg_column, [aggregation], [has_headers])`
 
 **示例**：
 ```
@@ -3209,7 +3209,7 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 <a id="range-tohtml"></a> ### RANGE.TOHTML — 导出 HTML 表格
 
-**语法**：`=RANGE.TOHTML(source_range, has_headers, [css_class])`
+**语法**：`=RANGE.TOHTML(source_range, [has_headers], [css_class])`
 
 **示例**：
 ```
@@ -3224,7 +3224,7 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 <a id="range-tojson"></a> ### RANGE.TOJSON — 导出 JSON
 
-**语法**：`=RANGE.TOJSON(source_range, has_headers, [pretty_print])`
+**语法**：`=RANGE.TOJSON(source_range, [has_headers], [pretty_print])`
 
 **示例**：
 ```
@@ -3239,7 +3239,7 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 <a id="range-tomd"></a> ### RANGE.TOMD — 导出 Markdown 表格
 
-**语法**：`=RANGE.TOMD(source_range, has_headers)`
+**语法**：`=RANGE.TOMD(source_range, [has_headers])`
 
 **示例**：
 ```
@@ -3260,7 +3260,7 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 <a id="range-tocsv"></a> ### RANGE.TOCSV — 导出 CSV
 
-**语法**：`=RANGE.TOCSV(source_range, [delimiter], [quote_fields])`
+**语法**：`=RANGE.TOCSV(source_range, [delimiter], [quote_fields], [has_headers])`
 
 **示例**：
 ```

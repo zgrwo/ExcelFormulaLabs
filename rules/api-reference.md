@@ -316,9 +316,9 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
-| `PIVOT.PIVOT` | (source_range, row_field, col_field, value_field, [aggregation]) | `object[,]` | 透视表。row_field=行标签列, col_field=列标签列, value_field=值列。aggregation=`sum/avg/count/min/max`（默认 SUM） |
-| `PIVOT.UNPIVOT` | (source_range, id_fields, value_fields) | `object[,]` | 逆透视：宽列转为键值行 |
-| `PIVOT.GROUPBY` | (source_range, group_fields, agg_column, [aggregation]) | `object[,]` | 分组聚合。group_fields=分组列号数组, agg_column=聚合列（默认 SUM） |
+| `PIVOT.PIVOT` | (source_range, row_field, col_field, value_field, [aggregation], [has_headers]) | `object[,]` | 透视表。row_field=行标签列, col_field=列标签列, value_field=值列。aggregation=`sum/avg/count/min/max`（默认 SUM），has_headers=首行是否表头（默认 TRUE） |
+| `PIVOT.UNPIVOT` | (source_range, id_fields, value_fields, [has_headers]) | `object[,]` | 逆透视：宽列转为键值行。has_headers=首行是否表头（默认 TRUE） |
+| `PIVOT.GROUPBY` | (source_range, group_fields, agg_column, [aggregation], [has_headers]) | `object[,]` | 分组聚合。group_fields=分组列号数组, agg_column=聚合列（默认 SUM）。has_headers=首行是否表头（默认 TRUE） |
 | `PIVOT.CROSSJOIN` | (table1, table2) | `object[,]` | 笛卡尔积交叉连接 |
 
 ---
@@ -373,10 +373,10 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
-| `RANGE.TOHTML` | (source_range, has_headers, [css_class]) | `string` | 导出为 HTML 表格 |
-| `RANGE.TOJSON` | (source_range, has_headers, [pretty_print]) | `string` | 导出为 JSON |
-| `RANGE.TOMD` | (source_range, has_headers) | `string` | 导出为 Markdown 表格 |
-| `RANGE.TOCSV` | (source_range, [delimiter], [quote_fields]) | `string` | 导出为 CSV（自定义分隔符与字段引用） |
+| `RANGE.TOHTML` | (source_range, [has_headers], [css_class]) | `string` | 导出为 HTML 表格。has_headers=首行是否表头（默认 TRUE） |
+| `RANGE.TOJSON` | (source_range, [has_headers], [pretty_print]) | `string` | 导出为 JSON。has_headers=首行是否表头（默认 TRUE） |
+| `RANGE.TOMD` | (source_range, [has_headers]) | `string` | 导出为 Markdown 表格。has_headers=首行是否表头（默认 TRUE） |
+| `RANGE.TOCSV` | (source_range, [delimiter], [quote_fields], [has_headers]) | `string` | 导出为 CSV（自定义分隔符、字段引用与表头）。has_headers=首行是否表头（默认 TRUE） |
 | `RANGE.TOCSVTAB` | (source_range) | `string` | 导出为 TSV（制表符分隔） |
 | `RANGE.TOCSVSEMI` | (source_range) | `string` | 导出为分号分隔 CSV |
 | `RANGE.TRANSPOSE` | (source_range) | `object[,]` | 行列转置。对标 Excel TRANSPOSE |

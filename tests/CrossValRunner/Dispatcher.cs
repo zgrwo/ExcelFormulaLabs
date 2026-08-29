@@ -101,6 +101,14 @@ public static class Dispatcher
         Register("DoeCore", "RsmBb", (a, _) =>
             DoeCore.RsmBb((int)ToLong(a[0])));
 
+        // ═══════════════════ DoeAnalysisCore（review-2026-08-29 P2-4：此前分析函数无 cross_check）═══════════════
+        Register("DoeAnalysisCore", "Analyze", (a, k) =>
+            DoeAnalysisCore.Analyze(ToDouble2D(a[0]), ToDouble1D(a[1]), (int)ToLong(a[2]), Kwarg(k, "quadratic", false)));
+        Register("DoeAnalysisCore", "Anova", (a, k) =>
+            DoeAnalysisCore.Anova(ToDouble2D(a[0]), ToDouble1D(a[1]), (int)ToLong(a[2]), Kwarg(k, "quadratic", false)));
+        Register("DoeAnalysisCore", "Pareto", (a, k) =>
+            DoeAnalysisCore.Pareto(ToDouble2D(a[0]), ToDouble1D(a[1]), (int)ToLong(a[2]), Kwarg(k, "quadratic", false)));
+
         // ═══════════════════ StringCore ═══════════════════
         Register("StringCore", "ReverseString", (a, _) => StringCore.ReverseString(ToString(a[0])));
         Register("StringCore", "LevenshteinDistance", (a, _) => StringCore.LevenshteinDistance(ToString(a[0]), ToString(a[1])));

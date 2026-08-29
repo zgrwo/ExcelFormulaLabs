@@ -83,7 +83,7 @@ PARAM_DESC = {
     "k":"Percentile value between 0 and 100","x":"Hypothesized population mean for one-sample t-test",
 }
 
-api_md = ROOT / "docs" / "api-reference.md"
+api_md = ROOT / "rules" / "api-reference.md"
 func_params = {}
 for m in re.finditer(r"\| `([A-Z]+\.[A-Z0-9_]+)` \| \(([^)]*)\) \|", api_md.read_text(encoding="utf-8")):
     func_params[m.group(1)] = [p.strip() for p in m.group(2).split(",") if p.strip()]

@@ -260,5 +260,21 @@ namespace ExcelFormulaLabs.Analytics
             double x = df / (df + t * t);
             return MathNet.Numerics.SpecialFunctions.BetaRegularized(df / 2.0, 0.5, x);
         }
+
+        /// <summary>Count of numeric elements (Excel COUNT semantics): values convertible to
+        /// a finite double are counted; text/empty/error cells are skipped, never thrown.
+        /// review-2026-08-29 P2-3：原实现经 PrepV（遇 NaN/Inf 抛异常），含文本区域返回 #VALUE!
+        /// 而非文档所述的“元素个数”。</summary>
+        internal static long CountNumeric(object data)
+        {
+            var raw = InputNormalizer.NormalizeTo1D(data);
+            long n = 0;
+            foreach (var x in raw)
+            {
+                double v = InputNormalizer.ToDouble(x);
+                if (!double.IsNaN(v) && !double.IsInfinity(v)) n++;
+            }
+            return n;
+        }
     }
 }

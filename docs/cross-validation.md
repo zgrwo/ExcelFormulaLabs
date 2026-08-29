@@ -124,7 +124,7 @@
 | SQL — Query | 3 | All deterministic | Y |
 | FS — FileSystem | 22 | All deterministic | Y |
 | RANGE — Export | 9 | All deterministic | Y |
-| **Total** | **232** | **All pass / 0 failures** | **ALL PASS** |
+| **Total** | **236** | **All pass / 0 failures** | **ALL PASS** |
 
 ---
 

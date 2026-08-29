@@ -1,5 +1,7 @@
 {
   "sharedData": {
+    "doe_x": [[-1.0,-1.0],[1.0,-1.0],[-1.0,1.0],[1.0,1.0],[0.0,0.0],[0.0,0.0],[0.0,0.0],[0.0,0.0]],
+    "doe_y": [3.1,5.9,5.2,8.4,5.0,5.1,4.9,5.0],
     "data_1_to_5": [1.0, 2.0, 3.0, 4.0, 5.0],
     "data_flat_20": [10.0, 20.0, 30.0, 40.0, 15.0, 25.0, 35.0, 45.0, 12.0, 22.0, 32.0, 42.0, 18.0, 28.0, 38.0, 48.0, 14.0, 24.0, 34.0, 44.0],
     "xc": [1.0, 3.0, 5.0, 7.0, 9.0],
@@ -103,6 +105,9 @@
     {"id":"DOE.RSM_3","module":"DOE","coreClass":"DoeCore","coreMethod":"RsmCcd","args":[3],"tolerance":1e-10},
     {"id":"DOE.BB_3","module":"DOE","coreClass":"DoeCore","coreMethod":"RsmBb","args":[3],"tolerance":1e-10},
     {"id":"DOE.BB_4","module":"DOE","coreClass":"DoeCore","coreMethod":"RsmBb","args":[4],"tolerance":1e-10},
+    {"id":"DOE.ANALYZE","module":"DOE","coreClass":"DoeAnalysisCore","coreMethod":"Analyze","args":[{"ref":"doe_x"},{"ref":"doe_y"},2],"kwargs":{"quadratic":false},"tolerance":1e-8},
+    {"id":"DOE.ANOVA","module":"DOE","coreClass":"DoeAnalysisCore","coreMethod":"Anova","args":[{"ref":"doe_x"},{"ref":"doe_y"},2],"kwargs":{"quadratic":false},"tolerance":1e-8},
+    {"id":"DOE.PARETO","module":"DOE","coreClass":"DoeAnalysisCore","coreMethod":"Pareto","args":[{"ref":"doe_x"},{"ref":"doe_y"},2],"kwargs":{"quadratic":false},"tolerance":1e-8},
 
     {"id":"DT.EASTER_2024","module":"DT","coreClass":"DateTimeCore","coreMethod":"Easter","args":[2024],"tolerance":0},
     {"id":"DT.EASTER_2025","module":"DT","coreClass":"DateTimeCore","coreMethod":"Easter","args":[2025],"tolerance":0},

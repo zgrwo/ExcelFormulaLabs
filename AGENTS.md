@@ -1,6 +1,6 @@
 # AGENTS.md — ExcelFormulaLabs 项目宪法
 
-> Excel 函数增强库：232 UDF，基于 C# / Excel-DNA，双 TFM (net48 + net8.0)。
+> Excel 函数增强库：236 UDF，基于 C# / Excel-DNA，双 TFM (net48 + net8.0)。
 > 本文件面向 AI 编程助手，编码细节按需加载 Skill。术语见 [context.md](rules/context.md)。
 
 ## 元数据
@@ -9,7 +9,7 @@
 - **GitHub**：https://github.com/zgrwo/ExcelFormulaLabs
 - **语言**：C#（文档与注释默认中文）
 - **术语**：[context.md](rules/context.md)
-- **数字唯一基准**：[api-reference.md](rules/api-reference.md) — 232 UDF 签名以此为准
+- **数字唯一基准**：[api-reference.md](rules/api-reference.md) — 236 UDF 签名以此为准
 - **SSOT**：每个事实只在一处定义，其余仅链接引用
 
 ## 四条核心准则
@@ -266,10 +266,10 @@ ExcelFormulaLabs/
 | [README.en.md](README.en.md) | 英文入口 | 国际用户入口 |
 | [context.md](rules/context.md) | 术语表 | 所有术语唯一定义 |
 | [specification.md](rules/specification.md) | 技术规格 | 项目概述、模块清单、功能规格 |
-| [api-reference.md](rules/api-reference.md) | 数字唯一信源 | 232 UDF 签名、参数、错误行为 |
+| [api-reference.md](rules/api-reference.md) | 数字唯一信源 | 236 UDF 签名、参数、错误行为 |
 | [user-manual.md](rules/user-manual.md) | 学习教程 | 每函数详细示例 + 结果解读 |
 | [project-structure.md](rules/project-structure.md) | 结构地图 | 文件职责与层级关系 |
 | [documentation.md](rules/documentation.md) | 文档职责 | 各文档分工与维护规则 |
-| [adr/](rules/adr/adr-template.md) | 决策记录 | 架构决策 ADR 0001-0005 |
+| [adr/](rules/adr/adr-template.md) | 决策记录 | 架构决策 ADR 0001-0006 |
 | [CHANGELOG.md](CHANGELOG.md) | 变更记录 | 版本变更历史（与 tag 强制一致） |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 贡献指南 | 开发/PR/发版流程 |

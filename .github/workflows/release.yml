@@ -121,10 +121,15 @@ jobs:
       - name: Collect XLL artifacts
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path artifacts
-          Get-ChildItem -Recurse -Filter "*-packed.xll" -Path "src" |
-            Where-Object { $_.DirectoryName -match "Release" } |
-            Copy-Item -Destination artifacts/
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+          $xlls = Get-ChildItem -Recurse -Filter "*-packed.xll" -Path "src" |
+            Where-Object { $_.DirectoryName -match "Release" }
+          if (-not $xlls) {
+            Write-Error "[Collect] 未找到任何 *-packed.xll 产物 — 构建可能静默失败，中止发布。"
+            exit 1
+          }
+          $xlls | Copy-Item -Destination artifacts/
           Get-ChildItem artifacts/
 
       - name: Pack NuGet (Foundation)

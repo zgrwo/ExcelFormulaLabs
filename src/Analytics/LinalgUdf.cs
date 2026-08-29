@@ -78,7 +78,7 @@ namespace ExcelFormulaLabs.Analytics
 
         [ExcelFunction(Name = "LINALG.IDENTITY", Description = "Identity matrix.")]
         public static object UDF_LINALG_IDENTITY([ExcelArgument(Name="size", Description="The matrix dimension, e.g. 3 for a 3x3 identity matrix")] object n)
-            => OutputWrapper.WrapError(() => LinalgCore.Identity((int)InputNormalizer.ToLong(n)));
+            => OutputWrapper.WrapError(() => LinalgCore.Identity(InputNormalizer.ToInt32(n)));
 
         [ExcelFunction(Name = "LINALG.MATMUL", Description = "Matrix multiplication.")]
         public static object UDF_LINALG_MATMUL([ExcelArgument(Name="array1", Description="First range or array")] object A, [ExcelArgument(Name="array2", Description="Second range or array")] object B)

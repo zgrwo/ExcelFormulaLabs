@@ -4,7 +4,7 @@ namespace ExcelFormulaLabs.Foundation
 {
     /// <summary>
     /// Element-wise mapping over scalar or array inputs — the core abstraction
-    /// that eliminates ~3000 lines of duplicated boilerplate across 232 UDF wrappers.
+    /// that eliminates ~3000 lines of duplicated boilerplate across 236 UDF wrappers.
     /// </summary>
     /// <remarks>
     /// <para>

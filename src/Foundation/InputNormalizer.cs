@@ -299,6 +299,20 @@ namespace ExcelFormulaLabs.Foundation
         }
 
         /// <summary>
+        /// Safe conversion to int. Error/Null/Empty → 0 (L4 sentinel).
+        /// Values outside the int range throw instead of silently truncating —
+        /// a raw <c>(int)</c> cast of a long beyond int.MaxValue wraps to a
+        /// negative/incorrect index (review-2026-08-29 P2-2).
+        /// </summary>
+        public static int ToInt32(object? value)
+        {
+            long l = ToLong(value);
+            if (l > int.MaxValue || l < int.MinValue)
+                throw new ArgumentException(ErrorMsg.Get("Input_IntOutOfRange", l, int.MinValue, int.MaxValue));
+            return (int)l;
+        }
+
+        /// <summary>
         /// Safe conversion to bool. Error/Null/Empty → false.
         /// Numeric: 0 → false, non-zero → true. String: "true"/"1" → true.
         /// </summary>

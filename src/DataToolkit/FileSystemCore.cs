@@ -215,29 +215,42 @@ namespace ExcelFormulaLabs.DataToolkit
         /// </summary>
         private static void DeleteFolderRecursive(string p)
         {
-            foreach (var entry in Directory.EnumerateFileSystemEntries(p))
+            // review-2026-08-29 P2-1：原递归实现在深层目录树下可致未捕获 StackOverflow
+            // （StackOverflow 被异常过滤器排除，不可 catch，会直接崩溃 Excel）。
+            // 改为显式栈的深度优先遍历：第一遍删除文件/重解析点并收集目录路径（DFS 前序），
+            // 第二遍逆序删除目录（子目录必然先于父目录被访问，逆序即自底向上）。
+            var dirs = new System.Collections.Generic.List<string>();
+            var pending = new System.Collections.Generic.Stack<string>();
+            pending.Push(p);
+            while (pending.Count > 0)
             {
-                var attr = File.GetAttributes(entry);
-                if ((attr & FileAttributes.ReparsePoint) != 0)
+                string current = pending.Pop();
+                dirs.Add(current);
+                foreach (var entry in Directory.EnumerateFileSystemEntries(current))
                 {
-                    // Junction / symlink: delete the link itself, don't follow it
-                    if ((attr & FileAttributes.Directory) != 0)
-                        Directory.Delete(entry);
+                    var attr = File.GetAttributes(entry);
+                    if ((attr & FileAttributes.ReparsePoint) != 0)
+                    {
+                        // Junction / symlink: delete the link itself, don't follow it
+                        if ((attr & FileAttributes.Directory) != 0)
+                            Directory.Delete(entry);
+                        else
+                            File.Delete(entry);
+                    }
+                    else if ((attr & FileAttributes.Directory) != 0)
+                    {
+                        pending.Push(entry);
+                    }
                     else
+                    {
+                        // File.Delete on a symlink deletes the link itself (does not follow),
+                        // so no special ReparsePoint handling is needed here.
                         File.Delete(entry);
-                }
-                else if ((attr & FileAttributes.Directory) != 0)
-                {
-                    DeleteFolderRecursive(entry);
-                }
-                else
-                {
-                    // File.Delete on a symlink deletes the link itself (does not follow),
-                    // so no special ReparsePoint handling is needed here.
-                    File.Delete(entry);
+                    }
                 }
             }
-            Directory.Delete(p);
+            for (int i = dirs.Count - 1; i >= 0; i--)
+                Directory.Delete(dirs[i]);
         }
         /// <summary>Enumerate logical drives. When <see cref="SandboxRoot"/> is set,
         /// returns only the sandbox root drive to limit filesystem reconnaissance.</summary>

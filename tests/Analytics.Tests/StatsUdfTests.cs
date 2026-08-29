@@ -45,7 +45,10 @@ namespace ExcelFormulaLabs.Analytics.Tests
             var r = (double[])StatsUdf.UDF_STAT_ZS(D);
             r.Length.Should().Be(5);
         }
-        [Fact] public void Count() => ((int)StatsUdf.UDF_STAT_CNT(D)).Should().Be(5);
+        [Fact] public void Count() => ((long)StatsUdf.UDF_STAT_CNT(D)).Should().Be(5);
+        [Fact] public void Count_mixed_skips_non_numeric()
+            => ((long)StatsUdf.UDF_STAT_CNT(new object[] { 1, "text", 2, null!, 3.5 })).Should().Be(3); // Excel COUNT semantics: text/empty skipped, no throw (review-2026-08-29 P2-3)
+        [Fact] public void Count_empty() => ((long)StatsUdf.UDF_STAT_CNT(null!)).Should().Be(0);
         [Fact] public void Mode() => ((double)StatsUdf.UDF_STAT_MODE(new double[] { 1, 2, 2, 3 })).Should().Be(2.0);
         [Fact] public void Mode_ties_returns_smallest() => ((double)StatsUdf.UDF_STAT_MODE(new double[] { 2, 2, 1, 1 })).Should().Be(1.0); // ties: returns smallest, matches scipy
 

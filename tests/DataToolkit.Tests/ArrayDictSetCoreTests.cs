@@ -250,5 +250,32 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             var r = DictSetCore.Dict(Array.Empty<object>(), Array.Empty<object>());
             r.GetLength(0).Should().Be(0);
         }
+
+        // ══════════════════════════════════════════════════════════════════
+        //  ArrayCore.Fill / ArrayCore.Sequence（review-2026-08-29 P1-2 下沉后的 Core 层测试）
+        // ══════════════════════════════════════════════════════════════════
+        [Fact] public void Fill_basic() => ArrayCore.Fill("x", 3).Should().Equal("x", "x", "x");
+        [Fact] public void Fill_zero_count() => ArrayCore.Fill("x", 0).Should().BeEmpty();
+        [Fact] public void Fill_null_value()
+        {
+            var r = ArrayCore.Fill(null!, 2);
+            r.Should().HaveCount(2);
+            r[0].Should().BeNull();
+        }
+        [Fact] public void Fill_negative_count_throws()
+            => ((Action)(() => ArrayCore.Fill("x", -1))).Should().Throw<ArgumentException>();
+        [Fact] public void Fill_over_limit_throws()
+            => ((Action)(() => ArrayCore.Fill("x", 100_001))).Should().Throw<ArgumentException>()
+                .WithMessage("*maximum is 100000*");
+        [Fact] public void Sequence_1_to_5() => ArrayCore.Sequence(1, 5, 1).Should().Equal(1.0, 2.0, 3.0, 4.0, 5.0);
+        [Fact] public void Sequence_with_step() => ArrayCore.Sequence(1.0, 5.0, 2.0).Should().Equal(1.0, 3.0, 5.0);
+        [Fact] public void Sequence_negative_descending() => ArrayCore.Sequence(3, 1, -1).Should().Equal(3.0, 2.0, 1.0);
+        [Fact] public void Sequence_start_gt_end_asc_empty() => ArrayCore.Sequence(5, 1, 1).Should().BeEmpty();
+        [Fact] public void Sequence_single() => ArrayCore.Sequence(7, 7, 1).Should().Equal(7.0);
+        [Fact] public void Sequence_nan_start_empty() => ArrayCore.Sequence(double.NaN, 5, 1).Should().BeEmpty();
+        [Fact] public void Sequence_step_zero_throws()
+            => ((Action)(() => ArrayCore.Sequence(1, 3, 0))).Should().Throw<ArgumentException>();
+        [Fact] public void Sequence_over_limit_throws()
+            => ((Action)(() => ArrayCore.Sequence(0, 1_000_000_000, 1))).Should().Throw<ArgumentException>();
     }
 }

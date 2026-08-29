@@ -6,10 +6,20 @@
 
 > 版本一致性：每个 `v*` git tag 必须在本文档有对应条目（`verify-docs.ps1` 强制检查，见规则 [documentation.md](rules/documentation.md)）。
 
+## [Unreleased]
+
+### Fixed（review-2026-08-29 深度审查修复，未发版）
+
+- 计数与门禁：232→236 全部同步（AGENTS/CONTRIBUTING/ElementWiseMapper/cross-validation/CHANGELOG）；verify-docs 新增检查 16（散文式 UDF 计数一致性）＋ test_verify_docs 场景 G；pre-commit check-5 名单动态化（含 DOE）＋除法检测排除注释，check-6 豁免名单收缩为与 AGENTS.md 一致的 6 项
+- 架构回归：ARR.FILL/ARR.RANGE 业务逻辑下沉 ArrayCore（UDF 变单行分发）；新增 InputNormalizer.ToInt32（超 int 范围抛异常，替换 4 处 `(int)` 直转）；STATS.COUNT 改 Excel COUNT 语义（跳过非数值而非抛 #VALUE!）
+- hasHeaders 对齐：RANGE.TOHTML/TOJSON/TOMD 的 has_headers 变可选；RANGE.TOCSV / PIVOT.PIVOT/UNPIVOT/GROUPBY 新增 `[has_headers]` 可选参数（向后兼容，api-reference/user-manual 同步）
+- 安全加固：FileSystemCore.DeleteFolderRecursive 改迭代栈式遍历（防未捕获 StackOverflow）；SQLite 原生 DLL 抽取改 SHA-256 校验；AutoOpen 沙箱未启用时输出醒目警告
+- 测试与 CI：ErrorMsg/ExceptionFilters/ExcelEmpty 补专用测试；DOE.ANALYZE/ANOVA/PARETO 接入 Python 交叉验证（Dispatcher + manifest + verify-manual 独立实现）；security.yml 增加 pull_request 触发；release/csproj 打包验证改硬错误（去除 ContinueOnError + 空产物断言）；update_excel_arguments.py 路径修复 `rules/api-reference.md`
+
 ## [2.2.0] - 2026-08-26
 
 ### Added
-- **DOE.* 实验设计与分析模块**（8 个函数，UDF 总数 232→236）：
+- **DOE.* 实验设计与分析模块**（4 个函数，UDF 总数 232→236）：
   - `DOE.PLAN`：生成实验设计矩阵，支持全因子（`full`）、田口正交表（`taguchi`，L4/L8/L9/L12/L16/L18/L27/L32）、2水平 ½ 部分因子（`fractional`）、响应面 CCD（`rsm`，可旋转 α=2^(k/4)）、Box-Behnken（`bb`）
   - `DOE.ANALYZE` / `DOE.ANOVA` / `DOE.PARETO`：效应估计、多因素 ANOVA、Pareto 排序（复用 `RegressionCore.FitOLS`，F=t²、SS=MSE×t²）
   - 与 pyDOE2（fullfact/fracfact/ccdesign/bbdesign）及 scipy 独立实现交叉验证；因子编码 -1/0/+1，自实现 `XorShift64` PRNG 保证双 TFM 随机化序列一致
@@ -198,6 +208,7 @@
 - IntelliSense 自动补全（net48）
 - MIT License
 
+[2.2.0]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.1.1...v2.2.0
 [2.1.1]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.0.0...v2.0.1

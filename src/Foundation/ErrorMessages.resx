@@ -23,6 +23,9 @@
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
 
   <!-- Foundation -->
+  <data name="Input_IntOutOfRange" xml:space="preserve">
+    <value>Value {0} is outside the int range [{1}, {2}].</value>
+  </data>
   <data name="Input_NullOrEmpty" xml:space="preserve">
     <value>Input cannot be null or empty.</value>
   </data>
@@ -156,5 +159,14 @@
   </data>
   <data name="DOE_BbTooFewFactors" xml:space="preserve">
     <value>Box-Behnken requires at least 3 factors (got {0}).</value>
+  </data>
+  <data name="ARR_CountOutOfRange" xml:space="preserve">
+    <value>ARR.FILL would create {0} elements; maximum is {1}.</value>
+  </data>
+  <data name="ARR_StepZero" xml:space="preserve">
+    <value>ARR.RANGE step cannot be zero.</value>
+  </data>
+  <data name="ARR_RangeTooLarge" xml:space="preserve">
+    <value>ARR.RANGE would generate {0} elements; maximum is {1}.</value>
   </data>
 </root>

@@ -25,6 +25,36 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static object[] Reverse(object[] a) { var r=new object[a.Length]; for(int i=0;i<a.Length;i++)r[i]=a[a.Length-1-i]; return r; }
         internal static long Count(object[] a) => a.Length;
         internal static bool Contains(object[] a, object v) => ArrayOperations.IndexOf(a,v)>=0;
+
+        // review-2026-08-29 P1-2：ARR.FILL / ARR.RANGE 业务逻辑从 UDF 层下沉至 Core（UDF 仅分发）。
+        internal static object[] Fill(object value, long count)
+        {
+            if (count < 0 || count > 100_000)
+                throw new ArgumentException(ErrorMsg.Get("ARR_CountOutOfRange", count, 100_000));
+            var r = new object[count];
+            for (int i = 0; i < count; i++) r[i] = value;
+            return r;
+        }
+        internal static object[] Sequence(double start, double end, double step)
+        {
+            if (double.IsNaN(start) || double.IsNaN(end) || double.IsNaN(step))
+                return Array.Empty<object>();
+            if (step == 0)
+                throw new ArgumentException(ErrorMsg.Get("ARR_StepZero"));
+            bool asc = step > 0;
+            if ((asc && start > end) || (!asc && start < end))
+                return Array.Empty<object>();
+            double d = Math.Abs((end - start) / step);
+            if (d > 100_000)
+                throw new ArgumentException(ErrorMsg.Get("ARR_RangeTooLarge", (int)d, 100_000));
+            int n = (int)Math.Floor(d) + 1;
+            if (n < 1) n = 1;
+            if (n > 100_000)
+                throw new ArgumentException(ErrorMsg.Get("ARR_RangeTooLarge", n, 100_000));
+            var r = new List<object>(n);
+            for (int i = 0; i < n; i++) r.Add(start + i * step);
+            return r.ToArray();
+        }
         internal static object[] CollectNumeric(object[,] data, int rows, int cols, out string[] names, bool hasHeaders = true) { var ci=ArrayOperations.CollectNumericColumns(data,rows,cols,out names,hasHeaders); return ci.Select(i=>(object)(long)i).ToArray(); }
 
         internal static object[] Shuffle(object[] a)

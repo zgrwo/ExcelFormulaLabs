@@ -101,7 +101,7 @@
     <ItemGroup>
       <_StaleDna Include="DataToolkit-AddIn*.dna" />
     </ItemGroup>
-    <Delete Files="@(_StaleDna)" ContinueOnError="true" />
+    <Delete Files="@(_StaleDna)" />
     <Copy Condition="'$(TargetFramework)' == 'net8.0-windows'"
           SourceFiles="DataToolkit-AddIn-net8.dna.tpl"
           DestinationFiles="DataToolkit-AddIn-net8.0.dna" />
@@ -113,16 +113,16 @@
     <ItemGroup>
       <_GenDna Include="DataToolkit-AddIn*.dna" />
     </ItemGroup>
-    <Delete Files="@(_GenDna)" ContinueOnError="true" />
+    <Delete Files="@(_GenDna)" />
   </Target>
 
   <!-- Patch VERSIONINFO in packed .xll files so Excel add-in manager
        shows meaningful descriptions instead of Excel-DNA defaults. -->
   <Target Name="PatchXllVersionInfo" AfterTargets="ExcelDnaPack" Condition="'$(Configuration)' == 'Release'">
-    <Exec Condition="'$(TargetFramework)' == 'net48'" Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\DataToolkit-AddIn-net48-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" ContinueOnError="true" />
-    <Exec Condition="'$(TargetFramework)' == 'net48'" Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\DataToolkit-AddIn-net48-64-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" ContinueOnError="true" />
-    <Exec Condition="'$(TargetFramework)' == 'net8.0-windows'" Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\DataToolkit-AddIn-net8.0-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" ContinueOnError="true" />
-    <Exec Condition="'$(TargetFramework)' == 'net8.0-windows'" Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\DataToolkit-AddIn-net8.0-64-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" ContinueOnError="true" />
+    <Exec Condition="'$(TargetFramework)' == 'net48'" Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\DataToolkit-AddIn-net48-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" />
+    <Exec Condition="'$(TargetFramework)' == 'net48'" Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\DataToolkit-AddIn-net48-64-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" />
+    <Exec Condition="'$(TargetFramework)' == 'net8.0-windows'" Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\DataToolkit-AddIn-net8.0-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" />
+    <Exec Condition="'$(TargetFramework)' == 'net8.0-windows'" Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\patch-xll-version.ps1&quot; -XllPath &quot;$(OutDir)publish\DataToolkit-AddIn-net8.0-64-packed.xll&quot; -FileDescription &quot;$(Description)&quot; -ProductName &quot;$(Product)&quot;" />
   </Target>
 
   <!-- 将 SQLite 原生 interop DLL 复制到 publish 目录。
@@ -161,22 +161,22 @@
     <Copy SourceFiles="$(OutDir)runtimes\win-x86\native\e_sqlite3.dll"
           DestinationFolder="$(OutDir)publish\x86\"
           SkipUnchangedFiles="true"
-          ContinueOnError="true" />
+          />
     <Copy SourceFiles="$(OutDir)runtimes\win-x64\native\e_sqlite3.dll"
           DestinationFolder="$(OutDir)publish\x64\"
           SkipUnchangedFiles="true"
-          ContinueOnError="true" />
+          />
   </Target>
 
   <!-- 打包后验证：检查 .xll 产物完整性和原生依赖 -->
   <Target Name="VerifyPackOutput" AfterTargets="CopySQLiteInteropToPublish;CopyESqlite3ToPublish"
           Condition="'$(Configuration)' == 'Release'">
     <Message Text="[VerifyPack] DataToolkit $(TargetFramework) ..." Importance="high" />
-    <Exec Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\verify-pack.ps1&quot; -PublishDir &quot;$(OutDir)publish&quot; -Module DataToolkit -Tfm &quot;$(TargetFramework)&quot;"
-          ContinueOnError="true">
+    <Exec Command="powershell -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\verify-pack.ps1&quot; -PublishDir &quot;$(OutDir)publish&quot; -Module DataToolkit -Tfm &quot;$(TargetFramework)&quot;">
       <Output TaskParameter="ExitCode" PropertyName="_VerifyExitCode" />
     </Exec>
-    <Warning Text="[VerifyPack] 验证发现问题，请检查上述输出。" Condition="$(_VerifyExitCode) != 0" />
+    <!-- review-2026-08-29 P2-10：验证失败改 Error（原 Warning + ContinueOnError 会让坏产物照常发布） -->
+    <Error Text="[VerifyPack] 验证发现问题，请检查上述输出。" Condition="$(_VerifyExitCode) != 0" />
   </Target>
 
 </Project>

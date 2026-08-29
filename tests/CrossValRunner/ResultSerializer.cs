@@ -34,6 +34,7 @@ public static class ResultSerializer
             int[] ia => ia.Cast<object>().ToArray(),
             long[] la => la.Cast<object>().ToArray(),
             double[,] d2 => MatrixToJagged(d2),
+            object[,] o2 => ObjectMatrixToJagged(o2),
             Dictionary<string, object> dict => DictToObject(dict),
             _ => TryTupleToObject(value)
         };
@@ -51,6 +52,21 @@ public static class ResultSerializer
                 double v = m[r, c];
                 result[r][c] = double.IsNaN(v) || double.IsInfinity(v) ? null : v;
             }
+        }
+        return result;
+    }
+
+    /// <summary>Convert an object[,] (e.g. DOE analysis tables with string header row)
+    /// to a jagged JSON-friendly array, recursing per element.</summary>
+    private static object?[][] ObjectMatrixToJagged(object[,] m)
+    {
+        int rows = m.GetLength(0), cols = m.GetLength(1);
+        var result = new object?[rows][];
+        for (int r = 0; r < rows; r++)
+        {
+            result[r] = new object?[cols];
+            for (int c = 0; c < cols; c++)
+                result[r][c] = ToJsonFriendly(m[r, c]);
         }
         return result;
     }

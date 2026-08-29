@@ -76,7 +76,7 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 
 ### 红线规则
 
-- **不修改**现有 232 UDF 的公开签名、参数、返回值（数量以 [api-reference.md](rules/api-reference.md) 为准）
+- **不修改**现有 236 UDF 的公开签名、参数、返回值（数量以 [api-reference.md](rules/api-reference.md) 为准）
 - **不允许** src/ 下出现裸 `catch {}`
 - **不允许**自校验模式 `check(name, X, X)`
 - **net8.0 禁止**添加任何 IntelliSense 相关代码

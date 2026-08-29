@@ -1,9 +1,12 @@
 ﻿# ============================================================================
-# test_verify_docs.ps1 — verify-docs.ps1 回归守卫（4 场景）
-# 场景 A：真实仓库副本 → 15 项检查全过（基线，防门禁自身回归）
+# test_verify_docs.ps1 — verify-docs.ps1 回归守卫（6 场景）
+# 场景 A：真实仓库副本 → 16 项检查全过（基线，防门禁自身回归）
 # 场景 B：README 硬编码徽章 → 检查 9 FAIL
 # 场景 C：README 断链 → 检查 12 FAIL
 # 场景 D：.qoder 镜像漂移 → 检查 13 FAIL
+# 场景 E：api-reference UDF 计数漂移 → 检查 1 FAIL
+# 场景 F：csproj 描述函数计数漂移 → 检查 11 FAIL
+# 场景 G：散文式 UDF 计数漂移（AGENTS.md）→ 检查 16 FAIL
 # 用法：powershell -NoProfile -ExecutionPolicy Bypass -File tests/scripts/test_verify_docs.ps1
 # 注意：本测试复制仓库（排除 bin/obj/.git 等），耗时数秒，仅在 CI windows job 与本地运行。
 # ============================================================================
@@ -47,7 +50,7 @@ function Run-VerifyDocs {
 }
 
 # --- 场景 A：基线（真实仓库副本全绿）---
-Write-Host "[A] 基线：仓库副本 15 项检查全过"
+Write-Host "[A] 基线：仓库副本 16 项检查全过"
 $fixture = Copy-RepoFixture
 Run-VerifyDocs $fixture "全部通过" $false
 
@@ -91,6 +94,15 @@ $content = [System.IO.File]::ReadAllText($csproj, (New-Object System.Text.UTF8En
 $content = $content -replace '144 个数据处理函数', '143 个数据处理函数'
 [System.IO.File]::WriteAllText($csproj, $content, (New-Object System.Text.UTF8Encoding($false)))
 Run-VerifyDocs $fixtureF "DataToolkit csproj description count" $true
+
+# --- 场景 G：散文式 UDF 计数漂移（检查 16）---
+Write-Host "[G] 散文式 UDF 计数漂移应 FAIL（检查 16）"
+$fixtureG = Copy-RepoFixture
+$agentsG = Join-Path $fixtureG "AGENTS.md"
+$contentG = [System.IO.File]::ReadAllText($agentsG, (New-Object System.Text.UTF8Encoding($false)))
+$contentG = $contentG -replace '236 UDF', '999 UDF'
+[System.IO.File]::WriteAllText($agentsG, $contentG, (New-Object System.Text.UTF8Encoding($false)))
+Run-VerifyDocs $fixtureG "Prose UDF counts" $true
 
 # --- 汇总 ---
 Remove-Item -Recurse -Force $tmpRoot

@@ -1,6 +1,8 @@
 # ============================================================================
 # security.yml — CodeQL 安全扫描
-# 触发：main 推送 / 每周一凌晨 2 点定时
+# 触发：main 推送 / PR 到 main / 每周一凌晨 2 点定时
+# review-2026-08-29 P2-9：增加 pull_request 触发——此前仅 push main + 定时，
+#       PR 合并前无扫描结果，漏洞可随合并进入 main 后才被发现。
 # 前置：仓库 Settings → Code security → CodeQL 默认设置关闭（避免重复），
 #       或保持默认设置启用并删除本文件（二选一）。
 # 说明：C# 为编译型语言，autobuild 需要可构建的源码树；本仓库 .sln 在
@@ -19,6 +21,8 @@ name: Security
 
 on:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
   schedule:
     - cron: "0 2 * * 1"

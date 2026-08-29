@@ -55,7 +55,7 @@ namespace ExcelFormulaLabs.Analytics
 
         private static (int maxOrder, bool quadratic) ParseTerms(object terms)
         {
-            if (terms == null || terms is ExcelMissing)
+            if (terms == null || InputNormalizer.IsExcelMissing(terms))
                 return (2, false); // default: main + 2-way interactions
             string t = InputNormalizer.ToString(terms).Trim().ToUpperInvariant();
             return t switch

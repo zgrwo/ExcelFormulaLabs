@@ -166,23 +166,27 @@ if ($coreHits) {
 Write-Host ""
 Write-Host "[5/6] Checking NaN/Inf guards in Core files ..."
 
-$coreModules = @("StatsCore", "LinalgCore", "RegressionCore", "PhyChemCore", "PivotCore", "JsonXmlCore")  # P2 (review): DataToolkit division paths now gated too
+# review-2026-08-29 P2-6：原硬编码 $coreModules 名单缺 DoeCore/DoeAnalysisCore（DOE 新增后未扩展）
+# → 改为动态发现全部 *Core.cs，名单漂移自愈。
+$coreFiles = Get-ChildItem -Path "$RepoRoot/src" -Recurse -Filter "*Core.cs" -ErrorAction SilentlyContinue
 $nanInfMissing = @()
 
-foreach ($mod in $coreModules) {
-    $files = $allCs | Where-Object { $_.Name -eq "$mod.cs" }
-    foreach ($f in $files) {
-        $content = Read-Utf8Text $f.FullName
-        $hasDivision = $content -match '/\s*(?!0\b)\w+'
-        if ($hasDivision) {
-            $hasGuard = ($content -match 'double\.IsNaN') -or
-                        ($content -match 'double\.IsInfinity') -or
-                        ($content -match 'ArgumentException') -or
-                        ($content -match 'double\.NaN')
-            if (-not $hasGuard) {
-                $nanInfMissing += $f.FullName
-                $violations += "NAN_INF_GUARD: $($f.FullName)"
-            }
+foreach ($f in $coreFiles) {
+    $content = Read-Utf8Text $f.FullName
+    if (-not $content) { continue }
+    # 剥离 // 与 /* */ 注释后再检测除法表达式：原正则会把 `/// <summary>` 等 XML 注释
+    # 误判为除法，导致所有文件 hasDivision=true，守卫检查退化为「任一 ArgumentException 即豁免”。
+    $code = [regex]::Replace($content, '/\*.*?\*/', '', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+    $code = [regex]::Replace($code, '(?m)//.*$', '')
+    $hasDivision = $code -match '/\s*(?!0\b)\w+'
+    if ($hasDivision) {
+        $hasGuard = ($content -match 'double\.IsNaN') -or
+                    ($content -match 'double\.IsInfinity') -or
+                    ($content -match 'ArgumentException') -or
+                    ($content -match 'double\.NaN')
+        if (-not $hasGuard) {
+            $nanInfMissing += $f.FullName
+            $violations += "NAN_INF_GUARD: $($f.FullName)"
         }
     }
 }
@@ -200,8 +204,10 @@ Write-Host "[6/6] Checking hasHeaders contract ..."
 $allCoreCs = Get-ChildItem -Path "$RepoRoot/src" -Recurse -Filter "*Core.cs" -ErrorAction SilentlyContinue
 $hasHeaderViolations = @()
 # Structural transformation exemptions (don't interpret header semantics)
-$structuralExempt = @('Transpose','SelectColumns','SelectRows','CrossJoin','Flatten2D','Count',
-                       'Frequency','Dict','JsonToTable','XmlToTable','RegexCaptureGroups')
+# review-2026-08-29 P2-7：原 11 项中的 Frequency/Dict/JsonToTable/XmlToTable/RegexCaptureGroups
+# 参数均为 object[]/string（非 object[,]），check 正则不匹配，属冗余项 → 收缩为与
+# AGENTS.md §4 表头行契约一致的 6 项（Transpose/SelectColumns/SelectRows/CrossJoin/Flatten2D/Count）。
+$structuralExempt = @('Transpose','SelectColumns','SelectRows','CrossJoin','Flatten2D','Count')
 
 foreach ($f in $allCoreCs) {
     $content = Read-Utf8Text $f.FullName

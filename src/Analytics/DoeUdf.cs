@@ -23,12 +23,12 @@ namespace ExcelFormulaLabs.Analytics
             [ExcelArgument(Name = "[seed]", Description = "Fixed seed for reproducible run order")]
             object seed = null)
             => OutputWrapper.WrapError(() => DoeCore.Plan(
-                (int)InputNormalizer.ToLong(qty1),
-                (int)InputNormalizer.ToLong(level1),
-                (int)InputNormalizer.ToLong(qty2),
-                (int)InputNormalizer.ToLong(level2),
+                InputNormalizer.ToInt32(qty1),
+                InputNormalizer.ToInt32(level1),
+                InputNormalizer.ToInt32(qty2),
+                InputNormalizer.ToInt32(level2),
                 InputNormalizer.ToString(method),
-                randomize == null || randomize is ExcelMissing ? true : InputNormalizer.ToBool(randomize),
+                InputNormalizer.ToBool(randomize, true),
                 seed == null || seed is ExcelMissing ? (long?)null : InputNormalizer.ToLong(seed)));
     }
 }

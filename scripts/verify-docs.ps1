@@ -1,7 +1,7 @@
 ﻿# verify-docs.ps1 - 文档一致性验证（唯一实现；verify-docs.sh 为包装器）
 # ============================================================================
 # 用法：.\scripts\verify-docs.ps1 [-RepoRoot <path>]
-# 15 项检查：
+# 16 项检查：
 #   1.  UDF 数量：api-reference.md 为准，与源码 [ExcelFunction] 一致
 #   2.  UDF 全覆盖：每个源码 UDF 在 api-reference.md 有条目
 #   3.  skill.md 含 RangeExport（数据工具模块技能覆盖）
@@ -17,6 +17,7 @@
 #  13.  .qoder skills 镜像与 skills/ 一致（变换后字节比对，见 sync-qoder-skills.ps1）
 #  14.  project-structure.md 目录树声明的条目全部真实存在
 #  15.  AGENTS.md 与 project-structure.md 顶层目录集合一致（双目录树防漂移）
+#  16.  散文式 UDF 计数（AGENTS/CONTRIBUTING/CHANGELOG/注释/Total 表）== 推导值
 #
 # 注意：文件一律用显式 UTF-8 读取（本脚本兼容 Windows PowerShell 5.1 与 pwsh 7）。
 # ============================================================================
@@ -257,6 +258,35 @@ if (-not $agentsBlock -or -not $structBlock) {
         Check "AGENTS/project-structure top dirs" ($detail -join '; ')
     }
 }
+
+# ---------- 16. 散文式 UDF 计数一致性 ----------
+# review-2026-08-29 P1-3/P1-4：此前只校验 api-reference↔源码（检查 1/11），从不校验
+# AGENTS/CONTRIBUTING/CHANGELOG/注释中的散文 `\d+ UDF` 计数，导致 232 陈旧漂移全绿通过。
+$proseFiles = @("AGENTS.md", "CONTRIBUTING.md", "src\Foundation\ElementWiseMapper.cs", "docs\cross-validation.md", "CHANGELOG.md")
+$proseMismatches = @()
+foreach ($rel in $proseFiles) {
+    $text = Read-Utf8 (Join-Path $RepoRoot $rel)
+    if (-not $text) { continue }
+    # 模式 1：`N UDF`（如 "236 UDF"）——仅对总计数声明文件生效；
+    # cross-validation.md 小节标题含模块级计数（34 UDFs 等），CHANGELOG 含历史表述，均豁免。
+    if ($rel -ne "docs\cross-validation.md" -and $rel -ne "CHANGELOG.md") {
+        foreach ($m in [regex]::Matches($text, '(\d+)\s+UDF')) {
+            if ([int]$m.Groups[1].Value -ne $codeUdfs) { $proseMismatches += "${rel}: '$($m.Value)'" }
+        }
+    }
+    # 模式 2：`UDF 总数 X→Y`（CHANGELOG 历史记录，断言终值）
+    foreach ($m in [regex]::Matches($text, 'UDF\s*总数\s*\d+\s*→\s*(\d+)')) {
+        if ([int]$m.Groups[1].Value -ne $codeUdfs) { $proseMismatches += "${rel}: '$($m.Value)'" }
+    }
+    # 模式 3：cross-validation.md Total 行 `| **Total** | **236** |`
+    if ($rel -eq "docs\cross-validation.md") {
+        foreach ($m in [regex]::Matches($text, '\|\s*\*\*Total\*\*\s*\|\s*\*\*(\d+)\*\*')) {
+            if ([int]$m.Groups[1].Value -ne $codeUdfs) { $proseMismatches += "${rel}: Total '$($m.Groups[1].Value)'" }
+        }
+    }
+}
+if ($proseMismatches.Count -eq 0) { Check "Prose UDF counts ($codeUdfs)" "OK" }
+else { Check "Prose UDF counts" ($proseMismatches -join ' | ') }
 
 # ---------- 汇总 ----------
 Write-Host ""
