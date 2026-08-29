@@ -125,8 +125,6 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           New-Item -ItemType Directory -Force -Path artifacts | Out-Null
-          $xlls = Get-ChildItem -Recurse -Filter "*-packed.xll" -Path "src" |
-            Where-Object { $_.DirectoryName -match "Release" }
           # H1 (release-audit-2026-08-29)：必须恰好 8 个 .xll —— 2 模块 × 2 TFM × 2 位数
           $expected = @(
             'Analytics-AddIn-net48-packed.xll',
@@ -138,13 +136,20 @@ jobs:
             'DataToolkit-AddIn-net8.0-packed.xll',
             'DataToolkit-AddIn-net8.0-64-packed.xll'
           )
-          $missing = @($expected | Where-Object { -not ($xlls | Where-Object { $_.Name -eq $_ }) })
+          $xlls = @(Get-ChildItem -Recurse -Filter "*-packed.xll" -Path "src" |
+            Where-Object { $_.DirectoryName -match "Release" })
+          Write-Host "found $($xlls.Count) packed xlls"
+          # review-2026-08-29 H1 修复：pwsh7(.NET Core) 下 FileInfo.ToString() 返回全路径而非文件名，
+          # 旧写法 `$_.Name -eq $_`（字符串 vs FileInfo 对象）在 pwsh7 恒 false（PS5.1 仅靠 ToString=文件名碰巧成立）。
+          # 改纯字符串名比较，PS5.1 / pwsh7 行为一致。
+          $foundNames = @($xlls | ForEach-Object { $_.Name })
+          $missing = @($expected | Where-Object { $_ -notin $foundNames })
           if ($missing.Count -gt 0) {
             Write-Error "[Collect] 缺少 $($missing.Count) 个产物: $($missing -join ', ') — 构建可能静默失败，中止发布。"
             exit 1
           }
-          if ($xlls.Count -ne $expected.Count) {
-            Write-Error "[Collect] 产物数量 $($xlls.Count) != 期望 $($expected.Count)。"
+          if ($foundNames.Count -ne $expected.Count) {
+            Write-Error "[Collect] 产物数量 $($foundNames.Count) != 期望 $($expected.Count)。"
             exit 1
           }
           $xlls | Copy-Item -Destination artifacts/
