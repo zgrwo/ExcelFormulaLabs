@@ -71,7 +71,7 @@ _Avoid_: 目标框架、框架版本
 **交叉验证（Cross-Validation）** — Python（numpy/scipy/sklearn）与 C# 实现逐项对照，精度 1e-10。覆盖 STATS/REGRESS/LINALG/PHYCHEM。
 **CrossVal** — `dotnet test --filter "CrossVal"` 运行的交叉验证测试子集。
 **verify-manual.py** — Python 脚本，验证 user-manual.md 中全部 UDF 示例与源码行为一致。
-**verify-docs.sh** — verify-docs.ps1 的 POSIX 包装器（16 项文档一致性检查，唯一实现为 PowerShell 版本）。
+**verify-docs.sh** — verify-docs.ps1 的 POSIX 包装器（18 项文档一致性检查，唯一实现为 PowerShell 版本）。
 
 ## 平台术语
 

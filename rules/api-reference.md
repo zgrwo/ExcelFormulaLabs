@@ -47,9 +47,9 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `STATS.PRODUCT` | (number1) | `double` | 求积 |
 | `STATS.PERCENTILE` | (array, k) | `double` | k 分位数（0-100），R7 算法。对标 Excel PERCENTILE.INC |
 | `STATS.IQR` | (number1) | `double` | 四分位距（Q3 - Q1），R7 算法 |
-| `STATS.SUMMARY` | (number1) | `double[9]` | 描述统计摘要：`[n, mean, stdev, min, q1, median, q3, max, iqr]`。R7 分位数（对标 Python scipy）。 |
+| `STATS.SUMMARY` | (array) | `double[9]` | 描述统计摘要：`[n, mean, stdev, min, q1, median, q3, max, iqr]`。R7 分位数（对标 Python scipy）。 |
 | `STATS.COUNT` | (number) | `long` | 元素个数 |
-| `STATS.MODE` | (number1) | `double` | 众数。全唯一返回 NaN（对标 Excel MODE.SNGL） |
+| `STATS.MODE` | (number) | `double` | 众数。全唯一返回 NaN（对标 Excel MODE.SNGL） |
 | `STATS.COVARP` | (array1, array2) | `double` | 总体协方差（除以 n）。对标 Excel COVARIANCE.P |
 | `STATS.COVAR` | (array1, array2) | `double` | 样本协方差（除以 n-1）。对标 Excel COVARIANCE.S |
 | `STATS.PEARSON` | (array1, array2) | `double` | Pearson 线性相关系数 r。范围 -1~1。对标 Excel PEARSON |
@@ -412,7 +412,8 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | **LINALG** | 矩阵含 NaN/Inf | `#VALUE!` |
 | **LINALG** | 非方阵求特征值/Cholesky | `#VALUE!` |
 | **LINALG** | 奇异矩阵求 Solve | `#VALUE!` |
-| **LINALG** | QR 宽矩阵超过 2000 列 | `#VALUE!` |
+| **LINALG** | IDENTITY 阶数 > 2000（32 位 Excel 单公式 OOM 防护） | `#VALUE!` |
+| **LINALG** | QR 宽矩阵（行数 < 列数，MathNet 不支持 m<n） | `#VALUE!` |
 | **REGRESS** | 常数响应变量 y（TSS=0） | `#VALUE!` |
 | **REGRESS** | n ≤ p（自由度不足） | `#VALUE!` |
 | **REGRESS** | 权重含负数/NaN/Inf | `#VALUE!` |
@@ -422,6 +423,9 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | **PHYCHEM** | 未知换算单位 | `#NUM!` |
 | **PHYCHEM** | 理想气体方程待求量 ≠ 1 个 | `#NUM!` |
 | **PHYCHEM** | 理想气体方程除零 | `#NUM!` |
+| **DOE** | 因子数 > 1000（MaxFactors） | `#VALUE!` |
+| **DOE** | 运行数 > 1,000,000（MaxRuns） | `#VALUE!` |
+| **DOE** | 输出单元格 > 1,000,000（MaxCells） | `#VALUE!` |
 | **STR** | Base64 解码非法输入 | `#VALUE!` |
 | **DT** | 非法日期值（MinValue） | `#VALUE!` |
 | **REGEX** | 非法正则表达式 | `#VALUE!` |
@@ -429,8 +433,11 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | **ARR** | FILL 超出 [0, 100000] 范围 | `#VALUE!` |
 | **PIVOT** | 不支持的聚合函数名 | `#VALUE!` |
 | **PIVOT** | CrossJoin 超过 1,000,000 单元格 | `#VALUE!` |
+| **SQL** | 非 SELECT 语句 / 含 DML·DDL 关键字（INSERT/UPDATE/DELETE/PRAGMA…，含 CTE 前缀） | `#VALUE!` |
+| **SQL** | 查询含分号（防多语句注入） | `#VALUE!` |
 | **FS** | 文件不存在 | `#VALUE!` |
 | **FS** | 路径含非法字符 | `#VALUE!` |
+| **FS** | 读取/写入超过沙箱大小上限（默认各 100MB，可配置） | `#VALUE!` |
 
 > **提示**：`#VALUE!` 表示输入/执行错误（用户可修正输入），`#NUM!` 表示计算结果无定义（数据本身不满足数学条件）。本页为错误行为唯一信源——其他文档引用以此为准。
 

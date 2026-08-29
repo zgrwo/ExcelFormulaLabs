@@ -1,0 +1,6 @@
+# Python 交叉验证依赖（CI 与贡献者统一引用，见 CONTRIBUTING.md / rules/project-structure.md）
+# 版本由 dependabot 维护（.github/dependabot.yml pip ecosystem）；下限保证 CI 解析到可工作版本。
+numpy>=1.26
+scipy>=1.11
+scikit-learn>=1.4
+pyDOE2>=1.9

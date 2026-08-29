@@ -13,6 +13,8 @@ src/**/*.dna
 !src/**/*.dna.tpl
 __pycache__/
 .claude/reviews/
+# CLAUDE.md 是 AGENTS.md 的本地副本（不入库登记，见 AGENTS.md）
+CLAUDE.md
 BenchmarkDotNet.Artifacts/
 # Qoder 本地工具配置/技能镜像（不入库，本地保留）
 .qoder/

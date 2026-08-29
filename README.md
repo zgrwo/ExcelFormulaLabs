@@ -23,10 +23,14 @@ Win10/11 自带 .NET Framework 4.8，直接加载 net48 版本的 `.xll`：
 
 | 文件 | 包含模块 |
 |------|---------|
-| `Analytics-AddIn-net48-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM · DOE（需 .NET Framework 4.8） |
-| `Analytics-AddIn-net8.0-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM · DOE（需 .NET 8 运行时） |
-| `DataToolkit-AddIn-net48-packed.xll` | STR · DT · REGEX · ARR · DICT · JSON/XML · PIVOT · SQL · FS · RANGE（需 .NET Framework 4.8） |
-| `DataToolkit-AddIn-net8.0-packed.xll` | STR · DT · REGEX · ARR · DICT · JSON/XML · PIVOT · SQL · FS · RANGE（需 .NET 8 运行时） |
+| `Analytics-AddIn-net48-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM · DOE（需 .NET Framework 4.8，32 位） |
+| `Analytics-AddIn-net48-64-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM · DOE（需 .NET Framework 4.8，64 位） |
+| `Analytics-AddIn-net8.0-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM · DOE（需 .NET 8 运行时，32 位） |
+| `Analytics-AddIn-net8.0-64-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM · DOE（需 .NET 8 运行时，64 位） |
+| `DataToolkit-AddIn-net48-packed.xll` | STR · DT · REGEX · ARR · DICT · JSON/XML · PIVOT · SQL · FS · RANGE（需 .NET Framework 4.8，32 位） |
+| `DataToolkit-AddIn-net48-64-packed.xll` | STR · DT · REGEX · ARR · DICT · JSON/XML · PIVOT · SQL · FS · RANGE（需 .NET Framework 4.8，64 位） |
+| `DataToolkit-AddIn-net8.0-packed.xll` | STR · DT · REGEX · ARR · DICT · JSON/XML · PIVOT · SQL · FS · RANGE（需 .NET 8 运行时，32 位） |
+| `DataToolkit-AddIn-net8.0-64-packed.xll` | STR · DT · REGEX · ARR · DICT · JSON/XML · PIVOT · SQL · FS · RANGE（需 .NET 8 运行时，64 位） |
 
 > **版本选择**：64 位 Excel 选文件名含 `64` 的 `.xll`，32 位 Excel 选不含的。`-net48` 版本无需额外安装运行时（Win10/11 自带），`-net8.0` 版本性能更优但需安装 .NET 8 运行时。两个加载项可同时加载，也可按需只装一个。
 
@@ -146,7 +150,7 @@ FileSystemCore.Initialize(new SandboxConfig(@"C:\Users\Public\Documents"));
 
 - **双 .NET 版本全量测试**，覆盖正常路径和退化输入（零值/空值/单元素/全等值）
 - **Python 交叉验证**：Stats/Regression 与 numpy/scipy 逐项对照，精度 1e-10；DataToolkit 集成管道测试覆盖跨模块组合
-- **手册验证**：Python 交叉验证覆盖全部 UDF 示例，确保结果与源码一致
+- **手册验证**：Python 交叉验证覆盖 224/236 个 UDF 示例（sync 变体；其余 12 个无独立示例的 *_ASYNC/共享 Core 变体由 UDF 层测试覆盖），确保结果与源码一致
 
 ---
 

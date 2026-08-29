@@ -60,11 +60,18 @@ if ($Module -eq "DataToolkit") {
     }
 }
 
-# 3. Check for cross-TFM contamination
+# 3. Check for cross-TFM contamination (H1, review-2026-08-29)
+#    publish 目录出现另一 TFM 的 packed.xll 说明并行内部构建互相污染（P1-3 已有序，
+#    但此处兜底）。改为 error 且同时检查 32/64 两个变体——旧实现仅 warning 且漏查 -64。
 $otherTfm = if ($tfmSuffix -eq "net48") { "net8.0" } else { "net48" }
-$staleXll = "$PublishDir\$Module-AddIn-$otherTfm-packed.xll"
-if (Test-Path $staleXll) {
-    $warnings += "Stale XLL from other TFM found: $staleXll"
+$staleXlls = @(
+    "$PublishDir\$Module-AddIn-$otherTfm-packed.xll",
+    "$PublishDir\$Module-AddIn-$otherTfm-64-packed.xll"
+)
+foreach ($stale in $staleXlls) {
+    if (Test-Path $stale) {
+        $errors += "Cross-TFM stale XLL found: $stale (会反向覆盖正确产物，中止)"
+    }
 }
 
 # Report

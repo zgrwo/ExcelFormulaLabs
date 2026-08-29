@@ -11,7 +11,7 @@ ExcelFormulaLabs/
 │
 ├── .github/                        # GitHub 生态
 │   ├── workflows/
-│   │   ├── ci.yml                  #   CI（6 jobs：红线/测试/CrossVal/Release/文档/覆盖率）
+│   │   ├── ci.yml                  #   CI（7 jobs：红线/测试net8.0/测试net48/CrossVal/Release/文档/覆盖率）
 │   │   ├── release.yml             #   Release（tag → build → pack → publish）
 │   │   ├── security.yml            #   CodeQL 安全扫描（定时 + push main）
 │   │   └── stale.yml               #   僵尸 Issue/PR 自动关闭
@@ -59,10 +59,11 @@ ExcelFormulaLabs/
 │       ├── 0002-core-zero-excel-dependency.md
 │       ├── 0003-mapover-abstraction.md
 │       ├── 0004-sentinel-contract-over-exceptions.md
-│       └── 0005-sandboxconfig-immutable.md
+│       ├── 0005-sandboxconfig-immutable.md
+│       └── 0006-doe-cross-validation-source.md
 │
 ├── scripts/                        # 构建/验证脚本
-│   ├── verify-docs.ps1             #   文档一致性验证（16 项检查，唯一实现）
+│   ├── verify-docs.ps1             #   文档一致性验证（18 项检查，唯一实现）
 │   ├── verify-docs.sh              #   verify-docs.ps1 的 POSIX 包装器
 │   ├── verify-manual.py            #   全 UDF 手册示例验证（Python↔C#）
 │   ├── verify-all.ps1              #   一键 5 步验证门
@@ -124,6 +125,7 @@ ExcelFormulaLabs/
 │   ├── DataToolkit/                # 数据处理模块 → DataToolkit-AddIn.xll
 │   │   ├── DataToolkit.csproj
 │   │   ├── AddIn.cs                #     AutoOpen/AutoClose
+│   │   ├── NativeDllStore.cs        #     原生 DLL 内容寻址提取（SHA-256 + 原子替换）
 │   │   ├── StringCore.cs / StringUdf.cs       # STR.*
 │   │   ├── DateTimeCore.cs / DateTimeUdf.cs   # DT.*
 │   │   ├── RegexCore.cs / RegexUdf.cs         # REGEX.*
@@ -149,9 +151,9 @@ ExcelFormulaLabs/
 │       └── {Name}CrossVal.py.template    # 含 cross_check() 调用
 │
 ├── tests/                          # 测试
-│   ├── Foundation.Tests/           #   Foundation 层单元测试（含 csproj 与 10 个测试文件）
-│   ├── Analytics.Tests/            #   Analytics 层单元测试（含 csproj 与 10 个测试文件）
-│   ├── DataToolkit.Tests/          #   DataToolkit 层单元测试（含 csproj 与 19 个测试文件）
+│   ├── Foundation.Tests/           #   Foundation 层单元测试（含 csproj 与 13 个测试文件）
+│   ├── Analytics.Tests/            #   Analytics 层单元测试（含 csproj 与 17 个测试文件）
+│   ├── DataToolkit.Tests/          #   DataToolkit 层单元测试（含 csproj 与 20 个测试文件）
 │   ├── CrossValRunner/             #   C# 交叉验证调度器
 │   │   ├── CrossValRunner.csproj
 │   │   ├── Program.cs
@@ -173,6 +175,7 @@ ExcelFormulaLabs/
 │
 ├── ExcelFormulaLabs.sln            # 解决方案
 ├── nuget.config                    # NuGet 源（nuget.org + GitHub Packages）
+├── requirements.txt                # Python 交叉验证依赖固定（CI + 贡献者）
 ├── AGENTS.md                       # 项目宪法 / AI 行为准则
 ├── README.md                       # 用户向功能指南
 ├── README.en.md                    # 英文入口

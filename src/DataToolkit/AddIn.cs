@@ -55,37 +55,18 @@ namespace ExcelFormulaLabs.DataToolkit
                 using var stream = typeof(AddIn).Assembly.GetManifestResourceStream(resName);
                 if (stream != null)
                 {
+                    // 内容寻址提取（NativeDllStore）：目标路径由嵌入字节的 SHA-256 派生，
+                    // 且每次调用重新比对盘上文件哈希与嵌入字节，不一致即原子替换。
+                    // review-2026-08-29 B1 修复 v2.2.1 失效的同目录覆写方案
+                    // （stream 不复位写 0 字节 + File.Move 无法覆写 → 完整性检查是空转）。
                     string localDir = Path.Combine(
                         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                         "ExcelFormulaLabs", "DataToolkit");
-                    Directory.CreateDirectory(localDir);
-                    string extractedPath = Path.Combine(localDir, dllName);
+                    using var ms = new MemoryStream();
+                    stream.CopyTo(ms);
+                    string extractedPath = NativeDllStore.GetOrExtract(
+                        localDir, "native", ms.ToArray(), dllName);
 
-                    // 完整性校验：嵌入资源与已提取文件大小 + SHA256 一致才跳过提取。
-                    // review-2026-08-29 P2-13：原实现仅比文件大小——同尺寸恶意 DLL 可被替换后
-                    // LoadLibrary 加载进 Excel 进程（本地提权腹地）。
-                    bool needExtract = true;
-                    if (File.Exists(extractedPath))
-                    {
-                        var fi = new FileInfo(extractedPath);
-                        if (fi.Length == stream.Length && Sha256Equals(stream, extractedPath))
-                            needExtract = false;
-                    }
-                    if (needExtract)
-                    {
-                        // 原子写入：先写临时文件再 rename，避免多进程并发写入导致 DLL 损坏。
-                        string tempPath = extractedPath + $".tmp.{System.Diagnostics.Process.GetCurrentProcess().Id}";
-                        using (var fs = new FileStream(tempPath, FileMode.Create, FileAccess.Write))
-                            stream.CopyTo(fs);
-                        try { File.Move(tempPath, extractedPath); }
-                        catch (IOException ex) when (ExceptionFilters.IsCatchable(ex))
-                        {
-                            // 另一 Excel 实例已完成提取；清理临时文件后使用已有 DLL。
-                            try { File.Delete(tempPath); }
-                            catch (Exception cleanupEx) when (ExceptionFilters.IsCatchable(cleanupEx))
-                            { /* best-effort */ }
-                        }
-                    }
                     LoadNativeLibrary(extractedPath);
                     return;
                 }
@@ -98,26 +79,6 @@ namespace ExcelFormulaLabs.DataToolkit
                 System.Diagnostics.Debug.WriteLine(
                     $"[AddIn] PreLoadNativeDependencies 失败: {ex.Message}");
             }
-        }
-
-        /// <summary>SHA-256 字节比对：嵌入资源流与已提取 DLL 是否一致。
-        /// 失败（IO/权限/哈希不符）一律返回 false → 触发重新提取，绝不用不可信文件。</summary>
-        private static bool Sha256Equals(System.IO.Stream expected, string path)
-        {
-            try
-            {
-                using var sha = System.Security.Cryptography.SHA256.Create();
-                expected.Position = 0;
-                var a = sha.ComputeHash(expected);
-                using var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
-                var b = sha.ComputeHash(fs);
-                if (a.Length != b.Length) return false;
-                for (int i = 0; i < a.Length; i++)
-                    if (a[i] != b[i]) return false;
-                return true;
-            }
-            catch (Exception ex) when (ExceptionFilters.IsCatchable(ex))
-            { return false; }
         }
 
         private static void LoadNativeLibrary(string path)

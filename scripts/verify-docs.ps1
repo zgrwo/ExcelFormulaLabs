@@ -1,7 +1,7 @@
 ﻿# verify-docs.ps1 - 文档一致性验证（唯一实现；verify-docs.sh 为包装器）
 # ============================================================================
 # 用法：.\scripts\verify-docs.ps1 [-RepoRoot <path>]
-# 16 项检查：
+# 18 项检查：
 #   1.  UDF 数量：api-reference.md 为准，与源码 [ExcelFunction] 一致
 #   2.  UDF 全覆盖：每个源码 UDF 在 api-reference.md 有条目
 #   3.  skill.md 含 RangeExport（数据工具模块技能覆盖）
@@ -18,6 +18,8 @@
 #  14.  project-structure.md 目录树声明的条目全部真实存在
 #  15.  AGENTS.md 与 project-structure.md 顶层目录集合一致（双目录树防漂移）
 #  16.  散文式 UDF 计数（AGENTS/CONTRIBUTING/CHANGELOG/注释/Total 表）== 推导值
+#  17.  [ExcelArgument] 名称 ↔ api-reference 参数列（自动比对，剥离可选标记）
+#  18.  src/ 实际文件必须被目录树声明（反向检查：存在→声明）
 #
 # 注意：文件一律用显式 UTF-8 读取（本脚本兼容 Windows PowerShell 5.1 与 pwsh 7）。
 # ============================================================================
@@ -133,12 +135,32 @@ if ($LASTEXITCODE -ne 0) {
     if ($untracked.Count -eq 0) { Check "CHANGELOG covers all tags ($($semverTags.Count) tags)" "OK" }
     else { Check "CHANGELOG covers all tags" "missing entries: $($untracked -join ', ')" }
 
-    $latestTag = $semverTags | Sort-Object -Descending | Select-Object -First 1
+    # H3 (review-2026-08-29)：字符串排序会将 v2.9.0 排在 v2.10.0 之前，误选最新 tag。
+    # 改为语义化版本（major/minor/patch）比较。
+    $latestTag = $semverTags |
+        Sort-Object -Property @{ Expression = {
+                $v = $_ -replace '^v', ''
+                $parts = $v -split '\.'
+                [long]$parts[0] * 1000000 + [long]$parts[1] * 1000 + [long]$parts[2]
+            } } -Descending | Select-Object -First 1
     $props = Read-Utf8 (Join-Path $RepoRoot "src\Directory.Build.props")
     $propsVer = if ($props -match '<Version>([0-9.]+)</Version>') { $Matches[1] } else { "?" }
     $latestVer = $latestTag -replace '^v', ''
     if ($propsVer -eq $latestVer) { Check "Directory.Build.props version == latest tag ($latestVer)" "OK" }
     else { Check "Directory.Build.props version" "props=$propsVer latest-tag=$latestVer" }
+
+    # G1 (review-2026-08-29)：AssemblyVersion / FileVersion 必须与 <Version> 一致
+    #（X.Y.Z → X.Y.Z.0）。v2.2.1 曾漏改 AV/FV 漂移到 2.2.0.0。
+    if ($propsVer -match '^\d+\.\d+\.\d+$') {
+        $propsAv = if ($props -match '<AssemblyVersion>([0-9.]+)</AssemblyVersion>') { $Matches[1] } else { "?" }
+        $propsFv = if ($props -match '<FileVersion>([0-9.]+)</FileVersion>') { $Matches[1] } else { "?" }
+        $expect = "$propsVer.0"
+        if ($propsAv -eq $expect -and $propsFv -eq $expect) {
+            Check "AssemblyVersion/FileVersion == Version" "OK"
+        } else {
+            Check "AssemblyVersion/FileVersion == Version" "expect=$expect av=$propsAv fv=$propsFv"
+        }
+    }
 }
 
 # ---------- 11. 模块 csproj 描述数量 == [ExcelFunction] 计数 ----------
@@ -262,14 +284,20 @@ if (-not $agentsBlock -or -not $structBlock) {
 # ---------- 16. 散文式 UDF 计数一致性 ----------
 # review-2026-08-29 P1-3/P1-4：此前只校验 api-reference↔源码（检查 1/11），从不校验
 # AGENTS/CONTRIBUTING/CHANGELOG/注释中的散文 `\d+ UDF` 计数，导致 232 陈旧漂移全绿通过。
-$proseFiles = @("AGENTS.md", "CONTRIBUTING.md", "src\Foundation\ElementWiseMapper.cs", "docs\cross-validation.md", "CHANGELOG.md")
+# review-2026-08-30：扫描范围从 5 个指定文件扩展为全仓 *.md（+ 源码注释文件）。
+#   豁免：cross-validation.md（模块级计数，仅验 Total 行）与 CHANGELOG.md（历史表述，仅验 X→Y 终值）。
+$proseMdFiles = Get-ChildItem -Path $RepoRoot -Recurse -Filter "*.md" |
+    Where-Object { $_.FullName -notmatch '\\.git\\|\\bin\\|\\obj\\|\\\\.qoder\\|\\TestResults\\|\\logs\\' }
+$proseFiles = @("src\Foundation\ElementWiseMapper.cs") +
+    @($proseMdFiles | ForEach-Object { $_.FullName.Substring($RepoRoot.Length).TrimStart('\\') })
 $proseMismatches = @()
 foreach ($rel in $proseFiles) {
     $text = Read-Utf8 (Join-Path $RepoRoot $rel)
     if (-not $text) { continue }
-    # 模式 1：`N UDF`（如 "236 UDF"）——仅对总计数声明文件生效；
-    # cross-validation.md 小节标题含模块级计数（34 UDFs 等），CHANGELOG 含历史表述，均豁免。
-    if ($rel -ne "docs\cross-validation.md" -and $rel -ne "CHANGELOG.md") {
+    $isModuleLevel = ($rel -eq "docs\cross-validation.md")
+    $isHistorical = ($rel -eq "CHANGELOG.md")
+    # 模式 1：`N UDF`（如 "236 UDF"）——除模块级/历史文件外强制执行 == codeUdfs
+    if (-not $isModuleLevel -and -not $isHistorical) {
         foreach ($m in [regex]::Matches($text, '(\d+)\s+UDF')) {
             if ([int]$m.Groups[1].Value -ne $codeUdfs) { $proseMismatches += "${rel}: '$($m.Value)'" }
         }
@@ -279,7 +307,7 @@ foreach ($rel in $proseFiles) {
         if ([int]$m.Groups[1].Value -ne $codeUdfs) { $proseMismatches += "${rel}: '$($m.Value)'" }
     }
     # 模式 3：cross-validation.md Total 行 `| **Total** | **236** |`
-    if ($rel -eq "docs\cross-validation.md") {
+    if ($isModuleLevel) {
         foreach ($m in [regex]::Matches($text, '\|\s*\*\*Total\*\*\s*\|\s*\*\*(\d+)\*\*')) {
             if ([int]$m.Groups[1].Value -ne $codeUdfs) { $proseMismatches += "${rel}: Total '$($m.Groups[1].Value)'" }
         }
@@ -287,6 +315,56 @@ foreach ($rel in $proseFiles) {
 }
 if ($proseMismatches.Count -eq 0) { Check "Prose UDF counts ($codeUdfs)" "OK" }
 else { Check "Prose UDF counts" ($proseMismatches -join ' | ') }
+
+# ---------- 17. [ExcelArgument] 名称 ↔ api-reference 参数列 ----------
+# review-2026-08-29 P2：api-reference 参数列与源码 [ExcelArgument(Name=...)] 自动比对，
+# 防文档参数名/顺序与实现漂移（H4 曾手工修正 STATS.SUMMARY/MODE 的参数名）。
+# 归一化：两端都剥离可选参数方括号——源码 [ExcelArgument(Name="[x]")] ↔ 文档 (x)。
+$apiParams = @{}
+foreach ($row in [regex]::Matches($apiContent, '^\|\s*`([A-Za-z0-9_.]+)`\s*\|\s*\(([^)]*)\)\s*\|', [System.Text.RegularExpressions.RegexOptions]::Multiline)) {
+    $names = @()
+    foreach ($p in ($row.Groups[2].Value -split ',')) {
+        $p = $p.Trim().Trim('[', ']')
+        if ($p -ne '') { $names += $p }
+    }
+    $apiParams[$row.Groups[1].Value] = $names
+}
+$srcParams = @{}
+Get-ChildItem -Path (Join-Path $RepoRoot "src") -Recurse -Filter "*.cs" |
+    Where-Object { $_.FullName -notmatch "\\obj\\" -and $_.FullName -notmatch "\\bin\\" } | ForEach-Object {
+    $text = Read-Utf8 $_.FullName
+    $currentFn = $null
+    foreach ($am in [regex]::Matches($text, '\[Excel(Function|Argument)\(Name\s*=\s*"([^"]+)"')) {
+        if ($am.Groups[1].Value -eq 'Function') { $currentFn = $am.Groups[2].Value; $srcParams[$currentFn] = @() }
+        elseif ($currentFn) { $srcParams[$currentFn] += $am.Groups[2].Value.Trim().Trim('[', ']') }
+    }
+}
+$paramMismatches = @()
+foreach ($name in $apiParams.Keys) {
+    if (-not $srcParams.ContainsKey($name)) { $paramMismatches += "$name 无源码 UDF"; continue }
+    if (($apiParams[$name] -join ',') -ne ($srcParams[$name] -join ',')) {
+        $paramMismatches += "$name 文档=($($apiParams[$name] -join ',')) 源码=($($srcParams[$name] -join ','))"
+    }
+}
+if ($paramMismatches.Count -eq 0) { Check "[ExcelArgument] vs api-reference params ($($apiParams.Count))" "OK" }
+else { Check "[ExcelArgument] vs api-reference params" ($paramMismatches -join ' | ') }
+
+# ---------- 18. 反向检查：src/ 实际文件必须被目录树声明 ----------
+# review-2026-08-29 P2：新增源码文件（如 NativeDllStore.cs）若忘记登记到 project-structure.md
+# 目录树，前向检查（声明→存在，检查 14）无法发现。本检查反向扫描 src/ 下实际文件。
+$declaredSrcFiles = @()
+foreach ($e in $structEntries) {
+    if (-not $e.IsDir -and $e.Path -like 'src/*') { $declaredSrcFiles += $e.Path }
+}
+$srcFiles = Get-ChildItem -Path (Join-Path $RepoRoot "src") -Recurse -File |
+    Where-Object { $_.FullName -notmatch "\\obj\\" -and $_.FullName -notmatch "\\bin\\" }
+$undeclaredFiles = @()
+foreach ($f in $srcFiles) {
+    $rel = $f.FullName.Substring($RepoRoot.Length).TrimStart('\\') -replace '\\', '/'
+    if ($rel -notin $declaredSrcFiles) { $undeclaredFiles += $rel }
+}
+if ($undeclaredFiles.Count -eq 0) { Check "src files declared in tree ($($srcFiles.Count))" "OK" }
+else { Check "src files declared in tree" "undeclared: $($undeclaredFiles -join ', ')" }
 
 # ---------- 汇总 ----------
 Write-Host ""

@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [master, main]
+    branches: [main]
   pull_request:
-    branches: [master, main]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -69,6 +69,8 @@ jobs:
         with:
           dotnet-version: |
             8.0.x
+          cache: true
+          cache-dependency-path: '**/*.csproj'
 
       - name: Restore
         run: dotnet restore
@@ -94,6 +96,8 @@ jobs:
         with:
           dotnet-version: |
             8.0.x
+          cache: true
+          cache-dependency-path: '**/*.csproj'
 
       - name: Restore
         run: dotnet restore
@@ -127,6 +131,8 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 8.0.x
+          cache: true
+          cache-dependency-path: '**/*.csproj'
 
       - name: Setup Python
         uses: actions/setup-python@v7
@@ -134,7 +140,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install Python dependencies
-        run: pip install numpy scipy scikit-learn pyDOE2
+        run: pip install -r requirements.txt
 
       - name: Build CrossValRunner
         run: dotnet build tests/CrossValRunner/CrossValRunner.csproj -c Debug
@@ -160,6 +166,8 @@ jobs:
         with:
           dotnet-version: |
             8.0.x
+          cache: true
+          cache-dependency-path: '**/*.csproj'
 
       - name: Restore
         run: dotnet restore
@@ -220,6 +228,8 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 8.0.x
+          cache: true
+          cache-dependency-path: '**/*.csproj'
 
       - name: Restore
         run: dotnet restore

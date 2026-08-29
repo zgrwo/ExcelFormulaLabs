@@ -25,10 +25,14 @@ Windows 10/11 ship with .NET Framework 4.8, so you can load the net48 `.xll` dir
 
 | File | Modules included |
 |------|---------|
-| `Analytics-AddIn-net48-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM · DOE (requires .NET Framework 4.8) |
-| `Analytics-AddIn-net8.0-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM · DOE (requires .NET 8 runtime) |
-| `DataToolkit-AddIn-net48-packed.xll` | STR · DT · REGEX · ARR · DICT · JSON/XML · PIVOT · SQL · FS · RANGE (requires .NET Framework 4.8) |
-| `DataToolkit-AddIn-net8.0-packed.xll` | STR · DT · REGEX · ARR · DICT · JSON/XML · PIVOT · SQL · FS · RANGE (requires .NET 8 runtime) |
+| `Analytics-AddIn-net48-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM · DOE (requires .NET Framework 4.8, 32-bit) |
+| `Analytics-AddIn-net48-64-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM · DOE (requires .NET Framework 4.8, 64-bit) |
+| `Analytics-AddIn-net8.0-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM · DOE (requires .NET 8 runtime, 32-bit) |
+| `Analytics-AddIn-net8.0-64-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM · DOE (requires .NET 8 runtime, 64-bit) |
+| `DataToolkit-AddIn-net48-packed.xll` | STR · DT · REGEX · ARR · DICT · JSON/XML · PIVOT · SQL · FS · RANGE (requires .NET Framework 4.8, 32-bit) |
+| `DataToolkit-AddIn-net48-64-packed.xll` | STR · DT · REGEX · ARR · DICT · JSON/XML · PIVOT · SQL · FS · RANGE (requires .NET Framework 4.8, 64-bit) |
+| `DataToolkit-AddIn-net8.0-packed.xll` | STR · DT · REGEX · ARR · DICT · JSON/XML · PIVOT · SQL · FS · RANGE (requires .NET 8 runtime, 32-bit) |
+| `DataToolkit-AddIn-net8.0-64-packed.xll` | STR · DT · REGEX · ARR · DICT · JSON/XML · PIVOT · SQL · FS · RANGE (requires .NET 8 runtime, 64-bit) |
 
 > **Version selection**: for 64-bit Excel choose the `.xll` whose filename contains `64`; for 32-bit Excel choose the one without. The `-net48` versions require no additional runtime (built into Windows 10/11), while the `-net8.0` versions perform better but require the .NET 8 runtime. Both add-ins can be loaded at the same time, or you can install only one as needed.
 
@@ -148,7 +152,7 @@ All `REGEX.*` functions have a built-in 5-second timeout to prevent ReDoS attack
 
 - **Full test suites on both .NET versions**, covering happy paths and degenerate inputs (zeros/empty/single-element/all-equal)
 - **Python cross-validation**: Stats/Regression checked item by item against numpy/scipy to a precision of 1e-10; DataToolkit integration pipeline tests cover cross-module combinations
-- **Manual verification**: Python cross-validation covers all UDF examples to ensure the results match the source
+- **Manual verification**: Python cross-validation covers 224/236 UDF examples (sync variants; the remaining 12 *_ASYNC / shared-Core variants without standalone examples are covered by UDF-layer tests) to ensure the results match the source
 
 ---
 
@@ -171,6 +175,10 @@ In rare cases Excel reports `Unexpected error trying to run SyncMacro for queued
 
 If it occurs frequently: ① unload and reload the add-in; ② avoid heavy repeated use of `*_ASYNC` functions in complex workbooks; ③ temporarily disable net48 IntelliSense (comment out `IntelliSenseServer.Install()` in `AddIn.AutoOpen` and repack). This add-in only uses Excel-DNA's official async mechanisms (net48 IntelliSense install + async UDF result marshalling) and queues no business macros.
 
+### Statistical Functions Do Not Skip Blank Cells
+
+Statistical functions (`STATS.*`/`REGRESS.*` etc.) treat blank cells as sentinel NaN propagation (a range containing blanks yields `#NUM!`), unlike Excel's native `AVERAGE`/`SUM` which skip blanks. To skip them, clean the data first with `FILTER`/`IF` or `ARR.FILTER`.
+
 ---
 
 ## Uninstallation
@@ -184,11 +192,11 @@ If it occurs frequently: ① unload and reload the add-in; ② avoid heavy repea
 ## Architecture Highlights
 
 ```
-UDF 层 (public static, [ExcelFunction])  ← 入口：仅分发与适配
-  ↓ MapOver / MapOverMulti / V() 分发
-Core 层 (internal static, 纯逻辑)       ← 零 Excel 依赖
-  ↓ 依赖
-Foundation (共享工具)                    ← InputNormalizer, MapOver, OutputWrapper
+UDF layer (public static, [ExcelFunction])  ← entry: dispatch & adaptation only
+  ↓ MapOver / MapOverMulti / V() dispatch
+Core layer (internal static, pure logic)     ← zero Excel dependency
+  ↓ depends on
+Foundation (shared utilities)                ← InputNormalizer, MapOver, OutputWrapper
 ```
 
 - ✅ UDFs contain no business logic; Core never references `ExcelDna.Integration`
@@ -233,7 +241,7 @@ This project follows the [Harmonization Governance Specification](https://github
 |------|------|------|
 | `AGENTS.md` | AI coding assistants | Project constitution — architecture, red lines, coding guidelines, anti-hallucination rules |
 | `readme.md` | Human users | Feature guide — installation, module overview, usage patterns (this file) |
-| `rules/` | AI + humans | Specification documents — API reference, user manual, glossary, review templates |
+| `rules/` | AI + humans | Specification documents — API reference, user manual, glossary, governance rules |
 | `skills/` | AI coding | Skill definitions — language pitfalls, coding patterns, refactoring guidelines |
 
 **Core principles**: SSOT (each piece of information is defined in exactly one place), Skill-first (load the relevant skill before modifying code), and the four core guidelines.

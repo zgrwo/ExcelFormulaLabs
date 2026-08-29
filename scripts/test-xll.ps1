@@ -1,9 +1,16 @@
-$BUILT = 'D:\Workspace\zgrwo\VBA\DeepSeek\ClaudeCode\已编译文件'
+# test-xll.ps1 - 本地 Excel XLL 加载/卸载冒烟测试（不入 CI）
+# 用法: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-xll.ps1 [-BaseDir <编译产物目录>]
+# review-2026-08-30：产物名随 v2.2.0 命名变更更新——旧 `Analytics-AddIn64-packed.xll` 已不存在，
+# 现为 `<Module>-AddIn-<tfm>[-64]-packed.xll`（net48/net8.0 各出 32/64 两变体）。本脚本测试 64 位变体。
+param(
+    [string]$BaseDir = 'D:\Workspace\zgrwo\VBA\DeepSeek\ClaudeCode\已编译文件'
+)
+
 $xlls = @(
-    @{Name='A-net48'; Path="$BUILT\net48\Analytics-AddIn64-packed.xll"; F='=STATS.MEAN({1,2,3,4,5})'; E=3.0},
-    @{Name='D-net48'; Path="$BUILT\net48\DataToolkit-AddIn64-packed.xll"; F='=STR.REVERSE("hello")'; E='olleh'},
-    @{Name='A-net8';  Path="$BUILT\net8.0-windows\Analytics-AddIn64-packed.xll"; F='=STATS.MEAN({1,2,3,4,5})'; E=3.0},
-    @{Name='D-net8';  Path="$BUILT\net8.0-windows\DataToolkit-AddIn64-packed.xll"; F='=STR.REVERSE("hello")'; E='olleh'}
+    @{Name='A-net48'; Path="$BaseDir\net48\Analytics-AddIn-net48-64-packed.xll"; F='=STATS.MEAN({1,2,3,4,5})'; E=3.0},
+    @{Name='D-net48'; Path="$BaseDir\net48\DataToolkit-AddIn-net48-64-packed.xll"; F='=STR.REVERSE("hello")'; E='olleh'},
+    @{Name='A-net8';  Path="$BaseDir\net8.0-windows\Analytics-AddIn-net8.0-64-packed.xll"; F='=STATS.MEAN({1,2,3,4,5})'; E=3.0},
+    @{Name='D-net8';  Path="$BaseDir\net8.0-windows\DataToolkit-AddIn-net8.0-64-packed.xll"; F='=STR.REVERSE("hello")'; E='olleh'}
 )
 
 $ROUNDS = 4

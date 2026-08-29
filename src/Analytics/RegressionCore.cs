@@ -53,9 +53,7 @@ namespace ExcelFormulaLabs.Analytics
             Vector<double> beta;
             try { beta = XtX.Solve(Xty); }
             catch (Exception ex) when (ExceptionFilters.IsCatchable(ex))
-            { throw new ArgumentException(
-                "Cannot fit OLS: design matrix X is rank-deficient (columns may be collinear). " +
-                "Check for linearly dependent predictors or constant columns.", ex); }
+            { throw new ArgumentException(ErrorMsg.Get("REGRESS_RankDeficient"), ex); }
 
             var fitted = matX * beta;
             var residuals = vecY - fitted;

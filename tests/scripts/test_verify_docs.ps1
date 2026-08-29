@@ -1,6 +1,6 @@
 ﻿# ============================================================================
 # test_verify_docs.ps1 — verify-docs.ps1 回归守卫（6 场景）
-# 场景 A：真实仓库副本 → 16 项检查全过（基线，防门禁自身回归）
+# 场景 A：真实仓库副本 → 18 项检查全过（基线，防门禁自身回归）
 # 场景 B：README 硬编码徽章 → 检查 9 FAIL
 # 场景 C：README 断链 → 检查 12 FAIL
 # 场景 D：.qoder 镜像漂移 → 检查 13 FAIL
@@ -50,7 +50,7 @@ function Run-VerifyDocs {
 }
 
 # --- 场景 A：基线（真实仓库副本全绿）---
-Write-Host "[A] 基线：仓库副本 16 项检查全过"
+Write-Host "[A] 基线：仓库副本 18 项检查全过"
 $fixture = Copy-RepoFixture
 Run-VerifyDocs $fixture "全部通过" $false
 

@@ -41,9 +41,7 @@ namespace ExcelFormulaLabs.DataToolkit
         public static void Initialize(SandboxConfig config)
         {
             if (Interlocked.CompareExchange(ref _initialized, 1, 0) != 0)
-                throw new InvalidOperationException(
-                    "[FileSystemCore] Sandbox already initialized. Configuration is immutable — " +
-                    "reload the add-in to change sandbox settings.");
+                throw new InvalidOperationException(ErrorMsg.Get("FS_AlreadyInitialized"));
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _sessionEnded = false;
             System.Diagnostics.Trace.WriteLine(
@@ -116,8 +114,7 @@ namespace ExcelFormulaLabs.DataToolkit
         private static void EnsureSessionActive()
         {
             if (_sessionEnded)
-                throw new InvalidOperationException(
-                    "[FileSystemCore] Session ended. Reload the add-in to use FS.* functions.");
+                throw new InvalidOperationException(ErrorMsg.Get("FS_SessionEnded"));
         }
 
         internal static string NormalizePath(string p)
@@ -131,8 +128,7 @@ namespace ExcelFormulaLabs.DataToolkit
                 if (root.Length > 0 && root[root.Length - 1] != Path.DirectorySeparatorChar)
                     root += Path.DirectorySeparatorChar;
                 if (!(normalized + Path.DirectorySeparatorChar).StartsWith(root, StringComparison.OrdinalIgnoreCase))
-                    throw new UnauthorizedAccessException(
-                        "Path is outside the sandbox root.");
+                    throw new UnauthorizedAccessException(ErrorMsg.Get("FS_PathOutsideSandbox"));
                 // Check path components beyond sandbox root for reparse points
                 // (junctions/symlinks) — Path.GetFullPath does not resolve them,
                 // but System.IO APIs follow them, so a junction could bypass the

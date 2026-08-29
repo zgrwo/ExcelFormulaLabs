@@ -4,10 +4,16 @@ root = true
 [*]
 indent_style = space
 indent_size = 4
-end_of_line = crlf
+# review-2026-08-30：与 .gitattributes 对齐（全仓 LF，仅 PowerShell 用 CRLF+BOM）
+end_of_line = lf
 charset = utf-8
 trim_trailing_whitespace = true
 insert_final_newline = true
+
+[*.ps1]
+# .gitattributes: *.ps1 text eol=crlf（Windows 兼容 + PS 5.1 需 UTF-8 BOM 才能正确读中文）
+end_of_line = crlf
+charset = utf-8-bom
 
 [*.cs]
 csharp_style_var_for_built_in_types = false:suggestion

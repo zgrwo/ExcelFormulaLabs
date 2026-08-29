@@ -6,19 +6,29 @@
 
 > 版本一致性：每个 `v*` git tag 必须在本文档有对应条目（`verify-docs.ps1` 强制检查，见规则 [documentation.md](rules/documentation.md)）。
 
-## [Unreleased]
+## [2.2.2] - 2026-08-29
 
-### 复审修复（2026-08-29 发行前 max level 全量深度审查，第三轮）
-- **安全（发行阻断）**：DOE 因子数（qty1+qty2）无上限——`PlanFull` 的 `new int[totalFactors]` 与 `RsmCcd` 的 `new int[k]` 在 qty 巨大（如 `=DOE.PLAN(10亿,2,0,1,"FULL")`）时可分配数 GB → 32 位 Excel OOM 崩溃（OOM 不可捕获）；新增 `MaxFactors=1000` 上限守卫（FullFractional/Taguchi/Fractional/Rsm/Bb 全部在按因子数分配数组前抛错）；`qty1+qty2` 求和改 long（原 int 回绕恒为负，错误落回 DOE_NoFactors 误导消息）
-- **数值正确性**：PhyChemCore 水合物系数原用裸 int 逐位累积（unchecked 静默回绕为负数→错误分子量），改与 ParseCount 一致的显式溢出抛错；Pivot/GroupBy 的 SUM/AVG 累加溢出为 ±Inf 原样泄漏进输出单元格（违反防错原则①），改 AggResult 对非有限累加值返回 NaN；RegressionCore.AnovaOneWay 有限极大值平方溢出可绕过后置守卫（`Abs(Inf)<1e-15` 恒 false）→ f=NaN 静默泄漏，补非有限平方和显式抛错；ArrayCore.Sequence 补 ±Inf 的 start/end/step 哨兵守卫（原仅挡 NaN，产生退化序列），并修复 `(int)d` 对 d≥2³¹/±Inf 回绕为 int.MinValue 的误导消息
-- **红线**：PhyChemCore `Regex.IsMatch` 补 `TimeSpan` 超时（原漏，违反「所有 Regex 调用带超时」红线）
-- **测试**：+18 个回归测试（DOE 超因子 8、Pivot/GroupBy 溢出 4、Sequence 4、水合物系数溢出 1、Anova 溢出 1），全部通过
+### Security
+- **B1（发行阻断）**：DataToolkit 原生 SQLite DLL 提取完整性失效（v2.2.1 引入的 no-op）——`Sha256Equals` 把资源流读到末尾不复位 → 写 0 字节；`File.Move` 无法覆写已存在文件 → 同尺寸篡改 DLL 仍被加载、升级换版本旧 DLL 永不替换。改为 NativeDllStore 内容寻址提取（路径由嵌入字节 SHA-256 派生）+ 每次调用重验盘上哈希 + 原子替换（File.Replace/Move 兼容 net48/net8），无法还原时 fail-safe 跳过加载
+- **DOE 因子数上限（第三轮）**：`PlanFull`/`RsmCcd` 在 qty 巨大（如 `=DOE.PLAN(10亿,2,0,1,"FULL")`）时可分配数 GB → 32 位 Excel OOM 崩溃；新增 `MaxFactors=1000` 守卫（全部方法在分配数组前抛错），`qty1+qty2` 求和改 long
+- **数值泄漏（第三轮）**：Pivot/GroupBy SUM/AVG 累加溢出 ±Inf 泄漏进输出单元格 → AggResult 返回 NaN；AnovaOneWay 非有限平方和显式抛错；ArrayCore.Sequence 补 ±Inf 守卫；PhyChemCore 水合物系数裸 int 回绕 → 显式溢出抛错
+- **红线（第三轮）**：PhyChemCore `Regex.IsMatch` 补 5 秒超时
 
-### 复审修复（2026-08-29 发行前第二轮，详见 git log 2568bef）
-- verify-manual.py 11 处 elif 分支 f-string 双花括号输出字面量而非实际错误消息——改单花括号（错误诊断恢复）
-- DoeCore cells 守卫改除法形式（`total > MaxCells/k` 防 `total×k` 乘法溢出，RsmBb 极端 k 下 edgePoints 逼近 long 溢出）
-- PivotCore.GroupBy maxCells 守卫移到数组分配前（原先 `new object[keyNames.Count, nG+1]` 再检查，1M 行 × 100 列 ≈ 800MB 可先 OOM）
-- 测试补强：DoeUdfTests +2（84 因子 FRAC / 700 因子 BB → #VALUE!）、PivotCoreTests +1（GroupBy 守卫前置）
+### Fixed
+- **B2（版本漂移）**：`AssemblyVersion`/`FileVersion` 漂移 2.2.0.0（v2.2.1 漏改）→ 与 `<Version>` 同步为 2.2.1.0；verify-docs 新增 AV/FV 一致性门禁（G1）
+- **B3（CHANGELOG 归位）**：第二轮内容归位 `[2.2.1]`；本条目替代原 `[Unreleased]`
+- **H1**：release 产物收集精确 8 资产断言 + `fail_on_unmatched_files`；verify-pack 跨 TFM 污染检查 warning→error 且覆盖 -64 变体
+- **H2**：NuGet push 加 `--no-symbols`（防连带推送 snupkg）；**H3**：verify-docs 最新 tag 语义化版本排序
+- **H4**：`STATS.SUMMARY`/`STATS.MODE` 参数名与源码对齐；**H5**：user-manual 193 处标题锚点语法修复
+- **H6**：Python 交叉验证依赖固定 `requirements.txt`（numpy/scipy/scikit-learn/pyDOE2），CI 与 CONTRIBUTING 统一引用
+- **P2 文档一致性**：spec 测试数 2,290→2,444；project-structure CI 6→7 jobs、测试文件数 10/10/19→13/17/20、补 ADR-0006 与 NativeDllStore.cs 登记；ADR-0003 232→236；README(.en) `.xll` 表 4→8 行、手册验证覆盖声明→224/236；README.en 补统计空白单元格小节、架构图翻译、rules/ 误译修正；CONTRIBUTING 依赖清单补 pyDOE2；手册 `#15-错误参考` 锚点→#16；版本头 2.1.0→2.2.1（specification/user-manual/cross-validation）
+- **P2 代码**：ErrorMessages.resx 4 个死键接线（FS_AlreadyInitialized/FS_SessionEnded/FS_PathOutsideSandbox/REGRESS_RankDeficient，消除硬编码消息）
+- **P3 门禁**：verify-docs 新增检查 17（[ExcelArgument] ↔ api-reference 参数列自动比对）与检查 18（结构树反向检查：存在→声明）；散文计数扫描扩展为全仓 `*.md`；release tag 触发模式收紧为 semver glob `v[0-9]*.[0-9]*.[0-9]*`（GitHub Actions 过滤为 glob 语义，非正则）；CI setup-dotnet 启用缓存；ci.yml 分支列表对齐 `[main]`
+- **工程**：.editorconfig 换行符与 .gitattributes 对齐（LF + *.ps1 CRLF）；.gitignore 补 CLAUDE.md；test-xll.ps1 / test-load-unload.py 文件名与路径参数化更新
+
+### Tests
+- NativeDllStore +5（首次提取字节精确、幂等、篡改还原、异尺寸篡改还原、版本升级新路径并存）
+- 第三轮 +18（DOE 超因子 8、Pivot/GroupBy 溢出 4、Sequence 4、水合物系数溢出 1、Anova 溢出 1）
 
 ## [2.2.1] - 2026-08-29
 
@@ -36,6 +46,12 @@
 
 ### 计数与门禁（2026-08-29 审查修复延续，详见 git log 994a98f）
 - 232→236 全部同步；verify-docs 检查 16（散文计数）；pre-commit check-5 动态化；ARR.FILL/RANGE 下沉；ToInt32；STATS.COUNT 语义；hasHeaders 可选化；DeleteFolderRecursive 迭代化；SQLite SHA-256；DOE 分析 cross_check；CodeQL PR 触发；打包硬错误
+
+### 复审修复（2026-08-29 第二轮，详见 git log 2568bef；归位自原 [Unreleased]）
+- verify-manual.py 11 处 elif 分支 f-string 双花括号输出字面量而非实际错误消息——改单花括号（错误诊断恢复）
+- DoeCore cells 守卫改除法形式（`total > MaxCells/k` 防 `total×k` 乘法溢出，RsmBb 极端 k 下 edgePoints 逼近 long 溢出）
+- PivotCore.GroupBy maxCells 守卫移到数组分配前（原先 `new object[keyNames.Count, nG+1]` 再检查，1M 行 × 100 列 ≈ 800MB 可先 OOM）
+- 测试补强：DoeUdfTests +2（84 因子 FRAC / 700 因子 BB → #VALUE!）、PivotCoreTests +1（GroupBy 守卫前置）
 
 ## [2.2.0] - 2026-08-26
 
@@ -229,6 +245,8 @@
 - IntelliSense 自动补全（net48）
 - MIT License
 
+[2.2.2]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.1...v2.2.2
+[Unreleased]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.2...HEAD
 [2.2.1]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.1.1...v2.2.0
 [2.1.1]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.1.0...v2.1.1

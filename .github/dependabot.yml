@@ -20,6 +20,14 @@ updates:
       - dependency-name: "Microsoft.Data.Sqlite"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
 
+  # --- Python 交叉验证依赖（requirements.txt，版本由 dependabot 维护） ---
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    labels: ["dependencies"]
+
   # --- GitHub Actions 自身 ---
   - package-ecosystem: "github-actions"
     directory: "/"

@@ -3,7 +3,9 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      # review-2026-08-30：收紧为 semver 三段（GitHub Actions 过滤为 glob 语义，非正则；
+      # `+` 不可作量词，用 `[0-9]*` 等价表达）。阻断 vfoo / v2.2 等非标准 tag 触发发布。
+      - 'v[0-9]*.[0-9]*.[0-9]*'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -72,7 +74,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install Python dependencies
-        run: pip install numpy scipy scikit-learn pyDOE2
+        run: pip install -r requirements.txt
 
       - name: Build CrossValRunner
         run: dotnet build tests/CrossValRunner/CrossValRunner.csproj -c Release
@@ -125,8 +127,24 @@ jobs:
           New-Item -ItemType Directory -Force -Path artifacts | Out-Null
           $xlls = Get-ChildItem -Recurse -Filter "*-packed.xll" -Path "src" |
             Where-Object { $_.DirectoryName -match "Release" }
-          if (-not $xlls) {
-            Write-Error "[Collect] 未找到任何 *-packed.xll 产物 — 构建可能静默失败，中止发布。"
+          # H1 (release-audit-2026-08-29)：必须恰好 8 个 .xll —— 2 模块 × 2 TFM × 2 位数
+          $expected = @(
+            'Analytics-AddIn-net48-packed.xll',
+            'Analytics-AddIn-net48-64-packed.xll',
+            'Analytics-AddIn-net8.0-packed.xll',
+            'Analytics-AddIn-net8.0-64-packed.xll',
+            'DataToolkit-AddIn-net48-packed.xll',
+            'DataToolkit-AddIn-net48-64-packed.xll',
+            'DataToolkit-AddIn-net8.0-packed.xll',
+            'DataToolkit-AddIn-net8.0-64-packed.xll'
+          )
+          $missing = @($expected | Where-Object { -not ($xlls | Where-Object { $_.Name -eq $_ }) })
+          if ($missing.Count -gt 0) {
+            Write-Error "[Collect] 缺少 $($missing.Count) 个产物: $($missing -join ', ') — 构建可能静默失败，中止发布。"
+            exit 1
+          }
+          if ($xlls.Count -ne $expected.Count) {
+            Write-Error "[Collect] 产物数量 $($xlls.Count) != 期望 $($expected.Count)。"
             exit 1
           }
           $xlls | Copy-Item -Destination artifacts/
@@ -139,7 +157,7 @@ jobs:
         shell: pwsh
         run: |
           Get-ChildItem "artifacts/nupkg/*.nupkg" | ForEach-Object {
-            dotnet nuget push $_.FullName --source "github" --api-key "${{ secrets.GITHUB_TOKEN }}" --skip-duplicate
+            dotnet nuget push $_.FullName --source "github" --api-key "${{ secrets.GITHUB_TOKEN }}" --skip-duplicate --no-symbols
           }
 
       - name: Create GitHub Release
@@ -163,5 +181,7 @@ jobs:
 
             详见 [CHANGELOG](CHANGELOG.md)。
           files: artifacts/*.xll
+          # H1 (release-audit-2026-08-29)：glob 无匹配即失败，防「Release 无任何 .xll」假成功。
+          fail_on_unmatched_files: true
           draft: false
           prerelease: false

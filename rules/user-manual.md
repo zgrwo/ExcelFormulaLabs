@@ -1,6 +1,6 @@
 # ExcelFormulaLabs 用户手册
 
-> **版本**：2.1.0 | **更新日期**：2026-08-22
+> **版本**：2.2.1 | **更新日期**：2026-08-29
 > 完整签名见 [API 参考](api-reference.md)；安装说明见 [README](../README.md)
 
 ---
@@ -35,7 +35,7 @@
 ## 通用约定
 
 - **数组公式**：多数函数支持数组输入。Excel 365 中数组自动溢出（spill），旧版需 `Ctrl+Shift+Enter`
-- **错误值**：`#VALUE!` = 输入/执行错误；`#NUM!` = 计算结果无定义（详见[错误参考](#15-错误参考)）
+- **错误值**：`#VALUE!` = 输入/执行错误；`#NUM!` = 计算结果无定义（详见[错误参考](#16-错误参考)）
 - **空值处理**：空单元格在数值函数中被转换为 `NaN`（逐元素运算返回 `#NUM!`，聚合运算返回 `#VALUE!`）；在字符串函数中视为空串。建议使用 `IF(ISNUMBER(), ...)` 预处理过滤
 - **表头行**：带 `hasHeaders` 参数的函数默认将第一行视为表头
 
@@ -64,7 +64,9 @@
 
 ---
 
-<a id="stats-mean"></a> ### STATS.MEAN — 算术平均值
+<a id="stats-mean"></a>
+
+### STATS.MEAN — 算术平均值
 
 **语法**：`=STATS.MEAN(number1)`
 
@@ -80,7 +82,9 @@
 
 ---
 
-<a id="stats-geomean"></a> ### STATS.GEOMEAN — 几何平均值
+<a id="stats-geomean"></a>
+
+### STATS.GEOMEAN — 几何平均值
 
 **语法**：`=STATS.GEOMEAN(number1)`
 
@@ -94,7 +98,9 @@
 
 ---
 
-<a id="stats-harmean"></a> ### STATS.HARMEAN — 调和平均值
+<a id="stats-harmean"></a>
+
+### STATS.HARMEAN — 调和平均值
 
 **语法**：`=STATS.HARMEAN(number1)`
 
@@ -106,7 +112,9 @@
 
 ---
 
-<a id="stats-median"></a> ### STATS.MEDIAN — 中位数
+<a id="stats-median"></a>
+
+### STATS.MEDIAN — 中位数
 
 **语法**：`=STATS.MEDIAN(number1)`
 
@@ -118,7 +126,9 @@
 
 ---
 
-<a id="stats-varp"></a> ### STATS.VARP — 总体方差（除以 n）
+<a id="stats-varp"></a>
+
+### STATS.VARP — 总体方差（除以 n）
 
 **语法**：`=STATS.VARP(number1)`
 
@@ -130,7 +140,9 @@
 
 ---
 
-<a id="stats-var"></a> ### STATS.VAR — 样本方差（除以 n-1）
+<a id="stats-var"></a>
+
+### STATS.VAR — 样本方差（除以 n-1）
 
 **语法**：`=STATS.VAR(number1)`
 
@@ -142,7 +154,9 @@
 
 ---
 
-<a id="stats-stdevp"></a> ### STATS.STDEVP — 总体标准差（除以 n）
+<a id="stats-stdevp"></a>
+
+### STATS.STDEVP — 总体标准差（除以 n）
 
 **语法**：`=STATS.STDEVP(number1)`
 
@@ -154,7 +168,9 @@
 
 ---
 
-<a id="stats-stdev"></a> ### STATS.STDEV — 样本标准差（除以 n-1）
+<a id="stats-stdev"></a>
+
+### STATS.STDEV — 样本标准差（除以 n-1）
 
 **语法**：`=STATS.STDEV(number1)`
 
@@ -166,7 +182,9 @@
 
 ---
 
-<a id="stats-skew"></a> ### STATS.SKEW — 样本偏度
+<a id="stats-skew"></a>
+
+### STATS.SKEW — 样本偏度
 
 **语法**：`=STATS.SKEW(number1)`
 
@@ -180,7 +198,9 @@
 
 ---
 
-<a id="stats-kurt"></a> ### STATS.KURT — 样本超额峰度
+<a id="stats-kurt"></a>
+
+### STATS.KURT — 样本超额峰度
 
 **语法**：`=STATS.KURT(number1)`
 
@@ -192,7 +212,9 @@
 
 ---
 
-<a id="stats-min"></a> ### STATS.MIN — 最小值
+<a id="stats-min"></a>
+
+### STATS.MIN — 最小值
 
 **语法**：`=STATS.MIN(number1)`
 
@@ -203,7 +225,9 @@
 
 ---
 
-<a id="stats-max"></a> ### STATS.MAX — 最大值
+<a id="stats-max"></a>
+
+### STATS.MAX — 最大值
 
 **语法**：`=STATS.MAX(number1)`
 
@@ -214,7 +238,9 @@
 
 ---
 
-<a id="stats-range"></a> ### STATS.RANGE — 极差
+<a id="stats-range"></a>
+
+### STATS.RANGE — 极差
 
 **语法**：`=STATS.RANGE(number1)`
 
@@ -227,7 +253,9 @@
 
 ---
 
-<a id="stats-sum"></a> ### STATS.SUM — 求和
+<a id="stats-sum"></a>
+
+### STATS.SUM — 求和
 
 **语法**：`=STATS.SUM(number1)`
 
@@ -238,7 +266,9 @@
 
 ---
 
-<a id="stats-product"></a> ### STATS.PRODUCT — 求积
+<a id="stats-product"></a>
+
+### STATS.PRODUCT — 求积
 
 **语法**：`=STATS.PRODUCT(number1)`
 
@@ -249,7 +279,9 @@
 
 ---
 
-<a id="stats-percentile"></a> ### STATS.PERCENTILE — 百分位数
+<a id="stats-percentile"></a>
+
+### STATS.PERCENTILE — 百分位数
 
 **语法**：`=STATS.PERCENTILE(array, k)`
 
@@ -269,7 +301,9 @@
 
 ---
 
-<a id="stats-iqr"></a> ### STATS.IQR — 四分位距
+<a id="stats-iqr"></a>
+
+### STATS.IQR — 四分位距
 
 **语法**：`=STATS.IQR(number1)`
 
@@ -282,7 +316,9 @@
 
 ---
 
-<a id="stats-summary"></a> ### STATS.SUMMARY — 描述统计摘要
+<a id="stats-summary"></a>
+
+### STATS.SUMMARY — 描述统计摘要
 
 **语法**：`=STATS.SUMMARY(number1)`
 
@@ -296,7 +332,9 @@
 
 ---
 
-<a id="stats-count"></a> ### STATS.COUNT — 元素个数
+<a id="stats-count"></a>
+
+### STATS.COUNT — 元素个数
 
 **语法**：`=STATS.COUNT(number)`
 
@@ -307,7 +345,9 @@
 
 ---
 
-<a id="stats-mode"></a> ### STATS.MODE — 众数
+<a id="stats-mode"></a>
+
+### STATS.MODE — 众数
 
 **语法**：`=STATS.MODE(number)`
 
@@ -321,7 +361,9 @@
 
 ---
 
-<a id="stats-covarp"></a> ### STATS.COVARP — 总体协方差（除以 n）
+<a id="stats-covarp"></a>
+
+### STATS.COVARP — 总体协方差（除以 n）
 
 **语法**：`=STATS.COVARP(array1, array2)`
 
@@ -343,7 +385,9 @@
 
 ---
 
-<a id="stats-covar"></a> ### STATS.COVAR — 样本协方差（除以 n-1）
+<a id="stats-covar"></a>
+
+### STATS.COVAR — 样本协方差（除以 n-1）
 
 **语法**：`=STATS.COVAR(array1, array2)`
 
@@ -356,7 +400,9 @@
 
 ---
 
-<a id="stats-pearson"></a> ### STATS.PEARSON — Pearson 相关系数
+<a id="stats-pearson"></a>
+
+### STATS.PEARSON — Pearson 相关系数
 
 **语法**：`=STATS.PEARSON(array1, array2)`
 
@@ -369,7 +415,9 @@
 
 ---
 
-<a id="stats-spearman"></a> ### STATS.SPEARMAN — Spearman 秩相关系数
+<a id="stats-spearman"></a>
+
+### STATS.SPEARMAN — Spearman 秩相关系数
 
 **语法**：`=STATS.SPEARMAN(array1, array2)`
 
@@ -407,7 +455,9 @@ A 列与 B 列完全正相关 (r=1)，A 列与 C 列完全负相关 (r=-1)。
 
 ---
 
-<a id="stats-ttest1"></a> ### STATS.TTEST1 — 单样本双侧 t 检验
+<a id="stats-ttest1"></a>
+
+### STATS.TTEST1 — 单样本双侧 t 检验
 
 **语法**：`=STATS.TTEST1(array, x)`
 
@@ -421,7 +471,9 @@ H₀: mean = x。p < 0.05 = 均值与 x 差异显著。
 
 ---
 
-<a id="stats-ttest2"></a> ### STATS.TTEST2 — Welch 双样本 t 检验
+<a id="stats-ttest2"></a>
+
+### STATS.TTEST2 — Welch 双样本 t 检验
 
 **语法**：`=STATS.TTEST2(array1, array2)`
 
@@ -444,7 +496,9 @@ H₀: mean = x。p < 0.05 = 均值与 x 差异显著。
 
 ---
 
-<a id="stats-zscore"></a> ### STATS.ZSCORE — Z 值标准化
+<a id="stats-zscore"></a>
+
+### STATS.ZSCORE — Z 值标准化
 
 **语法**：`=STATS.ZSCORE(number1)`
 
@@ -458,7 +512,9 @@ H₀: mean = x。p < 0.05 = 均值与 x 差异显著。
 
 ---
 
-<a id="stats-abs"></a> ### STATS.ABS — 逐元素绝对值
+<a id="stats-abs"></a>
+
+### STATS.ABS — 逐元素绝对值
 
 **语法**：`=STATS.ABS(number)`
 
@@ -472,7 +528,9 @@ H₀: mean = x。p < 0.05 = 均值与 x 差异显著。
 
 ---
 
-<a id="stats-sqrt"></a> ### STATS.SQRT — 逐元素平方根
+<a id="stats-sqrt"></a>
+
+### STATS.SQRT — 逐元素平方根
 
 **语法**：`=STATS.SQRT(number)`
 
@@ -486,7 +544,9 @@ H₀: mean = x。p < 0.05 = 均值与 x 差异显著。
 
 ---
 
-<a id="stats-ln"></a> ### STATS.LN — 逐元素自然对数
+<a id="stats-ln"></a>
+
+### STATS.LN — 逐元素自然对数
 
 **语法**：`=STATS.LN(number)`
 
@@ -500,7 +560,9 @@ H₀: mean = x。p < 0.05 = 均值与 x 差异显著。
 
 ---
 
-<a id="stats-log10"></a> ### STATS.LOG10 — 逐元素常用对数
+<a id="stats-log10"></a>
+
+### STATS.LOG10 — 逐元素常用对数
 
 **语法**：`=STATS.LOG10(number)`
 
@@ -514,7 +576,9 @@ H₀: mean = x。p < 0.05 = 均值与 x 差异显著。
 
 ---
 
-<a id="stats-exp"></a> ### STATS.EXP — 逐元素指数函数
+<a id="stats-exp"></a>
+
+### STATS.EXP — 逐元素指数函数
 
 **语法**：`=STATS.EXP(number)`
 
@@ -528,7 +592,9 @@ eˣ。对标 Excel EXP。支持数组。
 
 ---
 
-<a id="stats-sign"></a> ### STATS.SIGN — 逐元素符号
+<a id="stats-sign"></a>
+
+### STATS.SIGN — 逐元素符号
 
 **语法**：`=STATS.SIGN(number)`
 
@@ -622,7 +688,9 @@ p > 0.05 = 没有充分证据拒绝原假设（不意味着"没有差异"，而�
 
 ---
 
-<a id="linalg-det"></a> ### LINALG.DET — 行列式
+<a id="linalg-det"></a>
+
+### LINALG.DET — 行列式
 
 **语法**：`=LINALG.DET(array)`
 
@@ -635,7 +703,9 @@ p > 0.05 = 没有充分证据拒绝原假设（不意味着"没有差异"，而�
 
 ---
 
-<a id="linalg-solve"></a> ### LINALG.SOLVE — 解线性方程组 Ax = b
+<a id="linalg-solve"></a>
+
+### LINALG.SOLVE — 解线性方程组 Ax = b
 
 **语法**：`=LINALG.SOLVE(array1, array2)`
 
@@ -649,7 +719,9 @@ p > 0.05 = 没有充分证据拒绝原假设（不意味着"没有差异"，而�
 
 ---
 
-<a id="linalg-matmul"></a> ### LINALG.MATMUL — 矩阵乘法
+<a id="linalg-matmul"></a>
+
+### LINALG.MATMUL — 矩阵乘法
 
 **语法**：`=LINALG.MATMUL(array1, array2)`
 
@@ -682,7 +754,9 @@ p > 0.05 = 没有充分证据拒绝原假设（不意味着"没有差异"，而�
 
 ---
 
-<a id="linalg-transpose"></a> ### LINALG.TRANSPOSE — 矩阵转置
+<a id="linalg-transpose"></a>
+
+### LINALG.TRANSPOSE — 矩阵转置
 
 **语法**：`=LINALG.TRANSPOSE(array)`
 
@@ -703,7 +777,9 @@ p > 0.05 = 没有充分证据拒绝原假设（不意味着"没有差异"，而�
 
 ---
 
-<a id="linalg-trace"></a> ### LINALG.TRACE — 矩阵迹
+<a id="linalg-trace"></a>
+
+### LINALG.TRACE — 矩阵迹
 
 **语法**：`=LINALG.TRACE(array)`
 
@@ -716,7 +792,9 @@ p > 0.05 = 没有充分证据拒绝原假设（不意味着"没有差异"，而�
 
 ---
 
-<a id="linalg-rank"></a> ### LINALG.RANK — 数值秩
+<a id="linalg-rank"></a>
+
+### LINALG.RANK — 数值秩
 
 **语法**：`=LINALG.RANK(array, [tolerance])`
 
@@ -730,7 +808,9 @@ p > 0.05 = 没有充分证据拒绝原假设（不意味着"没有差异"，而�
 
 ---
 
-<a id="linalg-cond"></a> ### LINALG.COND — 条件数
+<a id="linalg-cond"></a>
+
+### LINALG.COND — 条件数
 
 **语法**：`=LINALG.COND(array)`
 
@@ -743,7 +823,9 @@ p > 0.05 = 没有充分证据拒绝原假设（不意味着"没有差异"，而�
 
 ---
 
-<a id="linalg-eigen"></a> ### LINALG.EIGEN — 特征值
+<a id="linalg-eigen"></a>
+
+### LINALG.EIGEN — 特征值
 
 **语法**：`=LINALG.EIGEN(array)`
 
@@ -761,7 +843,9 @@ p > 0.05 = 没有充分证据拒绝原假设（不意味着"没有差异"，而�
 
 ---
 
-<a id="linalg-svd-u"></a> <a id="linalg-svd-s"></a> <a id="linalg-svd-vt"></a> ### LINALG.SVD_U / SVD_S / SVD_VT — 奇异值分解
+<a id="linalg-svd-u"></a> <a id="linalg-svd-s"></a> <a id="linalg-svd-vt"></a>
+
+### LINALG.SVD_U / SVD_S / SVD_VT — 奇异值分解
 
 **语法**：
 - `=LINALG.SVD_U(array)` — 左奇异向量矩阵 U
@@ -783,7 +867,9 @@ p > 0.05 = 没有充分证据拒绝原假设（不意味着"没有差异"，而�
 
 ---
 
-<a id="linalg-qr-q"></a> <a id="linalg-qr-r"></a> ### LINALG.QR_Q / QR_R — QR 分解
+<a id="linalg-qr-q"></a> <a id="linalg-qr-r"></a>
+
+### LINALG.QR_Q / QR_R — QR 分解
 
 **语法**：
 - `=LINALG.QR_Q(array)` — 正交矩阵 Q
@@ -813,7 +899,9 @@ p > 0.05 = 没有充分证据拒绝原假设（不意味着"没有差异"，而�
 
 ---
 
-<a id="linalg-lu-l"></a> <a id="linalg-lu-u"></a> <a id="linalg-lu-p"></a> ### LINALG.LU_L / LU_U / LU_P — LU 分解
+<a id="linalg-lu-l"></a> <a id="linalg-lu-u"></a> <a id="linalg-lu-p"></a>
+
+### LINALG.LU_L / LU_U / LU_P — LU 分解
 
 **语法**：
 - `=LINALG.LU_L(array)` — 下三角矩阵 L（单位对角线）
@@ -834,7 +922,9 @@ p > 0.05 = 没有充分证据拒绝原假设（不意味着"没有差异"，而�
 
 ---
 
-<a id="linalg-pinv"></a> ### LINALG.PINV — Moore-Penrose 伪逆
+<a id="linalg-pinv"></a>
+
+### LINALG.PINV — Moore-Penrose 伪逆
 
 **语法**：`=LINALG.PINV(array)`
 
@@ -850,7 +940,9 @@ p > 0.05 = 没有充分证据拒绝原假设（不意味着"没有差异"，而�
 
 ---
 
-<a id="linalg-cholesky"></a> ### LINALG.CHOLESKY — Cholesky 分解
+<a id="linalg-cholesky"></a>
+
+### LINALG.CHOLESKY — Cholesky 分解
 
 **语法**：`=LINALG.CHOLESKY(array)`
 
@@ -870,7 +962,9 @@ p > 0.05 = 没有充分证据拒绝原假设（不意味着"没有差异"，而�
 
 ---
 
-<a id="linalg-identity"></a> ### LINALG.IDENTITY — 单位矩阵
+<a id="linalg-identity"></a>
+
+### LINALG.IDENTITY — 单位矩阵
 
 **语法**：`=LINALG.IDENTITY(size)`
 
@@ -964,7 +1058,9 @@ p > 0.05 = 没有充分证据拒绝原假设（不意味着"没有差异"，而�
 
 ---
 
-<a id="regress-ols"></a> ### REGRESS.OLS — 普通最小二乘法
+<a id="regress-ols"></a>
+
+### REGRESS.OLS — 普通最小二乘法
 
 **语法**：`=REGRESS.OLS(known_y, known_x)`
 
@@ -994,7 +1090,9 @@ p > 0.05 = 没有充分证据拒绝原假设（不意味着"没有差异"，而�
 
 ---
 
-<a id="regress-wls"></a> ### REGRESS.WLS — 加权最小二乘法
+<a id="regress-wls"></a>
+
+### REGRESS.WLS — 加权最小二乘法
 
 **语法**：`=REGRESS.WLS(known_y, known_x, weights)`
 
@@ -1007,7 +1105,9 @@ p > 0.05 = 没有充分证据拒绝原假设（不意味着"没有差异"，而�
 
 ---
 
-<a id="regress-ridge"></a> ### REGRESS.RIDGE — 岭回归
+<a id="regress-ridge"></a>
+
+### REGRESS.RIDGE — 岭回归
 
 **语法**：`=REGRESS.RIDGE(known_y, known_x, [lambda])`
 
@@ -1023,7 +1123,9 @@ L2 正则化（防过拟合）。λ 默认 1.0。不返回标准误/t值/p值（
 
 ---
 
-<a id="regress-anova1"></a> ### REGRESS.ANOVA1 — 单因素方差分析
+<a id="regress-anova1"></a>
+
+### REGRESS.ANOVA1 — 单因素方差分析
 
 **语法**：`=REGRESS.ANOVA1(input_range)`
 
@@ -1048,7 +1150,9 @@ L2 正则化（防过拟合）。λ 默认 1.0。不返回标准误/t值/p值（
 
 ---
 
-<a id="regress-factorimp"></a> ### REGRESS.FACTORIMP — 因子重要性排名
+<a id="regress-factorimp"></a>
+
+### REGRESS.FACTORIMP — 因子重要性排名
 
 **语法**：`=REGRESS.FACTORIMP(known_y, known_x)`
 
@@ -1062,7 +1166,9 @@ L2 正则化（防过拟合）。λ 默认 1.0。不返回标准误/t值/p值（
 
 ---
 
-<a id="regress-coef"></a> ### REGRESS.COEF — OLS 回归系数
+<a id="regress-coef"></a>
+
+### REGRESS.COEF — OLS 回归系数
 
 **语法**：`=REGRESS.COEF(known_y, known_x)`
 
@@ -1076,7 +1182,9 @@ L2 正则化（防过拟合）。λ 默认 1.0。不返回标准误/t值/p值（
 
 ---
 
-<a id="regress-rsq"></a> ### REGRESS.RSQ — 决定系数 R²
+<a id="regress-rsq"></a>
+
+### REGRESS.RSQ — 决定系数 R²
 
 **语法**：`=REGRESS.RSQ(known_y, known_x)`
 
@@ -1172,7 +1280,9 @@ L2 正则化（防过拟合）。λ 默认 1.0。不返回标准误/t值/p值（
 
 > **函数索引**：[MOLWT](#phychem-molwt) · [TEMP](#phychem-temp) · [PRESS](#phychem-press) · [VOL](#phychem-vol) · [MASS](#phychem-mass) · [C_TO_F](#phychem-c-to-f) · [F_TO_C](#phychem-f-to-c) · [KG_TO_LB](#phychem-kg-to-lb) · [LB_TO_KG](#phychem-lb-to-kg) · [L_TO_GAL](#phychem-l-to-gal) · [GAL_TO_L](#phychem-gal-to-l) · [ATM_TO_PSI](#phychem-atm-to-psi) · [PSI_TO_ATM](#phychem-psi-to-atm) · [IDEALGAS](#phychem-idealgas) · [GASSTP](#phychem-gasstp) · [DENSITY](#phychem-density)
 
-<a id="phychem-molwt"></a> ### PHYCHEM.MOLWT — 分子量
+<a id="phychem-molwt"></a>
+
+### PHYCHEM.MOLWT — 分子量
 
 **语法**：`=PHYCHEM.MOLWT(formula_text)`
 
@@ -1189,7 +1299,9 @@ L2 正则化（防过拟合）。λ 默认 1.0。不返回标准误/t值/p值（
 
 ---
 
-<a id="phychem-temp"></a> ### PHYCHEM.TEMP — 温度换算
+<a id="phychem-temp"></a>
+
+### PHYCHEM.TEMP — 温度换算
 
 **语法**：`=PHYCHEM.TEMP(number, from_unit, to_unit)`
 
@@ -1206,7 +1318,9 @@ L2 正则化（防过拟合）。λ 默认 1.0。不返回标准误/t值/p值（
 
 ---
 
-<a id="phychem-press"></a> ### PHYCHEM.PRESS — 压力换算
+<a id="phychem-press"></a>
+
+### PHYCHEM.PRESS — 压力换算
 
 **语法**：`=PHYCHEM.PRESS(number, from_unit, to_unit)`
 
@@ -1223,7 +1337,9 @@ L2 正则化（防过拟合）。λ 默认 1.0。不返回标准误/t值/p值（
 
 ---
 
-<a id="phychem-vol"></a> ### PHYCHEM.VOL — 体积换算
+<a id="phychem-vol"></a>
+
+### PHYCHEM.VOL — 体积换算
 
 **语法**：`=PHYCHEM.VOL(number, from_unit, to_unit)`
 
@@ -1240,7 +1356,9 @@ L2 正则化（防过拟合）。λ 默认 1.0。不返回标准误/t值/p值（
 
 ---
 
-<a id="phychem-mass"></a> ### PHYCHEM.MASS — 质量换算
+<a id="phychem-mass"></a>
+
+### PHYCHEM.MASS — 质量换算
 
 **语法**：`=PHYCHEM.MASS(number, from_unit, to_unit)`
 
@@ -1257,7 +1375,9 @@ L2 正则化（防过拟合）。λ 默认 1.0。不返回标准误/t值/p值（
 
 ---
 
-<a id="phychem-c-to-f"></a> <a id="phychem-f-to-c"></a> ### PHYCHEM.C_TO_F / F_TO_C — 温度快捷换算
+<a id="phychem-c-to-f"></a> <a id="phychem-f-to-c"></a>
+
+### PHYCHEM.C_TO_F / F_TO_C — 温度快捷换算
 
 **示例**：
 ```
@@ -1269,7 +1389,9 @@ L2 正则化（防过拟合）。λ 默认 1.0。不返回标准误/t值/p值（
 
 ---
 
-<a id="phychem-kg-to-lb"></a> <a id="phychem-lb-to-kg"></a> ### PHYCHEM.KG_TO_LB / LB_TO_KG — 质量快捷换算
+<a id="phychem-kg-to-lb"></a> <a id="phychem-lb-to-kg"></a>
+
+### PHYCHEM.KG_TO_LB / LB_TO_KG — 质量快捷换算
 
 **示例**：
 ```
@@ -1279,7 +1401,9 @@ L2 正则化（防过拟合）。λ 默认 1.0。不返回标准误/t值/p值（
 
 ---
 
-<a id="phychem-l-to-gal"></a> <a id="phychem-gal-to-l"></a> ### PHYCHEM.L_TO_GAL / GAL_TO_L — 体积快捷换算
+<a id="phychem-l-to-gal"></a> <a id="phychem-gal-to-l"></a>
+
+### PHYCHEM.L_TO_GAL / GAL_TO_L — 体积快捷换算
 
 **示例**：
 ```
@@ -1289,7 +1413,9 @@ L2 正则化（防过拟合）。λ 默认 1.0。不返回标准误/t值/p值（
 
 ---
 
-<a id="phychem-atm-to-psi"></a> <a id="phychem-psi-to-atm"></a> ### PHYCHEM.ATM_TO_PSI / PSI_TO_ATM — 压力快捷换算
+<a id="phychem-atm-to-psi"></a> <a id="phychem-psi-to-atm"></a>
+
+### PHYCHEM.ATM_TO_PSI / PSI_TO_ATM — 压力快捷换算
 
 **示例**：
 ```
@@ -1299,7 +1425,9 @@ L2 正则化（防过拟合）。λ 默认 1.0。不返回标准误/t值/p值（
 
 ---
 
-<a id="phychem-idealgas"></a> ### PHYCHEM.IDEALGAS — 理想气体状态方程
+<a id="phychem-idealgas"></a>
+
+### PHYCHEM.IDEALGAS — 理想气体状态方程
 
 **语法**：`=PHYCHEM.IDEALGAS(pressure, volume, moles, temperature)`
 
@@ -1315,7 +1443,9 @@ PV = nRT。将待求量填 `"*"`。R = 0.082057 L·atm/(mol·K)。
 
 ---
 
-<a id="phychem-gasstp"></a> ### PHYCHEM.GASSTP — 气体体积换算标况
+<a id="phychem-gasstp"></a>
+
+### PHYCHEM.GASSTP — 气体体积换算标况
 
 **语法**：`=PHYCHEM.GASSTP(volume, temperature, pressure, [tUnit], [pUnit])`
 
@@ -1337,7 +1467,9 @@ PV = nRT。将待求量填 `"*"`。R = 0.082057 L·atm/(mol·K)。
 
 ---
 
-<a id="phychem-density"></a> ### PHYCHEM.DENSITY — 密度
+<a id="phychem-density"></a>
+
+### PHYCHEM.DENSITY — 密度
 
 **语法**：`=PHYCHEM.DENSITY(mass, volume)`
 
@@ -1356,7 +1488,9 @@ PV = nRT。将待求量填 `"*"`。R = 0.082057 L·atm/(mol·K)。
 
 > 生成 DOE（实验设计）矩阵。支持全因子（method=`"full"`）、田口正交表（method=`"taguchi"`）、2水平部分因子（method=`"fractional"`）、响应面（method=`"rsm"` CCD / `"bb"` Box-Behnken）。因子水平编码为 -1/0/+1（coded 单位）。
 
-<a id="doe-plan"></a> ### DOE.PLAN — 全因子 / 田口 / 部分因子 / 响应面实验设计
+<a id="doe-plan"></a>
+
+### DOE.PLAN — 全因子 / 田口 / 部分因子 / 响应面实验设计
 
 **语法**：`=DOE.PLAN(factor_qty1, factor_level1, factor_qty2, factor_level2, method, [randomize], [seed])`
 
@@ -1460,7 +1594,9 @@ PV = nRT。将待求量填 `"*"`。R = 0.082057 L·atm/(mol·K)。
 
 ---
 
-<a id="str-reverse"></a> ### STR.REVERSE — 反转字符串
+<a id="str-reverse"></a>
+
+### STR.REVERSE — 反转字符串
 
 **语法**：`=STR.REVERSE(text)`
 
@@ -1472,7 +1608,9 @@ PV = nRT。将待求量填 `"*"`。R = 0.082057 L·atm/(mol·K)。
 
 ---
 
-<a id="str-normws"></a> ### STR.NORMWS — 规范化空白
+<a id="str-normws"></a>
+
+### STR.NORMWS — 规范化空白
 
 **语法**：`=STR.NORMWS(text)`
 
@@ -1486,7 +1624,9 @@ PV = nRT。将待求量填 `"*"`。R = 0.082057 L·atm/(mol·K)。
 
 ---
 
-<a id="str-title"></a> ### STR.TITLE — 首字母大写
+<a id="str-title"></a>
+
+### STR.TITLE — 首字母大写
 
 **语法**：`=STR.TITLE(text)`
 
@@ -1498,7 +1638,9 @@ PV = nRT。将待求量填 `"*"`。R = 0.082057 L·atm/(mol·K)。
 
 ---
 
-<a id="str-remove"></a> ### STR.REMOVE — 删除字符
+<a id="str-remove"></a>
+
+### STR.REMOVE — 删除字符
 
 **语法**：`=STR.REMOVE(text, old_text)`
 
@@ -1512,7 +1654,9 @@ PV = nRT。将待求量填 `"*"`。R = 0.082057 L·atm/(mol·K)。
 
 ---
 
-<a id="str-keep"></a> ### STR.KEEP — 保留字符
+<a id="str-keep"></a>
+
+### STR.KEEP — 保留字符
 
 **语法**：`=STR.KEEP(text, keep_chars)`
 
@@ -1526,7 +1670,9 @@ PV = nRT。将待求量填 `"*"`。R = 0.082057 L·atm/(mol·K)。
 
 ---
 
-<a id="str-padleft"></a> ### STR.PADLEFT — 左侧填充
+<a id="str-padleft"></a>
+
+### STR.PADLEFT — 左侧填充
 
 **语法**：`=STR.PADLEFT(text, num_chars, [pad_text])`
 
@@ -1539,7 +1685,9 @@ PV = nRT。将待求量填 `"*"`。R = 0.082057 L·atm/(mol·K)。
 
 ---
 
-<a id="str-padright"></a> ### STR.PADRIGHT — 右侧填充
+<a id="str-padright"></a>
+
+### STR.PADRIGHT — 右侧填充
 
 **语法**：`=STR.PADRIGHT(text, num_chars, [pad_text])`
 
@@ -1551,7 +1699,9 @@ PV = nRT。将待求量填 `"*"`。R = 0.082057 L·atm/(mol·K)。
 
 ---
 
-<a id="str-truncate"></a> ### STR.TRUNCATE — 截断
+<a id="str-truncate"></a>
+
+### STR.TRUNCATE — 截断
 
 **语法**：`=STR.TRUNCATE(text, num_chars, [suffix])`
 
@@ -1566,7 +1716,9 @@ PV = nRT。将待求量填 `"*"`。R = 0.082057 L·atm/(mol·K)。
 
 ---
 
-<a id="str-countsub"></a> ### STR.COUNTSUB — 子串计数
+<a id="str-countsub"></a>
+
+### STR.COUNTSUB — 子串计数
 
 **语法**：`=STR.COUNTSUB(text, substring, [match_case])`
 
@@ -1579,7 +1731,9 @@ PV = nRT。将待求量填 `"*"`。R = 0.082057 L·atm/(mol·K)。
 
 ---
 
-<a id="str-startswith"></a> ### STR.STARTSWITH — 判断前缀
+<a id="str-startswith"></a>
+
+### STR.STARTSWITH — 判断前缀
 
 **语法**：`=STR.STARTSWITH(text, prefix, [match_case])`
 
@@ -1592,7 +1746,9 @@ PV = nRT。将待求量填 `"*"`。R = 0.082057 L·atm/(mol·K)。
 
 ---
 
-<a id="str-endswith"></a> ### STR.ENDSWITH — 判断后缀
+<a id="str-endswith"></a>
+
+### STR.ENDSWITH — 判断后缀
 
 **语法**：`=STR.ENDSWITH(text, suffix, [match_case])`
 
@@ -1604,7 +1760,9 @@ PV = nRT。将待求量填 `"*"`。R = 0.082057 L·atm/(mol·K)。
 
 ---
 
-<a id="str-leftof"></a> ### STR.LEFTOF — 分隔符左侧
+<a id="str-leftof"></a>
+
+### STR.LEFTOF — 分隔符左侧
 
 **语法**：`=STR.LEFTOF(text, delimiter, [instance_num])`
 
@@ -1619,7 +1777,9 @@ instance_num: 1=第1次（默认），-1=最后一次。
 
 ---
 
-<a id="str-rightof"></a> ### STR.RIGHTOF — 分隔符右侧
+<a id="str-rightof"></a>
+
+### STR.RIGHTOF — 分隔符右侧
 
 **语法**：`=STR.RIGHTOF(text, delimiter, [instance_num])`
 
@@ -1632,7 +1792,9 @@ instance_num: 1=第1次（默认），-1=最后一次。
 
 ---
 
-<a id="str-extract"></a> ### STR.EXTRACT — 分隔符间提取
+<a id="str-extract"></a>
+
+### STR.EXTRACT — 分隔符间提取
 
 **语法**：`=STR.EXTRACT(text, start_delimiter, end_delimiter, [instance_num], [include_delimiters])`
 
@@ -1646,7 +1808,9 @@ instance_num: 1=第1次（默认），-1=最后一次。
 
 ---
 
-<a id="str-nthword"></a> ### STR.NTHWORD — 第 N 个词
+<a id="str-nthword"></a>
+
+### STR.NTHWORD — 第 N 个词
 
 **语法**：`=STR.NTHWORD(text, [instance_num])`
 
@@ -1661,7 +1825,9 @@ instance_num: 1=第1次（默认），-1=最后一次。
 
 ---
 
-<a id="str-commonpfx"></a> ### STR.COMMONPFX — 最长公共前缀
+<a id="str-commonpfx"></a>
+
+### STR.COMMONPFX — 最长公共前缀
 
 **语法**：`=STR.COMMONPFX(text1, text2, [match_case])`
 
@@ -1675,7 +1841,9 @@ instance_num: 1=第1次（默认），-1=最后一次。
 
 ---
 
-<a id="str-textjoin"></a> ### STR.TEXTJOIN — 文本连接
+<a id="str-textjoin"></a>
+
+### STR.TEXTJOIN — 文本连接
 
 **语法**：`=STR.TEXTJOIN(delimiter, ignore_empty, text_array)`
 
@@ -1692,7 +1860,9 @@ instance_num: 1=第1次（默认），-1=最后一次。
 
 ---
 
-<a id="str-levenshtein"></a> ### STR.LEVENSHTEIN — 编辑距离
+<a id="str-levenshtein"></a>
+
+### STR.LEVENSHTEIN — 编辑距离
 
 **语法**：`=STR.LEVENSHTEIN(text1, text2)`
 
@@ -1705,7 +1875,9 @@ instance_num: 1=第1次（默认），-1=最后一次。
 
 ---
 
-<a id="str-soundex"></a> ### STR.SOUNDEX — Soundex 编码
+<a id="str-soundex"></a>
+
+### STR.SOUNDEX — Soundex 编码
 
 **语法**：`=STR.SOUNDEX(text)`
 
@@ -1720,7 +1892,9 @@ instance_num: 1=第1次（默认），-1=最后一次。
 
 <a id="str-urlencode"></a>
 
-<a id="str-urldecode"></a> ### STR.URLENCODE / STR.URLDECODE — URL 编解码
+<a id="str-urldecode"></a>
+
+### STR.URLENCODE / STR.URLDECODE — URL 编解码
 
 **示例**：
 ```
@@ -1733,7 +1907,9 @@ instance_num: 1=第1次（默认），-1=最后一次。
 
 <a id="str-htmlencode"></a>
 
-<a id="str-htmldecode"></a> ### STR.HTMLENCODE / STR.HTMLDECODE — HTML 编解码
+<a id="str-htmldecode"></a>
+
+### STR.HTMLENCODE / STR.HTMLDECODE — HTML 编解码
 
 **示例**：
 ```
@@ -1746,7 +1922,9 @@ instance_num: 1=第1次（默认），-1=最后一次。
 
 <a id="str-base64enc"></a>
 
-<a id="str-base64dec"></a> ### STR.BASE64ENC / STR.BASE64DEC — Base64 编解码
+<a id="str-base64dec"></a>
+
+### STR.BASE64ENC / STR.BASE64DEC — Base64 编解码
 
 **示例**：
 ```
@@ -1756,7 +1934,9 @@ instance_num: 1=第1次（默认），-1=最后一次。
 
 ---
 
-<a id="str-uuid"></a> ### STR.UUID — 生成 UUID
+<a id="str-uuid"></a>
+
+### STR.UUID — 生成 UUID
 
 **语法**：`=STR.UUID()`
 
@@ -1767,7 +1947,9 @@ instance_num: 1=第1次（默认），-1=最后一次。
 
 ---
 
-<a id="str-rndstr"></a> <a id="str-rndalpha"></a> <a id="str-rndnum"></a> ### STR.RNDSTR / RNDALPHA / RNDNUM — 随机字符串
+<a id="str-rndstr"></a> <a id="str-rndalpha"></a> <a id="str-rndnum"></a>
+
+### STR.RNDSTR / RNDALPHA / RNDNUM — 随机字符串
 
 **语法**：
 - `=STR.RNDSTR(num_chars, [character_set])` — 从字符集随机生成
@@ -1786,7 +1968,9 @@ instance_num: 1=第1次（默认），-1=最后一次。
 
 <a id="str-isnullempty"></a>
 
-<a id="str-isnullws"></a> ### STR.ISNULLEMPTY / STR.ISNULLWS — 空值检测
+<a id="str-isnullws"></a>
+
+### STR.ISNULLEMPTY / STR.ISNULLWS — 空值检测
 
 **示例**：
 ```
@@ -1798,7 +1982,9 @@ instance_num: 1=第1次（默认），-1=最后一次。
 
 ---
 
-<a id="str-coalesce"></a> ### STR.COALESCE — 取首个非空值
+<a id="str-coalesce"></a>
+
+### STR.COALESCE — 取首个非空值
 
 **语法**：`=STR.COALESCE(value1, value2)`
 
@@ -1812,7 +1998,9 @@ instance_num: 1=第1次（默认），-1=最后一次。
 
 ---
 
-<a id="str-format"></a> ### STR.FORMAT — 格式化值
+<a id="str-format"></a>
+
+### STR.FORMAT — 格式化值
 
 **语法**：`=STR.FORMAT(value, format_text)`
 
@@ -1827,7 +2015,9 @@ instance_num: 1=第1次（默认），-1=最后一次。
 
 ---
 
-<a id="str-striphtml"></a> ### STR.STRIPHTML — 去除 HTML 标签
+<a id="str-striphtml"></a>
+
+### STR.STRIPHTML — 去除 HTML 标签
 
 **语法**：`=STR.STRIPHTML(text)`
 
@@ -1858,7 +2048,9 @@ instance_num: 1=第1次（默认），-1=最后一次。
 
 ---
 
-<a id="dt-isoweek"></a> ### DT.ISOWEEK — ISO 8601 周数
+<a id="dt-isoweek"></a>
+
+### DT.ISOWEEK — ISO 8601 周数
 
 **语法**：`=DT.ISOWEEK(serial_number)`
 
@@ -1873,7 +2065,9 @@ instance_num: 1=第1次（默认），-1=最后一次。
 
 ---
 
-<a id="dt-weekday"></a> ### DT.WEEKDAY — 星期几（VBA 风格）
+<a id="dt-weekday"></a>
+
+### DT.WEEKDAY — 星期几（VBA 风格）
 
 **语法**：`=DT.WEEKDAY(serial_number)`
 
@@ -1888,7 +2082,9 @@ Sun=1, Sat=7。
 
 ---
 
-<a id="dt-weekdayiso"></a> ### DT.WEEKDAYISO — 星期几（ISO 风格）
+<a id="dt-weekdayiso"></a>
+
+### DT.WEEKDAYISO — 星期几（ISO 风格）
 
 **语法**：`=DT.WEEKDAYISO(serial_number)`
 
@@ -1902,7 +2098,9 @@ Mon=1, Sun=7。
 
 ---
 
-<a id="dt-weekdayname"></a> ### DT.WEEKDAYNAME — 英文星期名
+<a id="dt-weekdayname"></a>
+
+### DT.WEEKDAYNAME — 英文星期名
 
 **语法**：`=DT.WEEKDAYNAME(serial_number)`
 
@@ -1916,7 +2114,9 @@ Mon=1, Sun=7。
 
 <a id="dt-sow"></a>
 
-<a id="dt-eow"></a> ### DT.SOW / DT.EOW — 周开始/结束日期
+<a id="dt-eow"></a>
+
+### DT.SOW / DT.EOW — 周开始/结束日期
 
 **语法**：
 - `=DT.SOW(serial_number, [start_day])` — Start of Week
@@ -1935,7 +2135,9 @@ start_day: 0=周日, 1=周一（默认）。
 
 <a id="dt-som"></a>
 
-<a id="dt-eom"></a> ### DT.SOM / DT.EOM — 月初/月末
+<a id="dt-eom"></a>
+
+### DT.SOM / DT.EOM — 月初/月末
 
 **语法**：
 - `=DT.SOM(serial_number)` — Start of Month
@@ -1950,7 +2152,9 @@ start_day: 0=周日, 1=周一（默认）。
 
 ---
 
-<a id="dt-wom"></a> ### DT.WOM — 当月第几周
+<a id="dt-wom"></a>
+
+### DT.WOM — 当月第几周
 
 **语法**：`=DT.WOM(serial_number, [start_day])`
 
@@ -1964,7 +2168,9 @@ start_day: 0=周日, 1=周一（默认）。
 
 ---
 
-<a id="dt-dim"></a> ### DT.DIM — 指定年月天数
+<a id="dt-dim"></a>
+
+### DT.DIM — 指定年月天数
 
 **语法**：`=DT.DIM(year, month)`
 
@@ -1978,7 +2184,9 @@ start_day: 0=周日, 1=周一（默认）。
 
 ---
 
-<a id="dt-ageyears"></a> <a id="dt-agemonths"></a> <a id="dt-agedays"></a> ### DT.AGEYEARS / AGEMONTHS / AGEDAYS — 年龄计算
+<a id="dt-ageyears"></a> <a id="dt-agemonths"></a> <a id="dt-agedays"></a>
+
+### DT.AGEYEARS / AGEMONTHS / AGEDAYS — 年龄计算
 
 **语法**：
 - `=DT.AGEYEARS(start_date, [end_date])` — 周岁（对标 DATEDIF）
@@ -1996,7 +2204,9 @@ end_date 默认今天。
 
 ---
 
-<a id="dt-iswe"></a> ### DT.ISWE — 是否周末
+<a id="dt-iswe"></a>
+
+### DT.ISWE — 是否周末
 
 **语法**：`=DT.ISWE(serial_number)`
 
@@ -2010,7 +2220,9 @@ end_date 默认今天。
 
 ---
 
-<a id="dt-addwkd"></a> ### DT.ADDWKD — 加工作日
+<a id="dt-addwkd"></a>
+
+### DT.ADDWKD — 加工作日
 
 **语法**：`=DT.ADDWKD(start_date, workdays)`
 
@@ -2024,7 +2236,9 @@ end_date 默认今天。
 
 ---
 
-<a id="dt-wkdbtwn"></a> ### DT.WKDBTWN — 工作日计数
+<a id="dt-wkdbtwn"></a>
+
+### DT.WKDBTWN — 工作日计数
 
 **语法**：`=DT.WKDBTWN(start_date, end_date)`
 
@@ -2038,7 +2252,9 @@ end_date 默认今天。
 
 ---
 
-<a id="dt-nextwkd"></a> ### DT.NEXTWKD — 下一个工作日
+<a id="dt-nextwkd"></a>
+
+### DT.NEXTWKD — 下一个工作日
 
 **语法**：`=DT.NEXTWKD(serial_number)`
 
@@ -2052,7 +2268,9 @@ end_date 默认今天。
 
 ---
 
-<a id="dt-easter"></a> ### DT.EASTER — 复活节日期
+<a id="dt-easter"></a>
+
+### DT.EASTER — 复活节日期
 
 **语法**：`=DT.EASTER(year)`
 
@@ -2069,7 +2287,9 @@ end_date 默认今天。
 
 <a id="dt-quarter"></a>
 
-<a id="dt-semester"></a> ### DT.QUARTER / DT.SEMESTER — 季度/半年度
+<a id="dt-semester"></a>
+
+### DT.QUARTER / DT.SEMESTER — 季度/半年度
 
 **示例**：
 ```
@@ -2081,7 +2301,9 @@ end_date 默认今天。
 
 ---
 
-<a id="dt-doy"></a> ### DT.DOY — 年内第几天
+<a id="dt-doy"></a>
+
+### DT.DOY — 年内第几天
 
 **语法**：`=DT.DOY(serial_number)`
 
@@ -2096,7 +2318,9 @@ end_date 默认今天。
 
 ---
 
-<a id="dt-isleap"></a> ### DT.ISLEAP — 是否闰年
+<a id="dt-isleap"></a>
+
+### DT.ISLEAP — 是否闰年
 
 **语法**：`=DT.ISLEAP(year)`
 
@@ -2110,7 +2334,9 @@ end_date 默认今天。
 
 ---
 
-<a id="dt-unixts"></a> ### DT.UNIXTS — Excel 日期 → Unix 时间戳
+<a id="dt-unixts"></a>
+
+### DT.UNIXTS — Excel 日期 → Unix 时间戳
 
 **语法**：`=DT.UNIXTS(serial_number)`
 
@@ -2122,7 +2348,9 @@ end_date 默认今天。
 
 ---
 
-<a id="dt-fromunix"></a> ### DT.FROMUNIX — Unix 时间戳 → Excel 日期
+<a id="dt-fromunix"></a>
+
+### DT.FROMUNIX — Unix 时间戳 → Excel 日期
 
 **语法**：`=DT.FROMUNIX(unix_timestamp)`
 
@@ -2134,7 +2362,9 @@ end_date 默认今天。
 
 ---
 
-<a id="dt-datediff"></a> ### DT.DATEDIFF — 日期差
+<a id="dt-datediff"></a>
+
+### DT.DATEDIFF — 日期差
 
 **语法**：`=DT.DATEDIFF(date_unit, start_date, end_date)`
 
@@ -2169,7 +2399,9 @@ end_date 默认今天。
 
 ---
 
-<a id="regex-test"></a> ### REGEX.TEST — 是否匹配正则
+<a id="regex-test"></a>
+
+### REGEX.TEST — 是否匹配正则
 
 **语法**：`=REGEX.TEST(text, pattern, [ignore_case])`
 
@@ -2183,7 +2415,9 @@ end_date 默认今天。
 
 ---
 
-<a id="regex-count"></a> ### REGEX.COUNT — 非重叠匹配次数
+<a id="regex-count"></a>
+
+### REGEX.COUNT — 非重叠匹配次数
 
 **语法**：`=REGEX.COUNT(text, pattern, [ignore_case])`
 
@@ -2195,7 +2429,9 @@ end_date 默认今天。
 
 ---
 
-<a id="regex-match"></a> ### REGEX.MATCH — 第 N 个匹配子串
+<a id="regex-match"></a>
+
+### REGEX.MATCH — 第 N 个匹配子串
 
 **语法**：`=REGEX.MATCH(text, pattern, [ignore_case], [instance_num])`
 
@@ -2210,7 +2446,9 @@ end_date 默认今天。
 
 ---
 
-<a id="regex-matchall"></a> ### REGEX.MATCHALL — 所有匹配
+<a id="regex-matchall"></a>
+
+### REGEX.MATCHALL — 所有匹配
 
 **语法**：`=REGEX.MATCHALL(text, pattern, [ignore_case])`
 
@@ -2224,7 +2462,9 @@ end_date 默认今天。
 
 ---
 
-<a id="regex-replace"></a> ### REGEX.REPLACE — 正则替换
+<a id="regex-replace"></a>
+
+### REGEX.REPLACE — 正则替换
 
 **语法**：`=REGEX.REPLACE(text, pattern, replacement, [ignore_case], [instance_num])`
 
@@ -2239,7 +2479,9 @@ end_date 默认今天。
 
 ---
 
-<a id="regex-split"></a> ### REGEX.SPLIT — 正则拆分
+<a id="regex-split"></a>
+
+### REGEX.SPLIT — 正则拆分
 
 **语法**：`=REGEX.SPLIT(text, pattern, [ignore_case], [instance_num])`
 
@@ -2258,7 +2500,9 @@ end_date 默认今天。
 
 ---
 
-<a id="regex-groups"></a> ### REGEX.GROUPS — 捕获组
+<a id="regex-groups"></a>
+
+### REGEX.GROUPS — 捕获组
 
 **语法**：`=REGEX.GROUPS(text, pattern, [ignore_case])`
 
@@ -2277,7 +2521,9 @@ end_date 默认今天。
 
 ---
 
-<a id="regex-escape"></a> ### REGEX.ESCAPE — 转义正则特殊字符
+<a id="regex-escape"></a>
+
+### REGEX.ESCAPE — 转义正则特殊字符
 
 **语法**：`=REGEX.ESCAPE(text)`
 
@@ -2289,7 +2535,9 @@ end_date 默认今天。
 
 ---
 
-<a id="regex-ismatch"></a> ### REGEX.ISMATCH — 不区分大小写匹配
+<a id="regex-ismatch"></a>
+
+### REGEX.ISMATCH — 不区分大小写匹配
 
 **语法**：`=REGEX.ISMATCH(text, pattern)`
 
@@ -2322,7 +2570,9 @@ end_date 默认今天。
 
 ---
 
-<a id="arr-sort"></a> ### ARR.SORT — 排序
+<a id="arr-sort"></a>
+
+### ARR.SORT — 排序
 
 **语法**：`=ARR.SORT(array, [sort_order], [sort_mode])`
 
@@ -2339,7 +2589,9 @@ sort_order: TRUE=升序（默认），FALSE=降序。sort_mode: `"auto"/"text"/"
 
 <a id="arr-sortasc"></a>
 
-<a id="arr-sortdesc"></a> ### ARR.SORTASC / ARR.SORTDESC — 升序/降序
+<a id="arr-sortdesc"></a>
+
+### ARR.SORTASC / ARR.SORTDESC — 升序/降序
 
 **示例**：
 ```
@@ -2351,7 +2603,9 @@ sort_order: TRUE=升序（默认），FALSE=降序。sort_mode: `"auto"/"text"/"
 
 <a id="arr-sortnum"></a>
 
-<a id="arr-sorttext"></a> ### ARR.SORTNUM / ARR.SORTTEXT — 按类型排序
+<a id="arr-sorttext"></a>
+
+### ARR.SORTNUM / ARR.SORTTEXT — 按类型排序
 
 **示例**：
 ```
@@ -2363,7 +2617,9 @@ sort_order: TRUE=升序（默认），FALSE=降序。sort_mode: `"auto"/"text"/"
 
 <a id="arr-unique"></a>
 
-<a id="arr-toset"></a> ### ARR.UNIQUE / ARR.TOSET — 去重
+<a id="arr-toset"></a>
+
+### ARR.UNIQUE / ARR.TOSET — 去重
 
 **语法**：`=ARR.UNIQUE(array)`
 
@@ -2376,7 +2632,9 @@ sort_order: TRUE=升序（默认），FALSE=降序。sort_mode: `"auto"/"text"/"
 
 ---
 
-<a id="arr-indexof"></a> ### ARR.INDEXOF — 查找索引
+<a id="arr-indexof"></a>
+
+### ARR.INDEXOF — 查找索引
 
 **语法**：`=ARR.INDEXOF(array, lookup_value)`
 
@@ -2390,7 +2648,9 @@ sort_order: TRUE=升序（默认），FALSE=降序。sort_mode: `"auto"/"text"/"
 
 ---
 
-<a id="arr-slice"></a> ### ARR.SLICE — 切片
+<a id="arr-slice"></a>
+
+### ARR.SLICE — 切片
 
 **语法**：`=ARR.SLICE(array, start_index, num_elements)`
 
@@ -2402,7 +2662,9 @@ sort_order: TRUE=升序（默认），FALSE=降序。sort_mode: `"auto"/"text"/"
 
 ---
 
-<a id="arr-flatten"></a> ### ARR.FLATTEN — 展平二维数组
+<a id="arr-flatten"></a>
+
+### ARR.FLATTEN — 展平二维数组
 
 **语法**：`=ARR.FLATTEN(array)`
 
@@ -2415,7 +2677,9 @@ sort_order: TRUE=升序（默认），FALSE=降序。sort_mode: `"auto"/"text"/"
 
 ---
 
-<a id="arr-filter"></a> ### ARR.FILTER — 按条件过滤
+<a id="arr-filter"></a>
+
+### ARR.FILTER — 按条件过滤
 
 **语法**：`=ARR.FILTER(array, criteria, comparison_operator)`
 
@@ -2429,7 +2693,9 @@ sort_order: TRUE=升序（默认），FALSE=降序。sort_mode: `"auto"/"text"/"
 
 ---
 
-<a id="arr-filter-eq"></a> <a id="arr-ne"></a> <a id="arr-gt"></a> <a id="arr-lt"></a> ### ARR.FILTER_EQ / NE / GT / LT — 快捷过滤
+<a id="arr-filter-eq"></a> <a id="arr-ne"></a> <a id="arr-gt"></a> <a id="arr-lt"></a>
+
+### ARR.FILTER_EQ / NE / GT / LT — 快捷过滤
 
 **示例**：
 ```
@@ -2441,7 +2707,9 @@ sort_order: TRUE=升序（默认），FALSE=降序。sort_mode: `"auto"/"text"/"
 
 ---
 
-<a id="arr-concat"></a> ### ARR.CONCAT — 数组拼接
+<a id="arr-concat"></a>
+
+### ARR.CONCAT — 数组拼接
 
 **语法**：`=ARR.CONCAT(array1, array2)`
 
@@ -2454,7 +2722,9 @@ sort_order: TRUE=升序（默认），FALSE=降序。sort_mode: `"auto"/"text"/"
 
 ---
 
-<a id="arr-reverse"></a> ### ARR.REVERSE — 反转顺序
+<a id="arr-reverse"></a>
+
+### ARR.REVERSE — 反转顺序
 
 **示例**：
 ```
@@ -2463,7 +2733,9 @@ sort_order: TRUE=升序（默认），FALSE=降序。sort_mode: `"auto"/"text"/"
 
 ---
 
-<a id="arr-count"></a> ### ARR.COUNT — 元素个数
+<a id="arr-count"></a>
+
+### ARR.COUNT — 元素个数
 
 **示例**：
 ```
@@ -2472,7 +2744,9 @@ sort_order: TRUE=升序（默认），FALSE=降序。sort_mode: `"auto"/"text"/"
 
 ---
 
-<a id="arr-contains"></a> ### ARR.CONTAINS — 是否包含
+<a id="arr-contains"></a>
+
+### ARR.CONTAINS — 是否包含
 
 **示例**：
 ```
@@ -2482,7 +2756,9 @@ sort_order: TRUE=升序（默认），FALSE=降序。sort_mode: `"auto"/"text"/"
 
 ---
 
-<a id="arr-fill"></a> ### ARR.FILL — 填充数组
+<a id="arr-fill"></a>
+
+### ARR.FILL — 填充数组
 
 **语法**：`=ARR.FILL(value, count)`
 
@@ -2494,7 +2770,9 @@ sort_order: TRUE=升序（默认），FALSE=降序。sort_mode: `"auto"/"text"/"
 
 ---
 
-<a id="arr-range"></a> ### ARR.RANGE — 生成序列
+<a id="arr-range"></a>
+
+### ARR.RANGE — 生成序列
 
 **语法**：`=ARR.RANGE(start, end, step)`
 
@@ -2509,7 +2787,9 @@ sort_order: TRUE=升序（默认），FALSE=降序。sort_mode: `"auto"/"text"/"
 
 ---
 
-<a id="arr-shuffle"></a> ### ARR.SHUFFLE — 随机打乱
+<a id="arr-shuffle"></a>
+
+### ARR.SHUFFLE — 随机打乱
 
 **语法**：`=ARR.SHUFFLE(array)`
 
@@ -2541,7 +2821,9 @@ Fisher-Yates 算法。
 
 ---
 
-<a id="dict-frequency"></a> ### DICT.FREQUENCY — 频率统计
+<a id="dict-frequency"></a>
+
+### DICT.FREQUENCY — 频率统计
 
 **语法**：`=DICT.FREQUENCY(key_array)`
 
@@ -2561,7 +2843,9 @@ Fisher-Yates 算法。
 
 ---
 
-<a id="dict-intersect"></a> ### DICT.INTERSECT — 交集
+<a id="dict-intersect"></a>
+
+### DICT.INTERSECT — 交集
 
 **语法**：`=DICT.INTERSECT(array1, array2)`
 
@@ -2574,7 +2858,9 @@ Fisher-Yates 算法。
 
 ---
 
-<a id="dict-union"></a> ### DICT.UNION — 并集
+<a id="dict-union"></a>
+
+### DICT.UNION — 并集
 
 **语法**：`=DICT.UNION(array1, array2)`
 
@@ -2587,7 +2873,9 @@ Fisher-Yates 算法。
 
 ---
 
-<a id="dict-except"></a> ### DICT.EXCEPT — 差集
+<a id="dict-except"></a>
+
+### DICT.EXCEPT — 差集
 
 **语法**：`=DICT.EXCEPT(array1, array2)`
 
@@ -2600,7 +2888,9 @@ Fisher-Yates 算法。
 
 ---
 
-<a id="dict-dict"></a> ### DICT.DICT — 构建字典表
+<a id="dict-dict"></a>
+
+### DICT.DICT — 构建字典表
 
 **语法**：`=DICT.DICT(key_array, value_array)`
 
@@ -2617,7 +2907,9 @@ Fisher-Yates 算法。
 
 ---
 
-<a id="dict-count"></a> ### DICT.COUNT — 字典行数
+<a id="dict-count"></a>
+
+### DICT.COUNT — 字典行数
 
 **语法**：`=DICT.COUNT(dict_table)`
 
@@ -2630,7 +2922,9 @@ Fisher-Yates 算法。
 
 <a id="dict-keys"></a>
 
-<a id="dict-values"></a> ### DICT.KEYS / DICT.VALUES — 提取键/值
+<a id="dict-values"></a>
+
+### DICT.KEYS / DICT.VALUES — 提取键/值
 
 **语法**：
 - `=DICT.KEYS(dict_table)` — 提取第一列（键）
@@ -2662,7 +2956,9 @@ Fisher-Yates 算法。
 
 ---
 
-<a id="json-parse"></a> ### JSON.PARSE — 解析 JSON
+<a id="json-parse"></a>
+
+### JSON.PARSE — 解析 JSON
 
 **语法**：`=JSON.PARSE(json_text)`
 
@@ -2676,7 +2972,9 @@ Fisher-Yates 算法。
 
 ---
 
-<a id="json-query"></a> ### JSON.QUERY — JSON 路径查询
+<a id="json-query"></a>
+
+### JSON.QUERY — JSON 路径查询
 
 **语法**：`=JSON.QUERY(json_text, json_path)`
 
@@ -2691,7 +2989,9 @@ Fisher-Yates 算法。
 
 ---
 
-<a id="json-validate"></a> ### JSON.VALIDATE — JSON 验证
+<a id="json-validate"></a>
+
+### JSON.VALIDATE — JSON 验证
 
 **语法**：`=JSON.VALIDATE(json_text)`
 
@@ -2703,7 +3003,9 @@ Fisher-Yates 算法。
 
 ---
 
-<a id="json-prettify"></a> ### JSON.PRETTIFY — JSON 美化
+<a id="json-prettify"></a>
+
+### JSON.PRETTIFY — JSON 美化
 
 **语法**：`=JSON.PRETTIFY(json_text)`
 
@@ -2717,7 +3019,9 @@ Fisher-Yates 算法。
 
 ---
 
-<a id="json-totable"></a> ### JSON.TOTABLE — JSON 转二维表
+<a id="json-totable"></a>
+
+### JSON.TOTABLE — JSON 转二维表
 
 **语法**：`=JSON.TOTABLE(json_text)`
 
@@ -2738,7 +3042,9 @@ JSON 对象数组 → 含表头的二维表。
 
 ---
 
-<a id="xml-xpath"></a> ### XML.XPATH — XPath 查询
+<a id="xml-xpath"></a>
+
+### XML.XPATH — XPath 查询
 
 **语法**：`=XML.XPATH(xml_text, xpath_text)`
 
@@ -2755,7 +3061,9 @@ JSON 对象数组 → 含表头的二维表。
 
 ---
 
-<a id="xml-validate"></a> ### XML.VALIDATE — XML 验证
+<a id="xml-validate"></a>
+
+### XML.VALIDATE — XML 验证
 
 **语法**：`=XML.VALIDATE(xml_text)`
 
@@ -2767,7 +3075,9 @@ JSON 对象数组 → 含表头的二维表。
 
 ---
 
-<a id="xml-totable"></a> ### XML.TOTABLE — XML 转二维表
+<a id="xml-totable"></a>
+
+### XML.TOTABLE — XML 转二维表
 
 **语法**：`=XML.TOTABLE(xml_text, row_xpath)`
 
@@ -2805,7 +3115,9 @@ row_xpath 定义行节点。
 
 > **函数索引**：[PIVOT](#pivot-pivot) · [UNPIVOT](#pivot-unpivot) · [GROUPBY](#pivot-groupby) · [CROSSJOIN](#pivot-crossjoin)
 
-<a id="pivot-pivot"></a> ### PIVOT.PIVOT — 创建透视表
+<a id="pivot-pivot"></a>
+
+### PIVOT.PIVOT — 创建透视表
 
 **语法**：`=PIVOT.PIVOT(source_range, row_field, col_field, value_field, [aggregation], [has_headers])`
 
@@ -2825,7 +3137,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="pivot-unpivot"></a> ### PIVOT.UNPIVOT — 逆透视
+<a id="pivot-unpivot"></a>
+
+### PIVOT.UNPIVOT — 逆透视
 
 **语法**：`=PIVOT.UNPIVOT(source_range, id_fields, value_fields, [has_headers])`
 
@@ -2841,7 +3155,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="pivot-groupby"></a> ### PIVOT.GROUPBY — 分组聚合
+<a id="pivot-groupby"></a>
+
+### PIVOT.GROUPBY — 分组聚合
 
 **语法**：`=PIVOT.GROUPBY(source_range, group_fields, agg_column, [aggregation], [has_headers])`
 
@@ -2856,7 +3172,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="pivot-crossjoin"></a> ### PIVOT.CROSSJOIN — 交叉连接
+<a id="pivot-crossjoin"></a>
+
+### PIVOT.CROSSJOIN — 交叉连接
 
 **语法**：`=PIVOT.CROSSJOIN(table1, table2)`
 
@@ -2888,7 +3206,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="sql-query"></a> ### SQL.QUERY — 单表 SQL
+<a id="sql-query"></a>
+
+### SQL.QUERY — 单表 SQL
 
 **语法**：`=SQL.QUERY(source_range, sql_query, [has_headers])`
 
@@ -2921,7 +3241,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="sql-join"></a> ### SQL.JOIN — 双表 SQL
+<a id="sql-join"></a>
+
+### SQL.JOIN — 双表 SQL
 
 **语法**：`=SQL.JOIN(source_range, join_table, sql_query)`
 
@@ -2940,7 +3262,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="sql-query3"></a> ### SQL.QUERY3 — 三表 SQL
+<a id="sql-query3"></a>
+
+### SQL.QUERY3 — 三表 SQL
 
 **语法**：`=SQL.QUERY3(table1, table2, table3, sql_query)`
 
@@ -2972,7 +3296,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="fs-norm"></a> ### FS.NORM — 规范化路径
+<a id="fs-norm"></a>
+
+### FS.NORM — 规范化路径
 
 **语法**：`=FS.NORM(file_path)`
 
@@ -2986,7 +3312,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="fs-combine"></a> ### FS.COMBINE — 拼接路径
+<a id="fs-combine"></a>
+
+### FS.COMBINE — 拼接路径
 
 **语法**：`=FS.COMBINE(path1, path2)`
 
@@ -2998,7 +3326,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="fs-fname"></a> ### FS.FNAME — 取文件名（含扩展名）
+<a id="fs-fname"></a>
+
+### FS.FNAME — 取文件名（含扩展名）
 
 **语法**：`=FS.FNAME(file_path)`
 
@@ -3010,7 +3340,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="fs-bname"></a> ### FS.BNAME — 取文件名（不含扩展名）
+<a id="fs-bname"></a>
+
+### FS.BNAME — 取文件名（不含扩展名）
 
 **语法**：`=FS.BNAME(file_path)`
 
@@ -3022,7 +3354,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="fs-ext"></a> ### FS.EXT — 取扩展名
+<a id="fs-ext"></a>
+
+### FS.EXT — 取扩展名
 
 **语法**：`=FS.EXT(file_path)`
 
@@ -3037,7 +3371,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="fs-folder"></a> ### FS.FOLDER — 取父目录
+<a id="fs-folder"></a>
+
+### FS.FOLDER — 取父目录
 
 **语法**：`=FS.FOLDER(file_path)`
 
@@ -3049,7 +3385,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="fs-fexists"></a> ### FS.FEXISTS — 文件是否存在
+<a id="fs-fexists"></a>
+
+### FS.FEXISTS — 文件是否存在
 
 **语法**：`=FS.FEXISTS(file_path)`
 
@@ -3061,7 +3399,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="fs-fsize"></a> ### FS.FSIZE — 文件大小
+<a id="fs-fsize"></a>
+
+### FS.FSIZE — 文件大小
 
 **语法**：`=FS.FSIZE(file_path)`
 
@@ -3069,7 +3409,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="fs-fdexists"></a> ### FS.FDEXISTS — 文件夹是否存在
+<a id="fs-fdexists"></a>
+
+### FS.FDEXISTS — 文件夹是否存在
 
 **语法**：`=FS.FDEXISTS(file_path)`
 
@@ -3081,7 +3423,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="fs-mkdir"></a> ### FS.MKDIR — 创建文件夹
+<a id="fs-mkdir"></a>
+
+### FS.MKDIR — 创建文件夹
 
 **语法**：`=FS.MKDIR(file_path)`
 
@@ -3089,7 +3433,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="fs-ls"></a> ### FS.LS — 列出文件
+<a id="fs-ls"></a>
+
+### FS.LS — 列出文件
 
 **语法**：`=FS.LS(file_path, [search_pattern])`
 
@@ -3103,7 +3449,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="fs-lsdir"></a> ### FS.LSDIR — 列出子文件夹
+<a id="fs-lsdir"></a>
+
+### FS.LSDIR — 列出子文件夹
 
 **语法**：`=FS.LSDIR(file_path, [search_pattern])`
 
@@ -3111,7 +3459,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="fs-read"></a> ### FS.READ — 读取文本文件
+<a id="fs-read"></a>
+
+### FS.READ — 读取文本文件
 
 **语法**：`=FS.READ(file_path)`
 
@@ -3119,7 +3469,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="fs-write"></a> ### FS.WRITE — 写入文本文件
+<a id="fs-write"></a>
+
+### FS.WRITE — 写入文本文件
 
 **语法**：`=FS.WRITE(file_path, file_content)`
 
@@ -3127,7 +3479,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="fs-append"></a> ### FS.APPEND — 追加写入
+<a id="fs-append"></a>
+
+### FS.APPEND — 追加写入
 
 **语法**：`=FS.APPEND(file_path, file_content)`
 
@@ -3135,7 +3489,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="fs-copy"></a> ### FS.COPY — 复制文件
+<a id="fs-copy"></a>
+
+### FS.COPY — 复制文件
 
 **语法**：`=FS.COPY(source_path, destination_path)`
 
@@ -3143,7 +3499,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="fs-move"></a> ### FS.MOVE — 移动/重命名文件
+<a id="fs-move"></a>
+
+### FS.MOVE — 移动/重命名文件
 
 **语法**：`=FS.MOVE(source_path, destination_path)`
 
@@ -3151,7 +3509,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="fs-delete"></a> ### FS.DELETE — 删除文件
+<a id="fs-delete"></a>
+
+### FS.DELETE — 删除文件
 
 **语法**：`=FS.DELETE(file_path)`
 
@@ -3159,7 +3519,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="fs-deldir"></a> ### FS.DELDIR — 删除文件夹
+<a id="fs-deldir"></a>
+
+### FS.DELDIR — 删除文件夹
 
 **语法**：`=FS.DELDIR(file_path)`
 
@@ -3167,7 +3529,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="fs-drives"></a> ### FS.DRIVES — 列出驱动器
+<a id="fs-drives"></a>
+
+### FS.DRIVES — 列出驱动器
 
 **语法**：`=FS.DRIVES()`
 
@@ -3175,7 +3539,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="fs-pwd"></a> ### FS.PWD — 当前工作目录
+<a id="fs-pwd"></a>
+
+### FS.PWD — 当前工作目录
 
 **语法**：`=FS.PWD()`
 
@@ -3183,7 +3549,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="fs-temp"></a> ### FS.TEMP — 临时文件夹路径
+<a id="fs-temp"></a>
+
+### FS.TEMP — 临时文件夹路径
 
 **语法**：`=FS.TEMP()`
 
@@ -3207,7 +3575,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 > **函数索引**：[TOHTML](#range-tohtml) · [TOJSON](#range-tojson) · [TOMD](#range-tomd) · [TOCSV](#range-tocsv) · [TOCSVTAB](#range-tocsvtab) · [TOCSVSEMI](#range-tocsvsemi) · [TRANSPOSE](#range-transpose) · [SELCOLS](#range-selcols) · [SELROWS](#range-selrows)
 
-<a id="range-tohtml"></a> ### RANGE.TOHTML — 导出 HTML 表格
+<a id="range-tohtml"></a>
+
+### RANGE.TOHTML — 导出 HTML 表格
 
 **语法**：`=RANGE.TOHTML(source_range, [has_headers], [css_class])`
 
@@ -3222,7 +3592,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="range-tojson"></a> ### RANGE.TOJSON — 导出 JSON
+<a id="range-tojson"></a>
+
+### RANGE.TOJSON — 导出 JSON
 
 **语法**：`=RANGE.TOJSON(source_range, [has_headers], [pretty_print])`
 
@@ -3237,7 +3609,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="range-tomd"></a> ### RANGE.TOMD — 导出 Markdown 表格
+<a id="range-tomd"></a>
+
+### RANGE.TOMD — 导出 Markdown 表格
 
 **语法**：`=RANGE.TOMD(source_range, [has_headers])`
 
@@ -3258,7 +3632,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="range-tocsv"></a> ### RANGE.TOCSV — 导出 CSV
+<a id="range-tocsv"></a>
+
+### RANGE.TOCSV — 导出 CSV
 
 **语法**：`=RANGE.TOCSV(source_range, [delimiter], [quote_fields], [has_headers])`
 
@@ -3273,7 +3649,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="range-tocsvtab"></a> ### RANGE.TOCSVTAB — 导出 TSV
+<a id="range-tocsvtab"></a>
+
+### RANGE.TOCSVTAB — 导出 TSV
 
 **语法**：`=RANGE.TOCSVTAB(source_range)`
 
@@ -3281,7 +3659,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="range-tocsvsemi"></a> ### RANGE.TOCSVSEMI — 导出分号 CSV
+<a id="range-tocsvsemi"></a>
+
+### RANGE.TOCSVSEMI — 导出分号 CSV
 
 **语法**：`=RANGE.TOCSVSEMI(source_range)`
 
@@ -3289,7 +3669,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="range-transpose"></a> ### RANGE.TRANSPOSE — 行列转置
+<a id="range-transpose"></a>
+
+### RANGE.TRANSPOSE — 行列转置
 
 **语法**：`=RANGE.TRANSPOSE(source_range)`
 
@@ -3303,7 +3685,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="range-selcols"></a> ### RANGE.SELCOLS — 选取列
+<a id="range-selcols"></a>
+
+### RANGE.SELCOLS — 选取列
 
 **语法**：`=RANGE.SELCOLS(source_range, column_indices)`
 
@@ -3324,7 +3708,9 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-<a id="range-selrows"></a> ### RANGE.SELROWS — 选取行
+<a id="range-selrows"></a>
+
+### RANGE.SELROWS — 选取行
 
 **语法**：`=RANGE.SELROWS(source_range, row_indices)`
 

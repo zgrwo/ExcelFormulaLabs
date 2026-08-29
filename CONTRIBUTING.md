@@ -8,7 +8,7 @@
 
 - Windows 10/11
 - [.NET SDK 8.0](https://dotnet.microsoft.com/download/dotnet/8.0)（含 net48 目标支持）
-- Python 3.11+（交叉验证用）：`pip install numpy scipy scikit-learn`
+- Python 3.11+（交叉验证用）：`pip install -r requirements.txt`（numpy / scipy / scikit-learn / pyDOE2，版本由 dependabot 维护）
 - Git
 
 ### 构建与测试
@@ -41,7 +41,7 @@ python scripts/verify-manual.py
 ### 5 步验证（提交前必须通过）
 
 ```powershell
-# ① 文档一致性（16 项检查）
+# ① 文档一致性（18 项检查）
 powershell -File scripts/verify-docs.ps1
 
 # ② 全量单元测试（双 TFM）
