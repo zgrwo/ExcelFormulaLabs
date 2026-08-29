@@ -287,14 +287,15 @@ if (-not $agentsBlock -or -not $structBlock) {
 # review-2026-08-30：扫描范围从 5 个指定文件扩展为全仓 *.md（+ 源码注释文件）。
 #   豁免：cross-validation.md（模块级计数，仅验 Total 行）与 CHANGELOG.md（历史表述，仅验 X→Y 终值）。
 $proseMdFiles = Get-ChildItem -Path $RepoRoot -Recurse -Filter "*.md" |
-    Where-Object { $_.FullName -notmatch '\\.git\\|\\bin\\|\\obj\\|\\\\.qoder\\|\\TestResults\\|\\logs\\' }
-$proseFiles = @("src\Foundation\ElementWiseMapper.cs") +
-    @($proseMdFiles | ForEach-Object { $_.FullName.Substring($RepoRoot.Length).TrimStart('\\') })
+    Where-Object { ($_.FullName -replace '\\', '/') -notmatch '/(\.git|bin|obj|\.qoder|TestResults|logs)/' }
+# 相对路径统一归一化为正斜杠 + 去掉前导分隔符（Windows 为 \，Linux/macOS 为 /，pwsh 双平台兼容）
+$proseFiles = @("src/Foundation/ElementWiseMapper.cs") +
+    @($proseMdFiles | ForEach-Object { ($_.FullName.Substring($RepoRoot.Length) -replace '\\', '/').TrimStart('/') })
 $proseMismatches = @()
 foreach ($rel in $proseFiles) {
     $text = Read-Utf8 (Join-Path $RepoRoot $rel)
     if (-not $text) { continue }
-    $isModuleLevel = ($rel -eq "docs\cross-validation.md")
+    $isModuleLevel = ($rel -eq "docs/cross-validation.md")
     $isHistorical = ($rel -eq "CHANGELOG.md")
     # 模式 1：`N UDF`（如 "236 UDF"）——除模块级/历史文件外强制执行 == codeUdfs
     if (-not $isModuleLevel -and -not $isHistorical) {
@@ -360,7 +361,8 @@ $srcFiles = Get-ChildItem -Path (Join-Path $RepoRoot "src") -Recurse -File |
     Where-Object { $_.FullName -notmatch "\\obj\\" -and $_.FullName -notmatch "\\bin\\" }
 $undeclaredFiles = @()
 foreach ($f in $srcFiles) {
-    $rel = $f.FullName.Substring($RepoRoot.Length).TrimStart('\\') -replace '\\', '/'
+    # 相对路径统一归一化为正斜杠 + 去前导分隔符（Windows \ / Linux /，pwsh 双平台兼容）
+    $rel = ($f.FullName.Substring($RepoRoot.Length) -replace '\\', '/').TrimStart('/')
     if ($rel -notin $declaredSrcFiles) { $undeclaredFiles += $rel }
 }
 if ($undeclaredFiles.Count -eq 0) { Check "src files declared in tree ($($srcFiles.Count))" "OK" }
