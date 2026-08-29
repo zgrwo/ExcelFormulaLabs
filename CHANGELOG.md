@@ -6,15 +6,22 @@
 
 > 版本一致性：每个 `v*` git tag 必须在本文档有对应条目（`verify-docs.ps1` 强制检查，见规则 [documentation.md](rules/documentation.md)）。
 
-## [Unreleased]
+## [2.2.1] - 2026-08-29
 
-### Fixed（review-2026-08-29 深度审查修复，未发版）
+### Changed
+- docs: 新增 .xll 下载解除锁定（Unblock）指引（README 与 GitHub Release 正文均含操作说明）
+- README.en：统计函数空白单元格语义与中文版对齐（按哨兵 NaN 传播，非跳过）；补 SyncMacro（Excel-DNA Issue #390）已知限制章节
 
-- 计数与门禁：232→236 全部同步（AGENTS/CONTRIBUTING/ElementWiseMapper/cross-validation/CHANGELOG）；verify-docs 新增检查 16（散文式 UDF 计数一致性）＋ test_verify_docs 场景 G；pre-commit check-5 名单动态化（含 DOE）＋除法检测排除注释，check-6 豁免名单收缩为与 AGENTS.md 一致的 6 项
-- 架构回归：ARR.FILL/ARR.RANGE 业务逻辑下沉 ArrayCore（UDF 变单行分发）；新增 InputNormalizer.ToInt32（超 int 范围抛异常，替换 4 处 `(int)` 直转）；STATS.COUNT 改 Excel COUNT 语义（跳过非数值而非抛 #VALUE!）
-- hasHeaders 对齐：RANGE.TOHTML/TOJSON/TOMD 的 has_headers 变可选；RANGE.TOCSV / PIVOT.PIVOT/UNPIVOT/GROUPBY 新增 `[has_headers]` 可选参数（向后兼容，api-reference/user-manual 同步）
-- 安全加固：FileSystemCore.DeleteFolderRecursive 改迭代栈式遍历（防未捕获 StackOverflow）；SQLite 原生 DLL 抽取改 SHA-256 校验；AutoOpen 沙箱未启用时输出醒目警告
-- 测试与 CI：ErrorMsg/ExceptionFilters/ExcelEmpty 补专用测试；DOE.ANALYZE/ANOVA/PARETO 接入 Python 交叉验证（Dispatcher + manifest + verify-manual 独立实现）；security.yml 增加 pull_request 触发；release/csproj 打包验证改硬错误（去除 ContinueOnError + 空产物断言）；update_excel_arguments.py 路径修复 `rules/api-reference.md`
+### Fixed（2026-08-29 发行前 max level 深度审查修复）
+
+- **安全（发行阻断修复）**：DOE 上限守卫绕过——`1L<<indep` 位移掩码（k≥64 回绕）与 cells 未守卫，单公式 `=DOE.PLAN(84,2,0,2,"FRAC")` 可分配 352MB+、`"BB"` 5.5GB → 32 位 Excel OOM 崩溃；新增 MaxCells（runs×factors）上限与位移防回绕、FullFactorialCoded 乘法溢出检测；Pivot/Unpivot/GroupBy 补输出 cell 上限守卫；LinalgCore.Identity 上限 10000→2000（800MB→32MB）
+- **架构**：DICT.KEYS/VALUES 列提取下沉 DictSetCore（红线①）；STATS.SQRT/LN/LOG10/EXP、PHYCHEM.DENSITY 内联计算下沉 Core；ConvertValue<int> 统一委托 ToInt32（超 int 范围抛异常而非 clamp）；STR.PADLEFT/PADRIGHT/TRUNCATE 改用 ToInt32
+- **数值正确性**：FitWLS 原尺度 SSE/TSS 补 NaN/Inf 守卫；FitOLSCore/FitRidge 的 TSS 改单遍中心化形式（防灾难性抵消）；PhyChemCore 分子式下标超长（>19 位数字）改显式抛错而非静默按 1 解析
+- **测试与交叉验证**：verify-manual.py 12 处条件-回退分支区分「runner 缺失（SKIP 兜底）」与「C# 单测报错（FAIL）」——不再吞 C# 错误；STATS.SKEW 改活体 cross_check（原布尔阈值）；STATS.COUNT / ARR.RANGE / ARR.FILL 接入 C#↔Python 活体对照（含 CountNumeric 独立语义实现）；InputNormalizer.ToInt32 补 11 个单测；FS 段机器依赖 notepad.exe→kernel32.dll
+- **文档/CI**：6 处「15 项」陈旧计数→16 项；context.md 表头豁免名单同步（8 项）；SECURITY.md 支持版本表补 2.2.x；cross-validation.md 补 DOE 小节（模块加总 232→236 对齐）；release.yml Release 正文 32 位文件表修正；沙箱警告注释诚实化（Trace 仅调试可见，用户警示由 README/SECURITY 承担）
+
+### 计数与门禁（2026-08-29 审查修复延续，详见 git log 994a98f）
+- 232→236 全部同步；verify-docs 检查 16（散文计数）；pre-commit check-5 动态化；ARR.FILL/RANGE 下沉；ToInt32；STATS.COUNT 语义；hasHeaders 可选化；DeleteFolderRecursive 迭代化；SQLite SHA-256；DOE 分析 cross_check；CodeQL PR 触发；打包硬错误
 
 ## [2.2.0] - 2026-08-26
 
@@ -208,6 +215,7 @@
 - IntelliSense 自动补全（net48）
 - MIT License
 
+[2.2.1]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.1.1...v2.2.0
 [2.1.1]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.0.1...v2.1.0
