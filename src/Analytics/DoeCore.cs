@@ -190,7 +190,7 @@ namespace ExcelFormulaLabs.Analytics
                 if (total > MaxRuns)
                     throw new ArgumentException(ErrorMsg.Get("DOE_TooManyRuns", MaxRuns));
             }
-            if (total * k > MaxCells)
+            if (k > 0 && total > MaxCells / k) // 除法防乘法溢出（total×k 在极端 k 下可溢出 long）
                 throw new ArgumentException(ErrorMsg.Get("DOE_TooManyCells", total, k, total * k, MaxCells));
 
             var m = new double[total, k];
@@ -277,7 +277,7 @@ namespace ExcelFormulaLabs.Analytics
             long runs = indep >= 31 ? long.MaxValue : 1L << indep;
             if (runs > MaxRuns)
                 throw new ArgumentException(ErrorMsg.Get("DOE_TooManyRuns", MaxRuns));
-            if (runs * k > MaxCells)
+            if (k > 0 && runs > MaxCells / k) // 除法防乘法溢出
                 throw new ArgumentException(ErrorMsg.Get("DOE_TooManyCells", runs, k, runs * k, MaxCells));
             var m = new double[runs, k];
             for (long r = 0; r < runs; r++)
@@ -318,7 +318,7 @@ namespace ExcelFormulaLabs.Analytics
             long total = nf + centerPerBlock + nAxial + centerPerBlock;
             if (total > MaxRuns)
                 throw new ArgumentException(ErrorMsg.Get("DOE_TooManyRuns", MaxRuns));
-            if (total * k > MaxCells)
+            if (k > 0 && total > MaxCells / k) // 除法防乘法溢出（total×k 在极端 k 下可溢出 long）
                 throw new ArgumentException(ErrorMsg.Get("DOE_TooManyCells", total, k, total * k, MaxCells));
 
             var m = new double[total, k];
@@ -366,7 +366,7 @@ namespace ExcelFormulaLabs.Analytics
             long total = edgePoints + center;
             if (total > MaxRuns)
                 throw new ArgumentException(ErrorMsg.Get("DOE_TooManyRuns", MaxRuns));
-            if (total * k > MaxCells)
+            if (k > 0 && total > MaxCells / k) // 除法防乘法溢出（total×k 在极端 k 下可溢出 long）
                 throw new ArgumentException(ErrorMsg.Get("DOE_TooManyCells", total, k, total * k, MaxCells));
 
             var m = new double[total, k];

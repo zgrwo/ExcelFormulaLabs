@@ -31,5 +31,13 @@ namespace ExcelFormulaLabs.Analytics.Tests
 
         [Fact] public void Plan_unknown_method_returns_error()
             => DoeUdf.UDF_DOE_PLAN(1, 2, 0, 2, "nope", false, null!).Should().Be(ExcelError.Value);
+
+        // review 2026-08-29：DOE 上限守卫（位移回绕 + cells）UDF 级验证——84 因子 FRAC 原会分配 352MB+，
+        // 修复后应返回 #VALUE! 而非 OOM 崩溃。
+        [Fact] public void Plan_fractional_shift_wrap_returns_error()
+            => DoeUdf.UDF_DOE_PLAN(84, 2, 0, 2, "fractional", false, null!).Should().Be(ExcelError.Value);
+
+        [Fact] public void Plan_bb_cells_guard_returns_error()
+            => DoeUdf.UDF_DOE_PLAN(700, 2, 0, 2, "bb", false, null!).Should().Be(ExcelError.Value);
     }
 }

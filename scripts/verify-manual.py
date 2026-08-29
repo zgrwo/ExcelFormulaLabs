@@ -206,7 +206,7 @@ if cs_solve and cs_solve["status"]=="ok":
     check("LINALG.SOLVE[2] vs C#", xs[2], cs[2], tol=1e-8)
     check("LINALG.SOLVE[3] vs C#", xs[3], cs[3], tol=1e-8)
 elif cs_solve is not None:
-    FAIL += 1; print(f"  FAIL LINALG.SOLVE[0]: C# error — {{cs_solve.get('error', 'unknown')}}")
+    FAIL += 1; print(f"  FAIL LINALG.SOLVE[0]: C# error — {cs_solve.get('error', 'unknown')}")
 else:
     check("LINALG.SOLVE[0]", xs[0], 0.5714285714285714)
     check("LINALG.SOLVE[1]", xs[1], 1.2857142857142858)
@@ -226,7 +226,7 @@ if cs_svd and cs_svd["status"]=="ok":
     check("LINALG.SVD_S[0] vs C#", S_svd[0], cs_S[0], tol=1e-3)
     check("LINALG.SVD_S[1] vs C#", S_svd[1], cs_S[1], tol=1e-3)
 elif cs_svd is not None:
-    FAIL += 1; print(f"  FAIL LINALG.SVD_S[0]: C# error — {{cs_svd.get('error', 'unknown')}}")
+    FAIL += 1; print(f"  FAIL LINALG.SVD_S[0]: C# error — {cs_svd.get('error', 'unknown')}")
 else:
     check("LINALG.SVD_S[0]", S_svd[0], 9.508032000586758, tol=1e-3)
     check("LINALG.SVD_S[1]", S_svd[1], 0.7728696356730957, tol=1e-3)
@@ -243,7 +243,7 @@ if cs_qr and cs_qr["status"]=="ok":
     check("LINALG.QR_R[1,1] vs C#", bool(abs(abs(Rr[1,1])-abs(cs_R[1][1]))<0.01), True)
     check("LINALG.QR_R[2,2] vs C#", bool(abs(abs(Rr[2,2])-abs(cs_R[2][2]))<0.01), True)
 elif cs_qr is not None:
-    FAIL += 1; print(f"  FAIL LINALG.QR_R[0,0]: C# error — {{cs_qr.get('error', 'unknown')}}")
+    FAIL += 1; print(f"  FAIL LINALG.QR_R[0,0]: C# error — {cs_qr.get('error', 'unknown')}")
 else:
     check("LINALG.QR_R[0,0]", abs(Rr[0,0]+14)<0.01, True)
     check("LINALG.QR_R[1,1]", abs(Rr[1,1]+175)<0.1, True)
@@ -256,7 +256,7 @@ P_lu,L_lu,U_lu=la.lu(A)
 if cs_lu and cs_lu["status"]=="ok":
     check("LINALG.LU+ vs C#", bool(abs(U_lu[0,0]-cs_lu["result"]["U"][0][0])<0.01), True)
 elif cs_lu is not None:
-    FAIL += 1; print(f"  FAIL LINALG.LU_U[0,0]: C# error — {{cs_lu.get('error', 'unknown')}}")
+    FAIL += 1; print(f"  FAIL LINALG.LU_U[0,0]: C# error — {cs_lu.get('error', 'unknown')}")
 else:
     check("LINALG.LU_U[0,0]", abs(U_lu[0,0]-4.0)<0.01, True)
     check("LINALG.LU_U[1,1]", abs(U_lu[1,1]-4.25)<0.01, True)
@@ -272,7 +272,7 @@ if cs_pinv and cs_pinv["status"]=="ok":
     check("LINALG.PINV[0,0] vs C#", bool(abs(Ap[0,0]-cs[0][0])<0.001), True)
     check("LINALG.PINV[1,0] vs C#", bool(abs(Ap[1,0]-cs[1][0])<0.001), True)
 elif cs_pinv is not None:
-    FAIL += 1; print(f"  FAIL LINALG.PINV[0,0]: C# error — {{cs_pinv.get('error', 'unknown')}}")
+    FAIL += 1; print(f"  FAIL LINALG.PINV[0,0]: C# error — {cs_pinv.get('error', 'unknown')}")
 else:
     check("LINALG.PINV[0,0]", abs(Ap[0,0]+0.9444)<0.001, True)
     check("LINALG.PINV[1,0]", abs(Ap[1,0]-0.4444)<0.001, True)
@@ -284,7 +284,7 @@ if cs_chol and cs_chol["status"]=="ok":
     check("LINALG.CHOLESKY[0,0] vs C#", Lc[0,0], cs[0][0], tol=1e-8)
     check("LINALG.CHOLESKY[1,0] vs C#", Lc[1,0], cs[1][0], tol=1e-8)
 elif cs_chol is not None:
-    FAIL += 1; print(f"  FAIL LINALG.CHOLESKY[0,0]: C# error — {{cs_chol.get('error', 'unknown')}}")
+    FAIL += 1; print(f"  FAIL LINALG.CHOLESKY[0,0]: C# error — {cs_chol.get('error', 'unknown')}")
 else:
     check("LINALG.CHOLESKY[0,0]", Lc[0,0], 2.0); check("LINALG.CHOLESKY[1,0]", Lc[1,0], 1.0)
 cross_check("LINALG.IDENTITY", np.eye(3))
@@ -306,7 +306,7 @@ if cs_ols and cs_ols["status"] == "ok":
     check("REGRESS.R² vs C#", lr.score(Xr,yr), cs.get("r_squared", -1), tol=1e-10)
     check("REGRESS.SSE vs C#", 0.0, cs.get("sse", -1), tol=1e-10)
 elif cs_ols is not None:
-    FAIL += 1; print(f"  FAIL REGRESS.OLS(R2): C# error — {{cs_ols.get('error', 'unknown')}}")
+    FAIL += 1; print(f"  FAIL REGRESS.OLS(R2): C# error — {cs_ols.get('error', 'unknown')}")
 else:
     # fallback: hardcoded check if C# runner unavailable
     check("REGRESS.OLS(R2)", lr.score(Xr,yr), 1.0)
@@ -320,7 +320,7 @@ cs_wls = csharp_results().get("REGRESS.FitWLS")
 if cs_wls and cs_wls["status"] == "ok":
     check("REGRESS.WLS(R²) vs C#", lr_w.score(Xr,yr,sample_weight=w), cs_wls["result"]["r_squared"], tol=1e-4)
 elif cs_wls is not None:
-    FAIL += 1; print(f"  FAIL REGRESS.WLS(R2): C# error — {{cs_wls.get('error', 'unknown')}}")
+    FAIL += 1; print(f"  FAIL REGRESS.WLS(R2): C# error — {cs_wls.get('error', 'unknown')}")
 else:
     check("REGRESS.WLS(R2)", lr_w.score(Xr,yr,sample_weight=w), 0.99999, tol=1e-4)
 # RIDGE — cross-validate
@@ -329,7 +329,7 @@ if cs_ridge and cs_ridge["status"] == "ok":
     ridge=RidgeLR(alpha=0.1,fit_intercept=True); ridge.fit(Xr,yr)
     check("REGRESS.RIDGE(R²) vs C#", ridge.score(Xr,yr), cs_ridge["result"]["r_squared"], tol=1e-3)
 elif cs_ridge is not None:
-    FAIL += 1; print(f"  FAIL REGRESS.RIDGE(R²) sklearn: C# error — {{cs_ridge.get('error', 'unknown')}}")
+    FAIL += 1; print(f"  FAIL REGRESS.RIDGE(R²) sklearn: C# error — {cs_ridge.get('error', 'unknown')}")
 else:
     ridge=RidgeLR(alpha=0.1,fit_intercept=True); ridge.fit(Xr,yr)
     # Fallback (C# unavailable): hardcoded sklearn result for the current dataset.
@@ -339,7 +339,7 @@ cs_fi = csharp_results().get("REGRESS.FACTORIMP")
 if cs_fi and cs_fi["status"] == "ok":
     check("REGRESS.FACTORIMP vs C#", list(np.argsort(-np.abs(lr.coef_))), cs_fi["result"], tol=1e-10)
 elif cs_fi is not None:
-    FAIL += 1; print(f"  FAIL REGRESS.FACTORIMP: C# error — {{cs_fi.get('error', 'unknown')}}")
+    FAIL += 1; print(f"  FAIL REGRESS.FACTORIMP: C# error — {cs_fi.get('error', 'unknown')}")
 else:
     check("REGRESS.FACTORIMP", list(np.argsort(-np.abs(lr.coef_))), [0,1])
 # ANOVA1 — cross-validate
@@ -349,7 +349,7 @@ if cs_anova and cs_anova["status"] == "ok":
     check("REGRESS.ANOVA1 f vs C#", fs, cs_anova["result"]["f_stat"], tol=1e-2)
     check("REGRESS.ANOVA1 p vs C#", pv, cs_anova["result"]["p_value"], tol=1e-6)
 elif cs_anova is not None:
-    FAIL += 1; print(f"  FAIL REGRESS.ANOVA1 f: C# error — {{cs_anova.get('error', 'unknown')}}")
+    FAIL += 1; print(f"  FAIL REGRESS.ANOVA1 f: C# error — {cs_anova.get('error', 'unknown')}")
 else:
     fs,pv=stats.f_oneway([10,12,14,11,13],[20,22,24,21,23],[15,17,16,18,14])
     check("REGRESS.ANOVA1 f", fs, 50.666666666666664, tol=1e-2)

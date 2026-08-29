@@ -137,13 +137,15 @@ namespace ExcelFormulaLabs.DataToolkit
                 if (groups.TryGetValue(gks, out var ex)) groups[gks] = agg switch { "SUM" or "AVG" => (ex.val + v, ex.cnt + 1), "MAX" => (Math.Max(ex.val, v), ex.cnt + 1), "MIN" => (Math.Min(ex.val, v), ex.cnt + 1), "COUNT" => (0, ex.cnt + 1) };
                 else { groups[gks] = (v, 1); if (seen.Add(gks)) keyNames.Add(gk); }
             }
-            var result = new object[keyNames.Count, nG + 1];
-            // review 2026-08-29：输出 cell 上限守卫（GroupBy 输出列 = 分组列+1，可被 nG 放大）
+            // review 2026-08-29：输出 cell 上限守卫（GroupBy 输出列 = 分组列+1，可被 nG 放大）。
+            // 复审修正：守卫必须位于数组分配之前——原实现先 new object[keyNames.Count, nG+1] 再检查，
+            // 无法阻止其针对的大分配（如 1M 行 × 100 分组列 ≈ 800MB，32 位可先 OOM）。
             const long maxCells = 1_000_000;
             if ((long)keyNames.Count * (nG + 1) > maxCells)
                 throw new ArgumentException(
                     $"GroupBy would produce {keyNames.Count:N0} rows × {nG + 1} cols = {(long)keyNames.Count * (nG + 1):N0} cells. " +
                     $"Maximum is {maxCells:N0}. Reduce group fields or input rows.");
+            var result = new object[keyNames.Count, nG + 1];
             for (int i = 0; i < keyNames.Count; i++) { var kn = keyNames[i]; for (int j = 0; j < nG; j++) result[i, j] = kn[j]; var (val, cnt) = groups[MakeCompoundKey(kn)]; result[i, nG] = AggResult(agg, val, cnt); }
             return result;
         }

@@ -405,5 +405,21 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             r[0, 1].Should().Be(300.0);  // A group: 100 + 200
             r[1, 1].Should().Be(300.0);  // B group: 300
         }
+
+        // review 2026-08-29 复审：GroupBy 输出 cell 守卫（100k 行 × 12 列 = 1.2M cells > 1M 上限 → 抛）
+        [Fact] public void GroupBy_max_cells_throws_before_alloc()
+        {
+            var d = new object[100_000, 13];
+            for (int i = 0; i < 100_000; i++)
+            {
+                d[i, 0] = $"k{i}";
+                d[i, 12] = i; // agg 列必须为数值，否则 NaN 被跳过
+            }
+            // 12 个分组列（nG=12 → 输出 13 列 × 100k 行 = 1.3M cells > 1M）
+            var gCols = new int[12];
+            for (int j = 0; j < 12; j++) gCols[j] = j;
+            var act = () => PivotCore.GroupBy(d, gCols, 12, "SUM", hasHeaders: false);
+            act.Should().Throw<ArgumentException>().WithMessage("*cells*");
+        }
     }
 }
