@@ -142,7 +142,7 @@ description: 项目经验库 — 从 v2.0.0 至今全部 commit/审查/CI 事故
 
 ## 七、治理流程
 
-- **max level 深度审查**：P0（发行阻塞）/P1（高危）/P2（应修复）/P3（门禁增强）分级；实证复现 + 负向测试 + 逐条声称对账；报告归档 `logs/review/release-audit-*.md`。
+- **max level 深度审查**：P0（发行阻塞）/P1（高危）/P2（应修复）/P3（门禁增强）分级；实证复现 + 负向测试 + 逐条声称对账；报告归档 `logs/review/release-audit-*.md`——**审查报告一律不入库**（logs/ 在 .gitignore），文档与代码层面的可复现结论（如逃逸模式 E1-E6）才提炼进 skill/AGENTS。
 - **修复验证闭环**：复现测试 FAILS → 修复 → PASSES + 无回归 → **保留复现测试**。
 - **跨会话交接**：`✅ 已完成 / 🔜 下一步 / ⚠️ 待决策 / 📄 关键上下文` 四段式。
 - **提交规范**：Conventional Commits；`fix(review)` 是审查修复专用 scope。
