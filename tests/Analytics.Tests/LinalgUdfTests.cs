@@ -15,22 +15,22 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void Svd_returns_3_components()
         {
             var (U, S, Vt) = LinalgCore.Svd(B);
-            U.Should().NotBeNull();
-            S.Should().NotBeNull();
-            Vt.Should().NotBeNull();
+            U.GetLength(0).Should().Be(3); U.GetLength(1).Should().Be(3);
+            S.Length.Should().Be(3);
+            Vt.GetLength(0).Should().Be(3); Vt.GetLength(1).Should().Be(3);
         }
         [Fact] public void Qr_returns_2_components()
         {
             var (Q, R) = LinalgCore.Qr(B);
-            Q.Should().NotBeNull();
-            R.Should().NotBeNull();
+            Q.GetLength(0).Should().Be(3); Q.GetLength(1).Should().Be(3);
+            R.GetLength(0).Should().Be(3); R.GetLength(1).Should().Be(3);
         }
         [Fact] public void Lu_returns_3_components()
         {
             var (L, U, P) = LinalgCore.Lu(B);
-            L.Should().NotBeNull();
-            U.Should().NotBeNull();
-            P.Should().NotBeNull();
+            L.GetLength(0).Should().Be(3); L.GetLength(1).Should().Be(3);
+            U.GetLength(0).Should().Be(3); U.GetLength(1).Should().Be(3);
+            P.GetLength(0).Should().Be(3); P.GetLength(1).Should().Be(3);
         }
 
         // ── SVD split UDFs ──
