@@ -180,6 +180,7 @@ description: 项目经验库 — 从 v2.0.0 至今全部 commit/审查/CI 事故
 - **现象**：审计的计时基准（5.3s）未含 ComparisonUtils 分发开销（实测 152s，差 30 倍）；构建竞态"50% 失败率"实为 bin 残留 .dna 污染（BuildInParallel=false 早已修复）。
 - **铁律**：性能/概率声称必须用**与生产代码相同路径**的复刻测量（含全部分发层）；"间歇性失败"先查环境残留（bin/obj 陈旧产物）再归因代码。
 - **证据**：清理 bin 残留 .dna 后 10 次并行构建 0 失败。
+- **补充（2026-08-31 max-level 审查）**：残留自愈设计——双 TFM 串行内建（BuildInParallel=false）下，GenerateDnaFromTemplate 应保留**通配删除**（`*-AddIn*.dna`）而非按 TFM 条件化删除：通配 Delete 在下一次构建时自动清理 pack 中断残留，条件化删除会失去自愈（残留反复导致 build 报 "System.Data.SQLite NOT FOUND"）。**注意依赖关系**：通配删除依赖串行化，移除 BuildInParallel=false 前必须改回条件化删除。
 
 ---
 
