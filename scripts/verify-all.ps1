@@ -32,33 +32,40 @@ Write-Host " ExcelFormulaLabs - Full Verification Gate"
 Write-Host " Config: $Configuration"
 Write-Host "============================================"
 
-# Step 1: Build
-Step "1/5 Build ($Configuration)" {
+# P1-17 (review-2026-08-31)：AGENTS.md 定义全量验证 5 步 = ① verify-docs ② dotnet test
+# ③ CrossVal ④ verify-manual.py ⑤ Release build——原实现没有 verify-docs 步骤。插入为 Step 1。
+# Step 1: verify-docs（文档一致性 18+1 项）
+Step "1/6 verify-docs" {
+    powershell -NoProfile -File "$root\scripts\verify-docs.ps1"
+}
+
+# Step 2: Build
+Step "2/6 Build ($Configuration)" {
     dotnet build "$root\ExcelFormulaLabs.sln" -c $Configuration --nologo -v q
 }
 
-# Step 2: Unit Tests (all TFMs: net8.0 + net8.0-windows + net48)
-Step "2/5 Unit Tests (all TFMs)" {
+# Step 3: Unit Tests (all TFMs: net8.0 + net8.0-windows + net48)
+Step "3/6 Unit Tests (all TFMs)" {
     dotnet test "$root\ExcelFormulaLabs.sln" -c $Configuration --no-build --nologo -v q
 }
 
-# Step 3: CrossVal (C# CrossValRunner + Python verify-manual.py)
+# Step 4: CrossVal (C# CrossValRunner + Python verify-manual.py)
 if (-not $SkipCrossVal) {
-    Step "3/5 CrossVal (verify-manual.py)" {
+    Step "4/6 CrossVal (verify-manual.py)" {
         python "$root\scripts\verify-manual.py"
     }
 } else {
     Write-Host ""
-    Write-Host "=== 3/5 CrossVal [SKIPPED] ==="
+    Write-Host "=== 4/6 CrossVal [SKIPPED] ==="
 }
 
-# Step 4: Pre-commit checks (bare catch / self-validation / IntelliSense / Core isolation)
-Step "4/5 Pre-commit Checks" {
+# Step 5: Pre-commit checks (bare catch / self-validation / IntelliSense / Core isolation)
+Step "5/6 Pre-commit Checks" {
     powershell -NoProfile -File "$root\scripts\pre-commit-check.ps1"
 }
 
-# Step 5: Release build (dual TFM packaging verification)
-Step "5/5 Release Build" {
+# Step 6: Release build (dual TFM packaging verification)
+Step "6/6 Release Build" {
     dotnet build "$root\ExcelFormulaLabs.sln" -c Release --nologo -v q
 }
 

@@ -29,31 +29,41 @@ if sys.platform == 'win32':
 
 EPS = 1e-10; EPS_LOOSE = 1e-6
 PASS = 0; FAIL = 0; SKIP = 0  # P1-9 (review): missing C# reference is now a hard-fail signal
+MANUAL_PASS = 0  # P0-3b (review-2026-08-31): check() 纯 Python 自校验通过数
+CROSS_PASS = 0   # P0-3b: cross_check() 与 C# 对照通过数
+SECTION_TOTAL = 0  # P1-16 (review-2026-08-31): UDF 覆盖率由 section() 声明累加派生，禁硬编码
 TOTAL_UDF = 0  # track unique UDFs verified
 
-def check(name, actual, expected, tol=EPS):
-    global PASS, FAIL
+def check(name, actual, expected, tol=EPS, manual=True):
+    global PASS, FAIL, MANUAL_PASS, CROSS_PASS
+    ok = False
     af = isinstance(actual, (float, np.floating, np.integer))
     ef = isinstance(expected, (float, np.floating, np.integer, int))
     if af and ef:
         if abs(float(actual) - float(expected)) < tol:
-            PASS += 1; print(f"  OK {name}: {actual}")
+            ok = True; print(f"  OK {name}: {actual}")
         else:
             FAIL += 1; print(f"  FAIL {name}: got {actual}, expected {expected} (diff={abs(float(actual)-float(expected)):.2e})")
     elif isinstance(expected, np.ndarray) or isinstance(actual, np.ndarray):
         a = np.asarray(actual, dtype=float); e = np.asarray(expected, dtype=float)
         ok = a.shape == e.shape and np.allclose(a, e, atol=tol, equal_nan=True)
-        if ok: PASS += 1; print(f"  OK {name}: shape={a.shape}")
+        if ok: print(f"  OK {name}: shape={a.shape}")
         else: FAIL += 1; print(f"  FAIL {name}: mismatch\ngot={actual}\nexp={expected}")
     elif isinstance(expected, list) and isinstance(actual, list) and len(expected) == len(actual):
         ok = all(abs(a-e)<tol if isinstance(a,(int,float)) and isinstance(e,(int,float)) else a==e for a,e in zip(actual,expected))
-        if ok: PASS += 1; print(f"  OK {name}: {actual}")
+        if ok: print(f"  OK {name}: {actual}")
         else: FAIL += 1; print(f"  FAIL {name}: got {actual}, expected {expected}")
     else:
-        if actual == expected: PASS += 1; print(f"  OK {name}: {actual}")
+        if actual == expected: ok = True; print(f"  OK {name}: {actual}")
         else: FAIL += 1; print(f"  FAIL {name}: got {actual!r}, expected {expected!r}")
+    if ok:
+        PASS += 1
+        if manual: MANUAL_PASS += 1
+        else: CROSS_PASS += 1
 
 def section(title, count):
+    global SECTION_TOTAL
+    SECTION_TOTAL += count  # P1-16: 累计声明数，避免硬编码与声明漂移
     print(f"\n{'='*60}\n  {title} ({count} UDFs)\n{'='*60}")
 
 # ── CrossValRunner integration ──────────────────────────────────────
@@ -77,6 +87,14 @@ def load_csharp_results():
             print(f"  SKIP cross-check: CrossValRunner failed:\n{proc.stderr}")
             return {}
         data = json.loads(proc.stdout)
+        # P0-3c (review-2026-08-31): manifest 的 summary 字段此前无人消费——C# 侧任何一条
+        # 执行错误（如 manifest 与 Dispatcher 失配）都会静默漏过，脚本照样 exit 0。
+        err_count = data.get("summary", {}).get("error", 0)
+        if err_count > 0:
+            print(f"  [WARN] CrossValRunner reported {err_count} C# execution error(s) — "
+                  f"manifest/Dispatcher may be out of sync (see FAILs below).")
+            global FAIL
+            FAIL += err_count
         return {r["id"]: r for r in data["results"]}
     except Exception as e:
         print(f"  SKIP cross-check: {e}")
@@ -89,9 +107,20 @@ def csharp_results():
         _csharp = load_csharp_results()
     return _csharp
 
+def unwrap(v):
+    """P0-3a (review-2026-08-31): 将 C# 序列化中的 NaN/Inf 标签（{"__nan__":true}/{"__inf__":±1}）
+    还原为 Python 的 nan/inf，便于 numpy 比较。C# 侧 +Inf 与 Python NaN 不再能互相冒充。"""
+    if isinstance(v, dict):
+        if "__nan__" in v: return float("nan")
+        if "__inf__" in v: return float("inf") if v["__inf__"] > 0 else float("-inf")
+        return {k: unwrap(x) for k, x in v.items()}
+    if isinstance(v, list):
+        return [unwrap(x) for x in v]
+    return v
+
 def cross_check(name, python_computed, tol=EPS):
     """Compare Python computation against C# CrossValRunner reference. Hard fail on mismatch."""
-    global PASS, FAIL, SKIP
+    global PASS, FAIL, SKIP, CROSS_PASS
     ref = csharp_results().get(name)
     if ref is None:
         # P1-9 (review): a missing C# reference must fail the run, not silently degrade
@@ -102,15 +131,24 @@ def cross_check(name, python_computed, tol=EPS):
     if ref["status"] != "ok":
         FAIL += 1; print(f"  FAIL {name}: C# error — {ref.get('error', 'unknown')}")
         return
-    cs_val = ref["result"]
-    # C# returns null for NaN
+    cs_val = unwrap(ref["result"]) if isinstance(ref["result"], (dict, list)) else ref["result"]
+    # C# 特殊值（NaN/±Inf）：必须与 Python 同类型同符号才算 PASS（P0-3a 修复）
+    if isinstance(cs_val, float) and (np.isnan(cs_val) or np.isinf(cs_val)):
+        if isinstance(python_computed, (float, np.floating)) and \
+           ((np.isnan(cs_val) and np.isnan(float(python_computed))) or
+            (np.isinf(cs_val) and np.isinf(float(python_computed)) and cs_val == float(python_computed))):
+            PASS += 1; CROSS_PASS += 1; print(f"  OK {name}: {cs_val}")
+        else:
+            FAIL += 1; print(f"  FAIL {name}: Python={python_computed}, C#={cs_val}")
+        return
+    # C# 真 null（不是 NaN/Inf）：Python 侧 NaN 视为匹配（向后兼容），否则 FAIL
     if cs_val is None and isinstance(python_computed, (float, np.floating)):
         if np.isnan(python_computed):
-            PASS += 1; print(f"  OK {name}: NaN (C#=null)")
+            PASS += 1; CROSS_PASS += 1; print(f"  OK {name}: NaN (C#=null)")
         else:
             FAIL += 1; print(f"  FAIL {name}: Python={python_computed}, C#=null (NaN)")
         return
-    check(name, python_computed, cs_val, tol=tol)
+    check(name, python_computed, cs_val, tol=tol, manual=False)
 
 def cross_check_dict(name, py_dict, csharp_id, keys, tol=EPS):
     """Compare Python dict entries against C# regression result dict entries."""
@@ -120,7 +158,7 @@ def cross_check_dict(name, py_dict, csharp_id, keys, tol=EPS):
         SKIP += 1
         print(f"  SKIP {name}: C# reference unavailable for {csharp_id}")
         return
-    cs = ref["result"]
+    cs = unwrap(ref["result"]) if isinstance(ref["result"], (dict, list)) else ref["result"]
     for key in keys:
         if key in py_dict and key in cs:
             cross_check(f"{name}.{key}", py_dict[key], tol=tol)
@@ -954,9 +992,14 @@ cross_check_matrix("DOE.PARETO", (2*beta_doe[1:])[order_doe].reshape(-1, 1))
 # FINAL
 # ========================================================================
 # Count unique UDFs verified:
-udf_count = (34 + 19 + 7 + 16 + 34 + 25 + 9 + 22 + 8 + 8 + 4 + 3 + 22 + 9 + 4)
+# P1-16 (review-2026-08-31): udf_count 原为写死的算术常量（与 15 处 section() 声明合计 221 矛盾，
+# README 声称 224——三个数字同时存在，删半个 section 照样打印 224）。改为从 section() 声明累加派生。
+udf_count = SECTION_TOTAL
 print(f"\n{'='*60}")
 print(f"  RESULTS: {PASS} passed, {FAIL} failed, {SKIP} skipped ({(PASS+FAIL)} checks)")
+# P0-3b (review-2026-08-31): 双通道分别汇报——check() 纯 Python 自校验不再混入"已验证"假象
+print(f"    └ manual-only (Python self-verify): {MANUAL_PASS}")
+print(f"    └ cross-validated (vs C#):         {CROSS_PASS}")
 # P2-5 (review): project has 236 UDFs; the 12 *_ASYNC variants share Core methods
 # (verified indirectly), LINALG.LU_P is covered via reconstruction.
 print(f"  UDF coverage: {udf_count} of 236 UDFs covered (sync variants)")

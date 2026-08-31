@@ -32,7 +32,7 @@ param(
 # "ure/src/..." 而全部失配（test_verify_docs 场景 A 在 CI 上复现）。
 $RepoRoot = [System.IO.Path]::GetFullPath($RepoRoot)
 $ErrorActionPreference = "Continue"
-$script:pass = 0; $script:fail = 0
+$script:pass = 0; $script:fail = 0; $script:skip = 0
 
 function Read-Utf8 {
     param([string]$Path)
@@ -46,11 +46,12 @@ function Check {
     else { Write-Host "  [FAIL] ${Label}: ${Result}"; $script:fail++ }
 }
 
-# SKIP 分支（如无 git 环境）：不计数失败，仅提示
+# SKIP 分支（如无 git 环境）：P2-29 (review-2026-08-31) 不再计入 pass——
+# 原实现把 SKIP 计为 pass，"Pass: 23" 含跳过项会掩盖未执行的检查。单列 skip 计数。
 function Check-Skip {
     param([string]$Label, [string]$Reason)
     Write-Host "  [SKIP] $Label ($Reason)"
-    $script:pass++
+    $script:skip++
 }
 
 # ---------- 1. UDF 数量 ----------
@@ -302,10 +303,19 @@ foreach ($rel in $proseFiles) {
     if (-not $text) { continue }
     $isModuleLevel = ($rel -eq "docs/cross-validation.md")
     $isHistorical = ($rel -eq "CHANGELOG.md")
-    # 模式 1：`N UDF`（如 "236 UDF"）——除模块级/历史文件外强制执行 == codeUdfs
+    # 模式 1：`N UDF`（如 "236 UDF"）与中文 `N 个 UDF`——除模块级/历史文件外强制执行 == codeUdfs
+    # P0-4 (review-2026-08-31)：原正则 `(\d+)\s+UDF` 匹配不上中文「236 个 UDF」（中间隔着
+    # 「个」），中文 README 计数漂移全绿通过（负向注入 236→999 仅英文被拦）。
     if (-not $isModuleLevel -and -not $isHistorical) {
-        foreach ($m in [regex]::Matches($text, '(\d+)\s+UDF')) {
+        foreach ($m in [regex]::Matches($text, '(\d+)\s*(?:个)?\s*UDF')) {
             if ([int]$m.Groups[1].Value -ne $codeUdfs) { $proseMismatches += "${rel}: '$($m.Value)'" }
+        }
+        # 分数形式 `X/Y UDF`（README "224/236 个 UDF"）：分母是总数声明必须 == codeUdfs，
+        # 分子是覆盖数只要求 ≤ codeUdfs（两者都验，防分子分母任一侧漂移）。
+        foreach ($m in [regex]::Matches($text, '(\d+)/(\d+)\s*(?:个)?\s*UDF')) {
+            $num = [int]$m.Groups[1].Value; $den = [int]$m.Groups[2].Value
+            if ($den -ne $codeUdfs) { $proseMismatches += "${rel}: 分母 '$($m.Value)' ($den != $codeUdfs)" }
+            if ($num -gt $codeUdfs) { $proseMismatches += "${rel}: 分子 '$($m.Value)' ($num > $codeUdfs)" }
         }
     }
     # 模式 2：`UDF 总数 X→Y`（CHANGELOG 历史记录，断言终值）
@@ -373,7 +383,25 @@ foreach ($f in $srcFiles) {
 if ($undeclaredFiles.Count -eq 0) { Check "src files declared in tree ($($srcFiles.Count))" "OK" }
 else { Check "src files declared in tree" "undeclared: $($undeclaredFiles -join ', ')" }
 
+# ---------- 19. 文档版本头 == Directory.Build.props <Version> ----------
+# review-2026-08-31（深度审查 P1-14）：specification/user-manual/cross-validation 版本头曾停在
+# 2.2.1（实际 2.2.3），CHANGELOG 声称"已同步"而 v2.2.2/v2.2.3 两次发版都没同步，且原 18 项检查
+# 无一覆盖（检查 5 只查 MathNet 版本，检查 10 只查 CHANGELOG/tag）。
+$propsVersion = [regex]::Match((Read-Utf8 (Join-Path $RepoRoot "src/Directory.Build.props")), '<Version>([^<]+)</Version>').Groups[1].Value
+$verMismatches = @()
+foreach ($vf in @("rules/specification.md", "rules/user-manual.md", "docs/cross-validation.md")) {
+    $vt = Read-Utf8 (Join-Path $RepoRoot $vf)
+    if (-not $vt) { continue }
+    # specification「版本：v2.2.3」/ user-manual「**版本**：2.2.3」/ cross-validation「ExcelFormulaLabs v2.2.3」
+    $m = [regex]::Match($vt, '(?:版本|v)\s*[:：*]*\s*(v?\d+\.\d+\.\d+)')
+    if (-not $m.Success -or $m.Groups[1].Value.TrimStart('v') -ne $propsVersion) {
+        $verMismatches += "${vf}: '$($m.Groups[1].Value)' (props=$propsVersion)"
+    }
+}
+if ($verMismatches.Count -eq 0) { Check "Doc version headers == $propsVersion" "OK" }
+else { Check "Doc version headers" ($verMismatches -join ' | ') }
+
 # ---------- 汇总 ----------
 Write-Host ""
-Write-Host "=== Pass: $($script:pass)  Fail: $($script:fail) ==="
+Write-Host "=== Pass: $($script:pass)  Fail: $($script:fail)  Skip: $($script:skip) ==="
 if ($script:fail -gt 0) { exit 1 } else { exit 0 }
