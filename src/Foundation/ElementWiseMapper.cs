@@ -358,7 +358,7 @@ namespace ExcelFormulaLabs.Foundation
             var result = new object[arr.Length];
             for (int i = 0; i < arr.Length; i++)
                 result[i] = MapSingleCell(scalar, arr[i], mapper);
-            if (was2D) return ReshapeFlatToOriginal2D(result, orig1, orig2);
+            if (was2D) return ReshapeFlatToOriginal2D(result, orig1!, orig2!);
             return result;
         }
 
@@ -369,7 +369,7 @@ namespace ExcelFormulaLabs.Foundation
             var result = new object[arr.Length];
             for (int i = 0; i < arr.Length; i++)
                 result[i] = MapSingleCell(arr[i], scalar, mapper);
-            if (was2D) return ReshapeFlatToOriginal2D(result, orig1, orig2);
+            if (was2D) return ReshapeFlatToOriginal2D(result, orig1!, orig2!);
             return result;
         }
 
@@ -380,7 +380,7 @@ namespace ExcelFormulaLabs.Foundation
             var result = new object[flat1.Length];
             for (int i = 0; i < flat1.Length; i++)
                 result[i] = MapSingleCell(flat1[i], flat2[i], mapper);
-            if (was2D) return ReshapeFlatToOriginal2D(result, orig1, orig2);
+            if (was2D) return ReshapeFlatToOriginal2D(result, orig1!, orig2!);
             return result;
         }
 
