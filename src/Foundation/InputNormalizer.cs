@@ -275,7 +275,11 @@ namespace ExcelFormulaLabs.Foundation
             {
                 if (double.IsNaN(d) || double.IsInfinity(d)) return 0; // L1 NaN/Inf guard
                 double rd = Math.Round(d);
-                if (rd < long.MinValue || rd > long.MaxValue) return 0; // L2 range guard
+                // review 2026-08-31（深度审查 P2-8）：`rd > long.MaxValue` 有 2⁶³ 漏洞——
+                // (double)long.MaxValue 不可精确表示，舍入为 2⁶³ = 9.223372036854776E18，
+                // 于是 `2⁶³ > 2⁶³` 恒 false → 守卫绕过 → (long)rd 得 long.MinValue（net8 回绕/
+                // net48 未定义，双 TFM 行为不一致）。用 2⁶³ 字面量严格小于比较。
+                if (rd < long.MinValue || rd >= 9.223372036854776E18) return 0; // L2 range guard
                 return (long)rd;
             }
             if (value is string s)
@@ -288,7 +292,8 @@ namespace ExcelFormulaLabs.Foundation
                 {
                     if (double.IsNaN(dVal) || double.IsInfinity(dVal)) return 0; // L1 NaN/Inf guard
                     double rd = Math.Round(dVal);
-                    if (rd < long.MinValue || rd > long.MaxValue) return 0; // L2 range guard
+                    // review 2026-08-31（深度审查 P2-8）：同 double 分支，2⁶³ 字面量严格比较。
+                    if (rd < long.MinValue || rd >= 9.223372036854776E18) return 0; // L2 range guard
                     return (long)rd;
                 }
                 return 0;
@@ -439,13 +444,34 @@ namespace ExcelFormulaLabs.Foundation
             if (input is object[] arr1D)
                 return arr1D;   // Already 1D — pass through
 
-            if (input is Array typedArr && typedArr.Rank == 1)
+            if (input is Array typedArr)
             {
-                // e.g. int[], double[], string[] → convert to object[]
-                var result = new object[typedArr.Length];
+                if (typedArr.Rank == 1)
+                {
+                    // e.g. int[], double[], string[] → convert to object[]
+                    var result = new object[typedArr.Length];
+                    for (int i = 0; i < typedArr.Length; i++)
+                        result[i] = typedArr.GetValue(i)!;
+                    return result;
+                }
+                // review 2026-08-31（深度审查 P2-17）：Rank≥2 强类型数组（如 double[,]）原落入
+                // scalar 分支被包装成单元素数组 → 下游塌缩成单个 NaN 或 "Cannot reshape" 报错。
+                // 按行优先展平：Array.GetValue(int) 只支持 1D，多维必须用 GetValue(int[])
+                // 逐维索引转换（最右维最快变化，与 object[,] 分支一致）。
+                var flat = new object[typedArr.Length];
+                var idxArr = new int[typedArr.Rank];
                 for (int i = 0; i < typedArr.Length; i++)
-                    result[i] = typedArr.GetValue(i)!;
-                return result;
+                {
+                    int rem = i;
+                    for (int d = typedArr.Rank - 1; d >= 0; d--)
+                    {
+                        int dim = typedArr.GetLength(d);
+                        idxArr[d] = rem % dim;
+                        rem /= dim;
+                    }
+                    flat[i] = typedArr.GetValue(idxArr)!;
+                }
+                return flat;
             }
 
             // Scalar → wrap as single-element array

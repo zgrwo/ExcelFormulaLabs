@@ -223,7 +223,10 @@ namespace ExcelFormulaLabs.Foundation
                 return $"Numeric:{d.ToString("G17", CultureInfo.InvariantCulture)}";
             }
 
-            return $"Object:{value.GetType().Name}:{value.GetHashCode():X8}";
+            // review 2026-08-31（深度审查 P2-16）：原 `GetHashCode()` 在 .NET 进程内随机化
+            // （string 每进程不同 seed）→ SafeKey 结果不可复现，ARR.UNIQUE 去重结果随进程漂移。
+            // 改为 ToString（确定性）；数值/日期/数组等已在上方分支精确处理，此处只剩自定义对象。
+            return $"Object:{value.GetType().Name}:{value.ToString() ?? ""}";
         }
 
         // ── Private helpers ──────────────────────────────────────────────

@@ -60,35 +60,43 @@ namespace ExcelFormulaLabs.Foundation
                     InsertionSort(arr, lo, hi, ascending, mode);
                     return;
                 }
-                int pivot = Partition(arr, lo, hi, ascending, mode);
-                // Tail-recursion: recurse into smaller partition first
-                if (pivot - lo < hi - pivot)
+                // review 2026-08-31（深度审查 P1-2）：Lomuto 分区在全等值/高重复输入下
+                // 退化为 O(n²)——全等值 20 万实测 152 秒（复刻计时）。改为 3-way（Dutch
+                // national flag）分区，把与 pivot 相等的元素集中到中间段一次跳过。
+                var (lt, gt) = Partition3(arr, lo, hi, ascending, mode);
+                // Tail-recursion: recurse into smaller side first, skip the equal band [lt, gt]
+                if (lt - lo < hi - gt)
                 {
-                    QuickSort(arr, lo, pivot - 1, ascending, mode);
-                    lo = pivot + 1;
+                    QuickSort(arr, lo, lt - 1, ascending, mode);
+                    lo = gt + 1;
                 }
                 else
                 {
-                    QuickSort(arr, pivot + 1, hi, ascending, mode);
-                    hi = pivot - 1;
+                    QuickSort(arr, gt + 1, hi, ascending, mode);
+                    hi = lt - 1;
                 }
             }
         }
 
-        private static int Partition<T>(T[] arr, int lo, int hi,
+        /// <summary>3-way partition (Dutch national flag): returns (lt, gt) such that
+        /// [lo, lt) &lt; pivot, [lt, gt] == pivot, (gt, hi] &gt; pivot.</summary>
+        private static (int lt, int gt) Partition3<T>(T[] arr, int lo, int hi,
             bool ascending, ComparerMode mode)
         {
             int mid = lo + (hi - lo) / 2;
             Swap(arr, mid, hi);
-            int i = lo;
-            for (int j = lo; j < hi; j++)
+            int lt = lo, i = lo, gt = hi;
+            T pivot = arr[hi];
+            while (i <= gt)
             {
-                int cmp = CompareElements(arr[j], arr[hi], mode);
-                bool shouldSwap = ascending ? cmp < 0 : cmp > 0;
-                if (shouldSwap) { Swap(arr, i, j); i++; }
+                int cmp = CompareElements(arr[i], pivot, mode);
+                bool less = ascending ? cmp < 0 : cmp > 0;
+                bool greater = ascending ? cmp > 0 : cmp < 0;
+                if (less) { Swap(arr, lt, i); lt++; i++; }
+                else if (greater) { Swap(arr, i, gt); gt--; }
+                else i++;
             }
-            Swap(arr, i, hi);
-            return i;
+            return (lt, gt);
         }
 
         private static void InsertionSort<T>(T[] arr, int lo, int hi,
@@ -188,12 +196,17 @@ namespace ExcelFormulaLabs.Foundation
         public static int IndexOf<T>(T[] array, T value, double tolerance = 1e-12)
         {
             if (array == null) return -1;
-            bool isFloat = typeof(T) == typeof(double) || typeof(T) == typeof(float);
+            // review 2026-08-31（深度审查 P1-3）：原 `typeof(T) == typeof(double)` 判断在
+            // T=object（ARR.INDEXOF / ARR.CONTAINS 的实际调用路径，ArrayCore.IndexOf 传 object[]）
+            // 下恒为 false → 1e-12 容差分支是死代码，退化为装箱 Equals 精确比较：
+            // {0.1+0.2} 查 0.3 → -1；整型 1 查浮点 1.0 → 找不到。改为运行时逐元素探测——
+            // 元素与目标值均为数值类型时走容差路径（文本 "2" 不匹配数值 2，保持原 Equals 语义）。
+            bool valueIsNumeric = value is double or float or int or long;
             for (int i = 0; i < array.Length; i++)
             {
                 if (array[i] == null && value == null) return i;
                 if (array[i] == null || value == null) continue;
-                if (isFloat)
+                if (valueIsNumeric && array[i] is double or float or int or long)
                 {
                     double dA = Convert.ToDouble(array[i], System.Globalization.CultureInfo.InvariantCulture);
                     double dB = Convert.ToDouble(value, System.Globalization.CultureInfo.InvariantCulture);
@@ -201,6 +214,14 @@ namespace ExcelFormulaLabs.Foundation
                     // otherwise Math.Abs(NaN - NaN) = NaN < tolerance = false → never found.
                     if (double.IsNaN(dA) && double.IsNaN(dB)) return i;
                     if (double.IsNaN(dA) || double.IsNaN(dB)) continue;
+                    // P2-13 (review-2026-08-31): same-sign Infinity equals itself —
+                    // Math.Abs(Inf − Inf) = NaN < tolerance is false → would never match.
+                    // Cross-sign Infinity is not equal. Mirrors ComparisonUtils.ValuesEqual.
+                    if (double.IsInfinity(dA) || double.IsInfinity(dB))
+                    {
+                        if (dA == dB) return i;
+                        continue;
+                    }
                     if (Math.Abs(dA - dB) < tolerance) return i;
                 }
                 else if (array[i]!.Equals(value)) return i;
@@ -255,34 +276,40 @@ namespace ExcelFormulaLabs.Foundation
                     InsertionSortIndices(values, idx, lo, hi, ascending, mode);
                     return;
                 }
-                int pivot = PartitionIndices(values, idx, lo, hi, ascending, mode);
-                if (pivot - lo < hi - pivot)
+                // review-2026-08-31（深度审查 P1-2）：Lomuto 分区在全等值输入下 O(n²)——
+                // argsort 路径（ARR.ARGSORT）与值排序同模式，一并改为 3-way 分区。
+                var (lt, gt) = PartitionIndices3(values, idx, lo, hi, ascending, mode);
+                if (lt - lo < hi - gt)
                 {
-                    QuickSortIndices(values, idx, lo, pivot - 1, ascending, mode);
-                    lo = pivot + 1;
+                    QuickSortIndices(values, idx, lo, lt - 1, ascending, mode);
+                    lo = gt + 1;
                 }
                 else
                 {
-                    QuickSortIndices(values, idx, pivot + 1, hi, ascending, mode);
-                    hi = pivot - 1;
+                    QuickSortIndices(values, idx, gt + 1, hi, ascending, mode);
+                    hi = lt - 1;
                 }
             }
         }
 
-        private static int PartitionIndices<T>(T[] values, int[] idx,
+        /// <summary>3-way partition for argsort: [lo, lt) &lt; pivot, [lt, gt] == pivot, (gt, hi] &gt; pivot.</summary>
+        private static (int lt, int gt) PartitionIndices3<T>(T[] values, int[] idx,
             int lo, int hi, bool ascending, ComparerMode mode)
         {
             int mid = lo + (hi - lo) / 2;
             Swap(idx, mid, hi);
-            int i = lo;
-            for (int j = lo; j < hi; j++)
+            int lt = lo, i = lo, gt = hi;
+            T pivot = values[idx[hi]];
+            while (i <= gt)
             {
-                int cmp = CompareElements(values[idx[j]], values[idx[hi]], mode);
-                bool shouldSwap = ascending ? cmp < 0 : cmp > 0;
-                if (shouldSwap) { Swap(idx, i, j); i++; }
+                int cmp = CompareElements(values[idx[i]], pivot, mode);
+                bool less = ascending ? cmp < 0 : cmp > 0;
+                bool greater = ascending ? cmp > 0 : cmp < 0;
+                if (less) { Swap(idx, lt, i); lt++; i++; }
+                else if (greater) { Swap(idx, i, gt); gt--; }
+                else i++;
             }
-            Swap(idx, i, hi);
-            return i;
+            return (lt, gt);
         }
 
         private static void InsertionSortIndices<T>(T[] values, int[] idx,
