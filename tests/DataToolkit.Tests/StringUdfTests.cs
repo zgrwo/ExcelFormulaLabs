@@ -377,16 +377,16 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Trunc_zero_length() => StringUdf.UDF_STR_TRUNC("hello", 0, "").Should().Be("");
         [Fact] public void Trunc_unicode() => StringUdf.UDF_STR_TRUNC("你好世界", 3, "").Should().Be("你好世");
 
-        [Fact] public void Sw_null_first() => StringUdf.UDF_STR_SW(null!, "hello", false).Should().Be(ExcelEmpty.Value);
-        [Fact] public void Ew_null_first() => StringUdf.UDF_STR_EW(null!, "world", false).Should().Be(ExcelEmpty.Value);
-        [Fact] public void Cnt_null_first() => StringUdf.UDF_STR_CNT(null!, "a", false).Should().Be(ExcelEmpty.Value);
-        [Fact] public void Cpfx_null_first() => StringUdf.UDF_STR_CPFX(null!, "hello", false).Should().Be(ExcelEmpty.Value);
+        [Fact] public void Sw_null_first() => StringUdf.UDF_STR_SW(null!, "hello", false).Should().BeNull();
+        [Fact] public void Ew_null_first() => StringUdf.UDF_STR_EW(null!, "world", false).Should().BeNull();
+        [Fact] public void Cnt_null_first() => StringUdf.UDF_STR_CNT(null!, "a", false).Should().BeNull();
+        [Fact] public void Cpfx_null_first() => StringUdf.UDF_STR_CPFX(null!, "hello", false).Should().BeNull();
 
         [Fact] public void Cpfx_case_insensitive() => StringUdf.UDF_STR_CPFX("Hello", "hello", false).Should().Be("Hello");
 
         [Fact] public void Rnd_negative_length() => StringUdf.UDF_STR_RND(-5, "").Should().Be(ExcelError.Value);
 
-        [Fact] public void Lev_null_first() => StringUdf.UDF_STR_LEV(null!, "hello").Should().Be(ExcelEmpty.Value);
+        [Fact] public void Lev_null_first() => StringUdf.UDF_STR_LEV(null!, "hello").Should().BeNull();
         [Fact] public void Lev_array() { var r=(object[])StringUdf.UDF_STR_LEV(new object[]{"kitten","cat"}, "sitten"); ((long)r[0]).Should().Be(1); ((long)r[1]).Should().Be(5); }
 
         [Fact] public void Join_null_delimiter() => StringUdf.UDF_STR_JOIN(null!, false, new object[]{"a","b","c"}).Should().Be("abc");
@@ -399,19 +399,19 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
 
         // STR.FORMAT strings ignore numeric-only format specifiers (e.g. "D4" on string → passthrough).
         [Fact] public void Fmt_string_ignore_d4() => StringUdf.UDF_STR_FMT("42", "D4").Should().Be("42");
-        [Fact] public void Fmt_null_value() => StringUdf.UDF_STR_FMT(null!, "D4").Should().Be(ExcelEmpty.Value);
+        [Fact] public void Fmt_null_value() => StringUdf.UDF_STR_FMT(null!, "D4").Should().BeNull();
         [Fact] public void Fmt_currency_passthrough() => StringUdf.UDF_STR_FMT("100", "C").Should().Be("100");
         [Fact] public void Fmt_array() { var r=(object[])StringUdf.UDF_STR_FMT(new object[]{"42","100"}, "D4"); ((string)r[0]).Should().Be("42"); ((string)r[1]).Should().Be("100"); }
         // Numeric format specifiers now work with actual numeric types (double/int)
         [Fact] public void Fmt_double_N2() => StringUdf.UDF_STR_FMT(123.456, "N2").Should().Be("123.46");
-        [Fact] public void Fmt_double_P0() => StringUdf.UDF_STR_FMT(0.25, "P0").Should().Be("25%");
+        [Fact] public void Fmt_double_P0() => StringUdf.UDF_STR_FMT(0.25, "P0").Should().Be("25 %"); // review-2026-08-31: InvariantCulture 的 .NET P0 标准输出（原 zh-CN locale 恰好为 "25%"）
         [Fact] public void Fmt_double_C() => ((string)StringUdf.UDF_STR_FMT(1234.5, "C")).Should().Contain("1,234.50");
         [Fact] public void Fmt_int_D4() => StringUdf.UDF_STR_FMT(42, "D4").Should().Be("0042");
         [Fact] public void Fmt_composite_format() => StringUdf.UDF_STR_FMT("world", "{0} hello").Should().Be("world hello");
         [Fact] public void Fmt_double_incompatible_format() => StringUdf.UDF_STR_FMT(42.0, "D4").Should().Be("42");  // D4 is integral-only, falls back to ToString
 
-        [Fact] public void Coal_primary_null() => StringUdf.UDF_STR_COAL(null!, "fallback").Should().Be(ExcelEmpty.Value);
-        [Fact] public void Coal_both_null() => StringUdf.UDF_STR_COAL(null!, null!).Should().Be(ExcelEmpty.Value);
+        [Fact] public void Coal_primary_null() => StringUdf.UDF_STR_COAL(null!, "fallback").Should().BeNull();
+        [Fact] public void Coal_both_null() => StringUdf.UDF_STR_COAL(null!, null!).Should().BeNull();
         [Fact] public void Coal_array() { var r=(object[])StringUdf.UDF_STR_COAL(new object[]{"a",null,"b"}, "fallback"); ((string)r[0]).Should().Be("a"); r[1].Should().BeNull(); ((string)r[2]).Should().Be("b"); }
 
         // Default behaviour: omitted match_case → case-sensitive (Core default cs=true)

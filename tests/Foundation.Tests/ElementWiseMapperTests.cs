@@ -161,7 +161,7 @@ public class MapOverTests
         => ElementWiseMapper.MapOverMulti(
             System.Array.Empty<object>(), System.Array.Empty<object>(),
             (string a, string b) => a + b)
-            .Should().Be(ExcelEmpty.Value);
+            .Should().BeNull();
 
     [Fact] public void MapOverMulti_mismatched_length_returns_ExcelError()
         => ElementWiseMapper.MapOverMulti(

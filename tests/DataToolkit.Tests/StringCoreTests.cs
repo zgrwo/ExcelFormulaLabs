@@ -248,5 +248,37 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void LeftOf_negative_n_exceeds_no_throw() => StringCore.LeftOf("aa", "a", -3).Should().Be("aa");
         [Fact] public void RightOf_negative_n_exceeds_no_throw() => StringCore.RightOf("aa", "a", -3).Should().Be("aa");
         [Fact] public void LeftOf_negative_n_at_index_zero_no_throw() => StringCore.LeftOf("aba", "a", -3).Should().Be("aba");
+
+
+    [Fact] public void Levenshtein_below_limit_ok()
+    {
+        StringCore.LevenshteinDistance(new string('a', 2000), new string('b', 2000)).Should().Be(2000);
     }
+
+    [Fact] public void Soundex_hardcoded_expected()
+    {
+        // P2-19：原 Soundex_same_sounding 是自校验（两参都来自被测实现）——硬编码期望值兜底。
+        StringCore.Soundex("Rupert").Should().Be("R163");
+        StringCore.Soundex("Robert").Should().Be("R163");
+    }
+
+    [Fact] public void FormatValue_invariant_culture()
+    {
+        // P1-19：STR.FMT 必须与 locale 无关（de-DE 下 "N2" 原为 "123,46"）。切 culture 断言不变。
+        var prev = System.Threading.Thread.CurrentThread.CurrentCulture;
+        try
+        {
+            System.Threading.Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo("de-DE");
+            StringCore.FormatValue(123.456, "N2").Should().Be("123.46");
+            StringCore.FormatValue(0.25, "P0").Should().Be("25 %"); // InvariantCulture .NET 标准
+        }
+        finally { System.Threading.Thread.CurrentThread.CurrentCulture = prev; }
+    }
+
+    [Fact] public void NthIdx_empty_separator_no_throw()
+    {
+        // P2-18：空分隔符 + n > len+1 原抛 ArgumentOutOfRangeException（IndexOutOfRange）。
+        StringCore.LeftOf("abc", "", 5).Should().Be("abc");
+    }
+}
 }

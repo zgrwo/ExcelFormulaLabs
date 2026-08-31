@@ -239,5 +239,28 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void CrossVal_IsoWeek_2023_01_01() { var d = new DateTime(2023, 1, 1); DateTimeCore.IsoWeekNum(d).Should().Be(52); DateTimeCore.IsoYear(d).Should().Be(2022); }
         [Fact] public void CrossVal_IsoWeek_2020_12_31() { var d = new DateTime(2020, 12, 31); DateTimeCore.IsoWeekNum(d).Should().Be(53); DateTimeCore.IsoYear(d).Should().Be(2020); }
         [Fact] public void CrossVal_IsoWeek_2028_12_31() { var d = new DateTime(2028, 12, 31); DateTimeCore.IsoWeekNum(d).Should().Be(52); DateTimeCore.IsoYear(d).Should().Be(2028); }
+
+    // ── review-2026-08-31：P1-12 回归守卫 ──
+    [Fact] public void DaysInMonth_out_of_range_month_throws()
+    {
+        // P1-12：DT.DIM(2026, 4294967297) 原静默截断 (int)4294967297L==1 → 返回 31（1 月天数）。
+        new Action(() => DateTimeCore.DaysInMonth(2026, 4294967297L))
+            .Should().Throw<ArgumentOutOfRangeException>();
     }
+
+    [Fact] public void WorkdaysBetween_reversed_dates_returns_negative()
+    {
+        // P1-12：日期倒置原静默返回 0（守卫只查上界）。Excel NETWORKDAYS 契约：倒置返回负数（对称）。
+        var from = new DateTime(2026, 3, 20);   // 周五
+        var to = new DateTime(2026, 3, 2);      // 早于 from
+        DateTimeCore.WorkdaysBetween(from, to).Should().Be(-DateTimeCore.WorkdaysBetween(to, from));
+    }
+
+    [Fact] public void AddWorkdays_long_min_value_throws()
+    {
+        // P1-12：Math.Abs(long.MinValue) 抛 OverflowException（误导性异常）——先判越界。
+        new Action(() => DateTimeCore.AddWorkdays(new DateTime(2026, 1, 1), long.MinValue))
+            .Should().Throw<ArgumentOutOfRangeException>();
+    }
+}
 }

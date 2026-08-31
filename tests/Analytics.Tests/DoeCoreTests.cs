@@ -157,5 +157,32 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void Full_qty_sum_overflow_reports_too_many_factors()
             => new Action(() => DoeCore.PlanFull(int.MaxValue, 2, int.MaxValue, 2, false, null))
                 .Should().Throw<ArgumentException>().WithMessage("*maximum supported*");
+
+    // ── review-2026-08-31：P1-7 回归守卫 ──
+    [Fact] public void Taguchi_2level_main_effect_columns_clean()
+    {
+        // P1-7：2 水平田口因子必须优先落在主效应列。L8（5 因子）列序应为 A,B,C,ABC,AB,…——
+        // 前 3 列（主效应）不得是任何两列的 ±乘积（修复前第 3 列即 AB 交互列，因子 3 与 1×2 完全别名）。
+        var plan = DoeCore.PlanTaguchi(5, 2, 0, 2, false, null);
+        int runs = plan.GetLength(0) - 1, cols = plan.GetLength(1);
+        var f = new double[runs, cols - 2];
+        for (int r = 0; r < runs; r++)
+            for (int c = 0; c < cols - 2; c++)
+                f[r, c] = Convert.ToDouble(plan[r + 1, 2 + c]);
+        // ±1 编码下交互列 = ±(两列乘积)；主效应列（前 3 列）不可能是其他两列的 ±乘积。
+        for (int c = 0; c < Math.Min(3, cols - 2); c++)
+            for (int a = 0; a < c; a++)
+                for (int b = a + 1; b < c; b++)
+                {
+                    bool pos = true, neg = true;
+                    for (int r = 0; r < runs; r++)
+                    {
+                        if (Math.Abs(f[r, c] - f[r, a] * f[r, b]) > 1e-9) pos = false;
+                        if (Math.Abs(f[r, c] + f[r, a] * f[r, b]) > 1e-9) neg = false;
+                    }
+                    bool aliased = pos || neg;
+                    aliased.Should().BeFalse($"主效应列 {c} 与列 {a}×{b} 别名");
+                }
     }
+}
 }

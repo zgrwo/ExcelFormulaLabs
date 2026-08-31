@@ -613,5 +613,34 @@ namespace ExcelFormulaLabs.Analytics.Tests
         // ── Release-review regression guards ──────────────────────────────────
         [Fact] public void CovarianceP_single_element_returns_zero() => StatsCore.CovarianceP(new[] { 5.0 }, new[] { 3.0 }).Should().Be(0.0);
         [Fact] public void Range_extreme_values_overflow_returns_NaN() => StatsCore.Range(new[] { -double.MaxValue, double.MaxValue }).Should().Be(double.NaN);
+
+    // ── review-2026-08-31：P1-4 / P1-5 回归守卫 ──
+    [Fact] public void CorrelationMatrix_overflow_column_diagonal_is_NaN()
+    {
+        // P1-4：{1e308,1} 列溢出 → sd=Inf → 对角线必须 NaN。修复前 r[0,0]=1 而 r[0,1]=NaN
+        // （自相矛盾矩阵，下游无法察觉）。
+        var d = new double[,] { { 1e308, 1 }, { 1e308, 2 }, { 1e308, 3 } };
+        var r = StatsCore.CorrelationMatrix(d);
+        double.IsNaN(r[0, 0]).Should().BeTrue();
+        double.IsNaN(r[0, 1]).Should().BeTrue();
+        r[1, 1].Should().Be(1.0);  // 列 1（1,2,3）正常，对角线为 1
     }
+
+    [Fact] public void TTestOneSample_small_scale_scale_invariant()
+    {
+        // P1-5：t 检验是尺度不变量——1e-9 量纲数据 p 值应与 1 量纲相同。修复前绝对阈值
+        // `va < 1e-15` 把 va=1e-18 误判常量 → 返回 NaN（真值 p≈0.478）。
+        double pSmall = StatsCore.TTestOneSample(new[] { 1e-9, 2e-9, 3e-9 }, 1.5e-9);
+        double pLarge = StatsCore.TTestOneSample(new[] { 1.0, 2.0, 3.0 }, 1.5);
+        double.IsNaN(pSmall).Should().BeFalse();
+        pSmall.Should().BeApproximately(pLarge, 1e-9);
+    }
+
+    [Fact] public void Product_overflow_safe_ordering()
+    {
+        // P2-11：朴素左折叠顺序依赖——Product(1e300,1e300,1e-300) → Inf→NaN（真值 1e300）。
+        // 按 |x| 升序相乘后应返回 1e300。
+        StatsCore.Product(new[] { 1e300, 1e300, 1e-300 }).Should().BeApproximately(1e300, 1e285);
+    }
+}
 }

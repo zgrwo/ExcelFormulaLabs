@@ -255,12 +255,18 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         // SANDBOX EDGE CASES
         // =====================================================================
 
+        // P2-22 (review-2026-08-31): 10 处 sandbox 测试中 9 处有 finally 复位，唯独此条漏了
+        // （共享静态状态泄漏到后续测试）。
         [Fact] public void Sandbox_null_root_allows_access()
         {
             FileSystemCore.ResetForTesting();
-            // Default config has Root=null — unrestricted
-            var act = () => FileSystemCore.ValidatePath(@"C:\any\path");
-            act.Should().NotThrow();
+            try
+            {
+                // Default config has Root=null — unrestricted
+                var act = () => FileSystemCore.ValidatePath(@"C:\any\path");
+                act.Should().NotThrow();
+            }
+            finally { FileSystemCore.ResetForTesting(); }
         }
 
         [Fact] public void Sandbox_path_exactly_equals_root()
@@ -424,6 +430,13 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
                 };
                 using var proc = System.Diagnostics.Process.Start(psi)!;
                 proc.WaitForExit(5000);
+                // P2-23 (review-2026-08-31): mklink /J 依赖权限，受限 CI 下可能失败——
+                // 此时 junction 未创建，后续断言无意义。环境敏感测试降级为跳过而非 FAIL。
+                if (proc.ExitCode != 0 || !System.IO.Directory.Exists(link))
+                {
+                    FileSystemCore.ResetForTesting();
+                    return;   // junction 创建失败 → 跳过（非 CI 阻塞）
+                }
                 FileSystemCore.ResetForTesting();
                 FileSystemCore.Initialize(new SandboxConfig(root));
                 // Traversing the junction should be blocked by the reparse-point check

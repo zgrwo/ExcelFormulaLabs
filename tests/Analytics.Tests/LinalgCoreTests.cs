@@ -362,5 +362,33 @@ namespace ExcelFormulaLabs.Analytics.Tests
         private static readonly double[,] NaNM = { { double.NaN, 1 }, { 1, 1 } };
         private static readonly double[,] InfM = { { 1.0, 1 }, { 1, double.PositiveInfinity } };
         private static readonly double[,] I2 = { { 1, 0 }, { 0, 1 } };
+
+    // ── review-2026-08-31：P1-6 / P1-1 回归守卫 ──
+    [Fact] public void Rank_relative_tolerance_small_scale()
+    {
+        // P1-6：diag(1e-11,1e-11) 真秩 2。UDF 默认容差改为 0（相对，numpy 约定）后应返回 2；
+        // 修复前默认绝对 1e-10 → 0（错）。
+        var m = new double[,] { { 1e-11, 0.0 }, { 0.0, 1e-11 } };
+        LinalgCore.Rank(m, tol: 0).Should().Be(2);
     }
+
+    [Fact] public void Lu_docs_convention_A_equals_PLU()
+    {
+        // P1-1：锁死实现约定 A = P·L·U（文档已同步为 A = P*L*U）。
+        // 若实现漂移到 PA=LU（置换非对合时），正向后向断言同时锁定。
+        var M = new double[,] { { 0, 2, 1 }, { 1, 0, 3 }, { 4, 5, 6 } };
+        var (L, U, P) = LinalgCore.Lu(M);
+        DiffFro(M, LinalgCore.MatMul(P, LinalgCore.MatMul(L, U))).Should().BeApproximately(0.0, 1e-9);
+        // 文档约定反向断言：P·A ≠ L·U（按 PA=LU 使用会得错误行序）
+        DiffFro(LinalgCore.MatMul(P, M), LinalgCore.MatMul(L, U)).Should().BeGreaterThan(1e-6);
+    }
+
+    [Fact] public void NormFrobenius_large_scale_no_overflow()
+    {
+        // P2-35：MathNet FrobeniusNorm 朴素平方和溢出（[[1e200,1e200]] → Inf）；
+        // 尺度化实现应返回 1.4142135623730951e200。
+        var m = new double[,] { { 1e200, 1e200 } };
+        LinalgCore.NormFrobenius(m).Should().BeApproximately(1.4142135623730951e200, 1e185);
+    }
+}
 }

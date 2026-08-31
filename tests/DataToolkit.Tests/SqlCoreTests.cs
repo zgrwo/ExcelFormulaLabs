@@ -141,7 +141,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             var r = SqlCore.SqlQuery(data, "SELECT * FROM data");
             r!.GetLength(0).Should().Be(3);        // header + 2 rows
             r![0, 0].Should().Be("Name");
-            r![1, 1].Should().Be(ExcelEmpty.Value);
+            r![1, 1].Should().BeNull();
             r![2, 1].Should().Be(90.0);
         }
 
@@ -151,7 +151,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             var data = new object[,] { { "Name", "Score" }, { "Alice", ExcelEmpty.Value }, { "Bob", 85.0 } };
             var r = SqlCore.SqlQuery(data, "SELECT * FROM data");
             r!.GetLength(0).Should().Be(3);
-            r![1, 1].Should().Be(ExcelEmpty.Value);
+            r![1, 1].Should().BeNull();
             r![2, 1].Should().Be(85.0);
         }
 
@@ -161,8 +161,8 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             var data = new object[,] { { "Name", "Extra" }, { "Alice", null! }, { "Bob", null! } };
             var r = SqlCore.SqlQuery(data, "SELECT * FROM data");
             r!.GetLength(0).Should().Be(3);
-            r![1, 1].Should().Be(ExcelEmpty.Value);
-            r![2, 1].Should().Be(ExcelEmpty.Value);
+            r![1, 1].Should().BeNull();
+            r![2, 1].Should().BeNull();
         }
 
         // ─────────────────────────────────────────────────────────────
@@ -368,7 +368,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             r![1, 0].Should().Be("Alice");
             r![1, 1].Should().Be(95.0);            // matched
             r![2, 0].Should().Be("Charlie");
-            r![2, 1].Should().Be(ExcelEmpty.Value); // no match → DBNull → ExcelEmpty
+            r![2, 1].Should().BeNull(); // no match → DBNull → ExcelEmpty
         }
 
         // ─────────────────────────────────────────────────────────────

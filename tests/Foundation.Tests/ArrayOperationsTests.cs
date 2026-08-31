@@ -46,8 +46,9 @@ public class SortTests
         original.Should().Equal(new[] { 3, 1, 2 });
     }
 
-    [Fact] public void Sort_empty_noop() => ArrayOperations.Sort(System.Array.Empty<int>());
-    [Fact] public void Sort_null_noop() { int[]? n = null; ArrayOperations.Sort(n!); }
+    // P2-21 (review-2026-08-31): 原零断言测试（仅调用不验证）——补 NotThrow。
+    [Fact] public void Sort_empty_noop() { var act = () => ArrayOperations.Sort(System.Array.Empty<int>()); act.Should().NotThrow(); }
+    [Fact] public void Sort_null_noop() { int[]? n = null; var act = () => ArrayOperations.Sort(n!); act.Should().NotThrow(); }
     [Fact] public void Sorted_null_input_returns_empty() => ArrayOperations.Sorted<int>(null!).Should().BeEmpty();
 }
 
@@ -176,4 +177,24 @@ public class SortIndicesTests
         ArrayOperations.SortIndices(values, indices);
         indices.Should().Equal(0);
     }
-}
+
+
+    // -- review-2026-08-31: P1-2 / P1-3 regression guards --
+    [Fact] public void Sort_all_equal_correct_and_fast()
+    {
+        var a = new int[200_000];
+        for (int i = 0; i < a.Length; i++) a[i] = 7;
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        ArrayOperations.Sort(a, true, ComparerMode.Auto);
+        sw.Stop();
+        sw.ElapsedMilliseconds.Should().BeLessThan(5000);
+        a.Should().OnlyContain(x => x == 7);
+    }
+
+    [Fact] public void IndexOf_float_tolerance_object_path()
+    {
+        var arr = new object[] { 0.1 + 0.2 };
+        ArrayOperations.IndexOf(arr, 0.3).Should().Be(0);
+        ArrayOperations.IndexOf(new object[] { 1, 2, 3 }, '2').Should().Be(-1);
+        ArrayOperations.IndexOf(new object[] { 1.0, 2.0 }, 1).Should().Be(0);
+    }}

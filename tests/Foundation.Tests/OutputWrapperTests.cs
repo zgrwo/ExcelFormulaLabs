@@ -151,9 +151,9 @@ namespace ExcelFormulaLabs.Foundation.Tests
             result[0, 0].Should().Be(1);
             result[0, 1].Should().Be(2);
             result[0, 2].Should().Be(3);
-            result[1, 0].Should().Be(ExcelEmpty.Value);
-            result[1, 1].Should().Be(ExcelEmpty.Value);
-            result[1, 2].Should().Be(ExcelEmpty.Value);
+            result[1, 0].Should().BeNull();
+            result[1, 1].Should().BeNull();
+            result[1, 2].Should().BeNull();
         }
 
         [Fact]
@@ -173,10 +173,10 @@ namespace ExcelFormulaLabs.Foundation.Tests
         {
             // Python: np.full((rows, cols), np.nan)
             var result = OutputWrapper.ReshapeOutput(null!, 2, 2);
-            result[0, 0].Should().Be(ExcelEmpty.Value);
-            result[0, 1].Should().Be(ExcelEmpty.Value);
-            result[1, 0].Should().Be(ExcelEmpty.Value);
-            result[1, 1].Should().Be(ExcelEmpty.Value);
+            result[0, 0].Should().BeNull();
+            result[0, 1].Should().BeNull();
+            result[1, 0].Should().BeNull();
+            result[1, 1].Should().BeNull();
         }
 
         [Fact]
@@ -185,7 +185,7 @@ namespace ExcelFormulaLabs.Foundation.Tests
             var flat = new object?[] { 1, null, 3, 4 };
             var result = OutputWrapper.ReshapeOutput(flat!, 2, 2);
             result[0, 0].Should().Be(1);
-            result[0, 1].Should().Be(ExcelEmpty.Value);
+            result[0, 1].Should().BeNull();
             result[1, 0].Should().Be(3);
             result[1, 1].Should().Be(4);
         }
@@ -217,10 +217,10 @@ namespace ExcelFormulaLabs.Foundation.Tests
         {
             var flat = Array.Empty<object>();
             var result = OutputWrapper.ReshapeOutput(flat, 2, 2);
-            result[0, 0].Should().Be(ExcelEmpty.Value);
-            result[0, 1].Should().Be(ExcelEmpty.Value);
-            result[1, 0].Should().Be(ExcelEmpty.Value);
-            result[1, 1].Should().Be(ExcelEmpty.Value);
+            result[0, 0].Should().BeNull();
+            result[0, 1].Should().BeNull();
+            result[1, 0].Should().BeNull();
+            result[1, 1].Should().BeNull();
         }
     }
 }

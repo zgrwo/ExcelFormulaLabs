@@ -210,4 +210,37 @@ public class ComRangeExtractionTests
         => new Action(() => InputNormalizer.ToInt32(-2_147_483_649L)).Should().Throw<ArgumentException>();
     [Fact] public void ToInt32_double_above_int_range_throws()
         => new Action(() => InputNormalizer.ToInt32(3e9)).Should().Throw<ArgumentException>();
-}
+
+
+    // -- review-2026-08-31: P2-8 / P2-17 regression guards --
+    [Fact] public void ToLong_2pow63_boundary_returns_zero()
+    {
+        InputNormalizer.ToLong(9.223372036854776E18).Should().Be(0L);
+        // 2⁶³−1 以下（9.223372036854775E18）是合法 long 值（9223372036854774784），应正常转换
+        InputNormalizer.ToLong(9.223372036854775E18).Should().Be(9223372036854774784L);
+    }
+
+    [Fact] public void NormalizeTo1D_rank2_typed_array_flattens()
+    {
+        var m = new double[,] { { 1, 2 }, { 3, 4 } };
+        var flat = InputNormalizer.NormalizeTo1D(m);
+        flat.Length.Should().Be(4);
+        flat[0].Should().Be(1.0);
+        flat[3].Should().Be(4.0);
+    }
+
+    // -- review-2026-08-31: P2-37 jagged-array (object[][]) NormalizeTo2D behavior --
+    [Fact] public void NormalizeTo2D_jagged_array_column_vector()
+    {
+        // 锯齿数组（object[][]）在 .NET 中是 Rank-1 object[]（协变）——NormalizeTo2D 按
+        // 1D 分支处理为 n×1 列向量（每元素为子数组）。此测试锁定该行为，防止未来漂移。
+        var jagged = new object[2][];
+        jagged[0] = new object[] { "a", "b" };
+        jagged[1] = new object[] { "c" };
+        var result = InputNormalizer.NormalizeTo2D(jagged);
+        result.Should().NotBeNull();
+        result.GetLength(0).Should().Be(2);
+        result.GetLength(1).Should().Be(1);
+        result[0, 0].Should().BeEquivalentTo(new object[] { "a", "b" });
+        result[1, 0].Should().BeEquivalentTo(new object[] { "c" });
+    }}

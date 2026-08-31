@@ -76,7 +76,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             var json = "[{\"a\":1,\"b\":2},{\"a\":3}]";
             var r = JsonXmlCore.JsonToTable(json);
             r!.GetLength(0).Should().Be(3);  // header + 2 rows
-            r![2, 1].Should().Be(ExcelFormulaLabs.Foundation.ExcelEmpty.Value);
+            r![2, 1].Should().BeNull();
         }
 
         [Fact] public void JsonToTable_non_object_elements_skipped()
@@ -233,7 +233,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             var d = new object[,] { { "K", "P", "V" }, { "A", "X", 10 }, { "B", "Y", 20 } };
             var r = PivotCore.Pivot(d, 0, 1, 2);
             r[1, 1].Should().Be(10.0);                          // A,X has data
-            r[2, 1].Should().Be(ExcelFormulaLabs.Foundation.ExcelEmpty.Value); // B,X no data → empty
+            r[2, 1].Should().BeNull(); // B,X no data → empty
         }
 
         // =====================================================================
@@ -451,5 +451,31 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             var act = () => PivotCore.GroupBy(d, gCols, 12, "SUM", hasHeaders: false);
             act.Should().Throw<ArgumentException>().WithMessage("*cells*");
         }
-    }
+
+        // ── review-2026-08-31：P1-10 回归守卫 ──
+        [Fact] public void GroupBy_Count_includes_non_numeric_rows()
+        {
+            // P1-10：COUNT 的本意是统计行数（含空/文本值行）。修复前非数值行整体丢弃 →
+            // 分组 B 完全消失（输出 1 行）。修复后 A=2、B=1。
+            var data = new object[,]
+            {
+                { "Dept", "Sales" },
+                { "A", 10.0 },
+                { "A", 20.0 },
+                { "B", "n/a" },
+            };
+            var r = PivotCore.GroupBy(data, new[] { 0 }, 1, "COUNT", true);
+            r.GetLength(0).Should().Be(2);
+            r[0, 0].Should().Be("A"); r[0, 1].Should().Be(2L);
+            r[1, 0].Should().Be("B"); r[1, 1].Should().Be(1L);
+        }
+
+        [Fact] public void Unpivot_empty_valueCols_throws()
+        {
+            // P2-14：valueCols 为空数组原静默产出 0 行——显式抛错。
+            var data = new object[,] { { "id", "v" }, { 1, 2.0 } };
+            new Action(() => PivotCore.Unpivot(data, new[] { 0 }, System.Array.Empty<int>(), true))
+                .Should().Throw<ArgumentException>();
+        }
+}
 }

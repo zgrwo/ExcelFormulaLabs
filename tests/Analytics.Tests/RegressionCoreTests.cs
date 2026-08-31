@@ -291,5 +291,36 @@ namespace ExcelFormulaLabs.Analytics.Tests
             var r = RegressionCore.FitRidge(Xcv, ycv, 0.5);
             ((double)r["r_squared"]).Should().BeGreaterThan(0.99);
         }
+
+    // ── review-2026-08-31：P0-1 回归守卫 ──
+    [Fact] public void FitOLS_Hilbert_nGtP_coefficients_accurate()
+    {
+        // Hilbert 10×8（cond≈1.6e13）：正规方程（X'X 条件数平方）下系数误差 ~1e2+ 且报表
+        // r²≈1 看似完美（静默错误）；QR 求解后误差 ~1e-3 量级。
+        const int n = 10, p = 8;
+        var X = new double[n, p];
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < p; j++) X[i, j] = 1.0 / (i + j + 1);
+        var y = new double[n];
+        for (int i = 0; i < n; i++) { double s = 0; for (int j = 0; j < p; j++) s += X[i, j]; y[i] = s; }
+        var r = RegressionCore.FitOLS(X, y, addIntercept: false);
+        var beta = (double[])r["coefficients"];
+        double err = 0; for (int j = 0; j < beta.Length; j++) err = Math.Max(err, Math.Abs(beta[j] - 1.0));
+        err.Should().BeLessThan(0.05);
+        ((double)r["r_squared"]).Should().BeApproximately(1.0, 1e-9);
     }
+
+    [Fact] public void FitOLS_n_equals_p_throws_df_guard()
+    {
+        // Hilbert 8×8（n=p）→ df=0，必须显式抛 "Need n > p"（而非静默返回错误系数）。
+        const int n = 8, p = 8;
+        var X = new double[n, p];
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < p; j++) X[i, j] = 1.0 / (i + j + 1);
+        var y = new double[n];
+        for (int i = 0; i < n; i++) { double s = 0; for (int j = 0; j < p; j++) s += X[i, j]; y[i] = s; }
+        new Action(() => RegressionCore.FitOLS(X, y, addIntercept: false))
+            .Should().Throw<ArgumentException>().WithMessage("*Need n > p*");
+    }
+}
 }

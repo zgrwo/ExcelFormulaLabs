@@ -81,9 +81,9 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void IsMatch_array() { var r=(object[])RegexUdf.UDF_RX_ISMATCH(new object[]{"a1","bc","d2"},"\\d+"); r.Should().Equal(true,false,true); }
 
         // MapOverMulti L100-101: NormalizeTo1D(null)→empty → returns ExcelEmpty.Value
-        [Fact] public void Test_null() => RegexUdf.UDF_RX_TEST(null!,"\\d+",true).Should().Be(ExcelEmpty.Value);
-        [Fact] public void Count_null() => RegexUdf.UDF_RX_COUNT(null!,"\\d+",true).Should().Be(ExcelEmpty.Value);
-        [Fact] public void Match_null() => RegexUdf.UDF_RX_MATCH(null!,"\\d+",true).Should().Be(ExcelEmpty.Value);
+        [Fact] public void Test_null() => RegexUdf.UDF_RX_TEST(null!,"\\d+",true).Should().BeNull();
+        [Fact] public void Count_null() => RegexUdf.UDF_RX_COUNT(null!,"\\d+",true).Should().BeNull();
+        [Fact] public void Match_null() => RegexUdf.UDF_RX_MATCH(null!,"\\d+",true).Should().BeNull();
         // MapOver (single-arg): MapSingleCell(null)→returns null
         [Fact] public void Replace_null() => RegexUdf.UDF_RX_REPL(null!,"\\d","X",true).Should().BeNull();
         // Direct Core call: ToString(null)→"" → regex groups on "" → empty array

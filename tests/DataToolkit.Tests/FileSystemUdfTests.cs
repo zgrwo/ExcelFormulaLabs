@@ -17,8 +17,8 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Combine_basic() => ((string)FileSystemUdf.UDF_FS_COMB(@"C:\a","b.txt")).Should().Be(@"C:\a\b.txt");
         [Fact] public void Combine_empty_first() => ((string)FileSystemUdf.UDF_FS_COMB("","b.txt")).Should().Be("b.txt");
         [Fact] public void Combine_empty_second() => ((string)FileSystemUdf.UDF_FS_COMB(@"C:\a","")).Should().Be(@"C:\a");
-        [Fact] public void Combine_null_first() => FileSystemUdf.UDF_FS_COMB(null!,"b.txt").Should().BeAssignableTo<ExcelEmpty>();
-        [Fact] public void Combine_null_second() => FileSystemUdf.UDF_FS_COMB(@"C:\a",null!).Should().BeAssignableTo<ExcelEmpty>();
+        [Fact] public void Combine_null_first() => FileSystemUdf.UDF_FS_COMB(null!,"b.txt").Should().BeNull();
+        [Fact] public void Combine_null_second() => FileSystemUdf.UDF_FS_COMB(@"C:\a",null!).Should().BeNull();
         [Fact] public void Combine_both_empty() => ((string)FileSystemUdf.UDF_FS_COMB("","")).Should().Be("");
         [Fact] public void FName_with_ext() => ((string)FileSystemUdf.UDF_FS_FNAME(@"C:\a\b.txt")).Should().Be("b.txt");
         [Fact] public void FName_empty() => ((string)FileSystemUdf.UDF_FS_FNAME("")).Should().Be("");
@@ -44,7 +44,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Read_empty() => FileSystemUdf.UDF_FS_READ("").Should().Be(ExcelError.Value);
         [Fact] public void Read_null() => FileSystemUdf.UDF_FS_READ(null!).Should().BeNull();
         [Fact] public void Write_empty_path() => FileSystemUdf.UDF_FS_WRITE("","content").Should().Be(ExcelError.Value);
-        [Fact] public void Write_null_path() => FileSystemUdf.UDF_FS_WRITE(null!,"content").Should().BeAssignableTo<ExcelEmpty>();
+        [Fact] public void Write_null_path() => FileSystemUdf.UDF_FS_WRITE(null!,"content").Should().BeNull();
         [Fact] public void Append_empty_path() => FileSystemUdf.UDF_FS_APPEND("","content").Should().Be(ExcelError.Value);
         [Fact] public void Copy_empty_src() => FileSystemUdf.UDF_FS_COPY("","dest").Should().Be(ExcelError.Value);
         [Fact] public void Move_empty_src() => FileSystemUdf.UDF_FS_MOVE("","dest").Should().Be(ExcelError.Value);
