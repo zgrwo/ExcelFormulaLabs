@@ -6,6 +6,40 @@
 
 > 版本一致性：每个 `v*` git tag 必须在本文档有对应条目（`verify-docs.ps1` 强制检查，见规则 [documentation.md](rules/documentation.md)）。
 
+## [2.2.4] - 2026-08-31
+
+### Fixed（2026-08-31 深度审查修复：61 项问题中 52 项实证、4 项部分属实、1 项建议值错误——全部按优先级修复并留回归守卫）
+
+**数值正确性（静默错误结果）**
+- **P0-1 OLS 正规方程 → Thin QR**：`X'X.Solve` 把设计矩阵条件数平方（Hilbert 12×8 系数误差 10.86 而 r²=1.000000000000 报表看似完美）→ QR 求解 + R⁻¹ 求标准误（误差降至 3e-11），R 对角线相对秩亏守卫；回归测试锁 Hilbert 10×8
+- **P1-5 零方差绝对阈值 6 处 → 精确零/相对判据**：TTEST1/2、ZSCORE、ANOVA1、FACTORIMP、对称判定——ppm/ppb 量纲数据不再误判常量；**并补齐 RegressionCore 3 处 TSS 绝对阈值**（全量审查发现 P1-5 遗漏：1e-9 量纲 y 被误判"常量响应"）
+- **P1-4 CorrMatrix**：溢出/NaN 列对角线不再假 1.0（`Inf < 1e-15` 恒 false 复活路径）
+- **P1-6 LINALG.RANK 默认容差** 1e-10 → 0（相对，numpy 约定）；文档同步
+- **P2-11 Product** 按 |x| 升序防中间溢出；**P2-35 NormFrobenius** 尺度化；**P2-36 RSM** total 守卫提前到分配前
+
+**崩溃与可用性**
+- **P0-2 SQL 三重防线**：RECURSIVE 拦截（含诊断消息补全）+ 行数/耗时双上限 + blob 尺寸守卫 + 直接写 object[,] 消除 2× 内存峰值——不可捕获 OOM → Excel 崩溃路径关闭；正式回归测试
+- **P1-2 排序 3-way 分区**：全等值 200k 从 152s → 毫秒级（含 argsort）；边界测试（降序/等值/null/文本）
+- **P1-7 Taguchi 2 水平主效应列优先** + 交互按阶数降序（L16 五因子 → 分辨率 V）；**P1-8 DOE 展开项数守卫**（5000 项上限）
+- **P1-13 Levenshtein 2500 万字符对上限**；**P1-12 日期守卫**（DIM 月份校验/WORKDAYS 倒置负数/long.MinValue）
+- **P1-9 .dna 构建**：通配删除恢复（残留自愈，配合 BuildInParallel=false 串行化）——pack 中断残留不再污染下次构建
+- **P2-9 Foundation.ExcelEmpty（#NUM!）→ null（空单元格）** 7 处；**P2-10 Neumaier 补偿求和**；**P2-17 MapOverMulti 1×1 广播**（Excel 单元格×列区域）+ Rank≥2 展平 + null 标量广播
+
+**验证体系可信度（交叉验证是项目核心卖点）**
+- **P0-3(a) NaN/Inf 标签化**：`{"__nan__":true}`/`{"__inf__":±1}`——C#=+Inf vs Python=NaN 不再互相冒充（ResultSerializer + verify-manual unwrap）
+- **P0-3(b) 双通道汇报**：check（manual 249）与 cross_check（C# 对照 112）分别计数，纯 Python 自校验不再混入"已验证"
+- **P0-3(c)** manifest tolerance 消费 + summary.error 断言；**P1-16 覆盖数从 api-reference 推导**（实测 224/236 与 README 一致）
+- **P0-4 中文计数正则**：`N 个 UDF` 漂移 236→999 不再全绿（负向注入验证）；**P1-14 版本头检查 19**；**P1-15 CHANGELOG 链接行成对断言**；**P1-17 verify-all 补 verify-docs 步骤**；**P1-18 hasHeaders 扩围**
+
+**覆盖补齐（feat）**
+- **Dispatcher 补注册 30 方法**（StringCore+10 / DateTimeCore+11 / ArrayCore+8 / LinalgCore LuU+LuP）——cross_check 覆盖 80 → 112；修复 JsonElement 标量未转 CLR（IndexOf/Contains）
+- **覆盖数可验证性**：REFERENCED 运行时收集 + _ID2UDF 映射 + api-reference 236 集合前缀匹配（取代人工 section 声明）
+
+**工程质量**
+- 回归守卫 30+ 个（Hilbert QR/LU 约定/Taguchi 主效应/COUNT 非数值行/ToLong 2⁶³/de-DE FMT/Product 顺序/锯齿数组等）；删除审计临时件（_AUDIT_Verify 有 bug 已转正）
+- CS8604 可空警告清零（双 TFM 构建 0 warning）；CodeQL 45 个 open 警报核实为误报/防御冗余后 dismiss
+- 审查报告归档 `logs/review/`（不入库）；逃逸模式 E1-E6 固化进 `skills/project-experience.md §八`
+
 ## [2.2.3] - 2026-08-29
 
 ### Fixed（v2.2.2 发布后 CI 事故修复与警告清理，不影响 xll 产物）
@@ -258,8 +292,9 @@
 - MIT License
 
 [2.2.2]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.1...v2.2.2
+[2.2.4]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.3...v2.2.4
 [2.2.3]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.2...v2.2.3
-[Unreleased]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.3...HEAD
+[Unreleased]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.4...HEAD
 [2.2.1]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.1.1...v2.2.0
 [2.1.1]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.1.0...v2.1.1
