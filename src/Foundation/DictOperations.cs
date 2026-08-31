@@ -49,7 +49,7 @@ namespace ExcelFormulaLabs.Foundation
 
                 string keyStr = KeyToString(key);
                 if (!dict.ContainsKey(keyStr))
-                    dict.Add(keyStr, defaultValue);
+                    dict.Add(keyStr, defaultValue!);  // null value 合法（Dictionary 允许），! 声明意图
             }
             return dict;
         }

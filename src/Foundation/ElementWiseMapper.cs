@@ -121,13 +121,13 @@ namespace ExcelFormulaLabs.Foundation
                     : MapSingleCell(flat1[0], flat2[0], mapper);
 
             if (flat1.Length == 1)
-                return MapMultiBroadcast(flat1[0], flat2, mapper, was2D, input1, input2);
+                return MapMultiBroadcast(flat1[0], flat2, mapper, was2D, input1!, input2!);
 
             if (flat2.Length == 1)
-                return PreserveShape2D(flat1, flat2[0], mapper, was2D, input1, input2);
+                return PreserveShape2D(flat1, flat2[0], mapper, was2D, input1!, input2!);
 
             if (flat1.Length == flat2.Length)
-                return MapMultiSameLength(flat1, flat2, mapper, was2D, input1, input2);
+                return MapMultiSameLength(flat1, flat2, mapper, was2D, input1!, input2!);
 
             return ExcelError.Value;
         }
