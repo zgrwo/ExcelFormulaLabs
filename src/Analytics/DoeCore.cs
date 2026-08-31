@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using ExcelFormulaLabs.Foundation;
 
 namespace ExcelFormulaLabs.Analytics
@@ -331,18 +332,21 @@ namespace ExcelFormulaLabs.Analytics
 
             double alpha = Math.Pow(Math.Pow(2, k), 0.25); // rotatable: 2^(k/4)
 
-            var levels = new int[k];
-            for (int i = 0; i < k; i++) levels[i] = 2;
-            var factorial = FullFactorialCoded(levels); // 2^k × k, coded ±1
-
+            // review 2026-08-31（深度审查 P2-36）：原 `long total = nf + centerPerBlock + ...` 在
+            // nf=long.MaxValue（k≥31 防回绕分支）时溢出为负 → 守卫失效；且 factorial 分配（2^k×k）
+            // 发生在守卫**之前**——k=25 时 2^25×25×8B≈6.7GB 先 OOM。nf/total 计算与守卫全部提前。
             long nf = k >= 31 ? long.MaxValue : 1L << k; // 防位移回绕（同 FractionalCoded）
             int nAxial = 2 * k;
             const int centerPerBlock = 4;
-            long total = nf + centerPerBlock + nAxial + centerPerBlock;
-            if (total > MaxRuns)
+            if (nf > MaxRuns - 2 * centerPerBlock - nAxial) // 减法形式防 total 溢出
                 throw new ArgumentException(ErrorMsg.Get("DOE_TooManyRuns", MaxRuns));
+            long total = nf + centerPerBlock + nAxial + centerPerBlock;
             if (k > 0 && total > MaxCells / k) // 除法防乘法溢出（total×k 在极端 k 下可溢出 long）
                 throw new ArgumentException(ErrorMsg.Get("DOE_TooManyCells", total, k, total * k, MaxCells));
+
+            var levels = new int[k];
+            for (int i = 0; i < k; i++) levels[i] = 2;
+            var factorial = FullFactorialCoded(levels); // 2^k × k, coded ±1
 
             var m = new double[total, k];
             long row = 0;
@@ -496,6 +500,12 @@ namespace ExcelFormulaLabs.Analytics
         /// 2-level orthogonal array L_{2^k}(2^{2^k-1}): k main-effect columns plus
         /// all XOR interaction columns, in standard Taguchi order
         /// (A, B, AB, C, AC, BC, ABC, D, ...). Returns level indices 0/1 per column.
+        /// review 2026-08-31（深度审查 P1-7）：**返回前列序重排为主效应优先 + 交互按阶数降序**——
+        /// 原标准序（A,B,AB,C,AC,BC,ABC,…）被 TaguchiCoded 顺序取前 n 列时把因子分配到交互列
+        /// （5 因子落 A,B,AB,C,AC → 因子 3 与 1×2 交互完全别名）。重排后：
+        /// L8→A,B,C,ABC,AB,AC,BC…（前 3 主效应列干净）；L16 五因子→A,B,C,D,ABCD（分辨率 V，
+        /// 与报告建议的列 1,2,4,8,15 一致）；高阶交互先于低阶（ABCD 先于 AB——低阶交互与
+        /// 主效应乘积直接产生短字长别名，高阶交互只与高阶交互关联）。
         /// </summary>
         private static List<int[]> Build2Level(int k)
         {
@@ -510,18 +520,31 @@ namespace ExcelFormulaLabs.Analytics
             }
 
             var cols = new List<int[]>(runs - 1) { mains[0] };
+            var orders = new List<int>(runs - 1) { 1 }; // interaction order (number of main effects XOR-ed)
             for (int i = 1; i < k; i++)
             {
-                cols.Add(mains[i]);
+                cols.Add(mains[i]); orders.Add(1);
                 int before = cols.Count - 1; // columns present before this main effect
                 for (int j = 0; j < before; j++)
                 {
                     var inter = new int[runs];
                     for (int r = 0; r < runs; r++) inter[r] = mains[i][r] ^ cols[j][r];
                     cols.Add(inter);
+                    orders.Add(1 + orders[j]);
                 }
             }
-            return cols;
+
+            // Main effects first (same array references as mains, stable relative order),
+            // then interaction columns by descending order (OrderByDescending is stable).
+            var mainsFirst = new List<int[]>(runs - 1);
+            foreach (var m in mains) mainsFirst.Add(m);
+            var interPairs = new List<(int[] Col, int Order)>();
+            for (int i = 0; i < cols.Count; i++)
+                if (!mains.Any(mm => ReferenceEquals(mm, cols[i])))
+                    interPairs.Add((cols[i], orders[i]));
+            foreach (var p in interPairs.OrderByDescending(p => p.Order))
+                mainsFirst.Add(p.Col);
+            return mainsFirst;
         }
 
         /// <summary>

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Factorization;
 using ExcelFormulaLabs.Foundation;
 
 namespace ExcelFormulaLabs.Analytics
@@ -48,10 +49,22 @@ namespace ExcelFormulaLabs.Analytics
         private static Dictionary<string, object> FitOLSCore(
             Matrix<double> matX, Vector<double> vecY, int n, int p)
         {
-            var XtX = matX.TransposeThisAndMultiply(matX);
-            var Xty = matX.TransposeThisAndMultiply(vecY);
+            // df 检查提前到 QR 之前：Thin QR 需要 n ≥ p（MathNet 对宽矩阵抛 NotSupportedException）。
+            int df = n - p;
+            if (df <= 0)
+                throw new ArgumentException(
+                    $"Cannot compute standard errors: degrees of freedom is {df} (n={n}, p={p}). Need n > p.");
+            // review 2026-08-31（深度审查 P0-1）：正规方程 X'X 把设计矩阵条件数**平方**，
+            // cond(X) > 1e8 时在 double 精度下静默返回错误系数（Hilbert 12×8 实测 ‖β−βtrue‖≈10.9
+            // 而 r²=1.000000000000，报表看似完美）。改为 Thin QR 求解——QR 是后向稳定分解，
+            // 精度只随 cond(X)（非 cond(X)²）退化；(X'X)⁻¹ 对角线由 R⁻¹ 求（R 良态，避免二次平方）。
+            QR<double> qr;
             Vector<double> beta;
-            try { beta = XtX.Solve(Xty); }
+            try
+            {
+                qr = matX.QR(QRMethod.Thin);
+                beta = qr.Solve(vecY);
+            }
             catch (Exception ex) when (ExceptionFilters.IsCatchable(ex))
             { throw new ArgumentException(ErrorMsg.Get("REGRESS_RankDeficient"), ex); }
 
@@ -71,18 +84,32 @@ namespace ExcelFormulaLabs.Analytics
                 throw new ArgumentException(
                     "Cannot fit OLS: total sum of squares is zero (constant response variable y).");
             double r2 = 1.0 - sse / tss;
-            int df = n - p;
-            if (df <= 0)
-                throw new ArgumentException(
-                    $"Cannot compute standard errors: degrees of freedom is {df} (n={n}, p={p}). Need n > p.");
             double adjR2 = 1.0 - (1.0 - r2) * (n - 1) / (double)df;
             double sigma2 = sse / df;
-            var XtXInv = XtX.Inverse();
+            // (X'X)⁻¹ = R⁻¹ R⁻ᵀ（X = QR ⇒ X'X = R'R）。对角线 = Σ_k R⁻¹[j,k]²。
+            // R 对角线相对守卫：|R[j,j]| ≤ eps·maxDiag 即数值秩亏（共线列），显式抛错
+            // 而非静默返回 NaN 标准误。阈值取机器精度级（不误伤多项式趋势等高 cond 但可解输入）。
+            var R = qr.R;
+            double maxDiag = 0.0;
             for (int j = 0; j < p; j++)
-                if (double.IsNaN(XtXInv[j, j]) || double.IsInfinity(XtXInv[j, j]))
+            {
+                double d = Math.Abs(R[j, j]);
+                if (d > maxDiag) maxDiag = d;
+            }
+            double diagTol = Math.Max(maxDiag, 1e-300) * 2.220446049250313e-16;
+            for (int j = 0; j < p; j++)
+                if (Math.Abs(R[j, j]) <= diagTol)
                     throw new ArgumentException(
                         "Cannot fit OLS: design matrix X is near-singular (highly collinear columns). " +
                         "Consider removing redundant predictors or using ridge regression (REGRESS.RIDGE).");
+            var Rinv = R.Inverse();
+            var xtxInvDiag = new double[p];
+            for (int j = 0; j < p; j++)
+            {
+                double s = 0.0;
+                for (int k = j; k < p; k++) { double v = Rinv[j, k]; s += v * v; }
+                xtxInvDiag[j] = s;
+            }
             // P1-6: defence-in-depth — residual squares can still overflow for extreme
             // y values even when X is stable (guard placed after the near-singular
             // check so the more specific X diagnosis wins).
@@ -97,7 +124,7 @@ namespace ExcelFormulaLabs.Analytics
             {
                 // Clamp tiny negative diagonal values from numerical noise before sqrt —
                 // otherwise NaN would silently leak into t_stats/p_values.
-                double varJ = sigma2 * XtXInv[j, j];
+                double varJ = sigma2 * xtxInvDiag[j];
                 se[j] = Math.Sqrt(varJ > 0.0 ? varJ : 0.0);
                 tStat[j] = beta[j] / se[j];
                 // L4 output sentinel: se==0 (perfect fit / degenerate diagonal) yields
@@ -322,9 +349,13 @@ namespace ExcelFormulaLabs.Analytics
 
             // Guard against degenerate data where all observations are identical
             // (within-group variance = 0 → F = 0/0 = NaN with no diagnostic message).
-            if (Math.Abs(ssW) < 1e-15)
+            // review 2026-08-31（深度审查 P1-5）：原 `Math.Abs(ssW) < 1e-15` 绝对阈值把
+            // 小量纲数据（ppm/ppb/nm 级）误判为"组内完全一致"并抛错（{1e-9,2e-9,3e-9} 的
+            // ssW=2e-18 < 1e-15）。方差平方和是尺度相关量，判据必须是精确零（真常量组），
+            // 非有限值已在上方显式守卫。
+            if (ssW == 0)
                 throw new ArgumentException(
-                    "ANOVA failed: within-group sum of squares is near zero. " +
+                    "ANOVA failed: within-group sum of squares is zero. " +
                     "All observations within each group are effectively identical.");
             double msB = ssB / dfB, msW = ssW / dfW;
             double f = msB / msW;
@@ -368,10 +399,13 @@ namespace ExcelFormulaLabs.Analytics
                 for (int i = 0; i < n; i++) { double d = X[i, j] - mean; sd += d * d; }
                 sd = Math.Sqrt(sd / (n - 1));
                 sds[j] = sd;
-                if (sd < 1e-12)
+                // review 2026-08-31（深度审查 P1-5）：原 `sd < 1e-12` 绝对阈值在 1e-9 量级
+                // 数据（sd~1e-9）下误判常数列。标准差与数据同尺度，判据应为精确零（真常量列）；
+                // sd=NaN/Inf（防御性）同样视为常量列跳过标准化。
+                if (!(sd > 0) || double.IsInfinity(sd))
                 {
                     constCols[j] = true;
-                    System.Diagnostics.Trace.WriteLine(
+                    System.Diagnostics.Debug.WriteLine(
                         $"[FactorImportance] Column {j} has zero variance (constant); ranked least important.");
                 }
                 else activeCols++;

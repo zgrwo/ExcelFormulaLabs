@@ -34,15 +34,15 @@ namespace ExcelFormulaLabs.Analytics
 
         // ── LU (split into 3 individual UDFs) ───────────────────────
 
-        [ExcelFunction(Name = "LINALG.LU_L", Description = "LU decomposition lower-triangular matrix L. PA = LU.")]
+        [ExcelFunction(Name = "LINALG.LU_L", Description = "LU decomposition lower-triangular matrix L. A = P*L*U.")]
         public static object UDF_LINALG_LU_L([ExcelArgument(Name="array", Description="A range or 2D array")] object d)
             => OutputWrapper.WrapError(() => LinalgCore.LuL(M(d)));
 
-        [ExcelFunction(Name = "LINALG.LU_U", Description = "LU decomposition upper-triangular matrix U. PA = LU.")]
+        [ExcelFunction(Name = "LINALG.LU_U", Description = "LU decomposition upper-triangular matrix U. A = P*L*U.")]
         public static object UDF_LINALG_LU_U([ExcelArgument(Name="array", Description="A range or 2D array")] object d)
             => OutputWrapper.WrapError(() => LinalgCore.LuU(M(d)));
 
-        [ExcelFunction(Name = "LINALG.LU_P", Description = "LU decomposition permutation matrix P. PA = LU.")]
+        [ExcelFunction(Name = "LINALG.LU_P", Description = "LU decomposition permutation matrix P. A = P*L*U.")]
         public static object UDF_LINALG_LU_P([ExcelArgument(Name="array", Description="A range or 2D array")] object d)
             => OutputWrapper.WrapError(() => LinalgCore.LuP(M(d)));
 
@@ -72,9 +72,9 @@ namespace ExcelFormulaLabs.Analytics
         public static object UDF_LINALG_COND([ExcelArgument(Name="array", Description="A range or 2D array")] object d)
             => OutputWrapper.WrapError(() => LinalgCore.ConditionNumber(M(d)));
 
-        [ExcelFunction(Name = "LINALG.RANK", Description = "Numerical rank. Tolerance = absolute singular-value threshold; default 1e-10.")]
-        public static object UDF_LINALG_RANK([ExcelArgument(Name="array", Description="A range or 2D array")] object d, [ExcelArgument(Name="[tolerance]", Description="Tolerance threshold for numerical rank detection; default 1e-10")] object tol=null)
-            => OutputWrapper.WrapError(() => (long)LinalgCore.Rank(M(d), tol==null||tol is ExcelDna.Integration.ExcelMissing?1e-10:InputNormalizer.ToDouble(tol)));
+        [ExcelFunction(Name = "LINALG.RANK", Description = "Numerical rank. Tolerance = absolute singular-value threshold; default 0 = relative (numpy convention).")]
+        public static object UDF_LINALG_RANK([ExcelArgument(Name="array", Description="A range or 2D array")] object d, [ExcelArgument(Name="[tolerance]", Description="Tolerance threshold for numerical rank detection; default 0 = relative (max_sv * max(rows,cols) * 1e-16)")] object tol=null)
+            => OutputWrapper.WrapError(() => (long)LinalgCore.Rank(M(d), tol==null||tol is ExcelDna.Integration.ExcelMissing?0:InputNormalizer.ToDouble(tol)));
 
         [ExcelFunction(Name = "LINALG.IDENTITY", Description = "Identity matrix.")]
         public static object UDF_LINALG_IDENTITY([ExcelArgument(Name="size", Description="The matrix dimension, e.g. 3 for a 3x3 identity matrix")] object n)

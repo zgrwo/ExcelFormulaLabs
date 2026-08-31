@@ -21,10 +21,14 @@ namespace ExcelFormulaLabs.Analytics
         /// </summary>
         private static class DecompCache
         {
-            private static readonly Dictionary<string, (object Value, LinkedListNode<string> Node)> Store = new();
+            private static readonly Dictionary<string, (object Value, LinkedListNode<string> Node, long Elems)> Store = new();
             private static readonly LinkedList<string> LruList = new(); // front = LRU, back = MRU
             private static readonly object Lock = new();
             private const int MaxEntries = 32;
+            // review 2026-08-31（深度审查 P2-34）：原按条目数（32）限流——单条 2000×2000 SVD
+            // ≈ 64MB，32 条 ≈ 2GB。改为按累计元素数限流（2000 万元素 ≈ 160MB），
+            // 大矩阵条目数更少但总内存有界。
+            private const long MaxTotalElems = 20_000_000;
 
             internal static T GetOrAdd<T>(string key, Func<T> factory)
             {
@@ -43,6 +47,7 @@ namespace ExcelFormulaLabs.Analytics
                 // Slow path: compute outside lock so concurrent callers
                 // for different keys are not serialised by decomposition cost
                 var result = factory();
+                long elems = ElementCount(result);
 
                 lock (Lock)
                 {
@@ -54,19 +59,30 @@ namespace ExcelFormulaLabs.Analytics
                         return (T)entry.Value;
                     }
 
-                    if (Store.Count >= MaxEntries)
+                    // Evict LRU entries until both count and total-element budgets fit.
+                    long total = 0;
+                    foreach (var kv in Store) total += kv.Value.Elems;
+                    while (Store.Count > 0 &&
+                           (Store.Count >= MaxEntries || total + elems > MaxTotalElems))
                     {
-                        // Evict front (LRU) — O(1)
                         var oldest = LruList.First!;
                         LruList.RemoveFirst();
+                        total -= Store[oldest.Value].Elems;
                         Store.Remove(oldest.Value);
                     }
 
                     var node = LruList.AddLast(key);
-                    Store[key] = (result!, node);
+                    Store[key] = (result!, node, elems);
                     return result;
                 }
             }
+
+            private static long ElementCount(object value) => value switch
+            {
+                double[,] m2 => (long)m2.GetLength(0) * m2.GetLength(1),
+                double[] v1 => v1.Length,
+                _ => 1,
+            };
 
             /// <summary>
             /// Clear all cached decompositions. Called on add-in unload to release
@@ -228,9 +244,14 @@ namespace ExcelFormulaLabs.Analytics
             {
                 for (int j = i + 1; j < n; j++)
                 {
-                    if (Math.Abs(m[i, j] - m[j, i]) > 1e-8)
+                    // review 2026-08-31（深度审查 P1-5）：原绝对阈值 1e-8 在 1e9 量级矩阵下
+                    // ULP≈1.2e-7 > 1e-8，理论对称矩阵因浮点舍入被误判为非对称。改为相对判据
+                    // （阈值随元素量级缩放，1e9 量级 → ≈1e1，远大于 ULP；小矩阵保持原 1e-8 行为）。
+                    double diff = Math.Abs(m[i, j] - m[j, i]);
+                    double scale = Math.Max(1.0, Math.Max(Math.Abs(m[i, j]), Math.Abs(m[j, i])));
+                    if (diff > 1e-8 * scale)
                         throw new ArgumentException(
-                            $"Matrix is not symmetric: |m[{i},{j}] − m[{j},{i}]| = {Math.Abs(m[i, j] - m[j, i]):E2} > 1e-8. " +
+                            $"Matrix is not symmetric: |m[{i},{j}] − m[{j},{i}]| = {diff:E2} > {1e-8 * scale:E2}. " +
                             "Eigenvalue decomposition (Evd) requires a symmetric matrix.");
                 }
             }
@@ -257,7 +278,22 @@ namespace ExcelFormulaLabs.Analytics
         internal static double NormFrobenius(double[,] m)
         {
             NumericGuard.AgainstNonFinite(m);
-            return Matrix<double>.Build.DenseOfArray(m).FrobeniusNorm();
+            // review 2026-08-31（深度审查 P2-35）：MathNet FrobeniusNorm 朴素平方和——
+            // [[1e200,1e200]] → 1e400 溢出 Inf（真值 1.41e200 可表示，实测确认）。
+            // 尺度化：先取最大 |x| 归一再平方求和，避免中间溢出。
+            double max = 0.0;
+            for (int r = 0; r < m.GetLength(0); r++)
+                for (int c = 0; c < m.GetLength(1); c++)
+                    max = Math.Max(max, Math.Abs(m[r, c]));
+            if (max == 0) return 0.0;
+            double s = 0.0;
+            for (int r = 0; r < m.GetLength(0); r++)
+                for (int c = 0; c < m.GetLength(1); c++)
+                {
+                    double t = m[r, c] / max;
+                    s += t * t;
+                }
+            return max * Math.Sqrt(s);
         }
 
         internal static double[,] Identity(int n)

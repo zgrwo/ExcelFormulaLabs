@@ -78,8 +78,21 @@ namespace ExcelFormulaLabs.Analytics
         /// <summary>
         /// Product of array elements. NaN/Inf input is guarded upstream by <see cref="AnalyticsHelpers.PrepV"/>.
         /// Infinity result is capped to NaN.
+        /// review 2026-08-31（深度审查 P2-11）：朴素左折叠顺序依赖——Product(1e300,1e300,1e-300) →
+        /// 1e300×1e300=1e600 溢出 → Inf → NaN（真值 1e300 可表示）。按 |x| 升序相乘，先消掉
+        /// 小量避免中间溢出（极端下溢场景如 1e-320² 仍可能，属 double 极限，接受）。
         /// </summary>
-        internal static double Product(double[] d) { if (d.Length == 0) return 1.0; var r = d.Aggregate(1.0, (a, x) => a * x); return double.IsInfinity(r) ? double.NaN : r; }
+        internal static double Product(double[] d)
+        {
+            if (d.Length == 0) return 1.0;
+            double r = 1.0;
+            foreach (double x in d.OrderBy(v => Math.Abs(v)))
+            {
+                r *= x;
+                if (double.IsInfinity(r)) return double.NaN;
+            }
+            return r;
+        }
 
         /// <summary>Sign of a numeric value. NaN → 0 (explicit guard; Math.Sign would throw for NaN).
         /// ±Infinity → ±1 (explicit guard; CLR behaviour made auditable per 防错原则1).</summary>
@@ -193,10 +206,15 @@ namespace ExcelFormulaLabs.Analytics
                 for (int i = 0; i < rows; i++) { double d = data[i, j] - means[j]; ss += d * d; }
                 sds[j] = Math.Sqrt(ss / (rows - 1));  // sample stddev
             }
-            // Fill diagonal = 1.0 (or NaN for constant columns)
+            // review 2026-08-31（深度审查 P1-4）：原 `sds[i] < 1e-15` 绝对阈值在两个方向都错——
+            // ① 溢出/NaN 路径：sd=Inf 或 NaN 时 `Inf < 1e-15`/`NaN < 1e-15` 恒为 false → 走 else 分支
+            //    产生"对角线 1.0、非对角 NaN"的自相矛盾矩阵（{1e308,1} 列实测 r[0,0]=1 而 r[0,1]=NaN）；
+            // ② 小量纲路径：相关系数是尺度不变量，列数据在 1e-16 量级时 sd 恒 < 1e-15 → 整行被误判常量。
+            // 判据改为"非有限或非正"（NaN/Inf/0 都进常量分支）。
             for (int i = 0; i < cols; i++)
             {
-                if (sds[i] < 1e-15) { for (int j = 0; j < cols; j++) r[i, j] = r[j, i] = double.NaN; }
+                if (double.IsNaN(sds[i]) || double.IsInfinity(sds[i]) || sds[i] <= 0)
+                { for (int j = 0; j < cols; j++) r[i, j] = r[j, i] = double.NaN; }
                 else r[i, i] = 1.0;
             }
             // Off-diagonal: Pearson r from pre-computed means/sds → O(cols²×rows)
@@ -220,7 +238,11 @@ namespace ExcelFormulaLabs.Analytics
         {
             if (d.Length < 2) return double.NaN;
             double va = Variance(d);
-            if (va < 1e-15)
+            // review 2026-08-31（深度审查 P1-5）：原 `va < 1e-15` 绝对阈值把 1e-9 量纲样本
+            // （va~1e-18）误判为常量 → 返回 NaN（真值 t=0.866, p=0.478）。t 检验是尺度不变量，
+            // 常量判据应为精确零方差；NaN/Inf 防御性返回 NaN（哨兵）。
+            if (double.IsNaN(va) || double.IsInfinity(va)) return double.NaN;
+            if (va == 0)
             {
                 // Zero variance: all values equal. If mean ≈ mu0, no evidence
                 // against H0 → p=1.0; otherwise undefined → NaN.
@@ -237,7 +259,10 @@ namespace ExcelFormulaLabs.Analytics
             if (a.Length < 2 || b.Length < 2) return double.NaN;
             double ma = Statistics.Mean(a), mb = Statistics.Mean(b);
             double va = Variance(a), vb = Variance(b);
-            if (va + vb < 1e-15) return Math.Abs(ma - mb) < 1e-15 ? 1.0 : double.NaN;
+            // review 2026-08-31（深度审查 P1-5）：绝对阈值 → 精确零判据（同 TTestOneSample）。
+            double vab = va + vb;
+            if (double.IsNaN(vab) || double.IsInfinity(vab)) return double.NaN;
+            if (vab == 0) return Math.Abs(ma - mb) < 1e-15 ? 1.0 : double.NaN;
             double se = Math.Sqrt(va / a.Length + vb / b.Length);
             double t = (ma - mb) / se;
             double num = (va / a.Length + vb / b.Length);
@@ -252,7 +277,8 @@ namespace ExcelFormulaLabs.Analytics
             if (d.Length == 0) return Array.Empty<double>();
             double m = Statistics.Mean(d);
             double sd = Math.Sqrt(VarianceP(d));
-            if (double.IsNaN(sd) || sd < 1e-15) throw new ArgumentException(ErrorMsg.Get("STATS_ZeroVariance"));
+            // review 2026-08-31（深度审查 P1-5）：绝对阈值 → 精确零判据（小量纲数据 sd 与数据同尺度）。
+            if (double.IsNaN(sd) || double.IsInfinity(sd) || sd == 0) throw new ArgumentException(ErrorMsg.Get("STATS_ZeroVariance"));
             return d.Select(x => (x - m) / sd).ToArray();
         }
 

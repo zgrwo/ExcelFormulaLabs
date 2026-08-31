@@ -214,20 +214,21 @@ namespace ExcelFormulaLabs.Analytics
             if (!p.HasValue)
             {
                 if (!v.HasValue || !n.HasValue || !t.HasValue) return double.NaN;
-                return v.Value == 0 ? double.NaN : n.Value * r * t.Value / v.Value;
+                // review 2026-08-31（深度审查 P2-12）：溢出 ±Inf → NaN（模块约定）。
+                return v.Value == 0 ? double.NaN : CapNaN(n.Value * r * t.Value / v.Value);
             }
             if (!v.HasValue)
             {
                 if (!p.HasValue || !n.HasValue || !t.HasValue) return double.NaN;
-                return p.Value == 0 ? double.NaN : n.Value * r * t.Value / p.Value;
+                return p.Value == 0 ? double.NaN : CapNaN(n.Value * r * t.Value / p.Value);
             }
             if (!n.HasValue)
             {
                 if (!p.HasValue || !v.HasValue || !t.HasValue) return double.NaN;
-                return t.Value == 0 ? double.NaN : p.Value * v.Value / (r * t.Value);
+                return t.Value == 0 ? double.NaN : CapNaN(p.Value * v.Value / (r * t.Value));
             }
             if (!p.HasValue || !v.HasValue || !n.HasValue) return double.NaN;
-            return n.Value == 0 ? double.NaN : p.Value * v.Value / (n.Value * r);
+            return n.Value == 0 ? double.NaN : CapNaN(p.Value * v.Value / (n.Value * r));
         }
 
         internal static double GasToSTP(double vol, double temp, double press,
@@ -239,8 +240,13 @@ namespace ExcelFormulaLabs.Analytics
             double pAtm = ConvertPressure(press, pUnit, "atm");
             if (double.IsNaN(tK) || double.IsNaN(pAtm) || tK <= 0 || pAtm <= 0)
                 return double.NaN;
-            return vol * pAtm * (273.15 / tK);
+            // review 2026-08-31（深度审查 P2-12）：溢出时原样返回 ±Inf，与模块
+            // "Infinity capped to NaN" 约定不一致（防错原则①——Inf 会继续传播进下游计算）。
+            return CapNaN(vol * pAtm * (273.15 / tK));
         }
+
+        /// <summary>Non-finite result → NaN（模块约定：不向 Excel 泄漏 ±Inf）。</summary>
+        private static double CapNaN(double v) => double.IsInfinity(v) ? double.NaN : v;
 
         // review 2026-08-29：DENSITY 下沉（原 L2 零分母守卫写在 UDF lambda，红线① UDF 仅分发）
         internal static double Density(double m, double v) => v == 0 ? double.NaN : m / v;

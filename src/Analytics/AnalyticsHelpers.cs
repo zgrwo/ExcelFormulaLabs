@@ -120,23 +120,23 @@ namespace ExcelFormulaLabs.Analytics
                 else if (val is object[] oa)
                 {
                     for (int j = 0; j < oa.Length; j++)
-                        result[i, j + 1] = oa[j] ?? ExcelEmpty.Value;
+                        result[i, j + 1] = oa[j];
                     len = oa.Length;
                 }
                 else if (val is System.Array arr)
                 {
                     for (int j = 0; j < arr.Length; j++)
-                        result[i, j + 1] = arr.GetValue(j) ?? ExcelEmpty.Value;
+                        result[i, j + 1] = arr.GetValue(j);
                     len = arr.Length;
                 }
                 else
                 {
-                    result[i, 1] = val ?? ExcelEmpty.Value;
+                    result[i, 1] = val;
                 }
 
-                // Pad remaining cells in this row with ExcelEmpty
+                // Pad remaining cells in this row with null (empty cell)
                 for (int j = len + 1; j <= maxLen; j++)
-                    result[i, j] = ExcelEmpty.Value;
+                    result[i, j] = null;
             }
 
             return result;

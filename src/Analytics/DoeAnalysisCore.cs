@@ -132,6 +132,18 @@ namespace ExcelFormulaLabs.Analytics
                 throw new ArgumentException(ErrorMsg.Get("DOE_NoFactors"));
             if (maxOrder < 1 || maxOrder > 3)
                 throw new ArgumentException($"Interaction order must be 1, 2, or 3 (got {maxOrder}).");
+            // review 2026-08-31（深度审查 P1-8）：展开项数无守卫——k=100、maxOrder=3 时
+            // p=166,750，Xe（n=1000）即 1.33GB → 不可捕获 OOM → Excel 崩溃。
+            // DOE.PLAN 允许 MaxFactors=1000，因此这条调用链合法。先算 p（long 防乘法溢出）
+            // 再分配：超过 5,000 项（≈ n×p 数千万元素）直接拒绝。
+            long termCount = k; // main effects
+            if (maxOrder >= 2) termCount += (long)k * (k - 1) / 2;
+            if (maxOrder >= 3) termCount += (long)k * (k - 1) * (k - 2) / 6;
+            if (quadratic) termCount += k;
+            if (termCount > 5000)
+                throw new ArgumentException(
+                    $"DOE analysis would expand to {termCount:N0} terms — exceeds the 5,000-term limit. " +
+                    "Reduce factor count or interaction order.");
 
             var terms = new List<string>();
             var cols = new List<double[]>();
