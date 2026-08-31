@@ -80,7 +80,7 @@ namespace ExcelFormulaLabs.Analytics
                 throw new ArgumentException(
                     "Cannot fit OLS: total sum of squares is numerically unstable " +
                     "(response values too large for double precision).");
-            if (Math.Abs(tss) < 1e-15)
+            if (tss == 0)  // review-2026-08-31（max-level 全量审查）：原 Math.Abs(tss) < 1e-15 绝对阈值把 1e-9 量纲 y 的 tss=2e-18 误判为常量响应抛错——P1-5 修复遗漏。TSS 是平方和（非负），真常量时精确为 0
                 throw new ArgumentException(
                     "Cannot fit OLS: total sum of squares is zero (constant response variable y).");
             double r2 = 1.0 - sse / tss;
@@ -205,7 +205,7 @@ namespace ExcelFormulaLabs.Analytics
                 double dev = y[i] - yMean;
                 tssOrig += dev * dev;
             }
-            if (Math.Abs(tssOrig) < 1e-15)
+            if (tssOrig == 0)  // review-2026-08-31：同上（WLS 原尺度）
                 throw new ArgumentException(
                     "Cannot fit WLS: total sum of squares is zero (constant response variable y).");
             // review 2026-08-29：sseOrig/tssOrig 平方溢出（y≈1e154 + 小权重）可致 r2Orig=1−Inf/Inf=NaN
@@ -282,7 +282,7 @@ namespace ExcelFormulaLabs.Analytics
                 throw new ArgumentException(
                     "Cannot fit Ridge: total sum of squares is numerically unstable " +
                     "(response values too large for double precision).");
-            if (Math.Abs(tss) < 1e-15)
+            if (tss == 0)  // review-2026-08-31（max-level 全量审查）：原 Math.Abs(tss) < 1e-15 绝对阈值把 1e-9 量纲 y 的 tss=2e-18 误判为常量响应抛错——P1-5 修复遗漏。TSS 是平方和（非负），真常量时精确为 0
                 throw new ArgumentException(
                     "Cannot fit Ridge: total sum of squares is zero (constant response variable y).");
 

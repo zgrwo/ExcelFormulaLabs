@@ -882,7 +882,7 @@ check("RANGE.SELROWS[0]", selr[0][0], "Alice")
 # ========================================================================
 # DOE (1 UDF)
 # ========================================================================
-section("DOE — Design of Experiments", 1)
+section("DOE — Design of Experiments", 4)  # review-2026-08-31: 原声明 1 手写错误——覆盖 PLAN+ANALYZE/ANOVA/PARETO 共 4 UDF
 if HAS_PYDOE2:
     def doe_coded(levels):
         idx = fullfact(levels)

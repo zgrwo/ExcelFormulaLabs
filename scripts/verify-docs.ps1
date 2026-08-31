@@ -137,6 +137,9 @@ if ($LASTEXITCODE -ne 0) {
     foreach ($t in $semverTags) {
         $ver = $t -replace '^v', ''
         if ($changelog -notmatch [regex]::Escape("## [$ver]")) { $untracked += $t }
+        # P1-15 (review-2026-08-31, max-level 全量审查)：章节头与版本链接行必须成对——
+        # 原检查只查 `## [X]`，链接行（`[X]: ...`）丢失时门禁放过（[Unreleased] 悬空案例）。
+        elseif ($changelog -notmatch [regex]::Escape("[$ver]:")) { $untracked += $t }
     }
     if ($untracked.Count -eq 0) { Check "CHANGELOG covers all tags ($($semverTags.Count) tags)" "OK" }
     else { Check "CHANGELOG covers all tags" "missing entries: $($untracked -join ', ')" }

@@ -322,5 +322,33 @@ namespace ExcelFormulaLabs.Analytics.Tests
         new Action(() => RegressionCore.FitOLS(X, y, addIntercept: false))
             .Should().Throw<ArgumentException>().WithMessage("*Need n > p*");
     }
+
+    // ── review-2026-08-31（max-level 全量审查）：P1-5 修复遗漏——TSS 绝对阈值误判小量纲 y ──
+    [Fact] public void FitOLS_small_scale_y_not_constant()
+    {
+        // 原 Math.Abs(tss) < 1e-15 把 y={1e-9,2e-9,3e-9}（tss=2e-18）误判为常量响应抛错。
+        // t 检验等已改精确零判据，回归三处 TSS 守卫同样必须精确零（tss==0）。
+        var X = new double[,] { { 1.0 }, { 2.0 }, { 3.0 } };
+        var y = new[] { 1e-9, 2e-9, 3e-9 };
+        var r = RegressionCore.FitOLS(X, y, addIntercept: true);
+        double r2 = (double)r["r_squared"];
+        r2.Should().BeApproximately(1.0, 1e-6);   // 线性关系 r²≈1
+    }
+
+    [Fact] public void FitRidge_small_scale_y_not_constant()
+    {
+        var X = new double[,] { { 1.0 }, { 2.0 }, { 3.0 } };
+        var y = new[] { 1e-9, 2e-9, 3e-9 };
+        var r = RegressionCore.FitRidge(X, y, 0.1);
+        ((double)r["r_squared"]).Should().BeGreaterThan(0.9);
+    }
+
+    [Fact] public void FitWLS_small_scale_y_not_constant()
+    {
+        var X = new double[,] { { 1.0 }, { 2.0 }, { 3.0 } };
+        var y = new[] { 1e-9, 2e-9, 3e-9 };
+        var r = RegressionCore.FitWLS(X, y, new[] { 1.0, 1.0, 1.0 }, true);
+        ((double)r["r_squared"]).Should().BeApproximately(1.0, 1e-6);
+    }
 }
 }

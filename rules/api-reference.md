@@ -76,7 +76,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `LINALG.MATMUL` | (array1, array2) | `double[,]` | 矩阵乘法。对标 Excel MMULT |
 | `LINALG.TRANSPOSE` | (array) | `double[,]` | 矩阵转置。对标 Excel TRANSPOSE |
 | `LINALG.TRACE` | (array) | `double` | 矩阵迹（对角线元素之和） |
-| `LINALG.RANK` | (array, [tolerance]) | `long` | 数值秩（默认容差 1e-10） |
+| `LINALG.RANK` | (array, [tolerance]) | `long` | 数值秩（默认容差 0 = 相对，numpy 约定；显式传绝对阈值仍支持） |
 | `LINALG.COND` | (array) | `double` | 条件数（2-范数） |
 | `LINALG.EIGEN` | (array) | `double[]` | 特征值。要求对称矩阵，非对称输入返回错误 |
 | `LINALG.SVD_U` | (array) | `double[,]` | SVD 左奇异向量矩阵 U。A = U·diag(S)·Vt |

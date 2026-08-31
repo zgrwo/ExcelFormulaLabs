@@ -412,5 +412,25 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             r[1, 0].Should().Be("Alice");
             r[2, 1].Should().Be(25.0);
         }
+
+    // ── review-2026-08-31（max-level 全量审查）：P0-2 守卫正式回归测试 ──
+    [Fact] public void Recursive_cte_blocked()
+    {
+        // 无限递归 CTE 原可通过全部过滤（无 RECURSIVE 关键字拦截）→ 输出无界 → OOM。
+        var data = new object[,] { { "x" }, { 1.0 } };
+        var act = () => SqlCore.SqlQuery(data,
+            "WITH RECURSIVE x(n) AS (SELECT 1 UNION ALL SELECT n+1 FROM x) SELECT count(*) FROM x", null, true);
+        act.Should().Throw<ArgumentException>().WithMessage("*RECURSIVE*");
     }
+
+    [Fact] public void Cross_join_row_limit_guard()
+    {
+        // 1000×1000 交叉连接 = 1e6 行 > 200k 上限 → 显式拒绝（不可捕获 OOM 防线的行数部分）。
+        var a = new object[1000, 1];
+        a[0, 0] = "v";
+        for (int i = 1; i < 1000; i++) a[i, 0] = (double)i;
+        var act = () => SqlCore.SqlQuery(a, "SELECT * FROM data a, data b", null, true);
+        act.Should().Throw<ArgumentException>().WithMessage("*more than*");
+    }
+}
 }

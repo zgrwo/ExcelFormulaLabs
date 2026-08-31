@@ -397,6 +397,10 @@ namespace ExcelFormulaLabs.Foundation
                 if (orig is object[,] arr2D)
                 {
                     int r = arr2D.GetLength(0);
+                    // review-2026-08-31（max-level 全量审查，P2-17 遗留）：1×1 输入是标量语义
+                    // （Excel 单元格即 1×1 range），不参与行数一致性校验——
+                    // MapOverMulti(1×1, n×1) 必须广播为 n×1，而非抛 "Cannot reshape"。
+                    if (r == 1 && arr2D.GetLength(1) == 1) continue;
                     if (expectedRows == null) { expectedRows = r; rows = r; }
                     else if (expectedRows.Value != r)
                         throw new InvalidOperationException(
