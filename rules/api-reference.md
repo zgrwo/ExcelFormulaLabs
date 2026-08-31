@@ -84,9 +84,9 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `LINALG.SVD_VT` | (array) | `double[,]` | SVD 右奇异向量转置 Vt。A = U·diag(S)·Vt |
 | `LINALG.QR_Q` | (array) | `double[,]` | QR 分解正交矩阵 Q。A = Q·R |
 | `LINALG.QR_R` | (array) | `double[,]` | QR 分解上三角矩阵 R。A = Q·R |
-| `LINALG.LU_L` | (array) | `double[,]` | LU 分解下三角矩阵 L。PA = LU |
-| `LINALG.LU_U` | (array) | `double[,]` | LU 分解上三角矩阵 U。PA = LU |
-| `LINALG.LU_P` | (array) | `double[,]` | LU 分解置换矩阵 P。PA = LU |
+| `LINALG.LU_L` | (array) | `double[,]` | LU 分解下三角矩阵 L。A = P*L*U |
+| `LINALG.LU_U` | (array) | `double[,]` | LU 分解上三角矩阵 U。A = P*L*U |
+| `LINALG.LU_P` | (array) | `double[,]` | LU 分解置换矩阵 P。A = P*L*U |
 | `LINALG.PINV` | (array) | `double[,]` | Moore-Penrose 伪逆 |
 | `LINALG.CHOLESKY` | (array) | `double[,]` | Cholesky 分解 |
 | `LINALG.IDENTITY` | (size) | `double[,]` | 生成 n×n 单位矩阵 |

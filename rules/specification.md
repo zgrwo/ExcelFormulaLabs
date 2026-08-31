@@ -1,6 +1,6 @@
 # ExcelFormulaLabs — 项目规格文档
 
-> 版本：v2.2.1 | 最后更新：2026-08-29 | 状态：稳定发行中
+> 版本：v2.2.3 | 最后更新：2026-08-31 | 状态：稳定发行中
 
 ## 1. 项目概述
 
@@ -31,7 +31,7 @@
 | 回归 | REGRESS.* | 10 | Analytics | OLS/WLS/岭回归/因子重要性 |
 | 物理化学 | PHYCHEM.* | 16 | Analytics | 分子量/温度/压力/气体定律 |
 | 实验设计 | DOE.* | 4 | Analytics | 实验设计矩阵 + 效应/ANOVA/Pareto 分析 |
-| 字符串 | STR.* | ~34 | DataToolkit | 反转/提取/编解码/编辑距离 |
+| 字符串 | STR.* | 34 | DataToolkit | 反转/提取/编解码/编辑距离 |
 | 日期时间 | DT.* | 25 | DataToolkit | ISO周/工作日/年龄/时间戳 |
 | 正则 | REGEX.* | 9 | DataToolkit | 匹配/替换/捕获组（5秒超时） |
 | 数组 | ARR.* | 22 | DataToolkit | 排序/筛选/去重/切片/打乱 |
@@ -82,7 +82,7 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 
 ### 4.1 测试体系
 
-- 2,444 单元测试（xUnit + FluentAssertions，[Fact]/[Theory] 实测计数）
+- 2,466 个 [Fact]（xUnit + FluentAssertions；[Theory]=0，review-2026-08-31 修正——原"2,444 单元测试（[Fact]/[Theory]）"的措辞与数字均过期）
 - Python 交叉验证（scipy/numpy 独立计算，容差 1e-10）
 - 手册示例验证（verify-manual.py 全 UDF 覆盖）
 - XLL 加载/卸载自动化测试
@@ -104,7 +104,7 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 
 | 阶段 | 时间 |  commits | 关键事件 |
 |------|------|----------|----------|
-| 初始版本 | 06-22 | 1 | 236 UDF + 2,444 测试（现计数） |
+| 初始版本 | 06-22 | 1 | 236 UDF + 2,466 测试（现计数） |
 | 审查修复期 | 06-22 ~ 07-05 | ~60 | 多轮深度审查，NaN守卫/安全加固/文档体系 |
 | 功能扩展期 | 07-05 ~ 07-15 | ~30 | CORRMATRIX/交叉验证/IntelliSense |
 | 稳定发行期 | 07-15 ~ 07-23 | ~47 | v1.0.4→v1.0.7，审查修复+性能优化 |

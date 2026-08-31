@@ -1,6 +1,6 @@
-# Cross-Validation Report — ExcelFormulaLabs v2.2.1
+# Cross-Validation Report — ExcelFormulaLabs v2.2.3
 
-> **Python 3.12 + scipy/numpy** | **C# MathNet.Numerics 5.0.0** | **2026-08-29**
+> **Python 3.11 + scipy/numpy** | **C# MathNet.Numerics 5.0.0** | **2026-08-31**
 >
 > 验证流程：示例输入 → Python(scipy) 计算 → C#(MathNet) 交叉验证 → 一致 → 写入手册
 
