@@ -49,7 +49,7 @@ namespace ExcelFormulaLabs.DataToolkit
                     "Use a dedicated database tool for DDL/DML operations.");
             if (ForbiddenKeyword.IsMatch(sql))
                 throw new ArgumentException(
-                    "Data-modifying or schema statements (INSERT/UPDATE/DELETE/DDL/PRAGMA/ATTACH) " +
+                    "Data-modifying or schema statements (INSERT/UPDATE/DELETE/RECURSIVE/DDL/PRAGMA/ATTACH) " +
                     "are forbidden inside SQL queries, including WITH (CTE) prefixes.");
             // Reject semicolons to prevent multi-statement injection
             // (e.g. SELECT 1; ATTACH DATABASE …).  SQLite single-statement

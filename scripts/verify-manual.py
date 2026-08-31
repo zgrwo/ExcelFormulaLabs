@@ -222,6 +222,9 @@ zs=np.array([10.0,20,30,40,50])
 X_cm=np.array([[4.0,1.0,2.0,3.0],[3.0,5.0,1.0,2.0],[2.0,3.0,6.0,1.0],[1.0,2.0,3.0,7.0]])  # A_4x4: rows=obs, cols=var
 cross_check("STATS.ZSCORE", stats.zscore(zs, ddof=0), tol=1e-5)
 cross_check("STATS.CORRMATRIX", np.corrcoef(X_cm, rowvar=False), tol=1e-10)
+# P0-3a 标签路径回归守卫（review-2026-08-31）：常量列 → 全 NaN 行列——
+# C# 序列化为 {"__nan__":true} 标签，unwrap 后须与 Python NaN 匹配（防标签被改回 null 的回归）。
+cross_check("STATS.CORRMATRIX_CONST", np.array([[np.nan, np.nan], [np.nan, 1.0]]), tol=0)
 check("STATS.ABS", np.abs([-10,20,-30,40,-50]).tolist(), [10,20,30,40,50])
 check("STATS.SQRT", np.sqrt([4,9,16,25,36]).tolist(), [2,3,4,5,6])
 check("STATS.LN", np.log([1,math.e,math.e**2,math.e**3,math.e**4]).tolist(), [0,1,2,3,4])
