@@ -40,7 +40,9 @@ esac
 
 # 匹配 Conventional Commits 格式（scope 允许中文与常见分隔符）
 if printf '%s' "$subject" | grep -Eq '^(feat|fix|docs|style|refactor|test|chore|build|ci|perf|revert|release)(\([^) ]+\))?(!)?: .+$'; then
-    len=$(printf '%s' "$subject" | wc -m)
+    # P2-28 (review-2026-08-31): wc -m 在 C locale 下按字节计数，中文标题会在 <72 字符处误报过长
+    # 用 ${#subject} 按字符计数（bash 内建，UTF-8 安全）。
+    len=${#subject}
     if [ "$len" -gt 72 ]; then
         echo "❌ 提交标题过长：${len} 字符，上限 72）：${subject}" >&2
         exit 1

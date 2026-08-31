@@ -16,20 +16,23 @@ public static class ResultSerializer
         NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
     };
 
-    /// <summary>Convert any Core method result to a JSON-serializable object.</summary>
+    /// <summary>Convert any Core method result to a JSON-serializable object.
+    /// review 2026-08-31（深度审查 P0-3a）：NaN/±Inf 原来被压成同一个 null，verify-manual.py 又把
+    /// null 一律还原为 NaN → C#=+Inf 对 Python=NaN 这对"都错且互不相同"的结果判 PASS。
+    /// 改为带标签对象：{{"__nan__":true}} / {{"__inf__":1|-1}}，与真正的 null 返回值区分。</summary>
     public static object? ToJsonFriendly(object? value)
     {
         return value switch
         {
             null => null,
-            double d => double.IsNaN(d) || double.IsInfinity(d) ? null : d,
+            double d => double.IsNaN(d) || double.IsInfinity(d) ? SpecialDouble(d) : d,
             long l => l,
             int i => i,
             bool b => b,
             string s => s,
             DateTime dt => dt.ToString("O"),
             double[] da => da.Select(d => (object?)(
-                double.IsNaN(d) || double.IsInfinity(d) ? null : d)).ToArray(),
+                double.IsNaN(d) || double.IsInfinity(d) ? SpecialDouble(d) : d)).ToArray(),
             string[] sa => sa.Cast<object>().ToArray(),
             int[] ia => ia.Cast<object>().ToArray(),
             long[] la => la.Cast<object>().ToArray(),
@@ -41,17 +44,22 @@ public static class ResultSerializer
         };
     }
 
-    private static double?[][] MatrixToJagged(double[,] m)
+    private static object SpecialDouble(double d) =>
+        double.IsNaN(d) ? new Dictionary<string, object> { ["__nan__"] = true }
+        : double.IsPositiveInfinity(d) ? new Dictionary<string, object> { ["__inf__"] = 1 }
+        : new Dictionary<string, object> { ["__inf__"] = -1 };
+
+    private static object?[][] MatrixToJagged(double[,] m)
     {
         int rows = m.GetLength(0), cols = m.GetLength(1);
-        var result = new double?[rows][];
+        var result = new object?[rows][];
         for (int r = 0; r < rows; r++)
         {
-            result[r] = new double?[cols];
+            result[r] = new object?[cols];
             for (int c = 0; c < cols; c++)
             {
                 double v = m[r, c];
-                result[r][c] = double.IsNaN(v) || double.IsInfinity(v) ? null : v;
+                result[r][c] = double.IsNaN(v) || double.IsInfinity(v) ? SpecialDouble(v) : v;
             }
         }
         return result;

@@ -28,6 +28,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
+          cache: true
           dotnet-version: |
             8.0.x
 
@@ -66,6 +67,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
+          cache: true
           dotnet-version: 8.0.x
 
       - name: Setup Python
@@ -95,6 +97,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
+          cache: true
           dotnet-version: |
             8.0.x
 

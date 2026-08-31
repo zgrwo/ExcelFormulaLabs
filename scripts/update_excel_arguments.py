@@ -83,36 +83,54 @@ PARAM_DESC = {
     "k":"Percentile value between 0 and 100","x":"Hypothesized population mean for one-sample t-test",
 }
 
-api_md = ROOT / "rules" / "api-reference.md"
-func_params = {}
-for m in re.finditer(r"\| `([A-Z]+\.[A-Z0-9_]+)` \| \(([^)]*)\) \|", api_md.read_text(encoding="utf-8")):
-    func_params[m.group(1)] = [p.strip() for p in m.group(2).split(",") if p.strip()]
+def sync_udf_arguments():
+    """Sync [ExcelArgument] attributes from api-reference.md param lists. Returns count updated."""
+    api_md = ROOT / "rules" / "api-reference.md"
+    func_params = {}
+    for m in re.finditer(r"\| `([A-Z]+\.[A-Z0-9_]+)` \| \(([^)]*)\) \|", api_md.read_text(encoding="utf-8")):
+        func_params[m.group(1)] = [p.strip() for p in m.group(2).split(",") if p.strip()]
 
-total = 0
-for fpath in sorted(ROOT.glob("src/**/*Udf.cs")):
-    content = fpath.read_text(encoding="utf-8")
-    content = re.sub(r'\[ExcelArgument\("[^"]*"\)\]\s*', '', content)
-    updated = content
-    for m in re.finditer(r'\[ExcelFunction\(Name\s*=\s*"([^"]+)"[^\]]*\)\]\s*public static object\s+\w+\s*\(([^)]*)\)', updated):
-        func_name = m.group(1)
-        raw_params = m.group(2).strip()
-        if not raw_params:
-            continue
-        csharp_params = [p.strip() for p in raw_params.split(",") if p.strip()]
-        new_names = func_params.get(func_name, [])
-        if len(new_names) != len(csharp_params):
-            continue
-        new_parts = []
-        for cp, an in zip(csharp_params, new_names):
-            desc = PARAM_DESC.get(an, "The {} argument".format(an.replace("_", " ")))
-            is_optional = '=null' in cp or '=null!' in cp
-            display_name = '[{}]'.format(an) if is_optional else an
-            new_parts.append('[ExcelArgument(Name="{}", Description="{}")] {}'.format(display_name, desc, cp))
-        old_sig = "(" + raw_params + ")"
-        new_sig = "(" + ", ".join(new_parts) + ")"
-        updated = updated.replace(old_sig, new_sig, 1)
-        total += 1
-    if updated != content:
-        fpath.write_text(updated, encoding="utf-8")
-        print("  {}: synced".format(fpath.name))
-print("Done. {} UDFs updated.".format(total))
+    total = 0
+    for fpath in sorted(ROOT.glob("src/**/*Udf.cs")):
+        content = fpath.read_text(encoding="utf-8")
+        content = re.sub(r'\[ExcelArgument\("[^"]*"\)\]\s*', '', content)
+        updated = content
+        for m in re.finditer(r'\[ExcelFunction\(Name\s*=\s*"([^"]+)"[^\]]*\)\]\s*public static object\s+\w+\s*\(([^)]*)\)', updated):
+            func_name = m.group(1)
+            raw_params = m.group(2).strip()
+            if not raw_params:
+                continue
+            csharp_params = [p.strip() for p in raw_params.split(",") if p.strip()]
+            new_names = func_params.get(func_name, [])
+            if len(new_names) != len(csharp_params):
+                continue
+            new_parts = []
+            for cp, an in zip(csharp_params, new_names):
+                desc = PARAM_DESC.get(an, "The {} argument".format(an.replace("_", " ")))
+                is_optional = '=null' in cp or '=null!' in cp
+                display_name = '[{}]'.format(an) if is_optional else an
+                new_parts.append('[ExcelArgument(Name="{}", Description="{}")] {}'.format(display_name, desc, cp))
+            old_sig = "(" + raw_params + ")"
+            new_sig = "(" + ", ".join(new_parts) + ")"
+            updated = updated.replace(old_sig, new_sig, 1)
+            total += 1
+        if updated != content:
+            fpath.write_text(updated, encoding="utf-8")
+            print("  {}: synced".format(fpath.name))
+    print("Done. {} UDFs updated.".format(total))
+    return total
+
+
+# P2-27 (review-2026-08-31): 原脚本无 main()/无 except/无 sys.exit——正则不匹配时静默 no-op，
+# 调用方无法区分"全部同步成功"与"什么都没匹配"。加改动计数 + 零改动时 exit 1。
+def main():
+    total = sync_udf_arguments()
+    if total == 0:
+        print("ERROR: no UDF signatures were updated - pattern may have drifted from the codebase.")
+        sys.exit(1)
+    print("OK: {} UDF(s) updated.".format(total))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

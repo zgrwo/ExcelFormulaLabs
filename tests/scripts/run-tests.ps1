@@ -13,7 +13,9 @@ $failures = @()
 foreach ($s in $scripts) {
     Write-Host ""
     Write-Host "===== 运行 $s =====" -ForegroundColor Cyan
-    & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $dir "scripts\$s")
+    # P2-6 (review-2026-08-31): 优先 pwsh 7（与 release.yml 一致，暴露 pwsh7 语义差异），回退 powershell 5.1
+    $hostCmd = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell" }
+        & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $dir "scripts\$s") $hostCmd -NoProfile -ExecutionPolicy Bypass -File (Join-Path $dir "scripts\$s")
     if ($LASTEXITCODE -ne 0) { $failures += $s }
 }
 Write-Host ""

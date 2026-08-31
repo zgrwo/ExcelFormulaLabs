@@ -63,8 +63,9 @@ function ConvertTo-QoderLinks {
 
 $mismatches = @()
 foreach ($name in $skillNames) {
-    $src = Join-Path $root "skills\$name.md"
-    $dst = Join-Path $root ".qoder\skills\$name\SKILL.md"
+    # P2-30 (review-2026-08-31): 原 "skills$name.md" 反斜杠在 Linux/pwsh 下是字面字符，改用 Join-Path 逐级拼接
+    $src = Join-Path (Join-Path $root "skills") "$name.md"
+    $dst = Join-Path (Join-Path (Join-Path (Join-Path $root ".qoder") "skills") $name) "SKILL.md"
     if (-not (Test-Path $src)) {
         $mismatches += "源文件缺失: skills/$name.md"
         continue
@@ -99,8 +100,9 @@ if ($CheckOnly) {
 if ($mismatches.Count -gt 0) {
     # 非 CheckOnly 模式：直接重写全部镜像（修复漂移）
     foreach ($name in $skillNames) {
-        $src = Join-Path $root "skills\$name.md"
-        $dst = Join-Path $root ".qoder\skills\$name\SKILL.md"
+        # P2-30 (review-2026-08-31): 原 "skills$name.md" 反斜杠在 Linux/pwsh 下是字面字符，改用 Join-Path 逐级拼接
+    $src = Join-Path (Join-Path $root "skills") "$name.md"
+        $dst = Join-Path (Join-Path (Join-Path (Join-Path $root ".qoder") "skills") $name) "SKILL.md"
         $dstDir = Split-Path -Parent $dst
         if (-not (Test-Path $dstDir)) { New-Item -ItemType Directory -Path $dstDir -Force | Out-Null }
         $content = [System.IO.File]::ReadAllText($src, $utf8NoBom)
