@@ -101,6 +101,10 @@ namespace ExcelFormulaLabs.Foundation
 
             object[] flat1 = InputNormalizer.NormalizeTo1D(input1);
             object[] flat2 = InputNormalizer.NormalizeTo1D(input2);
+            // review 2026-08-31（深度审查 P2-17 补充）：null 标量输入应广播（视为 [null]）而非被
+            // NormalizeTo1D(null)=空数组 吞掉——MapOverMulti(null, ["a","b"]) 此前直接返回空结果。
+            if (input1 == null) flat1 = new object[] { null! };
+            if (input2 == null) flat2 = new object[] { null! };
 
             // was2D is checked AFTER TryExtractComRangeValue (line 92-93) because
             // COM Range extraction converts the input to its .Value (object[,] for
@@ -109,7 +113,7 @@ namespace ExcelFormulaLabs.Foundation
             bool was2D = input1 is object[,] || input2 is object[,];
 
             if (flat1.Length == 0 || flat2.Length == 0)
-                return ExcelEmpty.Value;
+                return null!;
 
             if (flat1.Length == 1 && flat2.Length == 1)
                 return was2D
@@ -142,11 +146,15 @@ namespace ExcelFormulaLabs.Foundation
             object[] flat1 = InputNormalizer.NormalizeTo1D(input1);
             object[] flat2 = InputNormalizer.NormalizeTo1D(input2);
             object[] flat3 = InputNormalizer.NormalizeTo1D(input3);
+            // review 2026-08-31（深度审查 P2-17 补充）：null 标量广播（同 2 参数版本）。
+            if (input1 == null) flat1 = new object[] { null! };
+            if (input2 == null) flat2 = new object[] { null! };
+            if (input3 == null) flat3 = new object[] { null! };
 
             bool was2D = input1 is object[,] || input2 is object[,] || input3 is object[,];
 
             if (flat1.Length == 0 || flat2.Length == 0 || flat3.Length == 0)
-                return ExcelEmpty.Value;
+                return null!;
 
             int targetLen = Math.Max(Math.Max(flat1.Length, flat2.Length), flat3.Length);
 
@@ -183,7 +191,7 @@ namespace ExcelFormulaLabs.Foundation
             object cell, Func<TInput, TOutput> mapper)
         {
             if (cell == null) return cell!;
-            if (cell is DBNull) return ExcelEmpty.Value;
+            if (cell is DBNull) return null!;
             // P1-7 (review): return the ORIGINAL empty sentinel — Excel-DNA renders its own
             // ExcelEmpty as an empty cell, while Foundation.ExcelEmpty (a custom class outside
             // the Excel-DNA marshalling allow-list) rendered as #NUM! in real Excel.
@@ -200,8 +208,8 @@ namespace ExcelFormulaLabs.Foundation
             if (InputNormalizer.IsExcelErrorValue(cell2)) return cell2;
             if (cell1 == null) return cell1!;
             if (cell2 == null) return cell2!;
-            if (cell1 is DBNull) return ExcelEmpty.Value;
-            if (cell2 is DBNull) return ExcelEmpty.Value;
+            if (cell1 is DBNull) return null!;
+            if (cell2 is DBNull) return null!;
             // P1-7: pass through the original empty sentinel (Excel-DNA renders as empty).
             if (InputNormalizer.IsExcelEmptyValue(cell1)) return cell1!;
             if (InputNormalizer.IsExcelEmptyValue(cell2)) return cell2!;
@@ -219,9 +227,9 @@ namespace ExcelFormulaLabs.Foundation
             if (cell1 == null) return cell1!;
             if (cell2 == null) return cell2!;
             if (cell3 == null) return cell3!;
-            if (cell1 is DBNull) return ExcelEmpty.Value;
-            if (cell2 is DBNull) return ExcelEmpty.Value;
-            if (cell3 is DBNull) return ExcelEmpty.Value;
+            if (cell1 is DBNull) return null!;
+            if (cell2 is DBNull) return null!;
+            if (cell3 is DBNull) return null!;
             // P1-7: pass through the original empty sentinel (Excel-DNA renders as empty).
             if (InputNormalizer.IsExcelEmptyValue(cell1)) return cell1!;
             if (InputNormalizer.IsExcelEmptyValue(cell2)) return cell2!;
@@ -235,9 +243,13 @@ namespace ExcelFormulaLabs.Foundation
         private static object MapValue<TInput, TOutput>(
             object value, Func<TInput, TOutput> mapper)
         {
-            TInput typed = ConvertValue<TInput>(value);
+            // review 2026-08-31（深度审查 P1-11）：ConvertValue 原在 try 之外——它调用
+            // InputNormalizer.ToInt32/ToLong（对越界值主动抛 ArgumentException），任一单元格
+            // 触发即冲出 Map2D 双层循环 → 整片区域一个 #VALUE!，per-cell 隔离承诺失效。
+            // 移入 try：单格转换失败返回 ExcelError.Value。
             try
             {
+                TInput typed = ConvertValue<TInput>(value);
                 TOutput result = mapper(typed);
                 return (object)result!;
             }
@@ -255,10 +267,10 @@ namespace ExcelFormulaLabs.Foundation
         private static object MapValue<T1, T2, TOutput>(
             object v1, object v2, Func<T1, T2, TOutput> mapper)
         {
-            T1 t1 = ConvertValue<T1>(v1);
-            T2 t2 = ConvertValue<T2>(v2);
             try
             {
+                T1 t1 = ConvertValue<T1>(v1);
+                T2 t2 = ConvertValue<T2>(v2);
                 TOutput result = mapper(t1, t2);
                 return (object)result!;
             }
@@ -273,11 +285,11 @@ namespace ExcelFormulaLabs.Foundation
         private static object MapValue<T1, T2, T3, TOutput>(
             object v1, object v2, object v3, Func<T1, T2, T3, TOutput> mapper)
         {
-            T1 t1 = ConvertValue<T1>(v1);
-            T2 t2 = ConvertValue<T2>(v2);
-            T3 t3 = ConvertValue<T3>(v3);
             try
             {
+                T1 t1 = ConvertValue<T1>(v1);
+                T2 t2 = ConvertValue<T2>(v2);
+                T3 t3 = ConvertValue<T3>(v3);
                 TOutput result = mapper(t1, t2, t3);
                 return (object)result!;
             }

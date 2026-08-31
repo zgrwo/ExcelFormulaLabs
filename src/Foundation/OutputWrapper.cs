@@ -48,15 +48,18 @@ namespace ExcelFormulaLabs.Foundation
 
         /// <summary>
         /// Reshape a flat result into a 2D array matching target dimensions.
-        /// Pads with <see cref="ExcelEmpty.Value"/> if result is too short;
+        /// Pads with <c>null</c> (empty cell) if result is too short;
         /// truncates if too long.
+        /// review 2026-08-31（深度审查 P2-9）：原用 Foundation.ExcelEmpty.Value 填充——该自定义
+        /// 类不在 Excel-DNA 封送白名单内，真实 Excel 渲染为 #NUM!（ElementWiseMapper 注释自证）。
+        /// 改为 null：Excel-DNA 对 object[,] 中的 null 渲染为空单元格。
         /// </summary>
         public static object[,] ReshapeOutput(object result, int targetRows, int targetCols)
         {
             var output = new object[targetRows, targetCols];
             for (int r = 0; r < targetRows; r++)
                 for (int c = 0; c < targetCols; c++)
-                    output[r, c] = ExcelEmpty.Value;
+                    output[r, c] = null!;
 
             if (result == null) return output;
 
@@ -64,7 +67,7 @@ namespace ExcelFormulaLabs.Foundation
             {
                 int count = Math.Min(flat.Length, targetRows * targetCols);
                 for (int i = 0; i < count; i++)
-                    output[i / targetCols, i % targetCols] = flat[i] ?? ExcelEmpty.Value;
+                    output[i / targetCols, i % targetCols] = flat[i] ?? null!;
             }
             else
             {

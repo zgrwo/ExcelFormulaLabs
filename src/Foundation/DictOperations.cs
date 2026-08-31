@@ -49,7 +49,7 @@ namespace ExcelFormulaLabs.Foundation
 
                 string keyStr = KeyToString(key);
                 if (!dict.ContainsKey(keyStr))
-                    dict.Add(keyStr, defaultValue ?? ExcelEmpty.Value);
+                    dict.Add(keyStr, defaultValue);
             }
             return dict;
         }
@@ -66,7 +66,7 @@ namespace ExcelFormulaLabs.Foundation
             foreach (var kvp in dict)
             {
                 result[row, 0] = kvp.Key;
-                result[row, 1] = kvp.Value ?? ExcelEmpty.Value;
+                result[row, 1] = kvp.Value;
                 row++;
             }
             return result;
