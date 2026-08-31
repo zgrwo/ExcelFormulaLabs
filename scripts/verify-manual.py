@@ -34,8 +34,11 @@ CROSS_PASS = 0   # P0-3b: cross_check() 与 C# 对照通过数
 SECTION_TOTAL = 0  # P1-16 (review-2026-08-31): UDF 覆盖率由 section() 声明累加派生，禁硬编码
 TOTAL_UDF = 0  # track unique UDFs verified
 
+REFERENCED = set()  # P1-16 (review-2026-08-31): 实际引用的 UDF 名集合（覆盖数推导用）
+
 def check(name, actual, expected, tol=EPS, manual=True):
     global PASS, FAIL, MANUAL_PASS, CROSS_PASS
+    REFERENCED.add(name)
     ok = False
     af = isinstance(actual, (float, np.floating, np.integer))
     ef = isinstance(expected, (float, np.floating, np.integer, int))
@@ -121,6 +124,7 @@ def unwrap(v):
 def cross_check(name, python_computed, tol=EPS):
     """Compare Python computation against C# CrossValRunner reference. Hard fail on mismatch."""
     global PASS, FAIL, SKIP, CROSS_PASS
+    REFERENCED.add(name)
     ref = csharp_results().get(name)
     if ref is None:
         # P1-9 (review): a missing C# reference must fail the run, not silently degrade
@@ -305,6 +309,18 @@ else:
     check("LINALG.LU_U[3,3]", abs(U_lu[3,3]-6.5333)<0.01, True)
     check("LINALG.LU_L[1,0]", abs(L_lu[1,0]-0.75)<0.01, True)
 check("LINALG.LU_L+P+U reconstruction", P_lu@A, L_lu@U_lu, tol=EPS_LOOSE)
+# ── LINALG.LU_U / LU_P 独立验证（review-2026-08-31，Dispatcher 补注册）──
+# scipy 与 C# 主元策略可能不同，无法逐元素对照——改为性质检查（U 上三角、P 为置换矩阵）。
+_cs_luu = csharp_results().get("LINALG.LU_U")
+if _cs_luu and _cs_luu["status"] == "ok":
+    _U = np.array(_cs_luu["result"], dtype=float)
+    check("LINALG.LU_U upper-triangular", bool(np.allclose(_U, np.triu(_U), atol=1e-9)), True)
+_cs_lup = csharp_results().get("LINALG.LU_P")
+if _cs_lup and _cs_lup["status"] == "ok":
+    _P = np.array(_cs_lup["result"], dtype=float)
+    _uniq = set(np.unique(_P))
+    _perm = bool(np.all(_P.sum(axis=0) == 1) and np.all(_P.sum(axis=1) == 1) and _uniq <= {0.0, 1.0})
+    check("LINALG.LU_P permutation", _perm, True)
 # PINV
 cs_pinv=csharp_results().get("LINALG.PINV")
 Ap = np.linalg.pinv(np.array([[1,4],[2,5],[3,6]],dtype=float))
@@ -338,6 +354,7 @@ section("REGRESS - Regression Analysis", 7)
 Xr=np.array([[1,3],[2,1],[3,4],[4,2],[5,5]],dtype=float); yr=np.array([6,6,11,11,16],dtype=float)
 lr=LR(fit_intercept=True); lr.fit(Xr,yr)
 # Cross-validate OLS via FitOLS dispatch — compare Python vs C# dict keys
+REFERENCED.add("REGRESS.OLS")  # FitOLS 经 cs_ols 检查（COEF/R²/SSE，非 cross_check 调用）
 cs_ols = csharp_results().get("REGRESS.FitOLS")
 if cs_ols and cs_ols["status"] == "ok":
     cs = cs_ols["result"]
@@ -533,6 +550,19 @@ def _common_prefix(a,b):
     while i<len(a) and i<len(b) and a[i]==b[i]: i+=1
     return a[:i]
 cross_check("STR.COMMONPFX", _common_prefix("abcdef","abcxyz"))
+# ── Dispatcher 补注册（review-2026-08-31，全量审查第 1 项）──
+import urllib.parse as _up
+import html as _html
+cross_check("STR.TEXTJOIN", "-".join(["a","b","c"]))
+cross_check("STR.COALESCE", "")  # Coalesce("",f)="": 仅 null 才 fallback
+cross_check("STR.ISNULLEMPTY", len("") == 0)
+cross_check("STR.ISNULLWS", "  ".strip() == "")
+cross_check("STR.URLENCODE", _up.quote("a b&c=d", safe=""))
+cross_check("STR.URLDECODE", _up.unquote("a+b%26c"))
+cross_check("STR.HTMLENCODE", _html.escape("<b>&"))
+cross_check("STR.HTMLDECODE", _html.unescape("&lt;b&gt;"))
+cross_check("STR.PADLEFT", "42".rjust(5))
+cross_check("STR.PADRIGHT", "42".ljust(5))
 
 # ========================================================================
 # DT (25 UDFs)
@@ -625,6 +655,20 @@ check("DT.FROMUNIX(1704067200)", from_unix, date(2024,1,1))
 check("DT.DATEDIFF(d)", (date(2024,12,31)-d1).days, 365)
 check("DT.DATEDIFF(m)", (date(2024,12,31).year - d1.year) * 12 + date(2024,12,31).month - d1.month, 11)  # Jan→Dec = 11 months
 check("DT.DATEDIFF(y)", date(2024,12,31).year - d1.year, 0)
+# ── Dispatcher 补注册（review-2026-08-31）──
+from datetime import timezone as _tz
+import calendar as _cal
+cross_check("DT.WEEKDAY", (date(2024,1,8).isoweekday() % 7) + 1)
+cross_check("DT.WEEKDAYISO", date(2024,1,7).isoweekday())
+cross_check("DT.ISWE", date(2024,1,6).weekday() >= 5)
+cross_check("DT.QUARTER", (5 + 2) // 3)
+cross_check("DT.SEMESTER", (5 + 5) // 6)
+cross_check("DT.DOY", date(2024,2,1).timetuple().tm_yday)
+cross_check("DT.DIM", _cal.monthrange(2024,2)[1])
+cross_check("DT.EOM", "2024-02-29T00:00:00.0000000")   # C# DateTime "O" 格式
+cross_check("DT.UNIXTS", datetime(2024,1,1,tzinfo=_tz.utc).timestamp())
+cross_check("DT.AGEDAYS", (date(2024,2,1)-date(2024,1,1)).days)
+cross_check("DT.DATEDIFF", (date(2024,1,10)-date(2024,1,1)).days)
 
 # ========================================================================
 # REGEX (9 UDFs)
@@ -676,6 +720,15 @@ check("ARR.RANGE", list(range(1,11,2)), [1,3,5,7,9])
 # review 2026-08-29：ARR.RANGE/ARR.FILL（下沉 ArrayCore 后）接入活体对照
 cross_check("ARR.RANGE", [1.0, 2.0, 3.0, 4.0, 5.0])
 cross_check("ARR.FILL", ["x", "x", "x"])
+# ── Dispatcher 补注册（review-2026-08-31）──
+cross_check("ARR.SORT", sorted([3,1,2]))
+cross_check("ARR.UNIQUE", list(dict.fromkeys([1,2,1,3,2])))
+cross_check("ARR.INDEXOF", [1,2,3].index(2))
+cross_check("ARR.CONTAINS", 3 in [1,2,3])
+cross_check("ARR.REVERSE", [1,2,3][::-1])
+cross_check("ARR.COUNT", len([1,2,3]))
+cross_check("ARR.CONCAT", [1,2] + [3,4])
+cross_check("ARR.FLATTEN", [1,2,3,4])
 # SHUFFLE — Fisher-Yates format check
 # ARR.SHUFFLE: random output — format-only, verify length unchanged
 import random; shuffled=list(a5); random.shuffle(shuffled); check("ARR.SHUFFLE", len(shuffled), len(a5))
@@ -946,6 +999,7 @@ def doe_ols(Xe, y):
 def cross_check_matrix(name, py_rows):
     """对比 C# 返回的 object[][]（行 0 = 表头，后续为数值行，首列为 Term 字符串）
     与 Python 数值行（不含表头/Term 列）。None/NaN 视为相等。"""
+    REFERENCED.add(name)  # review-2026-08-31: 与 check/cross_check 一致收集覆盖名
     ref = csharp_results().get(name)
     if ref is None or ref["status"] != "ok":
         global PASS, FAIL
@@ -997,7 +1051,46 @@ cross_check_matrix("DOE.PARETO", (2*beta_doe[1:])[order_doe].reshape(-1, 1))
 # Count unique UDFs verified:
 # P1-16 (review-2026-08-31): udf_count 原为写死的算术常量（与 15 处 section() 声明合计 221 矛盾，
 # README 声称 224——三个数字同时存在，删半个 section 照样打印 224）。改为从 section() 声明累加派生。
-udf_count = SECTION_TOTAL
+# P1-16 完善（review-2026-08-31，全量审查第 2 项）：覆盖数从**实际引用**推导——
+# ① 收集 check/cross_check 引用的名字；② 经 _ID2UDF 映射（cross_check 的 manifest id 非 UDF 名，
+# 如 DOE.FULL_2x2 → DOE.PLAN）；③ 与 api-reference 的 236 UDF 名集合前缀匹配。
+# section() 声明保留用于分段展示，不再作为覆盖数信源（声明曾因手写错误导致 221 vs README 224 漂移）。
+_API_UDFS = set()
+for _m in re.finditer(r'\| `([A-Z]+\.[A-Z0-9_]+)`', (Path(__file__).parent.parent / "rules" / "api-reference.md").read_text(encoding="utf-8")):
+    _API_UDFS.add(_m.group(1))
+_ID2UDF = {
+    "DOE.FULL_2x2": "DOE.PLAN", "DOE.FULL_2x3": "DOE.PLAN", "DOE.FULL_3x3": "DOE.PLAN",
+    "DOE.FRAC_4": "DOE.PLAN", "DOE.FRAC_5": "DOE.PLAN", "DOE.FRAC_6": "DOE.PLAN",
+    "DOE.RSM_2": "DOE.PLAN", "DOE.RSM_3": "DOE.PLAN", "DOE.BB_3": "DOE.PLAN", "DOE.BB_4": "DOE.PLAN",
+    "REGRESS.FitOLS": "REGRESS.OLS", "REGRESS.FitWLS": "REGRESS.WLS", "REGRESS.FitRidge": "REGRESS.RIDGE",
+    "LINALG.SVD": "LINALG.SVD_U", "LINALG.QR": "LINALG.QR_Q", "LINALG.LU": "LINALG.LU_L",
+    "PHYCHEM.MOLWT_H2SO4": "PHYCHEM.MOLWT", "PHYCHEM.MOLWT_NaCl": "PHYCHEM.MOLWT", "PHYCHEM.MOLWT_CaCO3": "PHYCHEM.MOLWT",
+    "PHYCHEM.TEMP_CtoF_100": "PHYCHEM.TEMP", "PHYCHEM.TEMP_FtoC_32": "PHYCHEM.TEMP",
+    "PHYCHEM.TEMP_CtoK_0": "PHYCHEM.TEMP", "PHYCHEM.TEMP_KtoC_300": "PHYCHEM.TEMP",
+    "PHYCHEM.PRESS_ATMtoPSI_1": "PHYCHEM.PRESS",
+    "PHYCHEM.VOL_LtoML_1": "PHYCHEM.VOL", "PHYCHEM.VOL_GALtoL_1": "PHYCHEM.VOL",
+    "PHYCHEM.MASS_KGtoLB_1": "PHYCHEM.MASS",
+    "PHYCHEM.IDEALGAS_V": "PHYCHEM.IDEALGAS", "PHYCHEM.GASSTP_Kelvin": "PHYCHEM.GASSTP",
+    "STATS.CORRMATRIX_CONST": "STATS.CORRMATRIX",
+    "DT.ADDWORKDAYS": "DT.ADDWKD", "DT.NEXTWORKDAY": "DT.NEXTWKD", "DT.ISLEAP_2024": "DT.ISLEAP",
+    "DT.EASTER_2024": "DT.EASTER", "DT.EASTER_2025": "DT.EASTER",
+    "STATS.PERCENTILE_25": "STATS.PERCENTILE", "STATS.PERCENTILE_50": "STATS.PERCENTILE", "STATS.PERCENTILE_75": "STATS.PERCENTILE",
+    "LINALG.LU+": "LINALG.LU_L", "LINALG.LU_L+P+U": "LINALG.LU_L",
+}
+def _norm_ref(_name):
+    """规范化引用名为可匹配形式：先按空格截断（'RANGE.TOHTML table tag' → 'RANGE.TOHTML'），
+    再去 [ 下标 / ( 参数 / 尾随符号（'LINALG.SVD_S[0] vs C#' → 'LINALG.SVD_S'）。"""
+    _n = _name.split()[0].split("[")[0].split("(")[0].strip().rstrip("+. ")
+    return _n
+
+_covered = set()
+for _name in REFERENCED:
+    _base = _norm_ref(_name)
+    _mapped = _ID2UDF.get(_base, _base)
+    for _u in _API_UDFS:
+        if _mapped == _u or _mapped.startswith(_u + ".") or _u.startswith(_mapped + "."):
+            _covered.add(_u)
+udf_count = len(_covered)
 print(f"\n{'='*60}")
 print(f"  RESULTS: {PASS} passed, {FAIL} failed, {SKIP} skipped ({(PASS+FAIL)} checks)")
 # P0-3b (review-2026-08-31): 双通道分别汇报——check() 纯 Python 自校验不再混入"已验证"假象

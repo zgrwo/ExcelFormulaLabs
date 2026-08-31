@@ -89,6 +89,8 @@ public static class Dispatcher
         Register("LinalgCore", "Svd", (a, _) => { var (U,S,Vt)=LinalgCore.Svd(ToDouble2D(a[0])); return new Dictionary<string,object>{{"U",U},{"S",S},{"Vt",Vt}}; });
         Register("LinalgCore", "Qr", (a, _) => { var (Q,R)=LinalgCore.Qr(ToDouble2D(a[0])); return new Dictionary<string,object>{{"Q",Q},{"R",R}}; });
         Register("LinalgCore", "Lu", (a, _) => { var (L,U,P)=LinalgCore.Lu(ToDouble2D(a[0])); return new Dictionary<string,object>{{"L",L},{"U",U},{"P",P}}; });
+        Register("LinalgCore", "LuU", (a, _) => LinalgCore.LuU(ToDouble2D(a[0])));
+        Register("LinalgCore", "LuP", (a, _) => LinalgCore.LuP(ToDouble2D(a[0])));
         Register("LinalgCore", "PseudoInverse", (a, _) => LinalgCore.PseudoInverse(ToDouble2D(a[0])));
 
         // ═══════════════════ DoeCore ═══════════════════
@@ -122,6 +124,17 @@ public static class Dispatcher
         Register("StringCore", "Soundex", (a, _) => StringCore.Soundex(ToString(a[0])));
         Register("StringCore", "CountSubstring", (a, k) => StringCore.CountSubstring(ToString(a[0]), ToString(a[1]), Kwarg(k, "cs", true)));
         Register("StringCore", "CommonPrefix", (a, k) => StringCore.CommonPrefix(ToString(a[0]), ToString(a[1]), Kwarg(k, "cs", true)));
+        // review-2026-08-31（全量审查：Dispatcher 补注册——纯确定性，Python 独立实现）
+        Register("StringCore", "TextJoin", (a, k) => StringCore.TextJoin(ToString(a[0]), Kwarg(k, "skip", false), ToStringArray(a[1])));
+        Register("StringCore", "Coalesce", (a, _) => StringCore.Coalesce(ToString(a[0]), ToString(a[1])));
+        Register("StringCore", "IsNullOrEmptyStr", (a, _) => StringCore.IsNullOrEmptyStr(ToString(a[0])));
+        Register("StringCore", "IsNullOrWhitespaceStr", (a, _) => StringCore.IsNullOrWhitespaceStr(ToString(a[0])));
+        Register("StringCore", "UrlEncode", (a, _) => StringCore.UrlEncode(ToString(a[0])));
+        Register("StringCore", "UrlDecode", (a, _) => StringCore.UrlDecode(ToString(a[0])));
+        Register("StringCore", "HtmlEncode", (a, _) => StringCore.HtmlEncode(ToString(a[0])));
+        Register("StringCore", "HtmlDecode", (a, _) => StringCore.HtmlDecode(ToString(a[0])));
+        Register("StringCore", "PadLeft", (a, _) => StringCore.PadLeft(ToString(a[0]), (int)ToLong(a[1])));
+        Register("StringCore", "PadRight", (a, _) => StringCore.PadRight(ToString(a[0]), (int)ToLong(a[1])));
 
         // ═══════════════════ DateTimeCore ═══════════════════
         Register("DateTimeCore", "IsoWeekNum", (a, _) => DateTimeCore.IsoWeekNum(ToDateTime(a[0])));
@@ -129,6 +142,28 @@ public static class Dispatcher
         Register("DateTimeCore", "IsLeapYear", (a, _) => DateTimeCore.IsLeapYear(ToLong(a[0])));
         Register("DateTimeCore", "AddWorkdays", (a, _) => DateTimeCore.AddWorkdays(ToDateTime(a[0]), ToLong(a[1])));
         Register("DateTimeCore", "NextWorkday", (a, _) => DateTimeCore.NextWorkday(ToDateTime(a[0])));
+        // review-2026-08-31（Dispatcher 补注册——确定性日期函数）
+        Register("DateTimeCore", "Weekday", (a, _) => DateTimeCore.Weekday(ToDateTime(a[0])));
+        Register("DateTimeCore", "WeekdayISO", (a, _) => DateTimeCore.WeekdayISO(ToDateTime(a[0])));
+        Register("DateTimeCore", "IsWeekend", (a, _) => DateTimeCore.IsWeekend(ToDateTime(a[0])));
+        Register("DateTimeCore", "Quarter", (a, _) => DateTimeCore.Quarter(ToDateTime(a[0])));
+        Register("DateTimeCore", "Semester", (a, _) => DateTimeCore.Semester(ToDateTime(a[0])));
+        Register("DateTimeCore", "DayOfYear", (a, _) => DateTimeCore.DayOfYear(ToDateTime(a[0])));
+        Register("DateTimeCore", "DaysInMonth", (a, _) => DateTimeCore.DaysInMonth(ToLong(a[0]), ToLong(a[1])));
+        Register("DateTimeCore", "EndOfMonth", (a, _) => DateTimeCore.EndOfMonth(ToDateTime(a[0])));
+        Register("DateTimeCore", "UnixTimestamp", (a, _) => DateTimeCore.UnixTimestamp(ToDateTime(a[0])));
+        Register("DateTimeCore", "AgeDays", (a, _) => DateTimeCore.AgeDays(ToDateTime(a[0]), ToDateTime(a[1])));
+        Register("DateTimeCore", "DateDiff", (a, _) => DateTimeCore.DateDiff(ToString(a[0]), ToDateTime(a[1]), ToDateTime(a[2])));
+
+        // ═══════════════════ ArrayCore 补注册 ═══════════════════
+        Register("ArrayCore", "SortAsc", (a, _) => ArrayCore.Sort(ToObjectArray(a[0]), true, Foundation.ComparerMode.Auto));
+        Register("ArrayCore", "Unique", (a, _) => ArrayCore.Unique(ToObjectArray(a[0])));
+        Register("ArrayCore", "IndexOf", (a, _) => ArrayCore.IndexOf(ToObjectArray(a[0]), ToClr(a[1])));
+        Register("ArrayCore", "Contains", (a, _) => ArrayCore.Contains(ToObjectArray(a[0]), ToClr(a[1])));
+        Register("ArrayCore", "Reverse", (a, _) => ArrayCore.Reverse(ToObjectArray(a[0])));
+        Register("ArrayCore", "Count", (a, _) => ArrayCore.Count(ToObjectArray(a[0])));
+        Register("ArrayCore", "Concat", (a, _) => ArrayCore.Concat(ToObjectArray(a[0]), ToObjectArray(a[1])));
+        Register("ArrayCore", "Flatten2D", (a, _) => ArrayCore.Flatten2D(ToObject2D(a[0]), "R"));
 
         // ═══════════════════ RegexCore ═══════════════════
         Register("RegexCore", "RegexTest", (a, k) => RegexCore.RegexTest(ToString(a[0]), ToString(a[1]),
@@ -170,6 +205,46 @@ public static class Dispatcher
     }
 
     /// <summary>Convert a manifest array (JsonElement) to object[] — for Core methods taking object (CountNumeric).</summary>
+    private static string[] ToStringArray(object? v)
+    {
+        var oa = ToObjectArray(v);
+        var r = new string[oa.Length];
+        for (int i = 0; i < oa.Length; i++) r[i] = oa[i]?.ToString() ?? "";
+        return r;
+    }
+
+    private static object[,] ToObject2D(object? v)
+    {
+        if (v is object[,] m) return m;
+        if (v is JsonElement je && je.ValueKind == JsonValueKind.Array)
+        {
+            var rows = je.EnumerateArray().Select(e => e.EnumerateArray()
+                .Select<JsonElement, object?>(x => x.ValueKind == JsonValueKind.String ? x.GetString() : x.GetDouble()).ToArray()).ToArray();
+            int h = rows.Length, w = rows.Length > 0 ? rows[0].Length : 0;
+            var m2 = new object[h, w];
+            for (int i = 0; i < h; i++) for (int j = 0; j < w; j++) m2[i, j] = rows[i][j];
+            return m2;
+        }
+        throw new ArgumentException($"Cannot convert to object[,]: {v?.GetType().Name}");
+    }
+
+    /// <summary>Convert a raw JSON/CLR scalar to a CLR primitive — JsonElement numbers arrive
+    /// as JsonElement from the manifest (ResolveArg only resolves refs). IndexOf/Contains 的
+    /// 数值容差探测要求 value 是真实 CLR 数值类型（double/int/long）。</summary>
+    private static object ToClr(object? v)
+    {
+        if (v is JsonElement je)
+            return je.ValueKind switch
+            {
+                JsonValueKind.Number => je.TryGetInt64(out long l) ? l : je.GetDouble(),
+                JsonValueKind.String => je.GetString(),
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                _ => je.GetRawText(),
+            };
+        return v!;
+    }
+
     private static object[] ToObjectArray(object? v)
     {
         if (v is object[] oa) return oa;
