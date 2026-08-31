@@ -30,9 +30,13 @@ namespace ExcelFormulaLabs.DataToolkit
         /// SQLite allows data-modifying CTEs (e.g. "WITH x AS (SELECT 1) DELETE FROM data"),
         /// which would pass the <see cref="SelectOnly"/> prefix check — this second
         /// scan closes that bypass. REPLACE is matched only in its DML statement
-        /// form ("REPLACE INTO ...") so the scalar function REPLACE(X,Y,Z) stays usable.</summary>
+        /// form ("REPLACE INTO ...") so the scalar function REPLACE(X,Y,Z) stays usable.
+        /// review 2026-08-31（深度审查 P0-2）：新增 \bRECURSIVE\b——无限递归 CTE
+        /// （WITH RECURSIVE x(n) AS (SELECT 1 UNION ALL SELECT n+1 FROM x)）可通过
+        /// 前缀检查且不被任何关键字拦截，输出无上界 → OOM。递归 CTE 在本功能语境
+        /// （内存表只读查询）没有任何正当用途。</summary>
         private static readonly System.Text.RegularExpressions.Regex ForbiddenKeyword =
-            new(@"\b(INSERT|UPDATE|DELETE|REPLACE\s+INTO|ATTACH|DETACH|PRAGMA|DROP|CREATE|ALTER|VACUUM|REINDEX)\b",
+            new(@"\b(INSERT|UPDATE|DELETE|REPLACE\s+INTO|ATTACH|DETACH|PRAGMA|DROP|CREATE|ALTER|VACUUM|REINDEX|RECURSIVE)\b",
                 System.Text.RegularExpressions.RegexOptions.IgnoreCase
                 | System.Text.RegularExpressions.RegexOptions.Compiled,
                 TimeSpan.FromSeconds(5));
@@ -62,10 +66,55 @@ namespace ExcelFormulaLabs.DataToolkit
             if (extra != null) foreach (var kv in extra) CreateTable(conn, kv.Key, kv.Value, hasHeaders);
             using var cmd = conn.CreateCommand(); cmd.CommandText = sql; cmd.CommandTimeout = SqlTimeoutSeconds;
             using var reader = cmd.ExecuteReader();
-            int cols = reader.FieldCount; var rows = new List<object[]>(); var hdr = new object[cols];
-            for (int i = 0; i < cols; i++) hdr[i] = reader.GetName(i); rows.Add(hdr);
-            while (reader.Read()) { var row = new object[cols]; for (int i = 0; i < cols; i++) row[i] = reader.IsDBNull(i) ? ExcelEmpty.Value : reader.GetValue(i); rows.Add(row); }
-            var result = new object[rows.Count, cols]; for (int r = 0; r < rows.Count; r++) for (int c = 0; c < cols; c++) result[r, c] = rows[r][c]; return result;
+            // review 2026-08-31（深度审查 P0-2）：原实现 `rows.Add(row)` 无上界 + 末尾整体复制
+            // （峰值 2× 内存）——`SELECT * FROM a, b`（100k 行 → 1e10 行）等失控查询触发
+            // **不可捕获的 OOM → Excel 进程崩溃**（ExceptionFilters 排除 OOM，WrapError 不兜底）。
+            // 防线：① SQLITE_LIMIT_LENGTH=100MB（单值超限由 SQLite 层拒绝，randomblob(1e9) 在
+            // 分配前拦截）；② 读取循环行数 + 耗时双上限；③ 直接写入预分配 object[,]（消除 2× 峰值）。
+            int cols = reader.FieldCount;
+            const int maxRows = 200_000;
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var result = new object[Math.Min(1024, maxRows + 1), cols];
+            for (int i = 0; i < cols; i++) result[0, i] = reader.GetName(i);
+            int row = 1;
+            while (reader.Read())
+            {
+                if (row >= result.GetLength(0))
+                {
+                    if (row >= maxRows)
+                        throw new ArgumentException(
+                            $"SQL query returned more than {maxRows:N0} rows — possible runaway query " +
+                            "(cross join / recursive CTE). Narrow the query with WHERE/LIMIT.");
+                    var bigger = new object[Math.Min(result.GetLength(0) * 2, maxRows + 1), cols];
+                    Array.Copy(result, bigger, result.Length);
+                    result = bigger;
+                }
+                if (sw.ElapsedMilliseconds > 5000)
+                    throw new ArgumentException(
+                        "SQL query exceeded the 5-second execution budget — possible runaway query. " +
+                        "Narrow the query with WHERE/LIMIT.");
+                for (int i = 0; i < cols; i++)
+                {
+                    object v = reader.GetValue(i);
+                    // review 2026-08-31（深度审查 P0-2 补充）：单值巨型 blob（如
+                    // SELECT randomblob(1000000000)）由 SQLite 层整体分配后才到达此处——
+                    // 无法在分配前拦截，但对已读出的超大值立即拒绝，防止其进入结果数组
+                    // （32 位 Excel 单值 >2GB 时 GetValue 本身仍可能 OOM，属已知残余，见文档）。
+                    if (v is byte[] blob && blob.Length > 10_000_000)
+                        throw new ArgumentException(
+                            $"SQL query returned a {blob.Length:N0}-byte blob at row {row}, column {i} — " +
+                            "possible runaway query (randomblob). Limit blobs to 10 MB.");
+                    result[row, i] = reader.IsDBNull(i) ? null : v;
+                }
+                row++;
+            }
+            if (row < result.GetLength(0))
+            {
+                var trimmed = new object[row, cols];
+                for (int r = 0; r < row; r++) for (int c = 0; c < cols; c++) trimmed[r, c] = result[r, c];
+                return trimmed;
+            }
+            return result;
         }
 
         private static void CreateTable(SqlConn conn, string name, object[,] data, bool hasHeaders = true)

@@ -14,24 +14,37 @@ namespace ExcelFormulaLabs.DataToolkit
                 throw new ArgumentException(ErrorMsg.Get("PIVOT_UnknownAgg", agg));
         }
 
-        private static double Accumulate(string agg, double current, double incoming) => agg switch
+        private static (double val, double comp) Accumulate(string agg, (double val, double comp) current, double incoming) => agg switch
         {
-            "MAX" => Math.Max(current, incoming),
-            "MIN" => Math.Min(current, incoming),
-            _ => current + incoming  // SUM, AVG, COUNT
+            "MAX" => (Math.Max(current.val, incoming), 0),
+            "MIN" => (Math.Min(current.val, incoming), 0),
+            _ => NeumaierAdd(current, incoming)  // SUM, AVG
         };
 
         /// <summary>Compute final aggregation cell value from accumulator and count.</summary>
-        private static object AggResult(string agg, double val, long cnt) => agg switch
+        private static object AggResult(string agg, double val, double comp, long cnt) => agg switch
         {
             // review 2026-08-29（发行前 max level 复审）：SUM/AVG 累加 `current+incoming` 在极端值下
             // 可溢出为 ±Inf，原实现原样返回 → PIVOT/GROUPBY 单元格泄漏 Inf，违反防错原则①
             // （IEEE 传播无显式守卫，与 StatsCore.Sum/Product 的 Inf→NaN 约定不一致）。
             // 累加产生非有限值时返回 NaN 而非透传 Inf。
-            "AVG"   => cnt == 0 ? double.NaN : (double.IsNaN(val) || double.IsInfinity(val) ? double.NaN : val / cnt),
+            // review 2026-08-31（深度审查 P2-10）：SUM/AVG 改用 Neumaier 补偿求和——
+            // 朴素 `ex+v` 在大数+小数（灾难性抵消）场景丢精度；补偿项累积舍入误差，
+            // 最终结果 = val + comp。
+            "AVG"   => cnt == 0 ? double.NaN : (double.IsNaN(val + comp) || double.IsInfinity(val + comp) ? double.NaN : (val + comp) / cnt),
             "COUNT" => (object)cnt,  // keep as long, not double
-            _       => (double.IsNaN(val) || double.IsInfinity(val)) ? double.NaN : val,  // SUM, MAX, MIN
+            _       => (double.IsNaN(val + comp) || double.IsInfinity(val + comp)) ? double.NaN : (val + comp),  // SUM, MAX, MIN
         };
+
+        /// <summary>Neumaier compensated addition: returns (t, comp) with t = a.sum + b (round-to-nearest) and
+        /// comp accumulating the rounding error. Final sum = t + comp.</summary>
+        private static (double sum, double comp) NeumaierAdd((double sum, double comp) acc, double v)
+        {
+            double t = acc.sum + v;
+            if (Math.Abs(acc.sum) >= Math.Abs(v)) acc.comp += (acc.sum - t) + v;
+            else acc.comp += (v - t) + acc.sum;
+            return (t, acc.comp);
+        }
 
         internal static object[,] Pivot(object[,] data, int keyCol, int pivotCol, int valueCol, string agg = "SUM", bool hasHeaders = true)
         {
@@ -43,7 +56,7 @@ namespace ExcelFormulaLabs.DataToolkit
                     $" keyCol={keyCol}, pivotCol={pivotCol}, valueCol={valueCol}.");
             int rows = data.GetLength(0);
             int startRow = hasHeaders ? 1 : 0;
-            var map = new Dictionary<(string k, string p), double>();
+            var map = new Dictionary<(string k, string p), (double val, double comp)>();
             var cnt = new Dictionary<(string k, string p), long>(); // for AVG/COUNT
             var keySet = new HashSet<string>(); var keyList = new List<string>();
             var pivotSet = new HashSet<string>(); var pivotList = new List<string>();
@@ -52,16 +65,29 @@ namespace ExcelFormulaLabs.DataToolkit
                 string k = InputNormalizer.ToString(data[r, keyCol]);
                 string p = InputNormalizer.ToString(data[r, pivotCol]);
                 double v = InputNormalizer.ToDouble(data[r, valueCol]);
-                if (double.IsNaN(v) || double.IsInfinity(v)) continue;
+                bool numeric = !(double.IsNaN(v) || double.IsInfinity(v));
+                // review 2026-08-31（深度审查 P1-10）：COUNT 的本意是统计行数（含空/文本值行）——
+                // 原实现非数值行在 key/pivot 收录前 continue → 该分组的 COUNT 少计、纯空值分组的
+                // 行/列标签整体丢失。COUNT 单独分支：非数值行也计数并收录 key/pivot。
+                if (agg == "COUNT")
+                {
+                    if (keySet.Add(k)) keyList.Add(k);
+                    if (pivotSet.Add(p)) pivotList.Add(p);
+                    var kvC = (k, p);
+                    if (cnt.TryGetValue(kvC, out long exC)) cnt[kvC] = exC + 1;
+                    else { map[kvC] = (0, 0); cnt[kvC] = 1; }
+                    continue;
+                }
+                if (!numeric) continue;
                 if (keySet.Add(k)) keyList.Add(k);
                 if (pivotSet.Add(p)) pivotList.Add(p);
                 var kv = (k, p);
-                if (map.TryGetValue(kv, out double ex))
+                if (map.TryGetValue(kv, out var ex))
                 {
                     cnt[kv] = cnt[kv] + 1;
                     map[kv] = Accumulate(agg, ex, v);
                 }
-                else { map[kv] = v; cnt[kv] = 1; }
+                else { map[kv] = (v, 0); cnt[kv] = 1; }
             }
             var keys = keyList; var pivots = pivotList;
             // review 2026-08-29：输出 cell 上限守卫（原仅 CrossJoin 有）。1M 行全异键值 → 1e12 cells OOM。
@@ -77,9 +103,9 @@ namespace ExcelFormulaLabs.DataToolkit
             for (int r = 0; r < keys.Count; r++) { result[r + 1, 0] = keys[r]; for (int c = 0; c < pivots.Count; c++)
             {
                 var kv = (keys[r], pivots[c]);
-                result[r + 1, c + 1] = map.TryGetValue(kv, out double v)
-                    ? AggResult(agg, v, cnt[kv])
-                    : ExcelFormulaLabs.Foundation.ExcelEmpty.Value;
+                result[r + 1, c + 1] = map.TryGetValue(kv, out var cell)
+                    ? AggResult(agg, cell.val, cell.comp, cnt[kv])
+                    : null;
             } }
             return result;
         }
@@ -87,6 +113,10 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static object[,] Unpivot(object[,] data, int[] idCols, int[] valueCols, bool hasHeaders = true)
         {
             int cols = data.GetLength(1);
+            // review 2026-08-31（深度审查 P2-14）：valueCols 为空数组时原实现静默产出 0 行，
+            // 用户无法区分"参数传错"与"无数据"。显式抛错。
+            if (valueCols.Length == 0)
+                throw new ArgumentException(ErrorMsg.Get("PIVOT_ColumnOutOfRange", cols));
             if (idCols.Any(c => c < 0 || c >= cols) || valueCols.Any(c => c < 0 || c >= cols))
                 throw new ArgumentException(ErrorMsg.Get("PIVOT_ColumnOutOfRange", cols));
             int rows = data.GetLength(0); int nId = idCols.Length;
@@ -131,15 +161,36 @@ namespace ExcelFormulaLabs.DataToolkit
                 throw new ArgumentException(ErrorMsg.Get("PIVOT_ColumnOutOfRange", gc));
             int rows = data.GetLength(0), nG = gCols.Length;
             int startRow = hasHeaders ? 1 : 0;
-            var groups = new Dictionary<string, (double val, long cnt)>();
+            var groups = new Dictionary<string, (double val, double comp, long cnt)>();
             var keyNames = new List<string[]>(); var seen = new HashSet<string>();
             for (int r = startRow; r < rows; r++)
             {
                 var gk = gCols.Select(c => InputNormalizer.ToString(data[r, c])).ToArray();
-                string gks = MakeCompoundKey(gk); double v = InputNormalizer.ToDouble(data[r, aCol]);
-                if (double.IsNaN(v) || double.IsInfinity(v)) continue;
-                if (groups.TryGetValue(gks, out var ex)) groups[gks] = agg switch { "SUM" or "AVG" => (ex.val + v, ex.cnt + 1), "MAX" => (Math.Max(ex.val, v), ex.cnt + 1), "MIN" => (Math.Min(ex.val, v), ex.cnt + 1), "COUNT" => (0, ex.cnt + 1) };
-                else { groups[gks] = (v, 1); if (seen.Add(gks)) keyNames.Add(gk); }
+                string gks = MakeCompoundKey(gk);
+                double v = InputNormalizer.ToDouble(data[r, aCol]);
+                bool numeric = !(double.IsNaN(v) || double.IsInfinity(v));
+                // review 2026-08-31（深度审查 P1-10）：COUNT 统计行数（含空/文本值行）——
+                // 原实现非数值行 continue → 分组少计、纯空值分组整行消失。
+                if (agg == "COUNT")
+                {
+                    if (groups.TryGetValue(gks, out var exC)) groups[gks] = (0, 0, exC.cnt + 1);
+                    else { groups[gks] = (0, 0, 1); if (seen.Add(gks)) keyNames.Add(gk); }
+                    continue;
+                }
+                if (!numeric) continue;
+                if (groups.TryGetValue(gks, out var ex))
+                {
+                    if (agg == "SUM" || agg == "AVG")
+                    {
+                        var n = NeumaierAdd((ex.val, ex.comp), v);
+                        groups[gks] = (n.sum, n.comp, ex.cnt + 1);
+                    }
+                    else
+                        groups[gks] = agg == "MAX"
+                            ? (Math.Max(ex.val, v), 0, ex.cnt + 1)
+                            : (Math.Min(ex.val, v), 0, ex.cnt + 1);
+                }
+                else { groups[gks] = (v, 0, 1); if (seen.Add(gks)) keyNames.Add(gk); }
             }
             // review 2026-08-29：输出 cell 上限守卫（GroupBy 输出列 = 分组列+1，可被 nG 放大）。
             // 复审修正：守卫必须位于数组分配之前——原实现先 new object[keyNames.Count, nG+1] 再检查，
@@ -150,7 +201,7 @@ namespace ExcelFormulaLabs.DataToolkit
                     $"GroupBy would produce {keyNames.Count:N0} rows × {nG + 1} cols = {(long)keyNames.Count * (nG + 1):N0} cells. " +
                     $"Maximum is {maxCells:N0}. Reduce group fields or input rows.");
             var result = new object[keyNames.Count, nG + 1];
-            for (int i = 0; i < keyNames.Count; i++) { var kn = keyNames[i]; for (int j = 0; j < nG; j++) result[i, j] = kn[j]; var (val, cnt) = groups[MakeCompoundKey(kn)]; result[i, nG] = AggResult(agg, val, cnt); }
+            for (int i = 0; i < keyNames.Count; i++) { var kn = keyNames[i]; for (int j = 0; j < nG; j++) result[i, j] = kn[j]; var (val, comp, cnt) = groups[MakeCompoundKey(kn)]; result[i, nG] = AggResult(agg, val, comp, cnt); }
             return result;
         }
 

@@ -97,7 +97,12 @@ namespace ExcelFormulaLabs.DataToolkit
         { return string.Join(d, skip?v.Where(x=>!string.IsNullOrEmpty(x)):v); }
 
         internal static long LevenshteinDistance(string a, string b)
-        { a ??= ""; b ??= ""; int na=a.Length,nb=b.Length; var d0=new int[nb+1]; var d1=new int[nb+1]; for(int j=0;j<=nb;j++)d0[j]=j;
+        { a ??= ""; b ??= ""; // review 2026-08-31（深度审查 P1-13）：无长度守卫时 32767×32767
+            // （Excel 单元格上限）≈ 1.07e9 次内层循环 → 秒级冻结。上限 2500 万次字符对运算。
+            if ((long)a.Length * b.Length > 25_000_000)
+                throw new ArgumentException(
+                    $"Levenshtein distance is limited to 25,000,000 character-pair operations (got {a.Length}×{b.Length}).");
+            int na=a.Length,nb=b.Length; var d0=new int[nb+1]; var d1=new int[nb+1]; for(int j=0;j<=nb;j++)d0[j]=j;
           for(int i=1;i<=na;i++){ d1[0]=i; for(int j=1;j<=nb;j++)d1[j]=Math.Min(Math.Min(d0[j]+1,d1[j-1]+1),d0[j-1]+(a[i-1]==b[j-1]?0:1)); var t=d0;d0=d1;d1=t; } return d0[nb]; }
 
         internal static string Soundex(string t)
@@ -138,13 +143,16 @@ namespace ExcelFormulaLabs.DataToolkit
             string fs = fmt.Contains('{') ? fmt : $"{{0:{fmt}}}";
             try
             {
-                if (value is double d) return string.Format(fs, d);
-                if (value is int i) return string.Format(fs, i);
-                if (value is long l) return string.Format(fs, l);
-                if (value is float f) return string.Format(fs, f);
-                if (value is decimal m) return string.Format(fs, m);
-                if (value is DateTime dt) return string.Format(fs, dt);
-                return string.Format(fs, value);
+                // review 2026-08-31（深度审查 P1-19）：原实现 `string.Format(fs, d)` 依赖 CurrentCulture——
+                // de-DE 下 "N2"→"123,46"、"P0"→"25 %"，测试套件无固定 CultureInfo，结果取决于机器 locale。
+                // UDF 输出必须可移植：统一 InvariantCulture。
+                if (value is double d) return string.Format(CultureInfo.InvariantCulture, fs, d);
+                if (value is int i) return string.Format(CultureInfo.InvariantCulture, fs, i);
+                if (value is long l) return string.Format(CultureInfo.InvariantCulture, fs, l);
+                if (value is float f) return string.Format(CultureInfo.InvariantCulture, fs, f);
+                if (value is decimal m) return string.Format(CultureInfo.InvariantCulture, fs, m);
+                if (value is DateTime dt) return string.Format(CultureInfo.InvariantCulture, fs, dt);
+                return string.Format(CultureInfo.InvariantCulture, fs, value);
             }
             catch (Exception ex) when (ExceptionFilters.IsCatchable(ex))
             {
@@ -176,6 +184,11 @@ namespace ExcelFormulaLabs.DataToolkit
         {
             if (string.IsNullOrEmpty(t)) return -1;    // empty string → no match
             if (n == 0) n = 1;                         // default → first occurrence
+            // review 2026-08-31（深度审查 P2-18）：空分隔符 + n > len+1 时
+            // `t.IndexOf("", idx+1)` 的 startIndex 超过 Length → ArgumentOutOfRangeException。
+            // 空分隔符的第 n 次"出现"即位置 n−1（0-based），越界时饱和到末尾（不抛）。
+            if (s.Length == 0)
+                return n < 0 ? -1 : (int)Math.Min(n - 1, (long)t.Length);
             if (n < 0)
             {                                          // n=-1 → last, n=-2 → second-to-last, etc.
                 long absN = -n;

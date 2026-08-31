@@ -285,9 +285,19 @@ namespace ExcelFormulaLabs.DataToolkit
             if (!string.IsNullOrEmpty(root))
             {
                 EnsureFolder(root!);
-                string path = Path.Combine(root!, Path.GetRandomFileName());
-                using (File.Create(path)) { }
-                return path;
+                // review 2026-08-31（深度审查 P2-15）：Path.GetRandomFileName 理论上可冲突，
+                // 原实现无重试且 0 字节临时文件从不清理（调用方负责删除，EndSession 不跟踪）。
+                // 补存在性重试（3 次），清理责任在调用方（RangeExport 用完即删）。
+                for (int attempt = 0; attempt < 3; attempt++)
+                {
+                    string path = Path.Combine(root!, Path.GetRandomFileName());
+                    if (!File.Exists(path))
+                    {
+                        using (File.Create(path)) { }
+                        return path;
+                    }
+                }
+                throw new IOException("Unable to allocate a unique temporary file in the sandbox.");
             }
             return Path.GetTempFileName();
         }

@@ -74,8 +74,12 @@
        Wildcard-delete every ExcelDnaBuild-generated .dna so that 32/64-bit
        variants from the opposite TFM inner build never leak across. -->
   <Target Name="GenerateDnaFromTemplate" BeforeTargets="ExcelDnaBuild">
+    <!-- review 2026-08-31（深度审查 P1-9）：原通配删除 Analytics-AddIn*.dna 在双 TFM 并行内建下
+         互相踩踏（net48 的 Delete 删掉 net8.0 刚 Copy 的 .dna → DNA3414/MSB3491 间歇性失败，
+         本地 50% 失败率，CI 主 build job 同样暴露）。改为每个 TFM 只删除/生成自己的 .dna。 -->
     <ItemGroup>
-      <_StaleDna Include="Analytics-AddIn*.dna" />
+      <_StaleDna Condition="'$(TargetFramework)' == 'net48'" Include="Analytics-AddIn-net48.dna" />
+      <_StaleDna Condition="'$(TargetFramework)' == 'net8.0-windows'" Include="Analytics-AddIn-net8.0.dna" />
     </ItemGroup>
     <Delete Files="@(_StaleDna)" />
     <Copy Condition="'$(TargetFramework)' == 'net8.0-windows'"
@@ -87,7 +91,8 @@
   </Target>
   <Target Name="CleanupDnaAfterBuild" AfterTargets="ExcelDnaPack">
     <ItemGroup>
-      <_GenDna Include="Analytics-AddIn*.dna" />
+      <_GenDna Condition="'$(TargetFramework)' == 'net48'" Include="Analytics-AddIn-net48.dna" />
+      <_GenDna Condition="'$(TargetFramework)' == 'net8.0-windows'" Include="Analytics-AddIn-net8.0.dna" />
     </ItemGroup>
     <Delete Files="@(_GenDna)" />
   </Target>

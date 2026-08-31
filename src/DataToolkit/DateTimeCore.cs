@@ -46,7 +46,9 @@ namespace ExcelFormulaLabs.DataToolkit
         {
             AssertValidDate(s);
             const long maxWorkdays = 100_000;
-            if (Math.Abs(days) > maxWorkdays)
+            // review 2026-08-31（深度审查 P1-12）：Math.Abs(long.MinValue) 抛 OverflowException
+            // （误导性异常，非业务校验）。long.MinValue 远超上限，直接判越界。
+            if (days == long.MinValue || Math.Abs(days) > maxWorkdays)
                 throw new ArgumentOutOfRangeException(nameof(days),
                     $"|workdays| must be <= {maxWorkdays} (~274 years).");
             var d = s;
@@ -58,14 +60,20 @@ namespace ExcelFormulaLabs.DataToolkit
             while (rem > 0) { d = d.AddDays(inc); if (!IsWeekend(d)) rem--; }
             return d;
         }
-        internal static long WorkdaysBetween(DateTime s, DateTime e) { AssertValidDate(s); AssertValidDate(e); const long maxSpan = 100_000; if ((e - s).TotalDays > maxSpan) throw new ArgumentOutOfRangeException(nameof(e), $"Date span exceeds {maxSpan} days (≈274 years)."); long w = 0; var d = s.AddDays(1); while (d <= e) { if (!IsWeekend(d)) w++; d = d.AddDays(1); } return w; }
+        internal static long WorkdaysBetween(DateTime s, DateTime e) { AssertValidDate(s); AssertValidDate(e); const long maxSpan = 100_000; // review 2026-08-31（深度审查 P1-12）：原实现只判上界——e < s 时 TotalDays 为负，天然 < maxSpan → 守卫失效 → 静默返回 0。Excel NETWORKDAYS 契约：start > end 返回负工作日数（对称）。改用 Math.Abs 判跨度，再按方向计算。
+            if (Math.Abs((e - s).TotalDays) > maxSpan) throw new ArgumentOutOfRangeException(nameof(e), $"Date span exceeds {maxSpan} days (≈274 years).");
+            bool reversed = e < s; var (lo, hi) = reversed ? (e, s) : (s, e);
+            long w = 0; var d = lo.AddDays(1); while (d <= hi) { if (!IsWeekend(d)) w++; d = d.AddDays(1); }
+            return reversed ? -w : w; }
         internal static DateTime NextWorkday(DateTime d) { AssertValidDate(d); d = d.AddDays(1); while (IsWeekend(d)) d = d.AddDays(1); return d; }
         internal static DateTime Easter(long y) { if(y<1||y>9999)throw new ArgumentOutOfRangeException(nameof(y),$"Year {y} is outside the valid range [1, 9999]."); long a = y % 19, b = y / 100, c = y % 100, d = b / 4, e = b % 4, f = (b + 8) / 25, g = (b - f + 1) / 3, h = (19 * a + b - d - g + 15) % 30, i = c / 4, k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = (a + 11 * h + 22 * l) / 451; long mo = (h + l - 7 * m + 114) / 31; long da = (h + l - 7 * m + 114) % 31 + 1; return new DateTime((int)y, (int)mo, (int)da); }
         internal static long Quarter(DateTime d) { AssertValidDate(d); return (d.Month + 2) / 3; }
         internal static long Semester(DateTime d) { AssertValidDate(d); return (d.Month + 5) / 6; }
         internal static long DayOfYear(DateTime d) { AssertValidDate(d); return d.DayOfYear; }
         internal static bool IsLeapYear(long y) { if (y < 1 || y > 9999) throw new ArgumentOutOfRangeException(nameof(y), $"Year {y} is outside the valid range [1, 9999]."); return DateTime.IsLeapYear((int)y); }
-        internal static long DaysInMonth(long y, long m) { if (y < 1 || y > 9999) throw new ArgumentOutOfRangeException(nameof(y), $"Year {y} is outside the valid range [1, 9999]."); return DateTime.DaysInMonth((int)y, (int)m); }
+        internal static long DaysInMonth(long y, long m) { if (y < 1 || y > 9999) throw new ArgumentOutOfRangeException(nameof(y), $"Year {y} is outside the valid range [1, 9999]."); // review 2026-08-31（深度审查 P1-12）：原实现未校验月份，(int)m 对 4294967297L 静默截断为 1 → DT.DIM(2026, 4294967297) 返回 31。补 [1,12] 校验。
+            if (m < 1 || m > 12) throw new ArgumentOutOfRangeException(nameof(m), $"Month {m} is outside the valid range [1, 12].");
+            return DateTime.DaysInMonth((int)y, (int)m); }
         internal static double UnixTimestamp(DateTime d) { AssertValidDate(d); return (d.ToUniversalTime() - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds; }
         internal static DateTime FromUnixTimestamp(double ts) => new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(ts).ToLocalTime();
         /// <summary>
