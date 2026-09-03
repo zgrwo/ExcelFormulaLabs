@@ -35,6 +35,9 @@ SECTION_TOTAL = 0  # P1-16 (review-2026-08-31): UDF 覆盖率由 section() 声�
 TOTAL_UDF = 0  # track unique UDFs verified
 
 REFERENCED = set()  # P1-16 (review-2026-08-31): 实际引用的 UDF 名集合（覆盖数推导用）
+CROSS_REFERENCED = set()  # F2 (review-2026-09-04): 真正调用 C# 的 cross_* 用例名集合——
+# 覆盖率宣称必须区分：REFERENCED（含纯 Python 自校验）推导的是“手册示例覆盖”，
+# CROSS_REFERENCED 推导的才是“与 C# 交叉验证覆盖”。
 
 def check(name, actual, expected, tol=EPS, manual=True):
     global PASS, FAIL, MANUAL_PASS, CROSS_PASS
@@ -125,6 +128,7 @@ def cross_check(name, python_computed, tol=EPS):
     """Compare Python computation against C# CrossValRunner reference. Hard fail on mismatch."""
     global PASS, FAIL, SKIP, CROSS_PASS
     REFERENCED.add(name)
+    CROSS_REFERENCED.add(name)
     ref = csharp_results().get(name)
     if ref is None:
         # P1-9 (review): a missing C# reference must fail the run, not silently degrade
@@ -136,6 +140,13 @@ def cross_check(name, python_computed, tol=EPS):
         FAIL += 1; print(f"  FAIL {name}: C# error — {ref.get('error', 'unknown')}")
         return
     cs_val = unwrap(ref["result"]) if isinstance(ref["result"], (dict, list)) else ref["result"]
+    # F2 (review-2026-09-04): manifest 每条用例的 tolerance（TestManifest.cs:38 → ResultSerializer
+    # :154 → 结果 JSON）此前从不参与比较（verify-manual.py 0 次消费）。此处消费：取“调用方 tol
+    # 与 per-test tolerance 中较松者”——manifest tolerance 定义该用例 C# 数值复现精度的最宽松
+    # 预算（病态函数可单独放宽），调用方 tol 是额外收紧（如 SKEW 的 1e-4 是因为 Python 参考
+    # 实现无法按 1e-10 复现，与 manifest 无关）。当前 manifest 全为 1e-10 → 行为不变，但 per-test
+    # 通道已打通：后续给某用例单独放宽时无需改 Python。
+    tol_eff = max(tol, float(ref.get("tolerance"))) if ref.get("tolerance") is not None else tol
     # C# 特殊值（NaN/±Inf）：必须与 Python 同类型同符号才算 PASS（P0-3a 修复）
     if isinstance(cs_val, float) and (np.isnan(cs_val) or np.isinf(cs_val)):
         if isinstance(python_computed, (float, np.floating)) and \
@@ -152,11 +163,12 @@ def cross_check(name, python_computed, tol=EPS):
         else:
             FAIL += 1; print(f"  FAIL {name}: Python={python_computed}, C#=null (NaN)")
         return
-    check(name, python_computed, cs_val, tol=tol, manual=False)
+    check(name, python_computed, cs_val, tol=tol_eff, manual=False)
 
 def cross_check_dict(name, py_dict, csharp_id, keys, tol=EPS):
     """Compare Python dict entries against C# regression result dict entries."""
     global SKIP
+    CROSS_REFERENCED.add(name)  # F2 (review-2026-09-04): cross_* 族都计入 C# 对照集合
     ref = csharp_results().get(csharp_id)
     if ref is None or ref["status"] != "ok":
         SKIP += 1
@@ -1000,6 +1012,7 @@ def cross_check_matrix(name, py_rows):
     """对比 C# 返回的 object[][]（行 0 = 表头，后续为数值行，首列为 Term 字符串）
     与 Python 数值行（不含表头/Term 列）。None/NaN 视为相等。"""
     REFERENCED.add(name)  # review-2026-08-31: 与 check/cross_check 一致收集覆盖名
+    CROSS_REFERENCED.add(name)  # F2 (review-2026-09-04): cross_* 族都计入 C# 对照集合
     ref = csharp_results().get(name)
     if ref is None or ref["status"] != "ok":
         global PASS, FAIL
@@ -1009,6 +1022,8 @@ def cross_check_matrix(name, py_rows):
     if len(cs) != len(py_rows) + 1:
         FAIL += 1; print(f"  FAIL {name}: row count mismatch C#={len(cs)} py={len(py_rows)+1}")
         return
+    # F2 (review-2026-09-04): 同上，消费 per-test tolerance（取较松者）。
+    tol_eff = max(1e-6, float(ref.get("tolerance"))) if ref.get("tolerance") is not None else 1e-6
     ok = True; maxdiff = 0.0
     for r in range(1, len(cs)):
         crow, prow = cs[r], py_rows[r-1]
@@ -1019,7 +1034,7 @@ def cross_check_matrix(name, py_rows):
             cv, pv = crow[c], prow[c-1]
             if cv is None and np.isnan(pv):
                 continue
-            if cv is None or pv is None or not np.isclose(float(cv), float(pv), atol=1e-6):
+            if cv is None or pv is None or not np.isclose(float(cv), float(pv), atol=tol_eff):
                 ok = False
                 maxdiff = max(maxdiff, abs(float(cv) - float(pv)) if cv is not None and pv is not None else 1e9)
     if ok:
@@ -1091,14 +1106,23 @@ for _name in REFERENCED:
         if _mapped == _u or _mapped.startswith(_u + ".") or _u.startswith(_mapped + "."):
             _covered.add(_u)
 udf_count = len(_covered)
+# F2 (review-2026-09-04): 同一映射算法作用于 CROSS_REFERENCED，得到真正与 C# 交叉对照的 UDF 数
+_cross_covered = set()
+for _name in CROSS_REFERENCED:
+    _base = _norm_ref(_name)
+    _mapped = _ID2UDF.get(_base, _base)
+    for _u in _API_UDFS:
+        if _mapped == _u or _mapped.startswith(_u + ".") or _u.startswith(_mapped + "."):
+            _cross_covered.add(_u)
 print(f"\n{'='*60}")
 print(f"  RESULTS: {PASS} passed, {FAIL} failed, {SKIP} skipped ({(PASS+FAIL)} checks)")
 # P0-3b (review-2026-08-31): 双通道分别汇报——check() 纯 Python 自校验不再混入"已验证"假象
 print(f"    └ manual-only (Python self-verify): {MANUAL_PASS}")
 print(f"    └ cross-validated (vs C#):         {CROSS_PASS}")
-# P2-5 (review): project has 236 UDFs; the 12 *_ASYNC variants share Core methods
-# (verified indirectly), LINALG.LU_P is covered via reconstruction.
+# E2/F1 (review-2026-09-04): “UDF coverage” 是手册示例覆盖（含纯 Python 自校验），
+# 必须同时打印真正与 C# 对照的 cross 覆盖数，防止 README/报告宣称口径虚高。
 print(f"  UDF coverage: {udf_count} of 236 UDFs covered (sync variants)")
+print(f"    └ of which cross-validated vs C#: {len(_cross_covered)} of 236 ({len(_cross_covered)/236*100:.1f}%)")
 print(f"{'='*60}")
 if FAIL>0 or SKIP>0:
     print(f"\n  FAILURES DETECTED (failures={FAIL}, skipped={SKIP}). Review discrepancies above.")

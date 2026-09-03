@@ -223,7 +223,9 @@ namespace ExcelFormulaLabs.Analytics
         }
 
         /// <summary>
-        /// Ridge regression with L2 regularization. Adds lambda*I to X'X before solving.
+        /// Ridge regression with L2 regularization: solves the augmented least-squares
+        /// problem min‖y−Xβ‖²+λ‖β_pen‖² via Thin QR on [X; √λ·I] (numerically stable for
+        /// ill-conditioned X; λ=0 degrades to plain OLS). The intercept is not penalised.
         /// Shrinks coefficients to reduce overfitting. No standard errors or p-values
         /// (inferential statistics are not valid under regularization).
         /// Used by REGRESS.RIDGE.
@@ -249,17 +251,55 @@ namespace ExcelFormulaLabs.Analytics
             else { p = origP; Xaug = X; }
             var matX = Matrix<double>.Build.DenseOfArray(Xaug);
             var vecY = Vector<double>.Build.Dense(y);
-            var XtX = matX.TransposeThisAndMultiply(matX);
-            var Xty = matX.TransposeThisAndMultiply(vecY);
-            // Identity penalty matrix: don't penalise the intercept term
-            var I = Matrix<double>.Build.DenseIdentity(p);
-            if (addIntercept) I[0, 0] = 0.0;
-            var ridge = XtX + I * lambda;
-            var beta = ridge.Solve(Xty);
-            // Guard against near-singular XtX with insufficient lambda:
-            // ridge matrix XtX+λI is mathematically positive-definite for λ>0, but when
-            // λ is subnormal relative to the data scale (e.g. λ=1e-310 with X entries ~1e20),
-            // the diagonal addition is numerically zero and Solve may produce degenerate results.
+            // review 2026-09-04（reaudit P0 A1）：原实现构造 X'X 显式正规方程（X'X+λI 求解），
+            // 与 P0-1 同族缺陷——cond(X'X) = cond(X)²。λ 相对数据尺度较小时（λ=0 合法），
+            // 病态矩阵的系数错得离谱但全部有限，NaN/Inf 守卫形同虚设（静默错误结果）。
+            // 改为**增广 Thin QR**：把惩罚项作为额外的 √λ·I 行拼进设计矩阵后对 [X;√λI] 做
+            // Thin QR 求解——Ridge 的最小二乘问题 min‖y−Xβ‖²+λ‖β_pen‖² 等价于对增广矩阵的
+            // OLS，QR 是后向稳定分解（精度只随 cond(X_aug) 而非其平方退化，且
+            // cond(X_aug) ≤ sqrt(cond(X'X+λI))）。addIntercept 时截距列不惩罚
+            // （增广行该列为 0），λ=0 时退化为与 FitOLSCore 相同的纯 QR 路径。
+            int penCount = addIntercept ? p - 1 : p; // 被 L2 惩罚的列数（截距除外）
+            var Xa = Matrix<double>.Build.Dense(n + penCount, p);
+            var ya = Vector<double>.Build.Dense(n + penCount);
+            for (int i = 0; i < n; i++)
+            {
+                ya[i] = vecY[i];
+                for (int j = 0; j < p; j++) Xa[i, j] = matX[i, j];
+            }
+            double sqrtL = Math.Sqrt(lambda);
+            for (int t = 0; t < penCount; t++)
+                Xa[n + t, addIntercept ? t + 1 : t] = sqrtL; // 增广行：√λ·β_pen = 0
+            QR<double> qr;
+            Vector<double> beta;
+            try
+            {
+                qr = Xa.QR(QRMethod.Thin);
+                beta = qr.Solve(ya);
+            }
+            catch (Exception ex) when (ExceptionFilters.IsCatchable(ex))
+            {
+                throw new ArgumentException(
+                    "Cannot fit Ridge: augmented design is rank-deficient. " +
+                    "Increase lambda or remove collinear predictors.", ex);
+            }
+            // 相对 R 对角守卫（同 FitOLSCore）：增广矩阵奇异值 ≥ √λ，只有当 λ 低于数据尺度的
+            // 双精度噪声（λ ≈ eps²·‖X‖²）时才会数值秩亏。λ 太小 → 显式报错而非静默错误系数；
+            // λ 足够大（含 λ=0 且 X 满秩）→ 正常求解。
+            var R = qr.R;
+            double maxDiag = 0.0;
+            for (int j = 0; j < p; j++)
+            {
+                double d = Math.Abs(R[j, j]);
+                if (d > maxDiag) maxDiag = d;
+            }
+            double diagTol = Math.Max(maxDiag, 1e-300) * 2.220446049250313e-16;
+            for (int j = 0; j < p; j++)
+                if (Math.Abs(R[j, j]) <= diagTol)
+                    throw new ArgumentException(
+                        "Cannot fit Ridge: design matrix X is near-singular and lambda is too small " +
+                        "to regularize at the data scale. Try increasing lambda (e.g. lambda=10 or larger).");
+            // 纵深防御（保留）：极端数据下仍可能溢出为 NaN/Inf。
             for (int j = 0; j < p; j++)
                 if (double.IsNaN(beta[j]) || double.IsInfinity(beta[j]))
                     throw new ArgumentException(

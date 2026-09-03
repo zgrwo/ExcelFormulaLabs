@@ -127,7 +127,7 @@ namespace ExcelFormulaLabs.DataToolkit
         /// </summary>
         internal static string FormatValue(object? value, string fmt)
         {
-            if (string.IsNullOrEmpty(fmt)) return value?.ToString() ?? "";
+            if (string.IsNullOrEmpty(fmt)) return RawInvariant(value);
             // P2 (pre-release review): alignment specifiers like {0,999999999} attempt
             // ~GB allocations → OutOfMemoryException (excluded by ExceptionFilters) → Excel
             // crash. Reject overlong format strings and huge alignment widths up front.
@@ -160,9 +160,16 @@ namespace ExcelFormulaLabs.DataToolkit
                 // (e.g. "D4" applied to a double from Excel). Return the raw value.
                 System.Diagnostics.Debug.WriteLine(
                     $"[FormatValue] Failed to format '{value?.GetType().Name}' with '{fmt}': {ex.Message}");
-                return value?.ToString() ?? "";
+                return RawInvariant(value);
             }
         }
+
+        // review 2026-09-04（reaudit D2）：空格式串快路径与异常回退此前都是 `value?.ToString()`
+        // （CurrentCulture）——同一函数两种文化行为：de-DE 下 STR.FMT(1234.5,"") 输出 "1234,5" 而
+        // STR.FMT(1234.5,"N2") 输出 "1,234.50"。统一 InvariantCulture。null → ""（哨兵契约 L2）。
+        private static string RawInvariant(object? value)
+            => value == null ? ""
+                : Convert.ToString(value, CultureInfo.InvariantCulture) ?? value.ToString() ?? "";
 
         internal static string UUID()=>Guid.NewGuid().ToString();
         private const string DefaultCharset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";

@@ -197,4 +197,23 @@ public class SortIndicesTests
         ArrayOperations.IndexOf(arr, 0.3).Should().Be(0);
         ArrayOperations.IndexOf(new object[] { 1, 2, 3 }, '2').Should().Be(-1);
         ArrayOperations.IndexOf(new object[] { 1.0, 2.0 }, 1).Should().Be(0);
-    }}
+    }
+
+    // review 2026-09-04（reaudit D1）：绝对容差 1e-12 对小量纲数据恒命中首个元素（假阳性：
+    // {1e-16;2e-16;3e-16} 查 3e-16 → 0）。改纯相对容差 |a−b| < tol·max(|a|,|b|) 后，
+    // 量纲 < 1 的数据退化为精确比较；O(1) 量级浮点累差（0.1+0.2≈0.3）仍可桥接。
+    [Fact] public void IndexOf_tiny_scale_exact_index()
+        => ArrayOperations.IndexOf(new[] { 1e-16, 2e-16, 3e-16 }, 3e-16).Should().Be(2);
+
+    [Fact] public void IndexOf_tiny_scale_absent_returns_minus_one()
+        => ArrayOperations.IndexOf(new[] { 1e-13, 2e-13, 5e-13 }, 7e-13).Should().Be(-1);
+
+    [Fact] public void IndexOf_tiny_scale_no_false_positive()
+        => ArrayOperations.IndexOf(new[] { 1e-16, 2e-16, 3e-16 }, 5e-16).Should().Be(-1);
+
+    [Fact] public void IndexOf_tiny_scale_matches_exact_value_only()
+    {
+        // 相对容差下小量纲数据间不再互相命中（{2e-16 查 3e-16}：|diff|=1e-16 > 窗口 3e-28）。
+        ArrayOperations.IndexOf(new[] { 1e-16, 2e-16, 3e-16 }, 2e-16).Should().Be(1);
+    }
+}

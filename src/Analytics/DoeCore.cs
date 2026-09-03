@@ -262,14 +262,37 @@ namespace ExcelFormulaLabs.Analytics
 
             var (runs, twoCols, threeCols) = SelectOrthogonalArray(n2, n3);
 
+            // review 2026-09-04（reaudit B1）：中间因子数（L16 的 6~8、L32 的 7~16）此前按 P1-7
+            // 重排顺序取前 n 列仍为分辨率 III（主效应与 2 阶交互别名）。这两段区间数学上可达 IV：
+            // GF(2)^k 中含最高阶主效应的 2^{k-1} 个列构成 XOR-sum-free 集（两两异或不落入集合，
+            // 子集异或为零要求元素个数为偶数且低位抵消），取其中任意 m ≤ 2^{k-1} 列 → 无 ≤3 长
+            // 定义字 → 分辨率 ≥ IV。超出 2^{k-1}（L16 9~15、L32 17~31）受 GF(2) 最大 sum-free
+            // 容量限制（分别为 8/16）只能 III，保持原顺序。位置数组相对 Build2Level 重排输出。
+            int[]? twoPick = TwoLevelResolutionPick(twoCols.Count, n2);
             // Pick columns in factor order (group 1 first) and code to [-1, +1].
             var coded = new double[runs, (int)totalFactors];
             int twoIdx = 0, threeIdx = 0;
             int f = 0;
             for (int i = 0; i < qty1; i++, f++)
-                FillColumn(coded, f, level1 == 2 ? twoCols[twoIdx++] : threeCols[threeIdx++], level1);
+            {
+                if (level1 == 2)
+                {
+                    int idx = twoPick == null ? twoIdx : twoPick[twoIdx];
+                    twoIdx++;
+                    FillColumn(coded, f, twoCols[idx], level1);
+                }
+                else FillColumn(coded, f, threeCols[threeIdx++], level1);
+            }
             for (int i = 0; i < qty2; i++, f++)
-                FillColumn(coded, f, level2 == 2 ? twoCols[twoIdx++] : threeCols[threeIdx++], level2);
+            {
+                if (level2 == 2)
+                {
+                    int idx = twoPick == null ? twoIdx : twoPick[twoIdx];
+                    twoIdx++;
+                    FillColumn(coded, f, twoCols[idx], level2);
+                }
+                else FillColumn(coded, f, threeCols[threeIdx++], level2);
+            }
             return coded;
         }
 
@@ -494,6 +517,26 @@ namespace ExcelFormulaLabs.Analytics
 
             if (n2 <= 1 && n3 <= 7) { var (t2, t3) = BuildL18(); return (18, t2, t3); }
             throw new ArgumentException(ErrorMsg.Get("DOE_TaguchiMixedUnsupported", n2, n3));
+        }
+
+        // review 2026-09-04（reaudit B1）：分辨率 IV 列位序（相对 Build2Level 重排后的列表下标）。
+        // 取值 = 含最高阶主效应（D/E）的全部 2^{k-1} 个列在重排顺序中的位置——重排输出为
+        // 主效应优先 + 交互按阶数降序，这些列落在位置 [k−1 .. 尾]。取前 m 个即 XOR-sum-free
+        // 子集（分辨率 ≥ IV）。若日后重排算法变更，需重新生成（回归测试 L32 16 因子锁分辨率 ≥4）。
+        private static readonly int[] L16_RESOLUTION_IV_POS = { 3, 4, 6, 7, 8, 12, 13, 14 };
+        private static readonly int[] L32_RESOLUTION_IV_POS = { 4, 5, 7, 8, 9, 10, 15, 16, 17, 18, 19, 20, 27, 28, 29, 30 };
+
+        /// <summary>
+        /// Column-position override for two-level factors in the "resolution gap" region
+        /// (mains + top interaction already give V/VI; beyond 2^{k-1} factors resolution III
+        /// is forced by the GF(2) XOR-sum-free capacity). Returns a position array into the
+        /// (reordered) OA column list, or null to keep the sequential prefix allocation.
+        /// </summary>
+        private static int[]? TwoLevelResolutionPick(int nCols, int m)
+        {
+            if (nCols == 15 && m >= 6 && m <= 8) return L16_RESOLUTION_IV_POS;
+            if (nCols == 31 && m >= 7 && m <= 16) return L32_RESOLUTION_IV_POS;
+            return null;
         }
 
         /// <summary>

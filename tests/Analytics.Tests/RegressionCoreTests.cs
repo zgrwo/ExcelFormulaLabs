@@ -350,5 +350,49 @@ namespace ExcelFormulaLabs.Analytics.Tests
         var r = RegressionCore.FitWLS(X, y, new[] { 1.0, 1.0, 1.0 }, true);
         ((double)r["r_squared"]).Should().BeApproximately(1.0, 1e-6);
     }
+
+    // ── review 2026-09-04（reaudit P0 A1 回归守卫）：Ridge 增广 Thin QR ──
+    // 近共线设计 cond(X)=8.8e6：正规方程 cond(X'X)=8.2e13 下系数相对误差 ~2e-3
+    // （全部有限 → 旧 NaN/Inf 守卫放行 = 静默错误结果）；Thin QR 后误差 < 1e-9。
+    // 期望系数由 Python lstsq 硬编码（λ=0 时 Ridge == OLS，两路都精确解）。
+    [Fact] public void FitRidge_lambda0_on_ill_conditioned_matches_exact()
+    {
+        int n = 24;
+        var x = new double[n];
+        for (int i = 0; i < n; i++) x[i] = -1.0 + 2.0 * i / (n - 1); // linspace(-1,1,24)
+        var X = new double[n, 3];
+        var y = new double[n];
+        for (int i = 0; i < n; i++)
+        {
+            X[i, 0] = x[i];
+            X[i, 1] = x[i] + 1e-6 * x[i] * x[i];
+            X[i, 2] = x[i] - 1e-6 * x[i] * x[i] * x[i];
+            y[i] = 1.5 - 2.0 * x[i] + 0.8 * X[i, 1] + 1.2 * X[i, 2];
+        }
+        var c = (double[])RegressionCore.FitRidge(X, y, 0.0)["coefficients"];
+        c[0].Should().BeApproximately(1.5, 1e-6);
+        c[1].Should().BeApproximately(-2.0, 1e-6);
+        c[2].Should().BeApproximately(0.8, 1e-6);
+        c[3].Should().BeApproximately(1.2, 1e-6);
+    }
+
+    [Fact] public void FitRidge_lambda_near_zero_on_singular_X_throws_explicit_error()
+    {
+        // 完全共线列 + λ≈0（λ=0 合法）：旧实现 ridge.Solve 返回有限垃圾系数（静默），
+        // 新实现 R 对角守卫显式报错（提示增大 λ），而非返回错误数字。
+        var X = new double[,] { { 1.0, 1.0 }, { 2.0, 2.0 }, { 3.0, 3.0 }, { 4.0, 4.0 } };
+        var act = () => RegressionCore.FitRidge(X, new[] { 2.0, 4.0, 6.0, 8.0 }, 1e-300);
+        act.Should().Throw<ArgumentException>().WithMessage("*near-singular*");
+    }
+
+    [Fact] public void FitRidge_singular_X_with_enough_lambda_succeeds()
+    {
+        // 完全共线列但 λ 足够（增广矩阵满秩）→ 正常返回有限系数（不误伤 Ridge 用武之地）。
+        var X = new double[,] { { 1.0, 1.0 }, { 2.0, 2.0 }, { 3.0, 3.0 }, { 4.0, 4.0 } };
+        var r = RegressionCore.FitRidge(X, new[] { 2.0, 4.0, 6.0, 8.0 }, 1.0);
+        var c = (double[])r["coefficients"];
+        foreach (var v in c)
+            (double.IsNaN(v) || double.IsInfinity(v)).Should().BeFalse();
+    }
 }
 }

@@ -152,7 +152,7 @@ All `REGEX.*` functions have a built-in 5-second timeout to prevent ReDoS attack
 
 - **Full test suites on both .NET versions**, covering happy paths and degenerate inputs (zeros/empty/single-element/all-equal)
 - **Python cross-validation**: Stats/Regression checked item by item against numpy/scipy to a precision of 1e-10; DataToolkit integration pipeline tests cover cross-module combinations
-- **Manual verification**: Python cross-validation covers 224/236 UDF examples (sync variants; the remaining 12 *_ASYNC / shared-Core variants without standalone examples are covered by UDF-layer tests) to ensure the results match the source
+- **Manual verification**: Python independently recomputes the hardcoded expected values of 224 manual examples across the 236 UDFs (no self-checks). Examples actually cross-checked against C# and pure Python self-checks are reported in separate channels (manual-only vs cross-validated) by verify-manual.py at runtime — coverage is no longer labelled "cross-validation" as a whole (the remaining 12 *_ASYNC / shared-Core variants without standalone examples are covered by UDF-layer tests)
 
 ---
 

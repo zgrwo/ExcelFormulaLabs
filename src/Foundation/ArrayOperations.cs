@@ -191,7 +191,13 @@ namespace ExcelFormulaLabs.Foundation
 
         /// <summary>
         /// Linear search. Returns 0-based index or -1.
-        /// For floating-point types, uses tolerance (default 1e-12).
+        /// For floating-point values, matches within a relative tolerance (default 1e-12):
+        /// |a−b| &lt; tolerance·max(|a|,|b|). Exact floating-point equality always matches.
+        /// review 2026-09-04（reaudit D1）：原绝对容差 |a−b| &lt; 1e-12 在数据量纲小于容差时
+        /// 任何查值都命中第一个元素（假阳性：{1e-16;2e-16;3e-16} 查 3e-16 返回 0），且
+        /// P1-5 已论证绝对阈值对小量纲失效——同一认知未跨函数复用。改纯相对：量纲 &lt; 1 的
+        /// 数据（ppm/ppb/µA/nm…）退化为精确比较；O(1) 量级仍能桥接浮点累差（0.1+0.2≈0.3）。
+        /// 注意相对窗口随量级增长，超大值（1e12 级）相邻数据不再有 1e-12 的绝对安全区。
         /// </summary>
         public static int IndexOf<T>(T[] array, T value, double tolerance = 1e-12)
         {
@@ -222,7 +228,11 @@ namespace ExcelFormulaLabs.Foundation
                         if (dA == dB) return i;
                         continue;
                     }
-                    if (Math.Abs(dA - dB) < tolerance) return i;
+                    // 相等快路径（覆盖 0==0、同值）：相对容差窗口在双零时下溢为 0，不能依赖它判等。
+                    if (dA == dB) return i;
+                    // 纯相对容差：|a−b| < tolerance·max(|a|,|b|)。
+                    if (Math.Abs(dA - dB) <
+                        tolerance * Math.Max(Math.Abs(dA), Math.Abs(dB))) return i;
                 }
                 else if (array[i]!.Equals(value)) return i;
             }

@@ -144,6 +144,15 @@ namespace ExcelFormulaLabs.Analytics
                 throw new ArgumentException(
                     $"DOE analysis would expand to {termCount:N0} terms — exceeds the 5,000-term limit. " +
                     "Reduce factor count or interaction order.");
+            // review 2026-09-04（reaudit B2）：原守卫只量 p（termCount），n 无上限——
+            // k=45（2way p=1035 < 5000 放行）、n=200,000 时 Xe = 2.07e8 doubles ≈ 1.66 GB，
+            // 且 Column() 先物化同尺寸 cols 副本 → 不可捕获 OOM → Excel 进程崩溃。
+            // 补二维守卫 n·p ≤ 2e6（≈16 MB，含中间副本峰值 < 64 MB），放在任何列物化之前。
+            if ((long)n * termCount > 2_000_000)
+                throw new ArgumentException(
+                    $"DOE analysis would expand to {n:N0} observations × {termCount:N0} terms " +
+                    $"({(long)n * termCount:N0} cells) — exceeds the 2,000,000-cell limit. " +
+                    "Reduce factor count, interaction order, or the number of observations.");
 
             var terms = new List<string>();
             var cols = new List<double[]>();

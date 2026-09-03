@@ -6,6 +6,23 @@
 
 > 版本一致性：每个 `v*` git tag 必须在本文档有对应条目（`verify-docs.ps1` 强制检查，见规则 [documentation.md](rules/documentation.md)）。
 
+## [2.2.5] - 2026-09-04
+
+### Fixed（2026-09-04 reaudit：第二轮深度审查 7 项实证问题全部修复，每项带回归守卫）
+
+**数值正确性（静默错误结果）**
+- **P0 Ridge 正规方程 → 增广 Thin QR**：`FitRidge` 原构造 X'X 正规方程（`(X'X+λI).Solve`，cond²——P0-1 只改了 OLS 的同族漏改；λ=0 合法时纯退化）→ 对增广矩阵 `[X; √λ·I]` 做 Thin QR（截距不惩罚；λ=0 退化为与 OLS 相同的稳定 QR 路径）。λ 低于数据尺度双精度噪声时 R 对角守卫显式报错而非静默错误系数。回归测试：cond(X)=8.8e6 设计 λ=0 系数锁 1e-6（正规方程误差 2e-3 会被捕获）、完全共线 + λ≈0 显式抛错、共线 + λ 足够正常求解
+- **P1 ARR.INDEXOF/CONTAINS 绝对容差 → 纯相对容差**：P1-3 修复激活的绝对 1e-12 容差对小量纲数据假阳性（{1e-16;2e-16;3e-16} 查 3e-16 返回 0；修前假阴性 -1 的镜像面）→ `|a−b| < 1e-12·max(|a|,|b|)` + 精确相等快路径；量纲 <1 数据（ppm/ppb/µA/nm…）退化为精确比较。回归测试锁小量纲三用例
+
+**验证体系可信度**
+- **P0 覆盖率宣称口径修正**：README「交叉验证覆盖 224/236」实际含 71% 纯 Python 自校验 → `verify-manual.py` 双通道分报（manual-only / cross-validated）并新增真正与 C# 对照的 UDF 数（CROSS_REFERENCED 推导）；README 措辞改为手册示例复算覆盖 + C# 交叉对照分开表述
+- **P1 manifest tolerance 数据流终点打通**：TestManifest.cs → ResultSerializer → 结果 JSON 的 per-test `tolerance` 此前 0 次消费 → `verify-manual.py` cross_check/cross_check_matrix 现取「与调用方 tol 较松者」用于判定，per-test 可单独放宽/收紧
+
+**正确性与可用性**
+- **P1 DOE 展开守卫补二维（n·p）**：只守 p（>5000 项）漏 n——k=45、n=200,000 → 1.66 GB Xe 不可捕获 OOM → 加 `n·p ≤ 2e6`（分配前）；该守卫此前无任何回归测试，补 2 条
+- **P1 田口 2 水平中间因子段分辨率 III → IV**：L16 6~8、L32 7~16 因子（≤ 2^{k-1} XOR-sum-free 容量）改分配含最高主效应的列集 → 无 ≤3 长定义字（分辨率 ≥IV，主效应不再与 2 阶交互别名）。超出容量（L16 9~15、L32 17~31）受 GF(2) sum-free 上限 8/16 约束数学上只能 III——保持原顺序并注释说明；回归测试锁 L32 16 因子 ≥IV、L8 4 因子保持、L32 31 因子正交性不变
+- **P2 STR.FMT 空格式串/异常回退统一 InvariantCulture**：`value?.ToString()`（CurrentCulture）与主路径双文化（de-DE 下同函数 "1234,5" vs "1,234.50"）→ `Convert.ToString(value, InvariantCulture)`；回归测试 de-DE 下空格式串与回退路径
+
 ## [2.2.4] - 2026-08-31
 
 ### Fixed（2026-08-31 深度审查修复：61 项问题中 52 项实证、4 项部分属实、1 项建议值错误——全部按优先级修复并留回归守卫）
@@ -294,7 +311,8 @@
 [2.2.2]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.1...v2.2.2
 [2.2.4]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.3...v2.2.4
 [2.2.3]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.2...v2.2.3
-[Unreleased]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.4...HEAD
+[2.2.5]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.4...v2.2.5
+[Unreleased]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.5...HEAD
 [2.2.1]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.1.1...v2.2.0
 [2.1.1]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.1.0...v2.1.1

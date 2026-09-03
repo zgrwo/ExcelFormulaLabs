@@ -167,5 +167,57 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void Zero_factors_throws()
             => new Action(() => Taguchi(0, 2, 0, 2))
                 .Should().Throw<ArgumentException>().WithMessage("*factor*");
+
+        // ── review 2026-09-04（reaudit B1 回归守卫）：中间因子段分辨率 ≥ IV ──
+        // GF(2) 定义字：最短零异或子集长度。≤3 长字存在 ⇒ 主效应与 2/3 阶交互别名（分辨率 III）。
+        private static int MinWordLength(double[,] coded)
+        {
+            int runs = coded.GetLength(0), cols = coded.GetLength(1);
+            var g = new ulong[cols];
+            for (int c = 0; c < cols; c++)
+                for (int r = 0; r < runs; r++)
+                    if (coded[r, c] < 0) g[c] |= 1UL << r; // -1 → GF(2) 1
+            for (int size = 2; size <= cols; size++)
+            {
+                var idx = new int[size];
+                for (int i = 0; i < size; i++) idx[i] = i;
+                while (true)
+                {
+                    ulong x = 0;
+                    foreach (var i in idx) x ^= g[i];
+                    if (x == 0) return size;
+                    int p = size - 1;
+                    while (p >= 0 && idx[p] == cols - size + p) p--;
+                    if (p < 0) break;
+                    idx[p]++;
+                    for (int q = p + 1; q < size; q++) idx[q] = idx[q - 1] + 1;
+                }
+            }
+            return int.MaxValue;
+        }
+
+        [Fact] public void L32_16_factors_resolution_IV()
+        {
+            // n2=16 → L32。此前按重排前缀取前 16 列 → 分辨率 III（含 {ABCDE,ABCD,E} 3 长字）；
+            // 中间因子段（k+1 < m ≤ 2^{k-1}）可达 IV：取含最高主效应 E 的 16 个 XOR-sum-free 列。
+            var m = Taguchi(16, 2, 0, 2);
+            m.GetLength(0).Should().Be(32);
+            MinWordLength(m).Should().BeGreaterThanOrEqualTo(4);
+        }
+
+        [Fact] public void L8_4_factors_resolution_IV_preserved()
+        {
+            var m = Taguchi(4, 2, 0, 2); // n2=4 → L8
+            m.GetLength(0).Should().Be(8);
+            MinWordLength(m).Should().BeGreaterThanOrEqualTo(4);
+        }
+
+        [Fact] public void L32_31_factors_runs_and_orthogonality_kept()
+        {
+            // 超出 IV 容量（>2^{k-1}）保持原有顺序，正交性与行数不变（仍可正常生成）。
+            var m = Taguchi(31, 2, 0, 2);
+            m.GetLength(0).Should().Be(32);
+            AssertOrthogonal(m, Levels(31, 2, 0, 2));
+        }
     }
 }

@@ -275,6 +275,34 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         finally { System.Threading.Thread.CurrentThread.CurrentCulture = prev; }
     }
 
+    // review 2026-09-04（reaudit D2）：空格式串快路径与 catch 回退此前是 CurrentCulture
+    // `value?.ToString()`——de-DE 下 STR.FMT(1234.5,"") 输出 "1234,5" 而带格式串输出
+    // "1,234.50"（同一函数双文化）。统一 InvariantCulture 后跨文化输出一致。
+    [Fact] public void FormatValue_empty_format_invariant_under_de_DE()
+    {
+        var prev = System.Threading.Thread.CurrentThread.CurrentCulture;
+        try
+        {
+            System.Threading.Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo("de-DE");
+            StringCore.FormatValue(1234.5, "").Should().Be("1234.5");
+            StringCore.FormatValue(0.25, "").Should().Be("0.25");
+            StringCore.FormatValue(1234.5, "N2").Should().Be("1,234.50"); // 主路径对照
+        }
+        finally { System.Threading.Thread.CurrentThread.CurrentCulture = prev; }
+    }
+
+    [Fact] public void FormatValue_fallback_raw_value_invariant_under_de_DE()
+    {
+        // "D4" 是整型专用说明符，对 double 抛 FormatException → catch 回退原始值也须不变文化。
+        var prev = System.Threading.Thread.CurrentThread.CurrentCulture;
+        try
+        {
+            System.Threading.Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo("de-DE");
+            StringCore.FormatValue(1234.5, "D4").Should().Be("1234.5");
+        }
+        finally { System.Threading.Thread.CurrentThread.CurrentCulture = prev; }
+    }
+
     [Fact] public void NthIdx_empty_separator_no_throw()
     {
         // P2-18：空分隔符 + n > len+1 原抛 ArgumentOutOfRangeException（IndexOutOfRange）。
