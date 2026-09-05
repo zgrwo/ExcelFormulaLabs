@@ -101,7 +101,7 @@ Foundation (共享工具)                    ← InputNormalizer / ElementWiseMa
 | 版本一致性 | tag == `Directory.Build.props` `<Version>` == AV/FV == CHANGELOG 条目（verify-docs 检查 10/19 强制） |
 
 **高频复发模式**（逐条做被动排查，历史见 project-experience.md）：
-① 绝对阈值误判小量纲（`va < 1e-15` 类判据对 ppm/ppb 数据失效）→ 判据必须与数据同尺度（精确零 / 相对阈）；② 正规方程条件数平方（`X'X.Solve`）→ 回归必须 QR/SVD、标准误由 R⁻¹ 求；③ NaN 比较恒 false 复活路径（`sd < 1e-15` 对 sd=NaN/Inf 恒 false），守卫必须同时覆盖 **NaN/Inf/溢出三路径**；④ `2⁶³` 边界守卫（`rd > long.MaxValue` 比较时 long.MaxValue 转 double = 2⁶³，恒 false）→ 用 `2⁶³` 字面量严格比较；⑤ 排序全等值退化 O(n²) → 3-way 分区；⑥ 顺序依赖溢出（`Product(1e300,1e300,1e-300)`）→ 按 |x| 升序相乘；⑦ 重载回退性能（`n=1` 快路径保留 `Regex.Match` 而非 `Matches`）。
+① 绝对阈值误判小量纲（`va < 1e-15` 类判据对 ppm/ppb 数据失效）→ 判据必须与数据同尺度（精确零 / 相对阈）；② 正规方程条件数平方（`X'X.Solve`）→ 回归必须 QR/SVD、标准误由 R⁻¹ 求；③ NaN 比较恒 false 复活路径（`sd < 1e-15` 对 sd=NaN/Inf 恒 false），守卫必须同时覆盖 **NaN/Inf/溢出三路径**；④ `2⁶³` 边界守卫（`rd > long.MaxValue` 比较时 long.MaxValue 转 double = 2⁶³，恒 false）→ 用 `2⁶³` 字面量严格比较；⑤ 排序全等值退化 O(n²) → 3-way 分区；⑥ 顺序依赖溢出（`Product(1e300,1e300,1e-300)`）→ 按 |x| 升序相乘；⑦ 重载回退性能（`n=1` 快路径保留 `Regex.Match` 而非 `Matches`）；⑧ **同族函数守卫/封顶不一致**（EnsureSymmetric / CapNaN / 绝对零 / maxCells / CultureInvariant 模块内逐项对照——Cholesky 无 EnsureSymmetric 而 Eigen 有、TEMP 无绝对零守卫而 GASSTP 有、COND/DOE.ANOVA/Convert* 无 CapNaN 而 Sum/Range 有）；⑨ **门禁单向 / 名单三方漂移**（检查 10 只查 tag→CHANGELOG 不查反向 → 幽灵条目；豁免名单文档 8 vs 脚本 9）；⑩ **恒真断言族**（同源拼接 / 环境性恒真 / 对称自引用，见 6.1）。
 
 ---
 
@@ -190,7 +190,7 @@ codegraph node -f <文件> --symbols-only   # 文件模式：符号表 + depende
 
 - D1 **三路径守卫**：NaN / +Inf / −Inf / 溢出 每一条都要显式处理（除零、负数开方、`Math.Log(≤0)` 等返回 `NaN` 不抛）；守卫不能只修一个分支放走另外两个。
 - D2 **判据同尺度**：`grep -rn "1e-\|< 1e" src/` 逐条核对——任何"与数据量级无关的常数阈值"都是红旗。常量判据用精确零，对称判据用相对式（`tol * scale`），分子/分母均防溢出。
-- D3 **边界与溢出**：`(int)` 截断（d ≥ 2³¹）、`(long)` 越界（2⁶³）、求和/乘积溢出（int 回绕 → long / 显式检查）、`checked` 语义。
+- D3 **边界与溢出**：`(int)` 截断（d ≥ 2³¹）、`(long)` 越界（2⁶³）、求和/乘积溢出（int 回绕 → long / 显式检查）、`checked` 语义。**尺度不变量统计量**（Pearson / CORRMATRIX / 归一化）大尺度输入输出 NaN/Inf 是真错误（必须 max 缩放 / 中心化两遍）；绝对量溢出（VAR/STDEV → #NUM!）才可辩护。
 - D4 **条件数与抵消**：病态矩阵静默错结果（r²≈1 但系数全错）、灾难性抵消（两遍减法 → 单遍中心化）。
 - D5 **输出保洁**：结果矩阵/数组无 Inf 渗漏；`NumericGuard` 扫描；中间 NaN 不吞没、最终传播为 NaN。
 - D6 **浮点比较**：测试断言用相对误差（tolerance），对齐 `dotnet test` 与 Python 侧的容差口径（1e-10 量级，特殊标签消费）。
@@ -198,26 +198,26 @@ codegraph node -f <文件> --symbols-only   # 文件模式：符号表 + depende
 ### 维度 E：结果与验证体系（Results）
 
 - E1 **自校验零容忍**（专项，见 6.1）：全库 `check(name, X, X)` → 0；`cross_check()` 必须非 SKIP、必须注册 Dispatcher + manifest。
-- E2 **通道分离与宣称真实**：报告 CrossVal 覆盖时必须分列 `check()` / `cross_check()` 两条通道的数字；覆盖率分母用「Dispatcher 实际注册方法数」而非「按文档声称」；任何"X/Y 覆盖"宣称要与实测对账。
-- E3 **tolerance 消费**：manifest per-test tolerance 必须被读进比较逻辑（曾死数据，P0-3c/F2）。
-- E4 **特殊值标签往返**：NaN/Inf 序列化 `{"__nan__":true}`/`{"__inf__":±1}` 到 Python 侧解包，两端都要验（防被改回 null 的回归）。
+- E2 **通道分离与宣称真实**：报告 CrossVal 覆盖时必须分列 `check()` / `cross_check()` 两条通道的数字；覆盖率分母用「Dispatcher 实际注册方法数」而非「按文档声称」；任何"X/Y 覆盖"宣称要与实测对账。**追加对账**：① manifest 条目 ↔ Python 引用**双向**核对，孤儿条目（C# 执行计入 summary.ok 但 Python 零消费）必须点名；② `check()` / `cross_check()` **调用计数**分列（bespoke 簇落 MANUAL_PASS 会少计真 C# 对照，曾 25 处 vs 109）。
+- E3 **tolerance 消费**：manifest per-test tolerance 必须被读进比较逻辑（曾死数据，P0-3c/F2）。**消费语义同样要核对**：调用方显式 `tol` 应优先收紧，禁止 `max(tol, ref.tolerance)` 取松（曾把 ANOVA1 p 值断言 1e-6 放大到 0.01）；per-test tolerance 不得跨条目内每个断言复用；消费点注释声称的"行为不变"要与实测对账。
+- E4 **特殊值标签往返**：NaN/Inf 序列化 `{"__nan__":true}`/`{"__inf__":±1}` 到 Python 侧解包，两端都要验（防被改回 null 的回归）。**每种 check 变体（标量 / matrix / property）都要实测标签分支**——曾标量 bespoke 遇标签走 FAIL 误分类、matrix/property 走 TypeError，通道行为不一致。
 - E5 **断言质量**：期望必须硬编码（禁 `Be(实现自产)`）；禁零信息断言（NotBeNull 类）；复现测试必须进正式测试文件，临时审计测试（`_AUDIT_`）完成即转正或删除。
-- E6 **测试稳定性**：随机/时序/文件系统/全局状态依赖、CultureInfo 未固定（de-DE/FR-FR 上会误报）；"间歇性失败"先查 bin/obj 陈旧产物（.dna 残留曾冒充构建竞态）再归因代码。
+- E6 **测试稳定性**：随机/时序/文件系统/全局状态依赖、CultureInfo 未固定（de-DE/FR-FR 上会误报）；"间歇性失败"先查 bin/obj 陈旧产物（.dna 残留曾冒充构建竞态）再归因代码。**区分陈旧残留与瞬时生成物**：verify-docs 与构建并发曾抓 .dna 瞬时产物（复跑 PASS）——扫描需排除 git-ignored 生成物，并声明"验证脚本不得与构建并发"。
 
 ### 维度 F：文档一致性（Docs）
 
-- F1 数字基准：一切计数/签名以 [api-reference.md](../specification/api-reference.md) 为唯一信源；新增/修改 UDF 必须同步 api-reference 与 [user-manual.md](../user-manual/user-manual.md)。
+- F1 数字基准：一切计数/签名以 [api-reference.md](../specification/api-reference.md) 为唯一信源；新增/修改 UDF 必须同步 api-reference 与 [user-manual.md](../user-manual/user-manual.md)。**① 注释声称的契约 ↔ api-reference 双向对账**（注释有而文档无 = 文档欠账，如 singular→#VALUE!、RIDGE df、ANOVA1 跳行语义）；**② 一切计数（含测试断言数 `[Fact]`）必须纳入门禁**（spec 声称 2466 vs 实测 2485 曾漂移全绿）。
 - F2 目录树：新增/移动/删除文件必须同步 [project-structure.md](project-structure.md) 目录树（verify-docs 检查 14/18）。
 - F3 版本链：`Directory.Build.props` `<Version>` == AV/FV == CHANGELOG（`## [X]` + `[X]:` 链接行成对）== 最新 tag；specification / user-manual 版本头。
 - F4 门禁对账：CHANGELOG 的每条"声称"（.editorconfig 对齐、脚本参数化、门禁新增）对照实际 diff 逐一核实，禁止"声称未兑现"。
-- F5 术语：新概念是否已登记术语表 [context.md](context.md)；文档禁止在某处重复定义（SSOT 违规）。
+- F5 术语：新概念是否已登记术语表 [context.md](context.md)；文档禁止在某处重复定义（SSOT 违规）。**名单类配置**（hasHeaders 豁免 / dependabot ignore / 结构性豁免 / 白名单）必须跨文档 / 脚本 / 测试三方一致（曾文档 8 vs 脚本 9），且文档里"与 XX 一致"的声称本身要可验证（SSOT 链接）。
 - F6 本文件同步：verify-docs / pre-commit 检查项新增或删除后，本文档「4.4 流程触发链」与「3.6 陷阱速查」应同步（低信任项，人工核对）。
 
 ### 维度 G：脚本 / CI / PR / Q&S（Scripts & Flows）
 
-- G1 门禁自身正确性：新检查/脚本必须同时做 **正向全绿** 与 **负向注入实测**（注入漂移 → 指名 FAIL、退出码 1），并加入 `tests/scripts/` 自测防回归。
-- G2 门禁扫描盲区：正则必须覆盖中英双语变体（`(\d+)\s*(?:个)?\s*UDF`）、扫描范围用"排除 bin/obj 的全部文件"而非名字通配、路径相对化先 `-replace '\\','/'` 再 `TrimStart('/')`。
-- G3 环境差异：`Substring(路径前缀长度)` 前必须 `[IO.Path]::GetFullPath`（8.3 短名）；集合成员判断用纯字符串（`-notin @(... | ForEach-Object { $_.Name })`），不依赖对象隐式字符串化；幂等性。
+- G1 门禁自身正确性：新检查/脚本必须同时做 **正向全绿** 与 **负向注入实测**（注入漂移 → 指名 FAIL、退出码 1），并加入 `tests/scripts/` 自测防回归。**方向性铁律**：任何"声称"检查必须**双向对账**（正向有检查 ≠ 反向安全；检查 10 只查 tag→CHANGELOG，反向幽灵条目漏网）。
+- G2 **门禁扫描盲区**：正则必须覆盖中英双语变体（`(\d+)\s*(?:个)?\s*UDF`）、扫描范围用"排除 bin/obj 的全部文件"而非名字通配、路径相对化先 `-replace '\\','/'` 再 `TrimStart('/')`。**正则解析代码结构**（C# 签名 / `check(` 调用）必须考虑括号平衡、元组类型含 `)`、跨行调用、短别名豁免（pre-commit 检查 2/6 曾漏报），优先括号平衡解析而非单行正则；扫描**排除 git-ignored 构建生成物**（`*.dna`，verify-docs × 构建并发曾抓瞬时产物）；门禁脚本文件读失败 → `continue` 静默跳过（不计 SKIP）是系统性模式，必须计 SKIP 或显式 FAIL。
+- G3 环境差异：`Substring(路径前缀长度)` 前必须 `[IO.Path]::GetFullPath`（8.3 短名）；集合成员判断用纯字符串（`-notin @(... | ForEach-Object { $_.Name })`），不依赖对象隐式字符串化；幂等性。**治理脚本自测本身要覆盖 PS5.1 与 pwsh7 双宿主**（run-tests.ps1 曾硬编码 `powershell` 恒跑 PS5.1，pwsh7 语义永不暴露）。
 - G4 发布安全：`.xll` 8 资产断言与 `fail_on_unmatched_files`；NuGet `Get-ChildItem` 管道（通配不展开）；无 `continue-on-error` / `pull_request_target`。
 - G5 dependabot / 版本上限：见 4.4。
 
@@ -236,6 +236,7 @@ codegraph node -f <文件> --symbols-only   # 文件模式：符号表 + depende
 | `cross_check()` 返回 SKIP | 比对 Dispatcher 注册 → manifest 条目 → `cross_check` 调用三方可达性 | 无交叉验证 |
 | 期望由被测实现生成 | 测试断言 `Be(实现产出的值)` / `Be(Soundex(x))` | 零信息断言 |
 | 引用过期数据表 | Python 常数表与 C# 常量字典**逐项比对**来源（IUPAC 精确值 vs 约值），不信任单侧 | 系统性偏移 |
+| **恒真断言族** | ① 同源拼接：两侧由同一表达式产出（`f"{a}-{b}"` vs `a+"-"+str(b)`）恒真；② 环境性恒真：`len(uuid4())==36`、`len>0`、round-trip/保长恒真——与 UDF 逻辑无关；③ 对称/反对称自引用：`Be(-f(y,x))`、`Be(f(x₂))` 同源。**判定**：把被测实现替换为**恒错实现**，断言仍 PASS = 零信息 | 实现整体错仍全绿 |
 
 **主动反例**：把 C# 侧某数值 UDF 结果改错一分（如 Ln 实现改错），`dotnet test --filter CrossVal` + verify-manual.py 必须 **FAIL**；若全绿，则该"交叉验证"是假的，按 P0 报。
 
@@ -249,6 +250,8 @@ codegraph node -f <文件> --symbols-only   # 文件模式：符号表 + depende
 | 广播错配 | MapOverMulti 尺寸不匹配 → `ExcelError.Value`；标量→数组广播方向；`V()`/`M()` 在错配时返回 `NaN` 语义（非 ExcelError）|
 | 默认值语义 | 可选参数 `= null` 由 InputNormalizer 处理；Core 接收 `long`/`bool` 而非 `object`；默认值与文档/Excel 对齐 |
 | 行/列序混淆 | 矩阵函数按行主序 vs 列主序（Excel 区域 = 行主序）；`Transpose` / `SelectColumns` / `hasHeaders` 偏移（r=1 起点） |
+| 静默丢行/丢列 | 数组转换/清洗路径（`ToJaggedColumns` 跳行、PIVOT COUNT 丢非数值行）检查是否改变下游统计语义（ANOVA 不平衡组）且已文档化 |
+| 输入完整性（部分匹配） | 元素/模式匹配后必须校验剩余串为空（`MOLWT("H2Oxyz")` 静默接受 vs `"h2o"` → NaN 结局不一致）；同族"垃圾输入"结局必须一致 |
 
 **主动反例**：为可疑函数写一个手工矩阵/向量用例（Hilbert、不规则 2D、空头行含标题），用 C# 与 Python 独立实现并排输出核对每一列。
 
@@ -297,7 +300,7 @@ codegraph node -f <文件> --symbols-only   # 文件模式：符号表 + depende
 ```markdown
 #### [编号]〔P级别〕精炼标题
 
-- **位置**：`相对路径:行号`（可多个；矩阵类给函数名 + 行片段）
+- **位置**：`相对路径:行号` + **函数名/符号定位**（行号会跨报告漂移，符号名供复检核对；矩阵类给函数名 + 行片段）
 - **严重度**：P0 发行阻塞（静默错误结果 / 验证体系失效 / 安全漏洞）；P1 高危（应修复后合入）；P2 应修复；P3 门禁/治理增强
 - **现象**：什么输入 → 什么输出 → 期望什么（可含 Excel 层 `#VALUE!`/`#NUM!` 行为）
 - **根因**：代码层原因，一句话（含机制，如"abs 阈值与数据量级无关"）
@@ -319,10 +322,11 @@ codegraph node -f <文件> --symbols-only   # 文件模式：符号表 + depende
 1. **〇、审查概况**：变更范围、触发流程、基线数据（源码/测试/UDF 数、CrossVal Dispatcher 注册数——均实测，不与旧报告混）。
 2. **一、修复验证结论**（reaudit 场景）：逐条 `✅/⚠️/❌` + 证据（只信源码与实测，不信 commit message）。
 3. **二、按维度分类的问题清单**：A–G 分节，每条含「八」模板。
-4. **三、对抗验证执行记录**：注入内容 / 预期 FAIL / 恢复结果 / 独立参考比对表。
-5. **四、问题总表与优先级**：按 静默错误结果 → 验证体系可信度 → 正确性 → 工程治理 四批排序；每条含 关键编号 / 严重度 / 位置 / 动作。
-6. **五、保持项（勿在后续重构中破坏）**：经本轮复核确认健康的机制逐条列出，作为回归守卫——历史教训：keep-list 丢失 = 同类缺陷复活。
-7. **附、审查执行记录**：基准 commit、工作区状态、实际执行过的命令清单、声明未执行的步骤（含原因）。
+4. **二·5、多轮合并对比**（两轮以上审查时）：每条旧发现逐条复核并标注 **「共同 / 新发现 / 遗漏 / 修正」**；另设独立「对旧报告修正」段——旧报告数字/归因失实必须显式标注并说明为何误报（防下一轮复检踩坑），行号以本轮重测为准。
+5. **三、对抗验证执行记录**：注入内容 / 预期 FAIL / 恢复结果 / 独立参考比对表。
+6. **四、问题总表与优先级**：按 静默错误结果 → 验证体系可信度 → 正确性 → 工程治理 四批排序；每条含 关键编号 / 严重度 / 位置 / 动作。
+7. **五、保持项（勿在后续重构中破坏）**：经本轮复核确认健康的机制逐条列出，作为回归守卫——历史教训：keep-list 丢失 = 同类缺陷复活。
+8. **附、审查执行记录**：基准 commit、工作区状态、实际执行过的命令清单、声明未执行的步骤（含原因）。
 
 ---
 
