@@ -2,7 +2,7 @@
 
 > 项目级技能**单一信源**。`.qoder/skills/` 为 Qoder 本地工具镜像（**不入库**，本地保留），
 > 由 `scripts/sync-qoder-skills.ps1` 同步；`verify-docs.ps1` 检查 13 在 .qoder 存在时校验一致性。
-> 结构唯一定义见 [project-structure.md](../rules/project-structure.md)。
+> 结构唯一定义见 [project-structure.md](../docs/governance/project-structure.md)。
 
 ## 项目级技能（本目录）
 
@@ -27,4 +27,4 @@ systematic-debugging / subagent-driven-development / verification-before-complet
 
 - 修改任何 `skills/*.md` 后**必须**运行 `scripts/sync-qoder-skills.ps1` 同步镜像
 - verify-docs.ps1 检查 13 强制镜像一致（未同步 = CI 红）
-- 新技能文件必须登记 `rules/project-structure.md` 目录树
+- 新技能文件必须登记 `docs/governance/project-structure.md` 目录树

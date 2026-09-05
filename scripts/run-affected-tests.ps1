@@ -113,7 +113,7 @@ foreach ($file in $ChangedFiles) {
         }
         Write-Host "  $normalized -> $testProject (test file changed)" -ForegroundColor DarkGray
     }
-    # Rules/docs/scripts — no tests affected
+    # Rules/scripts — no tests affected
     else {
         Write-Host "  $normalized -> (no affected tests)" -ForegroundColor DarkYellow
     }

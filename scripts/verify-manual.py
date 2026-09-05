@@ -4,7 +4,7 @@
 verify-manual.py — Verify ALL UDF examples against Python with hardcoded expected values.
 
 Every numerical check compares Python computation against a constant cross-validated
-with C# MathNet. Never use self-checks (actual == same expression as expected). — Verify ALL 236 UDF examples in rules/user-manual.md against Python (sync variants; *_ASYNC share Core methods).
+with C# MathNet. Never use self-checks (actual == same expression as expected). — Verify ALL 236 UDF examples in docs/user-manual/user-manual.md against Python (sync variants; *_ASYNC share Core methods).
 
 Usage: python scripts/verify-manual.py
 """

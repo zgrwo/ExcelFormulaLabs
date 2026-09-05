@@ -36,7 +36,7 @@
 
 - **正面**：DOE 类函数纳入闭环验证，符合红线 6 精神（独立实现比对），避免自校验假阴性。
 - **代价**：DOE 验证链路比数值类多一层（pyDOE2 + golden reference 双轨），单元测试需维护 Minitab 标准表 golden 值。
-- **需同步**：`rules/api-reference.md`（DOE.* 签名）、`rules/user-manual.md`（DOE 示例）、`rules/specification.md`（模块清单 + UDF 总数）、`skills/excel-dna-project.md`（如需要，DOE 编码约定）。
+- **需同步**：`docs/specification/api-reference.md`（DOE.* 签名）、`docs/user-manual/user-manual.md`（DOE 示例）、`docs/specification/specification.md`（模块清单 + UDF 总数）、`skills/excel-dna-project.md`（如需要，DOE 编码约定）。
 
 ## 演进
 

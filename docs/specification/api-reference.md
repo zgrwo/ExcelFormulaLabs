@@ -1,6 +1,6 @@
 # API 参考
 
-> 全部 UDF 函数的完整签名。使用指南见 [README.md](../README.md)，每函数详细示例见 [用户手册](user-manual.md)。
+> 全部 UDF 函数的完整签名。使用指南见 [README.md](../../README.md)，每函数详细示例见 [用户手册](../user-manual/user-manual.md)。
 
 ---
 
@@ -443,4 +443,4 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 
 ---
 
-> **架构**：术语定义见 [context.md](context.md)，UDF 调用链与分层详见 [AGENTS.md](../AGENTS.md#架构分层)。
+> **架构**：术语定义见 [context.md](../governance/context.md)，UDF 调用链与分层详见 [AGENTS.md](../../AGENTS.md#架构分层)。

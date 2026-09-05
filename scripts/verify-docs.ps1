@@ -55,7 +55,7 @@ function Check-Skip {
 }
 
 # ---------- 1. UDF 数量 ----------
-$docUdfs = (Select-String -Path (Join-Path $RepoRoot "rules\api-reference.md") -Pattern '^\| `[A-Z]+\.[A-Z]' | Measure-Object).Count
+$docUdfs = (Select-String -Path (Join-Path $RepoRoot "docs\specification\api-reference.md") -Pattern '^\| `[A-Z]+\.[A-Z]' | Measure-Object).Count
 $codeUdfs = (Get-ChildItem -Path (Join-Path $RepoRoot "src") -Recurse -Filter "*.cs" |
     Where-Object { $_.FullName -notmatch "\\obj\\" -and $_.FullName -notmatch "\\bin\\" } |
     Select-String -Pattern 'ExcelFunction\(Name\s*=\s*"([^"]*)"' -AllMatches |
@@ -65,7 +65,7 @@ if ($docUdfs -eq $codeUdfs) { Check "UDF count ($docUdfs)" "OK" }
 else { Check "UDF count" "doc=$docUdfs code=$codeUdfs" }
 
 # ---------- 2. UDF 全覆盖 ----------
-$apiContent = Read-Utf8 (Join-Path $RepoRoot "rules\api-reference.md")
+$apiContent = Read-Utf8 (Join-Path $RepoRoot "docs\specification\api-reference.md")
 $missing = @()
 Get-ChildItem -Path (Join-Path $RepoRoot "src") -Recurse -Filter "*.cs" |
     Where-Object { $_.FullName -notmatch "\\obj\\" -and $_.FullName -notmatch "\\bin\\" } |
@@ -90,7 +90,7 @@ if ($readmeContent -match 'ElementWiseMapper') { Check "README no internal class
 else { Check "README no internal impl details" "OK" }
 
 # ---------- 5. MathNet 版本匹配 ----------
-$docVer = if ((Read-Utf8 (Join-Path $RepoRoot "rules\context.md")) -match 'MathNet\.Numerics\s+([0-9.]+)') { $Matches[1] } else { "?" }
+$docVer = if ((Read-Utf8 (Join-Path $RepoRoot "docs\governance\context.md")) -match 'MathNet\.Numerics\s+([0-9.]+)') { $Matches[1] } else { "?" }
 $csprojVer = if ((Read-Utf8 (Join-Path $RepoRoot "src\Analytics\Analytics.csproj")) -match 'MathNet\.Numerics.*Version="([0-9.]+)"') { $Matches[1] } else { "?" }
 if ($docVer -eq $csprojVer) { Check "MathNet version ($docVer)" "OK" }
 else { Check "MathNet version" "doc=$docVer csproj=$csprojVer" }
@@ -249,7 +249,7 @@ function Get-TreeBlock {
     return $m.Groups[1].Value
 }
 
-$structText = Read-Utf8 (Join-Path $RepoRoot "rules\project-structure.md")
+$structText = Read-Utf8 (Join-Path $RepoRoot "docs\governance\project-structure.md")
 $structBlock = Get-TreeBlock $structText
 $structEntries = if ($structBlock) { Get-TreeEntries $structBlock } else { @() }
 # 「不入库」目录（.gitignore 覆盖，如 logs/）：干净 checkout 下不存在，豁免存在性检查
@@ -294,7 +294,9 @@ if (-not $agentsBlock -or -not $structBlock) {
 # review-2026-08-29 P1-3/P1-4：此前只校验 api-reference↔源码（检查 1/11），从不校验
 # AGENTS/CONTRIBUTING/CHANGELOG/注释中的散文 `\d+ UDF` 计数，导致 232 陈旧漂移全绿通过。
 # review-2026-08-30：扫描范围从 5 个指定文件扩展为全仓 *.md（+ 源码注释文件）。
-#   豁免：cross-validation.md（模块级计数，仅验 Total 行）与 CHANGELOG.md（历史表述，仅验 X→Y 终值）。
+#   豁免：CHANGELOG.md（历史表述，仅验 X→Y 终值）。
+#   2026-09-05：docs/cross-validation.md 已归档至 logs/reports/（审查报告唯一存放处，全仓扫描自动豁免），
+#   其模块级 Total 计数检查随归档移除。
 $proseMdFiles = Get-ChildItem -Path $RepoRoot -Recurse -Filter "*.md" |
     Where-Object { ($_.FullName -replace '\\', '/') -notmatch '/(\.git|bin|obj|\.qoder|TestResults|logs)/' }
 # 相对路径统一归一化为正斜杠 + 去掉前导分隔符（Windows 为 \，Linux/macOS 为 /，pwsh 双平台兼容）
@@ -304,12 +306,11 @@ $proseMismatches = @()
 foreach ($rel in $proseFiles) {
     $text = Read-Utf8 (Join-Path $RepoRoot $rel)
     if (-not $text) { continue }
-    $isModuleLevel = ($rel -eq "docs/cross-validation.md")
     $isHistorical = ($rel -eq "CHANGELOG.md")
-    # 模式 1：`N UDF`（如 "236 UDF"）与中文 `N 个 UDF`——除模块级/历史文件外强制执行 == codeUdfs
+    # 模式 1：`N UDF`（如 "236 UDF"）与中文 `N 个 UDF`——除历史文件外强制执行 == codeUdfs
     # P0-4 (review-2026-08-31)：原正则 `(\d+)\s+UDF` 匹配不上中文「236 个 UDF」（中间隔着
     # 「个」），中文 README 计数漂移全绿通过（负向注入 236→999 仅英文被拦）。
-    if (-not $isModuleLevel -and -not $isHistorical) {
+    if (-not $isHistorical) {
         foreach ($m in [regex]::Matches($text, '(\d+)\s*(?:个)?\s*UDF')) {
             if ([int]$m.Groups[1].Value -ne $codeUdfs) { $proseMismatches += "${rel}: '$($m.Value)'" }
         }
@@ -324,12 +325,6 @@ foreach ($rel in $proseFiles) {
     # 模式 2：`UDF 总数 X→Y`（CHANGELOG 历史记录，断言终值）
     foreach ($m in [regex]::Matches($text, 'UDF\s*总数\s*\d+\s*→\s*(\d+)')) {
         if ([int]$m.Groups[1].Value -ne $codeUdfs) { $proseMismatches += "${rel}: '$($m.Value)'" }
-    }
-    # 模式 3：cross-validation.md Total 行 `| **Total** | **236** |`
-    if ($isModuleLevel) {
-        foreach ($m in [regex]::Matches($text, '\|\s*\*\*Total\*\*\s*\|\s*\*\*(\d+)\*\*')) {
-            if ([int]$m.Groups[1].Value -ne $codeUdfs) { $proseMismatches += "${rel}: Total '$($m.Groups[1].Value)'" }
-        }
     }
 }
 if ($proseMismatches.Count -eq 0) { Check "Prose UDF counts ($codeUdfs)" "OK" }
@@ -390,12 +385,13 @@ else { Check "src files declared in tree" "undeclared: $($undeclaredFiles -join 
 # review-2026-08-31（深度审查 P1-14）：specification/user-manual/cross-validation 版本头曾停在
 # 2.2.1（实际 2.2.3），CHANGELOG 声称"已同步"而 v2.2.2/v2.2.3 两次发版都没同步，且原 18 项检查
 # 无一覆盖（检查 5 只查 MathNet 版本，检查 10 只查 CHANGELOG/tag）。
+# 2026-09-05：docs/cross-validation.md 已归档至 logs/reports/（审查报告唯一存放处），不再参与版本头校验。
 $propsVersion = [regex]::Match((Read-Utf8 (Join-Path $RepoRoot "src/Directory.Build.props")), '<Version>([^<]+)</Version>').Groups[1].Value
 $verMismatches = @()
-foreach ($vf in @("rules/specification.md", "rules/user-manual.md", "docs/cross-validation.md")) {
+foreach ($vf in @("docs/specification/specification.md", "docs/user-manual/user-manual.md")) {
     $vt = Read-Utf8 (Join-Path $RepoRoot $vf)
     if (-not $vt) { continue }
-    # specification「版本：v2.2.3」/ user-manual「**版本**：2.2.3」/ cross-validation「ExcelFormulaLabs v2.2.3」
+    # specification「版本：v2.2.3」/ user-manual「**版本**：2.2.3」
     $m = [regex]::Match($vt, '(?:版本|v)\s*[:：*]*\s*(v?\d+\.\d+\.\d+)')
     if (-not $m.Success -or $m.Groups[1].Value.TrimStart('v') -ne $propsVersion) {
         $verMismatches += "${vf}: '$($m.Groups[1].Value)' (props=$propsVersion)"

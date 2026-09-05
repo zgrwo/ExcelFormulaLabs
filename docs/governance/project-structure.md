@@ -36,23 +36,22 @@ ExcelFormulaLabs/
 ├── build/                          # 构建配置说明
 │   └── README.md
 │
-├── docs/                           # 设计文档
-│   ├── README.md
-│   ├── cross-validation.md         #   交叉验证方法论
-│   └── guard-checklist.md          #   NaN/Inf 守卫逐项确认清单
+├── logs/                           # 日志（.gitignore 排除，不入库）
+│   ├── reports/                    #   审查/复审报告
+│   ├── release/                    #   发布审计
+│   └── probes/                     #   探针脚本与复现证据
 │
-├── examples/                       # 示例
-│   └── README.md                   #   交叉验证示例（TestData）使用说明
-│
-├── logs/                           # 日志（.gitignore 排除）
-│
-├── rules/                          # 治理规则
-│   ├── api-reference.md            #   UDF 签名唯一信源（数字基准）
-│   ├── context.md                  #   领域术语表
-│   ├── documentation.md            #   文档职责与维护规则
-│   ├── project-structure.md        #   本文件（结构 SSOT）
-│   ├── specification.md            #   技术规格
-│   ├── user-manual.md              #   每函数详细示例 + 结果解读
+├── docs/                           # 项目文档（原 rules/，按职责分类重组）
+│   ├── README.md                   #   分类导航索引
+│   ├── governance/                 #   治理与基础
+│   │   ├── context.md              #     领域术语表
+│   │   ├── documentation.md        #     文档职责与维护规则
+│   │   └── project-structure.md    #     本文件（结构 SSOT）
+│   ├── specification/              #   技术规格
+│   │   ├── specification.md        #     项目概述、模块清单、功能规格
+│   │   └── api-reference.md        #     UDF 签名唯一信源（数字基准）
+│   ├── user-manual/                #   用户手册
+│   │   └── user-manual.md          #     每函数详细示例 + 结果解读
 │   └── adr/                        #   架构决策记录（ADR）
 │       ├── adr-template.md
 │       ├── 0001-dual-tfm.md
@@ -170,10 +169,6 @@ ExcelFormulaLabs/
 │       ├── test_precommit_check.ps1
 │       └── test_verify_docs.ps1
 │
-├── tools/                          # 辅助工具
-│   ├── .gitkeep
-│   └── README.md
-│
 ├── ExcelFormulaLabs.sln            # 解决方案
 ├── nuget.config                    # NuGet 源（nuget.org + GitHub Packages）
 ├── requirements.txt                # Python 交叉验证依赖固定（CI + 贡献者）
@@ -215,5 +210,6 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 ```
 bin/  obj/  *.xll  *.deps.json  *.runtimeconfig.json  *.cache  *.user  *.suo
 TestResults/  __pycache__/  BenchmarkDotNet.Artifacts/  coverage*/
-logs/（目录保留，内容不入库）  .qoder/（Qoder 本地工具配置与技能镜像，本地保留）
+logs/（目录保留，内容不入库；reports / release / probes 三分类）
+.qoder/（Qoder 本地工具配置与技能镜像，本地保留）
 ```

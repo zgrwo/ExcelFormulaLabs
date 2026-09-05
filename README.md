@@ -5,7 +5,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/zgrwo/ExcelFormulaLabs)](https://github.com/zgrwo/ExcelFormulaLabs/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**在 Excel 里直接用 `=STATS.MEAN()`、`=STR.REVERSE()`、`=JSON.PARSE()` 等函数。** 基于 C# 高性能实现，Python 级精度。net48 版本自带 IntelliSense 参数提示（net8.0 版本因 Excel-DNA 已知问题不提供，见[已知限制](#已知限制)），VBA 中可通过 `Application.Run` 直接调用。完整函数清单与数量见 [API 参考](rules/api-reference.md)（数字唯一信源，测试状态见上方 CI 徽章）。
+**在 Excel 里直接用 `=STATS.MEAN()`、`=STR.REVERSE()`、`=JSON.PARSE()` 等函数。** 基于 C# 高性能实现，Python 级精度。net48 版本自带 IntelliSense 参数提示（net8.0 版本因 Excel-DNA 已知问题不提供，见[已知限制](#已知限制)），VBA 中可通过 `Application.Run` 直接调用。完整函数清单与数量见 [API 参考](docs/specification/api-reference.md)（数字唯一信源，测试状态见上方 CI 徽章）。
 
 ---
 
@@ -48,7 +48,7 @@ Win10/11 自带 .NET Framework 4.8，直接加载 net48 版本的 `.xll`：
 
 ## 模块速览
 
-> 完整签名、参数说明见 **[API 参考](rules/api-reference.md)**；每个函数的详细示例见 **[用户手册](rules/user-manual.md)**。
+> 完整签名、参数说明见 **[API 参考](docs/specification/api-reference.md)**；每个函数的详细示例见 **[用户手册](docs/user-manual/user-manual.md)**。
 
 | 模块 | 做什么 | 试一试 |
 |------|------|-------|
@@ -72,7 +72,7 @@ Win10/11 自带 .NET Framework 4.8，直接加载 net48 版本的 `.xll`：
 
 ## VBA 调用
 
-加载 `.xll` 后，所有函数可通过 `Application.Run` 直接调用，无需引用或声明。详见 [API 参考 → VBA 调用](rules/api-reference.md#vba-调用)。
+加载 `.xll` 后，所有函数可通过 `Application.Run` 直接调用，无需引用或声明。详见 [API 参考 → VBA 调用](docs/specification/api-reference.md#vba-调用)。
 
 ---
 
@@ -119,7 +119,7 @@ Win10/11 自带 .NET Framework 4.8，直接加载 net48 版本的 `.xll`：
 - 非数值单元格经类型转换后返回哨兵值（`0`/`false`/`""`），不视为错误
 - 所有输入被过滤时返回 `#VALUE!` 或 `NaN`
 
-> 完整错误清单见 **[API 参考 → 错误参考](rules/api-reference.md#错误参考)**（唯一信源）。
+> 完整错误清单见 **[API 参考 → 错误参考](docs/specification/api-reference.md#错误参考)**（唯一信源）。
 
 ---
 
@@ -222,9 +222,9 @@ dotnet test
 | 文档 | 角色 | 内容 |
 |------|------|------|
 | [README.en.md](README.en.md) | 英文入口 | English entry for international users |
-| [API 参考](rules/api-reference.md) | 数字唯一信源 | 函数完整签名、参数说明、错误表 |
-| [用户手册](rules/user-manual.md) | 学习教程 | 每个函数详细示例 + 结果解读指南 |
-| [context.md](rules/context.md) | 术语表 | 所有术语唯一定义 |
+| [API 参考](docs/specification/api-reference.md) | 数字唯一信源 | 函数完整签名、参数说明、错误表 |
+| [用户手册](docs/user-manual/user-manual.md) | 学习教程 | 每个函数详细示例 + 结果解读指南 |
+| [context.md](docs/governance/context.md) | 术语表 | 所有术语唯一定义 |
 | [AGENTS.md](AGENTS.md) | 项目宪法 | 架构分层、红线规则、开发流程 |
 | [skill: excel-dna-project](skills/excel-dna-project.md) | 编码规范 | MapOver 选型、预防规则、测试模式 |
 | [skill: excel-dna-addins](skills/excel-dna-addins.md) | 打包分发 | UDF 声明、黄金法则、.xll 打包 |
@@ -239,7 +239,7 @@ dotnet test
 |------|------|------|
 | `AGENTS.md` | AI 编程助手 | 项目宪法——架构、红线、编码准则、防幻觉铁律 |
 | `readme.md` | 人类用户 | 功能指南——安装、模块速览、使用模式（本文件） |
-| `rules/` | AI + 人类 | 规范文档——API 参考、用户手册、术语表、治理规范 |
+| `docs/` | AI + 人类 | 规范文档——API 参考、用户手册、术语表、治理规范 |
 | `skills/` | AI 编码 | 技能定义——语言陷阱、编码模式、重构守则 |
 
 **核心原则**：SSOT（信息只在一处定义）、Skill-first（修改代码前加载技能）、四条核心准则。

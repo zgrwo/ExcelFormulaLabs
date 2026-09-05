@@ -5,7 +5,7 @@ description: Excel-DNA 加载项开发全流程 — 创建、打包、测试、�
 
 # Excel-DNA 加载项开发技能
 
-> 术语定义见 [context.md](../rules/context.md)。
+> 术语定义见 [context.md](../docs/governance/context.md)。
 
 在 Windows 上使用 .NET 创建、审查、扩展、测试、排查和分发 Excel-DNA (.xll) 加载项时使用此技能。
 
@@ -93,9 +93,9 @@ public static object UDF_STR_REV(
 | [AGENTS.md](../AGENTS.md) | 项目宪法 | 架构分层、红线规则、开发流程 |
 | [skill: excel-dna-project](excel-dna-project.md) | 编码规范 | MapOver 选型、预防规则、测试模式 |
 | [README.md](../README.md) | 用户入口 | 安装、模块速览、安全说明 |
-| [API 参考](../rules/api-reference.md) | 数字唯一信源 | UDF 完整签名、参数说明、错误表 |
-| [用户手册](../rules/user-manual.md) | 学习教程 | 每函数详细示例 + 结果解读指南 |
-| [context.md](../rules/context.md) | 术语表 | 所有术语唯一定义 |
+| [API 参考](../docs/specification/api-reference.md) | 数字唯一信源 | UDF 完整签名、参数说明、错误表 |
+| [用户手册](../docs/user-manual/user-manual.md) | 学习教程 | 每函数详细示例 + 结果解读指南 |
+| [context.md](../docs/governance/context.md) | 术语表 | 所有术语唯一定义 |
 | Excel-DNA 官方文档 | https://github.com/Excel-DNA/ExcelDna | |
 
 > 测试数据：`tests/TestData/Cross_Validation_vs_Python.xlsx`（Python 交叉验证参考值）

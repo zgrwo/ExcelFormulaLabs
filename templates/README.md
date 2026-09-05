@@ -1,6 +1,6 @@
 # templates/ — 模块脚手架
 
-> 新增模块/函数的起点模板。结构唯一定义见 [project-structure.md](../rules/project-structure.md)。
+> 新增模块/函数的起点模板。结构唯一定义见 [project-structure.md](../docs/governance/project-structure.md)。
 
 ## NewModule/（UDF 四文件模板）
 
@@ -22,4 +22,4 @@
 ## 约定
 
 - 模板中的 `{Name}` 为单花括号占位符（由 scaffold 脚本替换），禁止使用 `{{...}}` 双花括号
-- 新模板文件必须登记到 `rules/project-structure.md` 目录树
+- 新模板文件必须登记到 `docs/governance/project-structure.md` 目录树

@@ -1,15 +1,15 @@
 # AGENTS.md — ExcelFormulaLabs 项目宪法
 
 > Excel 函数增强库：236 UDF，基于 C# / Excel-DNA，双 TFM (net48 + net8.0)。
-> 本文件面向 AI 编程助手，编码细节按需加载 Skill。术语见 [context.md](rules/context.md)。
+> 本文件面向 AI 编程助手，编码细节按需加载 Skill。术语见 [context.md](docs/governance/context.md)。
 
 ## 元数据
 
 - **项目名**：ExcelFormulaLabs
 - **GitHub**：https://github.com/zgrwo/ExcelFormulaLabs
 - **语言**：C#（文档与注释默认中文）
-- **术语**：[context.md](rules/context.md)
-- **数字唯一基准**：[api-reference.md](rules/api-reference.md) — 236 UDF 签名以此为准
+- **术语**：[context.md](docs/governance/context.md)
+- **数字唯一基准**：[api-reference.md](docs/specification/api-reference.md) — 236 UDF 签名以此为准
 - **SSOT**：每个事实只在一处定义，其余仅链接引用
 
 ## 四条核心准则
@@ -76,23 +76,20 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 
 ## 仓库目录树
 
-> 路由地图：所有文件路径均以此为基准。详细结构见 [project-structure.md](rules/project-structure.md)。
+> 路由地图：所有文件路径均以此为基准。详细结构见 [project-structure.md](docs/governance/project-structure.md)。
 
 ```
 ExcelFormulaLabs/
 ├── src/                          # 源码（Foundation / Analytics / DataToolkit）
 ├── tests/                        # 测试 + CrossVal + 脚本自测（tests/scripts）
-├── rules/                        # 规范文档（含 adr/ 架构决策记录）
+├── docs/                         # 项目文档（governance / specification / user-manual / adr 四分类）
 ├── skills/                       # Skill 定义（单一信源；.qoder 本地镜像不入库）
 ├── scripts/                      # 构建/验证/治理脚本
 ├── templates/                    # 模块脚手架（NewModule）
-├── docs/                         # 设计文档
-├── examples/                     # 示例
 ├── benchmarks/                   # 性能基准（BenchmarkDotNet）
 ├── build/                        # 构建配置说明
-├── tools/                        # 辅助工具
 ├── .github/                      # CI 工作流 + Issue/PR 模板 + CODEOWNERS + dependabot
-├── logs/                         # 日志（不入库）
+├── logs/                         # 日志；审查报告（reports/release/probes 三分类，不入库）
 ├── AGENTS.md                     # 本文件
 ├── README.md                     # 用户向功能指南
 ├── README.en.md                  # 英文入口
@@ -177,7 +174,7 @@ ExcelFormulaLabs/
 - 本文件即 `AGENTS.md`（大写）——2026 年跨工具事实标准（Codex / Copilot / Windsurf / JetBrains / Gemini / QoderCN 均可直接读取）。
 - Claude Code 需要 `CLAUDE.md` 副本：`Copy-Item AGENTS.md CLAUDE.md`（每次修改 AGENTS.md 后需重新创建；CLAUDE.md 不入库登记）。
 - 子目录级 AGENTS.md（多模块仓库时）：写清「你只管 X，不要碰 Y」，越靠近当前目录优先级越高。
-- **Agent 看不见的事实**（写在文档而不依赖代码推断）：包管理/构建工具选择（dotnet SDK 8.0）、生成文件目录（bin/ obj/ BenchmarkDotNet.Artifacts/ 禁止手改）、聚焦测试命令（改单模块先跑 `tests/<Module>.Tests`）、安全边界（FS 沙箱默认关闭、NuGet push 与 Release 需人工确认）、修改模块边界前必读 `rules/api-reference.md`。
+- **Agent 看不见的事实**（写在文档而不依赖代码推断）：包管理/构建工具选择（dotnet SDK 8.0）、生成文件目录（bin/ obj/ BenchmarkDotNet.Artifacts/ 禁止手改）、聚焦测试命令（改单模块先跑 `tests/<Module>.Tests`）、安全边界（FS 沙箱默认关闭、NuGet push 与 Release 需人工确认）、修改模块边界前必读 `docs/specification/api-reference.md`。
 
 ## 历史经验（从 diff 提炼）
 
@@ -240,7 +237,7 @@ ExcelFormulaLabs/
 
 | 铁律 | 说明 |
 |------|------|
-| **不靠记忆引用文档** | 每次引用 rules/ 或 skills/ 中的内容时，先 Read/Grep 确认 |
+| **不靠记忆引用文档** | 每次引用 docs/ 或 skills/ 中的内容时，先 Read/Grep 确认 |
 | **不确定 = 承认不确定** | 不要编造业务规则；说“我需要在 spec 中确认”然后去查 |
 | **写过的代码 = 读过的代码** | 不要假设自己知道某个文件内容——Read 它再改 |
 | **版本号是事实锚点** | 每个结论标注来源文档版本 |
@@ -275,12 +272,12 @@ ExcelFormulaLabs/
 | :--- | :--- | :--- |
 | [README.md](README.md) | 用户入口 | 安装、模块速览、使用模式 |
 | [README.en.md](README.en.md) | 英文入口 | 国际用户入口 |
-| [context.md](rules/context.md) | 术语表 | 所有术语唯一定义 |
-| [specification.md](rules/specification.md) | 技术规格 | 项目概述、模块清单、功能规格 |
-| [api-reference.md](rules/api-reference.md) | 数字唯一信源 | 236 UDF 签名、参数、错误行为 |
-| [user-manual.md](rules/user-manual.md) | 学习教程 | 每函数详细示例 + 结果解读 |
-| [project-structure.md](rules/project-structure.md) | 结构地图 | 文件职责与层级关系 |
-| [documentation.md](rules/documentation.md) | 文档职责 | 各文档分工与维护规则 |
-| [adr/](rules/adr/adr-template.md) | 决策记录 | 架构决策 ADR 0001-0006 |
+| [context.md](docs/governance/context.md) | 术语表 | 所有术语唯一定义 |
+| [specification.md](docs/specification/specification.md) | 技术规格 | 项目概述、模块清单、功能规格 |
+| [api-reference.md](docs/specification/api-reference.md) | 数字唯一信源 | 236 UDF 签名、参数、错误行为 |
+| [user-manual.md](docs/user-manual/user-manual.md) | 学习教程 | 每函数详细示例 + 结果解读 |
+| [project-structure.md](docs/governance/project-structure.md) | 结构地图 | 文件职责与层级关系 |
+| [documentation.md](docs/governance/documentation.md) | 文档职责 | 各文档分工与维护规则 |
+| [adr/](docs/adr/adr-template.md) | 决策记录 | 架构决策 ADR 0001-0006 |
 | [CHANGELOG.md](CHANGELOG.md) | 变更记录 | 版本变更历史（与 tag 强制一致） |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 贡献指南 | 开发/PR/发版流程 |

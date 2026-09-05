@@ -5,9 +5,9 @@
 #   .\scripts\sync-qoder-skills.ps1 -CheckOnly   # 只校验一致性（verify-docs 调用）
 #
 # 背景：
-#   skills/*.md 是技能唯一定义（父级相对链接，如 ../rules/context.md）。
+#   skills/*.md 是技能唯一定义（父级相对链接，如 ../docs/governance/context.md）。
 #   .qoder/skills/<name>/SKILL.md 是 Qoder 本地工具的镜像副本（不入库），链接需适配
-#   嵌套目录布局（如 ../../rules/context.md）。
+#   嵌套目录布局（如 ../../docs/governance/context.md）。
 #   本脚本执行「复制 + 链接重写」；本机存在 .qoder 时 verify-docs.ps1 检查 13 会
 #   以 -CheckOnly 校验镜像一致性（CI 环境无 .qoder 自动跳过，不视为失败）。
 # ============================================================================
@@ -28,8 +28,8 @@ $skillNames = @(
         Sort-Object
 )
 
-# 链接重写表：顶层 skills/*.md 使用父级相对链接（../rules/...），
-# .qoder 副本位于 .qoder/skills/<name>/，需再加一层 ../（../../rules/...）。
+# 链接重写表：顶层 skills/*.md 使用父级相对链接（../docs/...），
+# .qoder 副本位于 .qoder/skills/<name>/，需再加一层 ../（../../docs/...）。
 # 顺序敏感：技能互链先于通用规则。
 function ConvertTo-QoderLinks {
     param([string]$Text)
@@ -46,14 +46,12 @@ function ConvertTo-QoderLinks {
         @('](../LICENSE',               '](../../LICENSE'),
         @('](../SECURITY.md',           '](../../SECURITY.md'),
         @('](../CODE_OF_CONDUCT.md',    '](../../CODE_OF_CONDUCT.md'),
-        @('](../rules/',                '](../../rules/'),
-        @('](../docs/',                 '](../../docs/'),
+        @('](../docs/',                '](../../docs/'),
         @('](../scripts/',              '](../../scripts/'),
         @('](../templates/',            '](../../templates/'),
         @('](../tests/',                '](../../tests/'),
         @('](../benchmarks/',           '](../../benchmarks/'),
-        @('](../build/',                '](../../build/'),
-        @('](../tools/',                '](../../tools/')
+        @('](../build/',                '](../../build/')
     )
     foreach ($p in $pairs) {
         $Text = $Text.Replace($p[0], $p[1])

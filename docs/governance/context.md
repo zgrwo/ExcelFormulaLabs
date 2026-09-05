@@ -1,7 +1,7 @@
 # context.md — 项目术语表
 
 > 领域词汇的精确定义。AI 在对话中应使用这些术语，避免近义词。
-> 链接索引见 [AGENTS.md](../AGENTS.md#参考)。
+> 链接索引见 [AGENTS.md](../../AGENTS.md#参考)。
 
 ## 层（Layer）
 
@@ -35,7 +35,7 @@ _Avoid_: 映射器、包装器（太泛）
 
 ## 数据流术语
 
-**哨兵（Sentinel）** — InputNormalizer 五层防护体系（L1-L5），详见 [excel-dna-project.md §哨兵契约](../skills/excel-dna-project.md#哨兵契约-l1-l5)。核心原则：不可转换值返回类型零值哨兵（`double`→`NaN`、`long`→0、`int`→0、`bool`→`false`、`DateTime`→`MinValue`、`string`→`""`），不抛异常。
+**哨兵（Sentinel）** — InputNormalizer 五层防护体系（L1-L5），详见 [excel-dna-project.md §哨兵契约](../../skills/excel-dna-project.md#哨兵契约-l1-l5)。核心原则：不可转换值返回类型零值哨兵（`double`→`NaN`、`long`→0、`int`→0、`bool`→`false`、`DateTime`→`MinValue`、`string`→`""`），不抛异常。
 
 **表头行契约（hasHeaders）** — 所有接受 `object[,]` 的 Core 方法必须含 `bool hasHeaders = true`。默认跳过第一行（表头），数据从 `r=1` 开始。例外（纯结构变换，不解释表头语义）：`Transpose`、`SelectColumns`、`SelectRows`、`CrossJoin`、`Flatten2D`、`Count`、`Keys`、`Values`（与 AGENTS.md §4 及 pre-commit check-6 豁免名单一致）。
 

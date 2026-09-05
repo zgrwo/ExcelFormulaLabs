@@ -8,11 +8,12 @@
 |------|------|----------|----------|
 | `AGENTS.md` | AI 助手 | "项目怎么组织？红线在哪？" | 架构/红线/流程变更 |
 | `README.md` | 人类用户 | "这是什么？怎么用？" | 功能新增/安装方式变更 |
-| `rules/context.md` | AI + 新人 | "术语什么意思？" | 新概念引入 |
-| `rules/api-reference.md` | 开发者/AI | "函数签名是什么？"（**签名唯一信源**） | 任何 Public 接口变更 |
-| `rules/user-manual.md` | 最终用户 | "我要做 X，怎么操作？" | 用户可见功能变更 |
-| `rules/project-structure.md` | 开发者/AI | "代码在哪？文件干什么？"（**结构唯一信源**） | 文件新增/删除/移动 |
+| `docs/governance/context.md` | AI + 新人 | "术语什么意思？" | 新概念引入 |
+| `docs/specification/api-reference.md` | 开发者/AI | "函数签名是什么？"（**签名唯一信源**） | 任何 Public 接口变更 |
+| `docs/user-manual/user-manual.md` | 最终用户 | "我要做 X，怎么操作？" | 用户可见功能变更 |
+| `docs/governance/project-structure.md` | 开发者/AI | "代码在哪？文件干什么？"（**结构唯一信源**） | 文件新增/删除/移动 |
 | `skills/*.md` | AI 编码 | "这个语言/框架有什么陷阱？" | 发现新陷阱/模式 |
+| `logs/{reports,release}/*.md` | 审查者/AI | "审查结论、证据与修复验证在哪？"（**审查报告唯一存放位置**，不入库） | 每次审查/复查/发布审计完成 |
 
 ## 禁止事项
 
@@ -23,6 +24,7 @@
 | 在代码注释中写使用教程 | 教程属于 user-manual.md |
 | 在 api-reference 中写实现细节 | api-reference 只写签名和行为契约 |
 | 在 AGENTS.md 中写编码细节 | 编码细节属于 skills/ |
+| 审查报告放入 docs/ 子目录或其他位置 | 审查/复查/审计报告一律存放于 logs/{reports,release}/，不入库 |
 
 ## 维护规则
 
@@ -30,16 +32,20 @@
 
 ```
 新增 Public UDF
-  → rules/api-reference.md（签名 + 参数 + 错误行为）
-  → rules/user-manual.md（示例 + 结果解读）
+  → docs/specification/api-reference.md（签名 + 参数 + 错误行为）
+  → docs/user-manual/user-manual.md（示例 + 结果解读）
   → README.md 模块速览（如为新模块）
 
 新增/删除/移动文件
-  → rules/project-structure.md（结构树）
+  → docs/governance/project-structure.md（结构树）
   → AGENTS.md 目录树（如为顶层变更）
 
 引入新领域术语
-  → rules/context.md（唯一定义）
+  → docs/governance/context.md（唯一定义）
+
+审查/复查/发布审计完成
+  → logs/reports/ 或 logs/release/（唯一存放位置，不入库）
+  → 与审查直接相关的过程产物（probe 脚本/复现证据）放 logs/probes/
 ```
 
 ### 数字一致性

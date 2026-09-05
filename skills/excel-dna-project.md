@@ -5,7 +5,7 @@ description: 本项目编码规范与架构参考 — Foundation/Analytics/DataT
 
 # SKILL.md
 
-> 术语定义见 [context.md](../rules/context.md)。
+> 术语定义见 [context.md](../docs/governance/context.md)。
 
 ## 项目结构
 
@@ -28,7 +28,7 @@ tests/
 ├── Analytics.Tests/    Core + UDF 双重测试 + Python 交叉验证
 └── DataToolkit.Tests/  Core + UDF 双重测试 + IntegrationPipelineTests
 
-rules/
+docs/
 ├── api-reference.md   UDF 签名（数字的唯一信源）
 ├── user-manual.md     每个 UDF 的详细示例（全函数覆盖）
 └── context.md          领域术语表
@@ -318,6 +318,19 @@ xUnit `[Fact]` + FluentAssertions 8.10.0。每 Core 方法覆盖：正常路径 
 | **L3 Excel 信号** | `null`/`DBNull`/`ExcelEmpty`/`ExcelError`/`ExcelMissing` | 返回哨兵（语义：无有效值，跳过） | 抛异常或静默赋值 | Excel 交互异常 |
 | **L4 已知取舍** | `long`/`bool` 哨兵（0/false）与真实值不可区分 | 文档说明；调用方前置 `IsNumericCell` | 依赖「0/false 表示错误」语义 | 数据误判 |
 | **L5 最终边界** | `ConvertValue<T>` 未知类型 `Convert.ChangeType` 失败 | 已知 6 类委托 `InputNormalizer.ToXxx`；新类型：`double`→`NaN`，其余**必须 `throw`** | `return default(T)` 静默替代 | 脏数据传播 |
+
+### 新 Core 方法守卫 Checklist
+
+> 提交 PR 前逐项确认；未通过任一项 = 不允许合入。细则见上表与 [AGENTS.md §2](../AGENTS.md#2-防错三原则)（本文档替代原 docs/guard-checklist.md，2026-09-05 合并）。
+
+- [ ] **输入守卫**：`double.IsNaN/IsPositiveInfinity/IsNegativeInfinity(input)` → 返回 `double.NaN`；`string.IsNullOrEmpty` → `string.Empty` 或 `double.NaN`；空数组/集合 → 返回 `double.NaN` 或空结果，不抛异常
+- [ ] **计算守卫**：除零/负数开方/`Math.Log(<=0)` → `double.NaN`；溢出 `checked`/`double.IsInfinity` → `double.NaN`（L4）；空集合 Mean/Std/Var → `double.NaN`（豁免：`StatsCore.Sum`→0.0、`Product`→1.0，对齐 Excel 空区域）
+- [ ] **输出守卫**：结果 `double.IsInfinity` → 替换为 `double.NaN`；中间 NaN 不吞没、最终传播为 NaN；矩阵/数组输出无 Inf（可用 `NumericGuard` 扫描）
+- [ ] **哨兵一致性**：`double`→NaN、`string`→`string.Empty`（L2），`object[,]` 含 `bool hasHeaders = true`（表头行契约）
+- [ ] **异常处理**：无裸 `catch`，统一 `catch when` 过滤器 + UDF 层 `WrapError`；L5 未知类型允许 throw
+- [ ] **交叉验证**：数值类 UDF 有 `cross_check()` 且非自校验（见「闭环验证」）
+
+自动化红线（裸 catch/自校验/IntelliSense/Core 隔离/NaN 守卫/hasHeaders）由 `powershell -File scripts/pre-commit-check.ps1` 强制，勿手工替代。
 
 ## 闭环验证
 

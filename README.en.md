@@ -7,7 +7,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/zgrwo/ExcelFormulaLabs)](https://github.com/zgrwo/ExcelFormulaLabs/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Use functions like `=STATS.MEAN()`, `=STR.REVERSE()`, `=JSON.PARSE()` directly in Excel.** Built on a high-performance C# implementation with Python-level precision. The net48 build ships with IntelliSense parameter hints (the net8.0 build does not, due to a known Excel-DNA issue — see [Known Limitations](#known-limitations)), and all functions can be called directly from VBA via `Application.Run`. See the [API Reference](rules/api-reference.md) for the complete function list and count (the single source of truth for numbers; test status is shown in the CI badges above).
+**Use functions like `=STATS.MEAN()`, `=STR.REVERSE()`, `=JSON.PARSE()` directly in Excel.** Built on a high-performance C# implementation with Python-level precision. The net48 build ships with IntelliSense parameter hints (the net8.0 build does not, due to a known Excel-DNA issue — see [Known Limitations](#known-limitations)), and all functions can be called directly from VBA via `Application.Run`. See the [API Reference](docs/specification/api-reference.md) for the complete function list and count (the single source of truth for numbers; test status is shown in the CI badges above).
 
 ---
 
@@ -50,7 +50,7 @@ Type `=STATS.MEAN(` in any cell; if Excel pops up the function auto-completion, 
 
 ## Module Overview
 
-> See the **[API Reference](rules/api-reference.md)** for complete signatures and parameter descriptions; see the **[User Manual](rules/user-manual.md)** for detailed examples of every function.
+> See the **[API Reference](docs/specification/api-reference.md)** for complete signatures and parameter descriptions; see the **[User Manual](docs/user-manual/user-manual.md)** for detailed examples of every function.
 
 | Module | What it does | Try it |
 |------|------|-------|
@@ -74,7 +74,7 @@ Type `=STATS.MEAN(` in any cell; if Excel pops up the function auto-completion, 
 
 ## Calling from VBA
 
-After loading the `.xll`, all functions can be called directly via `Application.Run` without references or declarations. See [API Reference → VBA](rules/api-reference.md#vba-调用).
+After loading the `.xll`, all functions can be called directly via `Application.Run` without references or declarations. See [API Reference → VBA](docs/specification/api-reference.md#vba-调用).
 
 ---
 
@@ -121,7 +121,7 @@ Functions return two kinds of error values: **`#VALUE!`** (input/execution error
 - Non-numeric cells return sentinel values (`0`/`false`/`""`) after type conversion and are not treated as errors
 - When all inputs are filtered out, `#VALUE!` or `NaN` is returned
 
-> See the **[API Reference → Error Reference](rules/api-reference.md#错误参考)** for the complete error list (the single source of truth).
+> See the **[API Reference → Error Reference](docs/specification/api-reference.md#错误参考)** for the complete error list (the single source of truth).
 
 ---
 
@@ -224,9 +224,9 @@ Artifacts: `src/*/bin/Release/{net8.0-windows|net48}/publish/`
 | Document | Role | Content |
 |------|------|------|
 | [README.en.md](README.en.md) | English entry | This page — entry point for international users |
-| [API Reference](rules/api-reference.md) | Single source of truth for numbers | Complete function signatures, parameter descriptions, error tables |
-| [User Manual](rules/user-manual.md) | Learning tutorial | Detailed examples for every function + result interpretation guide |
-| [context.md](rules/context.md) | Glossary | Single definition of every term |
+| [API Reference](docs/specification/api-reference.md) | Single source of truth for numbers | Complete function signatures, parameter descriptions, error tables |
+| [User Manual](docs/user-manual/user-manual.md) | Learning tutorial | Detailed examples for every function + result interpretation guide |
+| [context.md](docs/governance/context.md) | Glossary | Single definition of every term |
 | [AGENTS.md](AGENTS.md) | Project constitution | Architecture layering, red-line rules, development workflow |
 | [skill: excel-dna-project](skills/excel-dna-project.md) | Coding standards | MapOver selection, defensive rules, testing patterns |
 | [skill: excel-dna-addins](skills/excel-dna-addins.md) | Packaging & distribution | UDF declarations, golden rules, .xll packaging |
@@ -241,7 +241,7 @@ This project follows the [Harmonization Governance Specification](https://github
 |------|------|------|
 | `AGENTS.md` | AI coding assistants | Project constitution — architecture, red lines, coding guidelines, anti-hallucination rules |
 | `readme.md` | Human users | Feature guide — installation, module overview, usage patterns (this file) |
-| `rules/` | AI + humans | Specification documents — API reference, user manual, glossary, governance rules |
+| `docs/` | AI + humans | Specification documents — API reference, user manual, glossary, governance rules |
 | `skills/` | AI coding | Skill definitions — language pitfalls, coding patterns, refactoring guidelines |
 
 **Core principles**: SSOT (each piece of information is defined in exactly one place), Skill-first (load the relevant skill before modifying code), and the four core guidelines.

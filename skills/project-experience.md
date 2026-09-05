@@ -120,10 +120,10 @@ description: 项目经验库 — 从 v2.0.0 至今全部 commit/审查/CI 事故
 
 ## 五、文档 SSOT 与计数
 
-- **数字唯一信源**：`rules/api-reference.md`（236 UDF），一切计数从此推导。
-- **散文计数**：verify-docs 检查 16 全仓扫描 `*.md` 的 `N UDF`（豁免 cross-validation 模块级与 CHANGELOG 历史）——曾 232 陈旧漂移全绿通过。
+- **数字唯一信源**：`docs/specification/api-reference.md`（236 UDF），一切计数从此推导。
+- **散文计数**：verify-docs 检查 16 全仓扫描 `*.md` 的 `N UDF`（仅豁免 CHANGELOG 历史表述）——曾 232 陈旧漂移全绿通过；cross-validation 模块级豁免及 Total 检查已随 docs/cross-validation.md 归档 logs/reports/ 移除（2026-09-05）。
 - **CHANGELOG 声称必须反映现实**（防幻觉铁律）：3 次发现「声称未兑现」（.editorconfig 对齐、脚本参数化、门禁 17/18）——写完条目对照 diff 逐条核实。
-- **版本头三处同步**：specification / user-manual / cross-validation（含日期行）。
+- **版本头同步**：specification / user-manual（含日期行）；docs/cross-validation.md 归档后不再参与版本头校验。
 - **参数一致性**：api-reference 参数列 ↔ `[ExcelArgument(Name=...)]` 自动比对（检查 17，剥离 `[可选]` 标记）。
 
 ---
@@ -142,7 +142,7 @@ description: 项目经验库 — 从 v2.0.0 至今全部 commit/审查/CI 事故
 
 ## 七、治理流程
 
-- **max level 深度审查**：P0（发行阻塞）/P1（高危）/P2（应修复）/P3（门禁增强）分级；实证复现 + 负向测试 + 逐条声称对账；报告归档 `logs/review/release-audit-*.md`——**审查报告一律不入库**（logs/ 在 .gitignore），文档与代码层面的可复现结论（如逃逸模式 E1-E6）才提炼进 skill/AGENTS。
+- **max level 深度审查**：P0（发行阻塞）/P1（高危）/P2（应修复）/P3（门禁增强）分级；实证复现 + 负向测试 + 逐条声称对账；报告归档 `logs/release/release-audit-*.md`——**审查报告一律不入库**（logs/ 在 .gitignore），文档与代码层面的可复现结论（如逃逸模式 E1-E6）才提炼进 skill/AGENTS。
 - **修复验证闭环**：复现测试 FAILS → 修复 → PASSES + 无回归 → **保留复现测试**。
 - **跨会话交接**：`✅ 已完成 / 🔜 下一步 / ⚠️ 待决策 / 📄 关键上下文` 四段式。
 - **提交规范**：Conventional Commits；`fix(review)` 是审查修复专用 scope。

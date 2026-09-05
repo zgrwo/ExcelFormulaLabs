@@ -1,5 +1,5 @@
 name: 文档改进
-description: 报告文档问题或提出文档改进建议（README / rules/ / skills/ / docs/）
+description: 报告文档问题或提出文档改进建议（README / docs/ / skills/ / docs/）
 title: "[docs] "
 labels: ["documentation"]
 body:
@@ -7,7 +7,7 @@ body:
     id: location
     attributes:
       label: 文档位置
-      description: 文件路径 + 章节（如 rules/api-reference.md 第 3 节）
+      description: 文件路径 + 章节（如 docs/specification/api-reference.md 第 3 节）
       placeholder: 路径:章节
     validations:
       required: true

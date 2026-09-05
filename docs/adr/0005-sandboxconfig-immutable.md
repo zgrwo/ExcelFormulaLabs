@@ -29,7 +29,7 @@
 
 - 正面：FS 沙箱线程安全、行为确定
 - 代价：运行时无法动态调整沙箱（需重启加载项）
-- 同步位置：README 安全章节、skills/excel-dna-addins.md、docs/guard-checklist.md
+- 同步位置：README 安全章节、skills/excel-dna-addins.md、skills/excel-dna-project.md 守卫 Checklist
 
 ## 演进
 

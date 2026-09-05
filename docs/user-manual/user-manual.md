@@ -1,7 +1,7 @@
 # ExcelFormulaLabs 用户手册
 
 > **版本**：2.2.5 | **更新日期**：2026-09-04
-> 完整签名见 [API 参考](api-reference.md)；安装说明见 [README](../README.md)
+> 完整签名见 [API 参考](../specification/api-reference.md)；安装说明见 [README](../../README.md)
 
 ---
 
@@ -28,7 +28,7 @@
 
 ## VBA 调用
 
-加载 .xll 后，所有函数可通过 `Application.Run` 直接调用，无需引用或声明。详见 [API 参考 → VBA 调用](api-reference.md#vba-调用)。
+加载 .xll 后，所有函数可通过 `Application.Run` 直接调用，无需引用或声明。详见 [API 参考 → VBA 调用](../specification/api-reference.md#vba-调用)。
 
 ---
 
@@ -3728,7 +3728,7 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ## 16. 错误参考
 
-> 完整错误条件与影响范围见 [API 参考 → 错误参考](api-reference.md#错误参考)。`#VALUE!` = 输入/执行错误，`#NUM!` = 计算结果无定义。
+> 完整错误条件与影响范围见 [API 参考 → 错误参考](../specification/api-reference.md#错误参考)。`#VALUE!` = 输入/执行错误，`#NUM!` = 计算结果无定义。
 
 ---
 
@@ -3786,7 +3786,7 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 | 文档 | 角色 | 内容 |
 |------|------|------|
-| [API 参考](api-reference.md) | 数字唯一信源 | UDF 完整签名、参数说明、错误表 |
-| [README](../README.md) | 用户入口 | 安装、模块速览、安全说明 |
-| [AGENTS.md](../AGENTS.md) | 项目宪法 | 架构分层、红线规则、开发流程 |
-| [context.md](context.md) | 术语表 | 所有术语唯一定义 |
+| [API 参考](../specification/api-reference.md) | 数字唯一信源 | UDF 完整签名、参数说明、错误表 |
+| [README](../../README.md) | 用户入口 | 安装、模块速览、安全说明 |
+| [AGENTS.md](../../AGENTS.md) | 项目宪法 | 架构分层、红线规则、开发流程 |
+| [context.md](../governance/context.md) | 术语表 | 所有术语唯一定义 |

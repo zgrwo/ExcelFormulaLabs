@@ -117,7 +117,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact]
         public void Async_names_match_api_reference()
         {
-            // Cross-check against rules/api-reference.md (single source of truth):
+            // Cross-check against docs/specification/api-reference.md (single source of truth):
             // every *_ASYNC name in the doc must have a matching registration and vice versa.
             var api = File.ReadAllText(Path.Combine(TestRoot(), "rules", "api-reference.md"));
             var pattern = new Regex(@"\|\s*`((?:LINALG|REGRESS)\.[A-Z_]+_ASYNC)`");

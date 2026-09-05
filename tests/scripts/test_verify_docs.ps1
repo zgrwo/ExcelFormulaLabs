@@ -82,7 +82,7 @@ if (Test-Path (Join-Path $repo ".qoder\skills")) {
 # --- 场景 E：api-reference UDF 计数漂移（检查 1）---
 Write-Host "[E] api-reference UDF 计数漂移应 FAIL（检查 1）"
 $fixtureE = Copy-RepoFixture
-$apiRef = Join-Path $fixtureE "rules\api-reference.md"
+$apiRef = Join-Path $fixtureE "docs\specification\api-reference.md"
 [System.IO.File]::AppendAllText($apiRef, "`r`n" + '| `TEST.FAKE` | (x) | `double` | 测试条目（不应存在） |' + "`r`n", (New-Object System.Text.UTF8Encoding($false)))
 Run-VerifyDocs $fixtureE "UDF count" $true
 

@@ -32,7 +32,7 @@
 
 - 正面：数值函数行为确定、可交叉验证、性能无异常开销
 - 代价：调用方需理解哨兵语义（user-manual「错误处理」章节有完整清单）
-- 同步位置：AGENTS.md 红线 2/5、skills/excel-dna-project.md、rules/user-manual.md
+- 同步位置：AGENTS.md 红线 2/5、skills/excel-dna-project.md、docs/user-manual/user-manual.md
 
 ## 演进
 

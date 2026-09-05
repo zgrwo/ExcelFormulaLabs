@@ -4,7 +4,7 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
-> 版本一致性：每个 `v*` git tag 必须在本文档有对应条目（`verify-docs.ps1` 强制检查，见规则 [documentation.md](rules/documentation.md)）。
+> 版本一致性：每个 `v*` git tag 必须在本文档有对应条目（`verify-docs.ps1` 强制检查，见规则 [documentation.md](docs/governance/documentation.md)）。
 
 ## [2.2.5] - 2026-09-04
 
@@ -55,7 +55,7 @@
 **工程质量**
 - 回归守卫 30+ 个（Hilbert QR/LU 约定/Taguchi 主效应/COUNT 非数值行/ToLong 2⁶³/de-DE FMT/Product 顺序/锯齿数组等）；删除审计临时件（_AUDIT_Verify 有 bug 已转正）
 - CS8604 可空警告清零（双 TFM 构建 0 warning）；CodeQL 45 个 open 警报核实为误报/防御冗余后 dismiss
-- 审查报告归档 `logs/review/`（不入库）；逃逸模式 E1-E6 固化进 `skills/project-experience.md §八`
+- 审查报告归档 `logs/reports/`（不入库）；逃逸模式 E1-E6 固化进 `skills/project-experience.md §八`
 
 ## [2.2.3] - 2026-08-29
 
@@ -84,7 +84,7 @@
 - **H2**：NuGet push 加 `--no-symbols`（防连带推送 snupkg）；**H3**：verify-docs 最新 tag 语义化版本排序
 - **H4**：`STATS.SUMMARY`/`STATS.MODE` 参数名与源码对齐；**H5**：user-manual 193 处标题锚点语法修复
 - **H6**：Python 交叉验证依赖固定 `requirements.txt`（numpy/scipy/scikit-learn/pyDOE2），CI 与 CONTRIBUTING 统一引用
-- **P2 文档一致性**：spec 测试数 2,290→2,444；project-structure CI 6→7 jobs、测试文件数 10/10/19→13/17/20、补 ADR-0006 与 NativeDllStore.cs 登记；ADR-0003 232→236；README(.en) `.xll` 表 4→8 行、手册验证覆盖声明→224/236；README.en 补统计空白单元格小节、架构图翻译、rules/ 误译修正；CONTRIBUTING 依赖清单补 pyDOE2；手册 `#15-错误参考` 锚点→#16；版本头 2.1.0→2.2.1（specification/user-manual/cross-validation）
+- **P2 文档一致性**：spec 测试数 2,290→2,444；project-structure CI 6→7 jobs、测试文件数 10/10/19→13/17/20、补 ADR-0006 与 NativeDllStore.cs 登记；ADR-0003 232→236；README(.en) `.xll` 表 4→8 行、手册验证覆盖声明→224/236；README.en 补统计空白单元格小节、架构图翻译、docs/ 误译修正；CONTRIBUTING 依赖清单补 pyDOE2；手册 `#15-错误参考` 锚点→#16；版本头 2.1.0→2.2.1（specification/user-manual/cross-validation）
 - **P2 代码**：ErrorMessages.resx 4 个死键接线（FS_AlreadyInitialized/FS_SessionEnded/FS_PathOutsideSandbox/REGRESS_RankDeficient，消除硬编码消息）
 - **P3 门禁**：verify-docs 新增检查 17（[ExcelArgument] ↔ api-reference 参数列自动比对）与检查 18（结构树反向检查：存在→声明）；散文计数扫描扩展为全仓 `*.md`；release tag 触发模式收紧为 semver glob `v[0-9]*.[0-9]*.[0-9]*`（GitHub Actions 过滤为 glob 语义，非正则）；CI setup-dotnet 启用缓存；ci.yml 分支列表对齐 `[main]`
 - **工程**：.editorconfig 换行符与 .gitattributes 对齐（LF + *.ps1 CRLF）；.gitignore 补 CLAUDE.md；test-xll.ps1 / test-load-unload.py 文件名与路径参数化更新
