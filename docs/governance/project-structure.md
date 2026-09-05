@@ -46,7 +46,8 @@ ExcelFormulaLabs/
 │   ├── governance/                 #   治理与基础
 │   │   ├── context.md              #     领域术语表
 │   │   ├── documentation.md        #     文档职责与维护规则
-│   │   └── project-structure.md    #     本文件（结构 SSOT）
+│   │   ├── project-structure.md    #     本文件（结构 SSOT）
+│   │   └── ai-review-prompt.md     #     AI 深度审查 Prompt（变更审查模板）
 │   ├── specification/              #   技术规格
 │   │   ├── specification.md        #     项目概述、模块清单、功能规格
 │   │   └── api-reference.md        #     UDF 签名唯一信源（数字基准）
