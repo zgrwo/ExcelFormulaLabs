@@ -2,6 +2,7 @@
 
 > 本文档是**一份可直接投喂给任意 AI 审查代理的 Prompt 模板**，用于对本项目的任何变更（PR / 提交 / 发版前全量）做一次"先想后写、实证优先、杜绝假阳性"的深度审查。
 > 配套治理规则见 [documentation.md](documentation.md)；审查产出报告一律归档 `logs/reports/`，**不入库**。
+> **事实基准**：文中门禁编号、步骤数、阈值已于 2026-09-05 对照 v2.2.5 逐条实测校准（verify-docs 19 项 / pre-commit 6 项 / verify-all 6 步 / CI 7 job / 覆盖率 75/50/42）。版本前进后，引用任何编号前先重数（见 6.5）。
 
 ---
 
@@ -51,8 +52,9 @@ Core 层 (internal static, 纯逻辑)        ← 零 Excel 依赖（禁止引用
   ↓
 Foundation (共享工具)                    ← InputNormalizer / ElementWiseMapper /
                                            OutputWrapper / NumericGuard / ExceptionFilters /
-                                           ComparisonUtils / FilterUtils / ArrayOperations /
-                                           DictOperations / ExcelEmpty / ExcelError
+                                           ErrorMsg / ComparisonUtils / FilterUtils /
+                                           ArrayOperations / DictOperations /
+                                           ExcelEmpty / ExcelError
 ```
 
 - **UDF 不含业务逻辑**；Core 是唯一数值/算法载体；Foundation 被两层共享。
@@ -65,7 +67,7 @@ Foundation (共享工具)                    ← InputNormalizer / ElementWiseMa
 | ① `MapOver` | 保持输入形状，null/error/empty 透传 | 异常 → WrapError → `#VALUE!` |
 | ② `MapOverFlat` | 强转 1D 输出 | 同上 |
 | ③ `MapOverMulti` | 2–3 参广播，尺寸不匹配 → `ExcelError.Value` | 同一单元格失败不影响他格 |
-| ④ Analytics `V()`/`M()`/`D()` | 直接调 Core（CVP/CV/PEAR/SPR/T1/T2 等） | 尺寸不匹配 → `NaN`（非 ExcelError） |
+| ④ Analytics `V()`/`M()` + DataToolkit `D()` | 短别名转换后直接调 Core（CVP/CV/PEAR/SPR/T1/T2、DT_*、RANGE.* 等） | 尺寸不匹配 → `NaN`（非 ExcelError） |
 | ⑤ 标量 UDF | 零或极少参数 | WrapError |
 | ⑥ 自定义调度 | 手动数组展开 | 按模块约定 |
 
@@ -74,22 +76,26 @@ Foundation (共享工具)                    ← InputNormalizer / ElementWiseMa
 ### 3.4 哨兵契约 L1–L5 与表头行契约
 
 - **哨兵契约**（不可转换值返回类型零值哨兵，不抛异常）：`double`→`NaN`、`long`→`0`、`int`→`0`、`bool`→`false`、`DateTime`→`MinValue`、`string`→`""`。L5 未知类型 `double`→`NaN`，**其余必须 throw**，禁止 `return default(T)` 静默替代。
-- **表头行契约**：所有接受 `object[,]` 的 Core 方法必须含 `bool hasHeaders = true`。豁免（纯结构变换）：`Transpose / SelectColumns / SelectRows / CrossJoin / Flatten2D / Count / Keys / Values`。
+- **表头行契约**：所有接受 `object[,]` 的 Core 方法必须含 `bool hasHeaders = true`。豁免（纯结构变换，**9 项**，与 AGENTS.md §4 / pre-commit 检查 6 三方一致）：`Transpose / SelectColumns / SelectRows / CrossJoin / Flatten2D / Count / Keys / Values / ToDoubleMatrix`。
 - **L1 守卫**：NaN/Inf 判定先于类型转换；**禁止依赖 IEEE 754 传播**（WrapError 不兜底 NaN/Inf）。
 
-### 3.5 验证体系（5 步门 + 交叉验证）
+### 3.5 验证体系（6 步门，同 verify-all.ps1 + 交叉验证）
 
 ```
-① verify-docs（脚本：scripts/verify-docs.ps1，文档一致性检查）
-② dotnet test（全 TFM：net8.0 / net8.0-windows / net48，xUnit + FluentAssertions）
-③ CrossVal（tests/CrossValRunner：C# 侧 Dispatcher 调 Core → JSON → test_manifest.json）
-④ verify-manual.py（Python 侧：读 JSON 与 Python 独立实现/direct 手算核对）
-⑤ `dotnet build -c Release`（双 TFM 打包验证）
+① verify-docs（scripts/verify-docs.ps1，文档一致性 19 项）
+② dotnet build（双 TFM）
+③ dotnet test（全 TFM：net8.0 / net8.0-windows / net48，xUnit + FluentAssertions）
+④ CrossVal：verify-manual.py 一站式——定位 CrossValRunner.exe（bin/Debug|Release/net8.0-windows），
+   Dispatcher 读 tests/CrossValRunner/test_manifest.json 调 Core → 结果 JSON → Python 独立实现核对
+⑤ pre-commit-check.ps1（红线 6 项：裸 catch / 自校验 / IntelliSense / Core 隔离 / NaN-Inf / hasHeaders）
+⑥ `dotnet build -c Release`（双 TFM 打包验证）
 ```
+
+> CI `cross-val` job = build CrossValRunner + `dotnet test --filter CrossVal` + verify-manual.py 三段；本地 ④ 已把 CrossVal 执行一并包含。
 
 - **交叉验证铁律**：数值类 UDF 必须 `cross_check()` 且**非自校验**；Python 是**独立实现**，不共享 C# 代码路径；特殊值必须带标签（`{"__nan__":true}` / `{"__inf__":±1}`）且 Python 侧必须消费；manifest 的 `tolerance` 字段必须参与比较判定（曾为死数据）。
 - **通道分离**：`check()`（Python 参考实现自测）与 `cross_check()`（真正调 C#）**分开统计、分开汇报**，禁止合并成单一"覆盖率"声称。
-- 覆盖率门禁：Foundation ≥ 75%、Analytics ≥ 50%、DataToolkit ≥ 42%（`ThresholdStat=total`，仅 net8.0）。
+- 覆盖率门禁（CI coverage job，`ThresholdType=line`、`ThresholdStat=total`）：Foundation ≥ 75%（仅 net8.0）、Analytics ≥ 50% / DataToolkit ≥ 42%（仅 net8.0-windows）。
 
 ### 3.6 治理红线与历史陷阱速查
 
@@ -101,7 +107,7 @@ Foundation (共享工具)                    ← InputNormalizer / ElementWiseMa
 | 版本一致性 | tag == `Directory.Build.props` `<Version>` == AV/FV == CHANGELOG 条目（verify-docs 检查 10/19 强制） |
 
 **高频复发模式**（逐条做被动排查，历史见 project-experience.md）：
-① 绝对阈值误判小量纲（`va < 1e-15` 类判据对 ppm/ppb 数据失效）→ 判据必须与数据同尺度（精确零 / 相对阈）；② 正规方程条件数平方（`X'X.Solve`）→ 回归必须 QR/SVD、标准误由 R⁻¹ 求；③ NaN 比较恒 false 复活路径（`sd < 1e-15` 对 sd=NaN/Inf 恒 false），守卫必须同时覆盖 **NaN/Inf/溢出三路径**；④ `2⁶³` 边界守卫（`rd > long.MaxValue` 比较时 long.MaxValue 转 double = 2⁶³，恒 false）→ 用 `2⁶³` 字面量严格比较；⑤ 排序全等值退化 O(n²) → 3-way 分区；⑥ 顺序依赖溢出（`Product(1e300,1e300,1e-300)`）→ 按 |x| 升序相乘；⑦ 重载回退性能（`n=1` 快路径保留 `Regex.Match` 而非 `Matches`）；⑧ **同族函数守卫/封顶不一致**（EnsureSymmetric / CapNaN / 绝对零 / maxCells / CultureInvariant 模块内逐项对照——Cholesky 无 EnsureSymmetric 而 Eigen 有、TEMP 无绝对零守卫而 GASSTP 有、COND/DOE.ANOVA/Convert* 无 CapNaN 而 Sum/Range 有）；⑨ **门禁单向 / 名单三方漂移**（检查 10 只查 tag→CHANGELOG 不查反向 → 幽灵条目；豁免名单文档 8 vs 脚本 9）；⑩ **恒真断言族**（同源拼接 / 环境性恒真 / 对称自引用，见 6.1）。
+① 绝对阈值误判小量纲（`va < 1e-15` 类判据对 ppm/ppb 数据失效）→ 判据必须与数据同尺度（精确零 / 相对阈）；② 正规方程条件数平方（`X'X.Solve`）→ 回归必须 QR/SVD、标准误由 R⁻¹ 求；③ NaN 比较恒 false 复活路径（`sd < 1e-15` 对 sd=NaN/Inf 恒 false），守卫必须同时覆盖 **NaN/Inf/溢出三路径**；④ `2⁶³` 边界守卫（`rd > long.MaxValue` 比较时 long.MaxValue 转 double = 2⁶³，恒 false）→ 用 `2⁶³` 字面量严格比较；⑤ 排序全等值退化 O(n²) → 3-way 分区；⑥ 顺序依赖溢出（`Product(1e300,1e300,1e-300)`）→ 按 |x| 升序相乘；⑦ 重载回退性能（`n=1` 快路径保留 `Regex.Match` 而非 `Matches`）；⑧ **同族函数守卫/封顶不一致**（EnsureSymmetric / CapNaN / 绝对零 / maxCells / CultureInvariant 模块内逐项对照——历史例：Cholesky 曾缺 EnsureSymmetric（N04 已补齐）、TEMP 曾缺绝对零守卫（N08b 已补齐）、CapNaN 现仅 DoeAnalysisCore / PhyChemCore 具备；新增同族成员时对照现存成员的全套机制，勿照抄旧报告的"未修复清单"）；⑨ **门禁单向 / 名单三方漂移**（检查 10 只查 tag→CHANGELOG 不查反向 → 幽灵条目；豁免名单文档 8 vs 脚本 9）；⑩ **恒真断言族**（同源拼接 / 环境性恒真 / 对称自引用，见 6.1）。
 
 ---
 
@@ -135,6 +141,8 @@ codegraph node <符号>              # 单符号源码 + callers/callees
 codegraph node -f <文件> --symbols-only   # 文件模式：符号表 + dependents
 ```
 
+**先验索引新鲜度**：`codegraph status` 落后于 HEAD 时先 `codegraph sync` 再查——陈旧索引会漏报新建的调用者，Blast radius 失真。
+
 必须回答并写进报告：
 - 变更方法的**调用者**（UDF 层？其他 Core？测试？CrossVal Dispatcher？）。
 - **测试覆盖面**：codegraph 标 `⚠️ no covering tests found` 的符号 = 高风险点。
@@ -154,7 +162,7 @@ codegraph node -f <文件> --symbols-only   # 文件模式：符号表 + depende
 | [stale.yml](../../.github/workflows/stale.yml) | 每日定时 | 僵尸 Issue/PR 关闭，不常动；核对豁免标签 |
 | PR 流程 | PR 打开 | 核对 [PULL_REQUEST_TEMPLATE.md](../../.github/PULL_REQUEST_TEMPLATE.md) 勾选清单是否与真实验证一致（重点：声称跑过的命令要有日志佐证） |
 | Bug 上报 | Issue | [bug_report.yml](../../.github/ISSUE_TEMPLATE/bug_report.yml) 要求：版本/环境/复现步骤/期望/实际。审查"复现步骤是否真能复现" |
-| dependabot | deps PR | **版本上限**是硬约束：CI Python 3.11 → numpy/scipy 有上限；System.Text.Json 停在 8.0.5（netstandard2.0 兼容）；SQLitePCLRaw 版本耦合（ignore semver-major/minor）。依赖变更必须核对 requirements.txt 上限、双 TFM 可解析、`pip install --dry-run` |
+| dependabot | deps PR | **版本上限**是硬约束：CI Python 3.11 → numpy/scipy 有上限（requirements.txt：`<2.5` / `<1.18`）；System.Text.Json 在 DataToolkit.csproj 硬钉 8.0.5；Microsoft.Data.Sqlite ignore 已覆盖 major/minor/patch 全档（SQLitePCLRaw bundle 版本耦合，R20）。依赖变更必须核对 requirements.txt 上限、双 TFM 可解析、`pip install --dry-run` |
 
 对**被触发的工作流**，额外核对三点：① 门禁新增的"声称"（计数/链接/覆盖数）是否都有对应检查；② 退出码是否正确传播（`fail-fast`、`exit 1`）；③ 环境差异（pwsh7 vs PS5.1、8.3 短路径、路径分隔符）是否被规范化处理。
 
@@ -276,6 +284,20 @@ codegraph node -f <文件> --symbols-only   # 文件模式：符号表 + depende
 4. 注入用例加入 `tests/scripts/` 自测（若尚未覆盖）。
 5. 报告中记录注入内容、预期 FAIL 文本、恢复后结果。
 
+### 6.5 复检陷阱（审查者自身的假阳性——reaudit 场景必读）
+
+"去伪存真"同样约束审查者输出。以下模式已在本仓库复检中实测产生伪 finding，提交报告前逐条自查：
+
+| 陷阱 | 防控 |
+| :--- | :--- |
+| 把历史已修复项当未修复复报 | 引用旧报告"未修复清单"前，先对当前 HEAD 重验源码/CHANGELOG（实例：Cholesky EnsureSymmetric（N04）、TEMP 绝对零（N08b）、DOE F/p CapNaN 均已于 2026-09-05 补齐——照抄旧清单 = 追杀已修复项） |
+| 豁免名单误报 | 检查 5/6 报出的违例先对照豁免名单：hasHeaders 豁免 9 项（含 ToDoubleMatrix）、int 除法豁免（DateTimeCore / DoeCore） |
+| 引用过期的门禁编号/步骤数 | §3.5/§3.6 的编号是 2026-09-05 实测基准；版本前进后逐条重数（以 verify-docs / pre-commit 头注、verify-all 步骤标签为准） |
+| 把"补 CodeQL 抑制注释"当修复方案 | 本仓库实测无效（见 4.4 security.yml 行）——此类建议按无效方案退回 |
+| 引用上一轮"全绿"当语义正确背书 | §二.4 同样适用于复检：门禁全绿 ≠ 无缺陷，历史 P0/P1 全部在门禁全绿状态下合入 |
+
+**每条 finding 提交前自问一次：这条在当前 HEAD 还成立吗？**——用 1 次重测替换 1 次历史引用。
+
 ---
 
 ## 七、对抗验证方法论（Adversarial Validation）
@@ -327,6 +349,8 @@ codegraph node -f <文件> --symbols-only   # 文件模式：符号表 + depende
 6. **四、问题总表与优先级**：按 静默错误结果 → 验证体系可信度 → 正确性 → 工程治理 四批排序；每条含 关键编号 / 严重度 / 位置 / 动作。
 7. **五、保持项（勿在后续重构中破坏）**：经本轮复核确认健康的机制逐条列出，作为回归守卫——历史教训：keep-list 丢失 = 同类缺陷复活。
 8. **附、审查执行记录**：基准 commit、工作区状态、实际执行过的命令清单、声明未执行的步骤（含原因）。
+
+**提交前自检**（任一不满足即退回补做）：① 每条 finding 均有 `文件:行号` + 对抗验证证据；② P0/P1 均在当前 HEAD 复测复现；③ 全部数字本轮实测，无旧报告搬运；④ 对旧报告的修正段已写（如有失实）；⑤ 保持项已列；⑥ 缺输入项已显式标注；⑦ 已按 6.5 过滤复检陷阱。
 
 ---
 
