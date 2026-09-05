@@ -151,5 +151,75 @@ namespace ExcelFormulaLabs.Analytics.Tests
         // ── Release-review regression guards ────────────────────────────────
         [Fact] public void GasToSTP_negative_pressure_returns_NaN() => PhyChemCore.GasToSTP(10.0, 25.0, -1.0).Should().Be(double.NaN);
         [Fact] public void GasToSTP_zero_pressure_returns_NaN() => PhyChemCore.GasToSTP(10.0, 25.0, 0.0).Should().Be(double.NaN);
+
+        // ── review-2026-09-05（N06）：残留字符拒收一致化 ──
+        [Fact] public void MOLWT_trailing_garbage_returns_NaN()
+        {
+            // "H2Oxyz"：元素匹配后残留 "xyz" 原实现静默按已匹配部分计算（=18.015），
+            // 而全小写 "h2o"（零匹配）却返回 NaN——拒收不一致。整串消费校验后 → NaN。
+            double.IsNaN(PhyChemCore.MolecularWeight("H2Oxyz")).Should().BeTrue();
+        }
+
+        [Fact] public void MOLWT_lowercase_returns_NaN()
+        {
+            // "h2o"：无大写元素记号 → NaN（既有行为，与残留拒收口径一致化后保持）。
+            double.IsNaN(PhyChemCore.MolecularWeight("h2o")).Should().BeTrue();
+        }
+
+        [Fact] public void MOLWT_H2O_exact_value()
+        {
+            // 按现有 AtomicWeights 精度：H=1.008, O=15.999 → 2×1.008+15.999 = 18.015。
+            // 拒收规则收紧（N06）后正常式不受影响。
+            PhyChemCore.MolecularWeight("H2O").Should().BeApproximately(18.015, 1e-3);
+        }
+
+        [Fact] public void MOLWT_CO2_exact_value()
+        {
+            // C=12.011, O=15.999 → 12.011+2×15.999 = 44.009（N06 收紧后正常式不变）。
+            PhyChemCore.MolecularWeight("CO2").Should().BeApproximately(44.009, 1e-3);
+        }
+
+        // ── review-2026-09-05（N08）：Convert* 输出封顶 + 绝对零守卫 ──
+        [Fact] public void ConvertTemperature_overflow_returns_NaN()
+        {
+            // 有限大输入 1e308 ℃ → F：×1.8 溢出 ±Inf → NaN 封顶（原 Inf 直通）。
+            double.IsNaN(PhyChemCore.ConvertTemperature(1e308, "C", "F")).Should().BeTrue();
+        }
+
+        [Fact] public void ConvertTemperature_below_absolute_zero_returns_NaN()
+        {
+            // -300℃ → -26.85 K：K 温标 ≤ 0 物理无意义（对齐 GASSTP 的 tK<=0 拒收）→ NaN。
+            double.IsNaN(PhyChemCore.ConvertTemperature(-300, "C", "K")).Should().BeTrue();
+        }
+
+        [Fact] public void ConvertTemperature_zero_kelvin_returns_NaN()
+        {
+            // 0 K 为绝对零边界（守卫判据 k ≤ 0）→ NaN。
+            double.IsNaN(PhyChemCore.ConvertTemperature(0, "K", "C")).Should().BeTrue();
+        }
+
+        [Fact] public void ConvertPressure_overflow_returns_NaN()
+        {
+            // 1e308 atm → Pa：×101325 溢出 Inf → NaN 封顶。
+            double.IsNaN(PhyChemCore.ConvertPressure(1e308, "ATM", "PA")).Should().BeTrue();
+        }
+
+        [Fact] public void ConvertVolume_overflow_returns_NaN()
+        {
+            // 1e308 L → mL：×1000 溢出 Inf → NaN 封顶。
+            double.IsNaN(PhyChemCore.ConvertVolume(1e308, "L", "ML")).Should().BeTrue();
+        }
+
+        [Fact] public void ConvertMass_overflow_returns_NaN()
+        {
+            // 1e308 kg → g：×1000 溢出 Inf → NaN 封顶。
+            double.IsNaN(PhyChemCore.ConvertMass(1e308, "KG", "G")).Should().BeTrue();
+        }
+
+        [Fact] public void ConvertTemperature_large_but_finite_K_returns_finite()
+        {
+            // 1e308 ℃ → K：k=1e308 有限且 > 0 → 结果有限（不得误封顶）。
+            PhyChemCore.ConvertTemperature(1e308, "C", "K").Should().BeApproximately(1e308, 1e300);
+        }
     }
 }

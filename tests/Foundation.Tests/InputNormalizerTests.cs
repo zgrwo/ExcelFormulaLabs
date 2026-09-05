@@ -243,4 +243,53 @@ public class ComRangeExtractionTests
         result.GetLength(1).Should().Be(1);
         result[0, 0].Should().BeEquivalentTo(new object[] { "a", "b" });
         result[1, 0].Should().BeEquivalentTo(new object[] { "c" });
-    }}
+    }
+
+    // -- review-2026-09-05: N13 Rank≥3 数组展平为列向量（原 GetValue(int,int) 抛未捕获
+    //    ArgumentException，与 P2-17 NormalizeTo1D 多维展平未同步）--
+    [Fact] public void NormalizeTo2D_rank3_typed_array_flattens_to_column()
+    {
+        var cube = new double[2, 3, 2];
+        double v = 0;
+        for (int i = 0; i < 2; i++)
+            for (int j = 0; j < 3; j++)
+                for (int k = 0; k < 2; k++)
+                    cube[i, j, k] = v++;
+        var result = InputNormalizer.NormalizeTo2D(cube);
+        result.Should().NotBeNull();
+        result.GetLength(0).Should().Be(12);
+        result.GetLength(1).Should().Be(1);
+        // 行优先（最右维最快）：i=0,j=0,k=1 → 线性序 1
+        Convert.ToDouble(result[1, 0]).Should().Be(1.0);
+        // i=1,j=2,k=0 → 线性序 10
+        Convert.ToDouble(result[10, 0]).Should().Be(10.0);
+        Convert.ToDouble(result[11, 0]).Should().Be(11.0);
+    }
+
+    [Fact] public void NormalizeTo2D_rank2_unchanged_rectangular()
+    {
+        var m = new int[2, 3];
+        var result = InputNormalizer.NormalizeTo2D(m);
+        result.Should().NotBeNull();
+        result.GetLength(0).Should().Be(2);
+        result.GetLength(1).Should().Be(3);
+    }
+}
+
+// -- review-2026-09-05: R23 哨兵类型名 const 字面量锁定（Excel-DNA 升级改型名时在此报警）--
+public class SentinelTypeNameLockTests
+{
+    private static object? Const(string name)
+        => typeof(InputNormalizer).GetField(name,
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+            ?.GetValue(null);
+
+    [Fact] public void ExcelDna_missing_type_name_locked()
+        => Const("ExcelDnaMissingTypeName").Should().Be("ExcelDna.Integration.ExcelMissing");
+
+    [Fact] public void ExcelDna_empty_type_name_locked()
+        => Const("ExcelDnaEmptyTypeName").Should().Be("ExcelDna.Integration.ExcelEmpty");
+
+    [Fact] public void ExcelDna_error_type_name_locked()
+        => Const("ExcelDnaErrorTypeName").Should().Be("ExcelDna.Integration.ExcelError");
+}

@@ -345,10 +345,12 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
 
         // ══════════════════════════════════════════════════════════════════
         //  STR.COALESCE  (MapOverMulti<string,string,string>)
-        //  null → fallback, empty → empty (not coalesced)
+        //  review 2026-09-05（R09）：语义以文档契约为准——null 或空串 → fallback
+        //  （StringUdf.cs:40 "not null or empty" / api-reference / user-manual）。
+        //  纯空白串不属于空串，仍原样返回。
         // ══════════════════════════════════════════════════════════════════
         [Fact] public void Coal_primary_non_empty() => StringUdf.UDF_STR_COAL("hello", "world").Should().Be("hello");
-        [Fact] public void Coal_primary_empty_not_coalesced() => StringUdf.UDF_STR_COAL("", "fallback").Should().Be("");
+        [Fact] public void Coal_primary_empty_coalesced() => StringUdf.UDF_STR_COAL("", "fallback").Should().Be("fallback");
         [Fact] public void Coal_primary_whitespace() => StringUdf.UDF_STR_COAL("   ", "fallback").Should().Be("   ");
 
         // ══════════════════════════════════════════════════════════════════

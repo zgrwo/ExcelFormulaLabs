@@ -91,6 +91,12 @@ namespace ExcelFormulaLabs.DataToolkit
         /// diagnostic warning so operators are aware the sandbox is disabled.
         /// Throws <see cref="InvalidOperationException"/> if the session has ended.
         /// </summary>
+        /// <remarks>
+        /// review 2026-09-05（N18）：ValidatePath（检查）与各 I/O 方法使用原始路径（使用）之间
+        /// 存在该类前缀检查设计固有的 TOCTOU 窗口——检查后、I/O 前目录 junction 被替换理论上可
+        /// 逃逸。威胁模型为本地攻击者（与 NativeDllStore 的 TOCTOU 残余同等级），已接受并文档化；
+        /// NormalizePath 逐段 reparse 走查的 O(depth) 系统调用开销同样为该设计的已知取舍。
+        /// </remarks>
         internal static void ValidatePath(string path)
         {
             EnsureSessionActive();

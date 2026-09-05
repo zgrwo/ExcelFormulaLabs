@@ -44,7 +44,7 @@ docs/
 |------|--------|------|----------|
 | 单参数，保持输入形状 | `MapOver<TIn,TOut>` | 标量→标量，1D→1D，2D→2D | null/error/empty 透传 |
 | 单参数，强制 1D 输出 | `MapOverFlat<TIn,TOut>` | 始终 `object[]` | null/error/empty 透传 |
-| 2-3 参数，广播 | `MapOverMulti<T1,T2,TOut>` | 标量广播到数组尺寸 | 尺寸不匹配→`ExcelError.Value` |
+| 2-3 参数，广播 | `MapOverMulti<T1,T2,TOut>` | 标量广播到数组尺寸 | 尺寸不匹配→`ExcelError.Value`；任一输入展平为空→返回 `null`（UDF 渲染空白，非 ExcelError） |
 
 部分统计 UDF（CVP/CV/PEAR/SPR/T1/T2）绕过 MapOver，用 `V()`/`M()` 直接调 Core。尺寸不匹配→`NaN`（非 ExcelError），`V(null)`→空数组→`NaN`。
 
@@ -99,7 +99,7 @@ object param = null   // ← 默认值 null，由 InputNormalizer 处理
 => OutputWrapper.WrapError(() =>
     ElementWiseMapper.MapOverFlat<string, string>(input, StringCore.SomeMethod));
 
-// ③ MapOverMulti — 2-3 参数广播，尺寸不匹配 → ExcelError.Value
+// ③ MapOverMulti — 2-3 参数广播，尺寸不匹配 → ExcelError.Value；空输入 → null
 => OutputWrapper.WrapError(() =>
     ElementWiseMapper.MapOverMulti<string, string, bool>(t, p,
         (text, prefix) => StringCore.StartsWithStr(text, prefix)));

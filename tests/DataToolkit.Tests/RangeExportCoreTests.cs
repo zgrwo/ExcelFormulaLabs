@@ -582,5 +582,38 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             csv.Should().Contain("'-1+2");
             csv.Should().Contain("'@REF");
         }
+
+        // ── review 2026-09-05（N02）：输出规模守卫——1001×1001 = 1,002,001 cells > 1e6 上限，
+        // 四个导出函数必须在分配 StringBuilder 前拒绝（对齐 PivotCore maxCells 纪律）。
+        private static readonly object[,] OversizedData = new object[1001, 1001];
+
+        [Fact]
+        public void ToHtml_oversized_throws_before_allocation()
+            => new Action(() => RangeExportCore.RangeToHtml(OversizedData))
+                .Should().Throw<ArgumentException>().WithMessage("*Maximum is 1,000,000*");
+
+        [Fact]
+        public void ToJson_oversized_throws_before_allocation()
+            => new Action(() => RangeExportCore.RangeToJson(OversizedData))
+                .Should().Throw<ArgumentException>().WithMessage("*RANGE.TOJSON*");
+
+        [Fact]
+        public void ToMarkdown_oversized_throws_before_allocation()
+            => new Action(() => RangeExportCore.RangeToMarkdown(OversizedData))
+                .Should().Throw<ArgumentException>().WithMessage("*RANGE.TOMD*");
+
+        [Fact]
+        public void ToCsv_oversized_throws_before_allocation()
+            => new Action(() => RangeExportCore.RangeToCsv(OversizedData))
+                .Should().Throw<ArgumentException>().WithMessage("*RANGE.TOCSV*");
+
+        [Fact]
+        public void Exports_at_guard_boundary_still_work()
+        {
+            // 1000×1000 = 1,000,000 cells == 上限（除法形式边界：不超限）——正常导出
+            var atLimit = new object[1000, 1000];
+            atLimit[0, 0] = "ok";
+            RangeExportCore.RangeToCsv(atLimit).Should().StartWith("ok");
+        }
     }
 }

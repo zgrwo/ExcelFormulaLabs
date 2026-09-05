@@ -5,7 +5,7 @@
 .DESCRIPTION
     Blocks commits with common violations:
     1. Bare catch {} - red line
-    2. Self-validation check(name, X, X) - false negative（括号平衡解析，支持嵌套调用/数组参数）
+    2. Self-validation check(name, X, X) - false negative（全文括号平衡解析，支持跨行/嵌套调用/数组参数/短别名）
     3. IntelliSense code in net8.0 - framework isolation
     4. Core layer referencing ExcelDna - architecture violation
     5. NaN/Inf guard missing in Core files with division
@@ -20,6 +20,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $violations = @()
+$script:skipped = 0   # N19 (review-2026-09-05)：SKIP 计数，与 violations 对账用
 
 function Read-Utf8Text {
     param([string]$Path)
@@ -27,7 +28,10 @@ function Read-Utf8Text {
     return [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::UTF8)
 }
 
-# 从一行中提取 check( 调用的顶层参数列表（括号/引号平衡，支持嵌套调用）
+# 从文本中提取 check( 调用的顶层参数列表（括号/引号平衡，支持嵌套调用与跨行参数）
+# R15 (review-2026-09-05)：原仅按单行传入；改为可传入全文，逐字符深度计数跨行提取。
+# R15：深度计数扩 [ ] { }——否则 f([1,2]) 这类数组参数内的逗号被误当参数分隔符，
+# 自校验 arg2==arg3 对比会被切碎而漏检（test_precommit 场景 3 第二行曾空转）。
 function Split-TopLevelArgs {
     param([string]$Line, [int]$StartIndex)
     $args = New-Object System.Collections.Generic.List[string]
@@ -48,8 +52,8 @@ function Split-TopLevelArgs {
         } else {
             if ($ch -eq '"') { $inStr = '"'; [void]$buf.Append($ch) }
             elseif ($ch -eq "'") { $inStr = "'"; [void]$buf.Append($ch) }
-            elseif ($ch -eq '(') { $depth++; [void]$buf.Append($ch) }
-            elseif ($ch -eq ')') {
+            elseif ($ch -eq '(' -or $ch -eq '[' -or $ch -eq '{') { $depth++; [void]$buf.Append($ch) }
+            elseif ($ch -eq ')' -or $ch -eq ']' -or $ch -eq '}') {
                 $depth--
                 if ($depth -eq 0) { break }   # 最外层 check( 闭合，结束
                 [void]$buf.Append($ch)
@@ -86,25 +90,26 @@ Write-Host "[2/6] Checking self-validation pattern ..."
 
 $verifyScript = Join-Path $RepoRoot "scripts\verify-manual.py"
 if (Test-Path $verifyScript) {
-    # @() 强制数组：单行文件时 Get-Content 返回标量 string，索引会得到 char
-    $lines = @(Get-Content $verifyScript)
+    # R15 (review-2026-09-05)：改为全文扫描——原按单行解析，两类输入曾绕过（均实测）：
+    #   ① 跨行 check(（参数分布多行，单行 IndexOf 永不命中完整参数列表）；
+    #   ② 短别名 check("m", x, x)（$a2.Length -gt 3 豁免放行，"x" 长度 1）。
+    # 现全文逐字符括号平衡提取参数列表；并移除长度豁免：顶层参数 ≥3 且去空白后
+    # arg2==arg3 即自校验（期望值硬编码铁律下，同源对照无论长短都是假阴性）。
+    $verifyText = [System.IO.File]::ReadAllText($verifyScript, [System.Text.Encoding]::UTF8)
     $selfHits = @()
-    for ($i = 0; $i -lt $lines.Count; $i++) {
-        $line = $lines[$i]
-        $idx = $line.IndexOf("check(")
-        while ($idx -ge 0) {
-            $args = Split-TopLevelArgs $line ($idx + 6)
-            # check(name, X, X)：第 2、3 个顶层参数完全相同且非平凡长度
-            if ($args.Count -ge 3) {
-                $a2 = $args[1].Trim()
-                $a3 = $args[2].Trim()
-                if ($a2 -eq $a3 -and $a2.Length -gt 3) {
-                    $selfHits += "verify-manual.py:$($i+1) ($a2)"
-                    break
-                }
+    $idx = $verifyText.IndexOf("check(")
+    while ($idx -ge 0) {
+        $args = Split-TopLevelArgs $verifyText ($idx + 6)
+        # check(name, X, X)：第 2、3 个顶层参数完全相同（跨行空白由 Trim 收敛）
+        if ($args.Count -ge 3) {
+            $a2 = $args[1].Trim()
+            $a3 = $args[2].Trim()
+            if ($a2 -eq $a3) {
+                $lineNo = ($verifyText.Substring(0, $idx) -split "`n").Count
+                $selfHits += "verify-manual.py:$lineNo ($a2)"
             }
-            $idx = $line.IndexOf("check(", $idx + 1)
         }
+        $idx = $verifyText.IndexOf("check(", $idx + 1)
     }
     if ($selfHits.Count -gt 0) {
         foreach ($h in $selfHits) { $violations += "SELF_CHECK: $h" }
@@ -180,7 +185,9 @@ $nanInfMissing = @()
 
 foreach ($f in $coreFiles) {
     $content = Read-Utf8Text $f.FullName
-    if (-not $content) { continue }
+    # N19 (review-2026-09-05)：读文件失败原为静默 continue——改为 SKIP 计数输出，
+    # 防止文件不可读时守卫检查静默空转（对齐 verify-docs Check-Skip 语义）。
+    if (-not $content) { $script:skipped++; Write-Host "  [SKIP] $($f.Name) unreadable, guard check skipped" -ForegroundColor DarkYellow; continue }
     # 剥离 // 与 /* */ 注释后再检测除法表达式：原正则会把 `/// <summary>` 等 XML 注释
     # 误判为除法，导致所有文件 hasDivision=true，守卫检查退化为「任一 ArgumentException 即豁免”。
     $code = [regex]::Replace($content, '/\*.*?\*/', '', [System.Text.RegularExpressions.RegexOptions]::Singleline)
@@ -232,7 +239,11 @@ $structuralExempt = @('Transpose','SelectColumns','SelectRows','CrossJoin','Flat
 foreach ($f in $allCoreCs) {
     $content = Read-Utf8Text $f.FullName
     # Match method signatures with object[,] as PARAMETER (not return type)
-    $paramMatches = [regex]::Matches($content, '(private|internal|public)\s+(?:static\s+)?\S+\s+(\w+)\s*\([^)]*object\s*\[,\s*\][^)]*\)')
+    # R18 (review-2026-09-05)：原 `\([^)]*object...[^)]*\)` 对参数段含嵌套括号的签名漏报
+    #（如元组参数 `(int,int) key, object[,] data`——首个 `)` 提前终结 [^)]*，实测漏报）。
+    # 改为允许一层嵌套括号的参数段提取（分支两选择首字符不相交，无回溯风险）；
+    # 泛型 Func<object[,],bool> 形态保持命中（test_precommit 场景 10/11）。
+    $paramMatches = [regex]::Matches($content, '(private|internal|public)\s+(?:static\s+)?\S+\s+(\w+)\s*\((?:[^()]|\([^()]*\))*object\s*\[,\s*\][^)]*\)')
     foreach ($pm in $paramMatches) {
         $sig = $pm.Value
         $accessMod = $pm.Groups[1].Value
@@ -257,6 +268,8 @@ if ($hasHeaderViolations.Count -gt 0) {
 # -- Summary --
 Write-Host ""
 Write-Host "============================================================"
+# N19 (review-2026-09-05)：SKIP 计数入账展示（不可读文件跳过不静默）
+if ($script:skipped -gt 0) { Write-Host "  [INFO] $($script:skipped) file(s) skipped (unreadable)" -ForegroundColor DarkYellow }
 if ($violations.Count -gt 0) {
     Write-Host "  [BLOCKED] $($violations.Count) violation(s) found:" -ForegroundColor Red
     Write-Host ""

@@ -185,7 +185,11 @@ namespace ExcelFormulaLabs.DataToolkit
 
         internal static bool IsNullOrEmptyStr(string? t)=>string.IsNullOrEmpty(t);
         internal static bool IsNullOrWhitespaceStr(string? t)=>string.IsNullOrWhiteSpace(t);
-        internal static string Coalesce(string? p,string f)=>p??f;
+        // review 2026-09-05（R09）：原 `p ?? f` 仅 null 兜底，与三处文档契约矛盾
+        // （StringUdf.cs:40 "not null or empty"、docs/specification/api-reference.md:199、
+        // docs/user-manual/user-manual.md:1995 均声称空串兜底）。以文档契约为准：
+        // 空串也取 fallback（verify-manual.py 期望由另一代理按 ""→"default" 同步）。
+        internal static string Coalesce(string? p,string f)=>string.IsNullOrEmpty(p)?f:p;
 
         private static int NthIdx(string t, string s, long n)
         {

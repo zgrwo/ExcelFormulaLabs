@@ -2,6 +2,7 @@
 # dependabot.yml — 依赖自动更新
 # 使用方式：直接启用（GitHub 自动读取）
 #   - nuget: 仓库含 *.sln / *.csproj（本仓库）
+#   - pip: requirements.txt 存在（Python 交叉验证依赖）
 #   - github-actions: workflow 文件存在
 # ============================================================================
 version: 2
@@ -17,8 +18,10 @@ updates:
       # Microsoft.Data.Sqlite 升级需人工适配 DataToolkit.csproj 的 e_sqlite3.dll
       # 原生资源嵌入路径（SQLitePCLRaw 版本耦合，见 PR#8）——patch/minor 升级同样会
       # 改变 SQLitePCLRaw bundle 版本（P2 审查修复：semver-major → semver-minor）
+      # R20 (review-2026-09-05)：补 semver-patch——注释声称 patch/minor 均拦截，
+      # 原 update-types 漏 patch，配置与注释不一致。
       - dependency-name: "Microsoft.Data.Sqlite"
-        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+        update-types: ["version-update:semver-major", "version-update:semver-minor", "version-update:semver-patch"]
 
   # --- Python 交叉验证依赖（requirements.txt，版本由 dependabot 维护） ---
   - package-ecosystem: "pip"

@@ -47,7 +47,10 @@ namespace ExcelFormulaLabs.Analytics
                 // Slow path: compute outside lock so concurrent callers
                 // for different keys are not serialised by decomposition cost
                 var result = factory();
-                long elems = ElementCount(result);
+                // review 2026-09-05（R10/CS8604）：泛型 T 无约束，编译器认为 factory() 可能为
+                // null；但所有 decomp 工厂（Svd/Qr/Lu 及其包装）均返回非 null 数组（见各方法
+                // 签名与调用点），此处不可能为 null —— 显式 `!` 标注该契约。
+                long elems = ElementCount(result!);
 
                 lock (Lock)
                 {
@@ -194,11 +197,26 @@ namespace ExcelFormulaLabs.Analytics
             NumericGuard.AgainstNonFinite(A);
             if (b.Any(v => double.IsNaN(v) || double.IsInfinity(v)))
                 throw new ArgumentException(ErrorMsg.Get("LINALG_RhsNotFinite"));
-            var x = Matrix<double>.Build.DenseOfArray(A).Solve(Vector<double>.Build.Dense(b));
+            var matA = Matrix<double>.Build.DenseOfArray(A);
+            // review 2026-09-05（R21）：原仅输出侧拦 NaN/Inf——近奇异系统（cond→1e16）经
+            // MathNet LU 静默返回错得离谱但全部有限的解（历史 P0-1 同族：条件数主导精度）。
+            // 求解前加条件数守卫：cond 非有限（精确奇异）或 > 1e14 → 显式拒绝。1e14 与
+            // double 16 位有效数字对应，超过后解的有效位数不足 2 位，必然不可靠。
+            // SVD 仅在此入口执行一次（n 通常小，成本可接受）；消息含实测 cond 值便于诊断。
+            // 注意：消息含 "singular"——精确奇异用例的既有断言（WithMessage("*singular*")）
+            // 现由此守卫先行触发，保持契约不破。
+            var svd = matA.Svd(computeVectors: false);
+            double cond = svd.ConditionNumber;
+            if (double.IsNaN(cond) || double.IsInfinity(cond) || cond > 1e14)
+                throw new ArgumentException(
+                    "Matrix is singular or too ill-conditioned for a reliable solution " +
+                    $"(condition number = {cond.ToString("E3", System.Globalization.CultureInfo.InvariantCulture)}; " +
+                    "guard threshold 1e14). Use LINALG.PINV for singular systems.");
+            var x = matA.Solve(Vector<double>.Build.Dense(b));
             var arr = x.ToArray();
             // P2 (pre-release review): MathNet Solve silently returns NaN/±Inf for singular
             // systems; the api-reference contract says singular → #VALUE! (guard, not
-            // silent propagation — 防错原则1).
+            // silent propagation — 防错原则1)。R21 守卫后保留为纵深防御（良态系统不应到达）。
             for (int i = 0; i < arr.Length; i++)
                 if (double.IsNaN(arr[i]) || double.IsInfinity(arr[i]))
                     throw new ArgumentException(ErrorMsg.Get("LINALG_SingularMatrix"));
@@ -207,7 +225,11 @@ namespace ExcelFormulaLabs.Analytics
 
         internal static double[,] Cholesky(double[,] m)
         {
-            NumericGuard.AgainstNonFinite(m);
+            // review 2026-09-05（N04）：与 Eigenvalues/Eigen 同族对齐——MathNet Cholesky 只读
+            // 三角，非对称输入（如 {1,0.5;0,1}）原先被静默按 {1,0;0.5,1} 分解（错误结果）。
+            // 复用 EnsureSymmetric（含方阵检查、非有限守卫、相对对称判据），与 Eigen 同一
+            // 拒绝路径。
+            EnsureSymmetric(m, "Cholesky decomposition");
             return Matrix<double>.Build.DenseOfArray(m).Cholesky().Factor.ToArray();
         }
 
@@ -234,7 +256,13 @@ namespace ExcelFormulaLabs.Analytics
             return (evd.EigenValues.Real().ToArray(), evd.EigenVectors.ToArray());
         }
 
-        private static void EnsureSymmetric(double[,] m)
+        /// <summary>
+        /// Reject non-square, non-finite, or non-symmetric input (relative tolerance).
+        /// Shared by the symmetric-only decomposition family (Evd, Cholesky).
+        /// </summary>
+        /// <param name="m">Input matrix.</param>
+        /// <param name="op">Operation name used in the error message.</param>
+        private static void EnsureSymmetric(double[,] m, string op = "Eigenvalue decomposition (Evd)")
         {
             int n = m.GetLength(0);
             if (n != m.GetLength(1))
@@ -247,12 +275,16 @@ namespace ExcelFormulaLabs.Analytics
                     // review 2026-08-31（深度审查 P1-5）：原绝对阈值 1e-8 在 1e9 量级矩阵下
                     // ULP≈1.2e-7 > 1e-8，理论对称矩阵因浮点舍入被误判为非对称。改为相对判据
                     // （阈值随元素量级缩放，1e9 量级 → ≈1e1，远大于 ULP；小矩阵保持原 1e-8 行为）。
+                    // review 2026-09-05（R05）：scale 原带 `Math.Max(1.0, …)` 下限——小量纲矩阵
+                    // （如 [[0,0],[1e-9,0]]，相对 100% 非对称）退化为绝对阈值 diff<1e-8 → 误判
+                    // 对称 → Evd 静默按错误矩阵分解。改纯相对判据 scale = max(|aij|,|aji|)；
+                    // 全零对称对 diff=0、scale=0 → `0 > 0` 不触发（判据无除法，无除零风险）。
                     double diff = Math.Abs(m[i, j] - m[j, i]);
-                    double scale = Math.Max(1.0, Math.Max(Math.Abs(m[i, j]), Math.Abs(m[j, i])));
+                    double scale = Math.Max(Math.Abs(m[i, j]), Math.Abs(m[j, i]));
                     if (diff > 1e-8 * scale)
                         throw new ArgumentException(
                             $"Matrix is not symmetric: |m[{i},{j}] − m[{j},{i}]| = {diff:E2} > {1e-8 * scale:E2}. " +
-                            "Eigenvalue decomposition (Evd) requires a symmetric matrix.");
+                            $"{op} requires a symmetric matrix.");
                 }
             }
         }
@@ -260,7 +292,10 @@ namespace ExcelFormulaLabs.Analytics
         internal static double ConditionNumber(double[,] m)
         {
             NumericGuard.AgainstNonFinite(m);
-            return Matrix<double>.Build.DenseOfArray(m).ConditionNumber();
+            // review 2026-09-05（N05）：奇异矩阵 cond=+∞ 原样返回，违反模块 Inf→NaN 输出
+            // 封顶约定（对齐 Sum/Range/CapNaN 的写法）。封顶为 NaN，语义 = "条件数不可表示"。
+            var cond = Matrix<double>.Build.DenseOfArray(m).ConditionNumber();
+            return double.IsInfinity(cond) ? double.NaN : cond;
         }
 
         internal static int Rank(double[,] m, double tol = 0)
@@ -345,6 +380,36 @@ namespace ExcelFormulaLabs.Analytics
         /// Called by <see cref="AddIn.AutoClose"/> on add-in unload.
         /// </summary>
         internal static void ClearDecompCache() => DecompCache.Clear();
+
+        /// <summary>
+        /// 128-bit content hash of a 2D double array (two independent FNV-1a streams
+        /// + dimension suffix), shared by the decomposition cache and the async RTD
+        /// topic keys. A single 64-bit hash would make an ExcelAsyncUtil.Run key
+        /// collision silently return another matrix's cached result (R24).
+        /// </summary>
+        internal static string MatrixHash(double[,] m) => DecompCache.MatrixHash(m);
+
+        /// <summary>128-bit content hash of a double vector — same dual-FNV-1a scheme
+        /// as <see cref="MatrixHash"/> (length participates in both streams).</summary>
+        internal static string VectorHash(double[] v)
+        {
+            unchecked
+            {
+                long h1 = unchecked((long)14695981039346656037); // FNV offset basis
+                long h2 = unchecked((long)14695981039346656037);
+                const long prime1 = unchecked((long)1099511628211); // FNV prime
+                const long prime2 = unchecked((long)6364136223846793005); // secondary prime
+                h1 = (h1 ^ v.Length) * prime1;
+                h2 = (h2 ^ v.Length) * prime2;
+                for (int i = 0; i < v.Length; i++)
+                {
+                    long bits = BitConverter.DoubleToInt64Bits(v[i]);
+                    h1 = (h1 ^ bits) * prime1;
+                    h2 = (h2 ^ (bits >> 16 ^ bits)) * prime2;
+                }
+                return $"V{v.Length}:{h1:X16}{h2:X16}";
+            }
+        }
 
         private static TResult GetDecompPart<TDecomp, TResult>(
             double[,] m, string prefix,

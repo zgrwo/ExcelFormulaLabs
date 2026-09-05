@@ -15,29 +15,13 @@ namespace ExcelFormulaLabs.Analytics
         private static double[] V(object d) => AnalyticsHelpers.PrepV(d);
 
         // review 2026-08-31（深度审查 P1-20）：M/V 转换移出 ExcelAsyncUtil.Run lambda（同 LinalgAsyncUdf）——
-        // 调用线程完成 COM/类型转换，lambda 只接收纯 double[,]/double[]；key 用紧凑哈希。
-        private static object AsyncKey(double[,] m)
-        {
-            unchecked
-            {
-                long h = 17;
-                for (int r = 0; r < m.GetLength(0); r++)
-                    for (int c = 0; c < m.GetLength(1); c++)
-                        h = h * 31 + BitConverter.DoubleToInt64Bits(m[r, c]);
-                return $"{m.GetLength(0)}x{m.GetLength(1)}:{h:X16}";
-            }
-        }
+        // 调用线程完成 COM/类型转换，lambda 只接收纯 double[,]/double[]。
+        // review 2026-09-05（R24）：topic key 原为单 64 位 31-进制哈希——碰撞会使 RTD 把
+        // 另一组输入的缓存结果静默返回给本单元格。改为复用 LinalgCore 的 128 位双 FNV-1a
+        // 内容哈希（与 DecompCache.MatrixHash 同一实现），对齐同模块 key 方案。
+        private static object AsyncKey(double[,] m) => LinalgCore.MatrixHash(m);
 
-        private static object AsyncKeyV(double[] v)
-        {
-            unchecked
-            {
-                long h = 17;
-                for (int i = 0; i < v.Length; i++)
-                    h = h * 31 + BitConverter.DoubleToInt64Bits(v[i]);
-                return $"V{v.Length}:{h:X16}";
-            }
-        }
+        private static object AsyncKeyV(double[] v) => LinalgCore.VectorHash(v);
 
         [ExcelFunction(Name = "REGRESS.OLS_ASYNC",
           Description = "OLS regression, computed asynchronously on a background thread.")]

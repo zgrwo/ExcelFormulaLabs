@@ -37,7 +37,7 @@ _Avoid_: 映射器、包装器（太泛）
 
 **哨兵（Sentinel）** — InputNormalizer 五层防护体系（L1-L5），详见 [excel-dna-project.md §哨兵契约](../../skills/excel-dna-project.md#哨兵契约-l1-l5)。核心原则：不可转换值返回类型零值哨兵（`double`→`NaN`、`long`→0、`int`→0、`bool`→`false`、`DateTime`→`MinValue`、`string`→`""`），不抛异常。
 
-**表头行契约（hasHeaders）** — 所有接受 `object[,]` 的 Core 方法必须含 `bool hasHeaders = true`。默认跳过第一行（表头），数据从 `r=1` 开始。例外（纯结构变换，不解释表头语义）：`Transpose`、`SelectColumns`、`SelectRows`、`CrossJoin`、`Flatten2D`、`Count`、`Keys`、`Values`（与 AGENTS.md §4 及 pre-commit check-6 豁免名单一致）。
+**表头行契约（hasHeaders）** — 所有接受 `object[,]` 的 Core 方法必须含 `bool hasHeaders = true`。默认跳过第一行（表头），数据从 `r=1` 开始。例外（纯结构变换，不解释表头语义）：`Transpose`、`SelectColumns`、`SelectRows`、`CrossJoin`、`Flatten2D`、`Count`、`Keys`、`Values`、`ToDoubleMatrix`（与 AGENTS.md §4 及 pre-commit check-6 豁免名单一致）。
 
 **ExcelEmpty** — Foundation 层定义的 Excel 空单元格哨兵，`ExcelEmpty.Value`。
 **ExcelError** — Foundation 层定义的 Excel 错误哨兵，携带 `Code`（如 2042=`#N/A`）。MapOver 层遇到 ExcelError 透传不处理。
@@ -71,7 +71,7 @@ _Avoid_: 目标框架、框架版本
 **交叉验证（Cross-Validation）** — Python（numpy/scipy/sklearn）与 C# 实现逐项对照，精度 1e-10。覆盖 STATS/REGRESS/LINALG/PHYCHEM。
 **CrossVal** — `dotnet test --filter "CrossVal"` 运行的交叉验证测试子集。
 **verify-manual.py** — Python 脚本，验证 user-manual.md 中全部 UDF 示例与源码行为一致。
-**verify-docs.sh** — verify-docs.ps1 的 POSIX 包装器（18 项文档一致性检查，唯一实现为 PowerShell 版本）。
+**verify-docs.sh** — verify-docs.ps1 的 POSIX 包装器（19 项文档一致性检查，唯一实现为 PowerShell 版本）。
 
 ## 平台术语
 

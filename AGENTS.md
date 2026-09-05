@@ -138,7 +138,7 @@ ExcelFormulaLabs/
 ### 4. 表头行契约
 
 所有接受 `object[,]` 的 Core 方法必须含 `bool hasHeaders = true`。
-豁免：纯结构变换（Transpose / SelectColumns / SelectRows / CrossJoin / Flatten2D / Count / Keys / Values）不解释表头语义，无需该参数。
+豁免：纯结构变换（Transpose / SelectColumns / SelectRows / CrossJoin / Flatten2D / Count / Keys / Values / ToDoubleMatrix）不解释表头语义，无需该参数。
 
 ### 5. 哨兵契约（L1-L5）
 
@@ -148,7 +148,7 @@ ExcelFormulaLabs/
 
 - 禁止自校验 `check(name, X, X)`
 - 数值类 UDF 必须 `cross_check()`
-- 修改后运行全量验证 5 步
+- 修改后运行全量验证 6 步（同 `scripts/verify-all.ps1`）
 
 ## 构建与测试
 
@@ -156,8 +156,8 @@ ExcelFormulaLabs/
 | :--- | :--- |
 | 日常构建 | `dotnet restore && dotnet build && dotnet test` |
 | 分发构建 | `dotnet build -c Release` |
-| 全量测试 | ① verify-docs ② dotnet test ③ CrossVal ④ verify-manual.py ⑤ Release build |
-| 文档一致性（18 项） | `powershell -File scripts/verify-docs.ps1` |
+| 全量测试（6 步，同 verify-all.ps1） | ① verify-docs ② Build ③ dotnet test ④ CrossVal（verify-manual.py）⑤ Pre-commit Checks ⑥ Release build |
+| 文档一致性（19 项） | `powershell -File scripts/verify-docs.ps1` |
 | 提交前红线（6 项） | `powershell -File scripts/pre-commit-check.ps1` |
 | 治理脚本自测 | `powershell -File tests/scripts/run-tests.ps1` |
 | 本地 Qoder 技能镜像 | `powershell -File scripts/sync-qoder-skills.ps1`（可选，本地工具用，不入库） |

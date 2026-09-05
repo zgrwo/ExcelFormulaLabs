@@ -36,7 +36,10 @@ namespace ExcelFormulaLabs.DataToolkit
             if(rows.Count==0)return null;
             var ka=keys.ToArray(); var r=new object[rows.Count+1,ka.Length];
             for(int c=0;c<ka.Length;c++)r[0,c]=ka[c];
-            for(int i=0;i<rows.Count;i++)for(int c=0;c<ka.Length;c++)r[i+1,c]=rows[i].TryGetValue(ka[c],out var v)?v:null;
+            // review 2026-09-05（R10）：网格单元的 null =「空单元格」哨兵（JSON null 值与缺键均
+            // 合法），v! / null! 豁免的是 object[,] 元素类型无法表达可空，而非断言运行时非空
+            // （经 warnlab 实证：object?[,] 本地数组方案会在返回处触发 CS8619，不可用）。
+            for(int i=0;i<rows.Count;i++)for(int c=0;c<ka.Length;c++)r[i+1,c]=rows[i].TryGetValue(ka[c],out var v)?v!:null!;
             return r;
         }
 
@@ -85,7 +88,8 @@ namespace ExcelFormulaLabs.DataToolkit
         { try{var d=ParseXmlSafe(xml);return d.XPathSelectElements(xpath).Select(e=>e.Value).ToArray();}catch(Exception ex) when(ExceptionFilters.IsCatchable(ex)){System.Diagnostics.Debug.WriteLine($"[XmlXPath] Failed: {ex.Message}");return Array.Empty<string>();} }
 
         internal static object[,]? XmlToTable(string xml, string? rowPath=null)
-        { try{var d=ParseXmlSafe(xml);var rows=rowPath!=null?d.XPathSelectElements(rowPath):d.Root?.Elements()??Enumerable.Empty<XElement>();var rl=rows.ToList();if(rl.Count==0)return null;var cn=rl.SelectMany(r=>r.Elements()).Select(e=>e.Name.LocalName).Distinct().ToArray();var rt=new object[rl.Count+1,cn.Length];for(int c=0;c<cn.Length;c++)rt[0,c]=cn[c];for(int i=0;i<rl.Count;i++){var row=rl[i];for(int c=0;c<cn.Length;c++){var el=row.Element(cn[c]);rt[i+1,c]=el!=null?el.Value:null;}}return rt;}catch(Exception ex) when(ExceptionFilters.IsCatchable(ex)){System.Diagnostics.Debug.WriteLine($"[XmlToTable] Failed: {ex.Message}");return null;} }
+            // review 2026-09-05（R10）：缺元素单元格写 null =「空单元格」哨兵，null! 豁免可空性分析。
+        { try{var d=ParseXmlSafe(xml);var rows=rowPath!=null?d.XPathSelectElements(rowPath):d.Root?.Elements()??Enumerable.Empty<XElement>();var rl=rows.ToList();if(rl.Count==0)return null;var cn=rl.SelectMany(r=>r.Elements()).Select(e=>e.Name.LocalName).Distinct().ToArray();var rt=new object[rl.Count+1,cn.Length];for(int c=0;c<cn.Length;c++)rt[0,c]=cn[c];for(int i=0;i<rl.Count;i++){var row=rl[i];for(int c=0;c<cn.Length;c++){var el=row.Element(cn[c]);rt[i+1,c]=el!=null?el.Value:null!;}}return rt;}catch(Exception ex) when(ExceptionFilters.IsCatchable(ex)){System.Diagnostics.Debug.WriteLine($"[XmlToTable] Failed: {ex.Message}");return null;} }
 
         internal static bool XmlValidate(string xml)
         { try{ParseXmlSafe(xml);return true;}catch(Exception ex) when(ExceptionFilters.IsCatchable(ex)){return false;} }

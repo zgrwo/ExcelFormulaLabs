@@ -207,6 +207,9 @@ namespace ExcelFormulaLabs.Foundation
             // 下恒为 false → 1e-12 容差分支是死代码，退化为装箱 Equals 精确比较：
             // {0.1+0.2} 查 0.3 → -1；整型 1 查浮点 1.0 → 找不到。改为运行时逐元素探测——
             // 元素与目标值均为数值类型时走容差路径（文本 "2" 不匹配数值 2，保持原 Equals 语义）。
+            // review 2026-09-05（N18）：容差路径类型面有意收窄为 double/float/int/long——
+            // decimal/short/byte 等元素落 :237 装箱 Equals 精确路径（如 JSON 反序列化产物
+            // decimal 0.1+0.2≠0.3 不桥接）。Excel 场景数值以 double 到达，此为已知取舍。
             bool valueIsNumeric = value is double or float or int or long;
             for (int i = 0; i < array.Length; i++)
             {

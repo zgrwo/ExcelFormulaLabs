@@ -642,5 +642,84 @@ namespace ExcelFormulaLabs.Analytics.Tests
         // 按 |x| 升序相乘后应返回 1e300。
         StatsCore.Product(new[] { 1e300, 1e300, 1e-300 }).Should().BeApproximately(1e300, 1e285);
     }
+
+    // ── review-2026-09-05（R03）：零方差分支均值判据改精确相等 ──
+    [Fact] public void TTestTwoSample_small_scale_zero_variance_NaN()
+    {
+        // {1e-16}×4 vs {2e-16}×4：均值差 1e-16 < 1e-15 曾被绝对阈值误判"均值相等"→ 错误 p=1。
+        // 精确相等判据（ma == mb）→ NaN。
+        double.IsNaN(StatsCore.TTestTwoSample(
+            new[] { 1e-16, 1e-16, 1e-16, 1e-16 },
+            new[] { 2e-16, 2e-16, 2e-16, 2e-16 })).Should().BeTrue();
+    }
+
+    [Fact] public void TTestTwoSample_unit_scale_zero_variance_NaN()
+    {
+        // {1}×4 vs {2}×4：均值差不精确相等 → NaN（修复前因差 1 > 1e-15 也是 NaN，
+        // 与小量纲行为对齐后两量纲一致）。
+        double.IsNaN(StatsCore.TTestTwoSample(
+            new[] { 1.0, 1.0, 1.0, 1.0 },
+            new[] { 2.0, 2.0, 2.0, 2.0 })).Should().BeTrue();
+    }
+
+    [Fact] public void TTestOneSample_small_scale_diff_mu0_NaN()
+    {
+        // {1e-16}×4 vs mu0=2e-16：均值差 1e-16 曾被误判相等 → 错误 p=1；精确判据 → NaN。
+        double.IsNaN(StatsCore.TTestOneSample(
+            new[] { 1e-16, 1e-16, 1e-16, 1e-16 }, 2e-16)).Should().BeTrue();
+    }
+
+    [Fact] public void TTestOneSample_small_scale_exact_mu0_p1()
+    {
+        // {1e-16}×4 vs mu0=1e-16：均值精确相等（IEEE：(4×1e-16)/4 == 1e-16）→ p=1，
+        // 与 {5,5,5} vs mu0=5 同判——精确相等跨量纲一致。
+        StatsCore.TTestOneSample(
+            new[] { 1e-16, 1e-16, 1e-16, 1e-16 }, 1e-16).Should().Be(1.0);
+    }
+
+    // ── review-2026-09-05（R22）：预缩放防两遍平方和溢出 + 非有限结果封顶 ──
+    [Fact] public void Pearson_overflow_scale_returns_finite()
+    {
+        // Pearson({1e200,-1e200},{1,2})：两遍平方和 Σx²=2e400 溢出曾返回 NaN（真值 -1，
+        // 相关系数是尺度不变量）。逐序列 1/maxAbs 预缩放后返回有限值 -1。
+        StatsCore.Pearson(new[] { 1e200, -1e200 }, new[] { 1.0, 2.0 })
+            .Should().BeApproximately(-1.0, 1e-10);
+    }
+
+    [Fact] public void CorrelationMatrix_overflow_scale_column_finite()
+    {
+        // 含 1e200 交替列的相关矩阵：两遍平方和溢出曾产生 NaN/Inf（真值有限）。
+        // 预缩放后该列对角线恢复 1.0、非对角有限：列 0 = ±1e200 交替 vs 列 1 = 1..4，
+        // 理论 r = -1/√5（cov=-2/3，sd₀=√(4/3)，sd₁=√(5/3)）。
+        var r = StatsCore.CorrelationMatrix(new double[,]
+            { { 1e200, 1 }, { -1e200, 2 }, { 1e200, 3 }, { -1e200, 4 } });
+        r[0, 0].Should().BeApproximately(1.0, 1e-10);
+        r[0, 1].Should().BeApproximately(-0.447213595499958, 1e-9);
+        r[1, 0].Should().BeApproximately(-0.447213595499958, 1e-9);
+    }
+
+    [Fact] public void Variance_overflow_returns_NaN()
+    {
+        // R22b：VAR({1e200,-1e200}) = 2e400 溢出，真值不可表示 → NaN 封顶（对齐 Sum/Range）。
+        double.IsNaN(StatsCore.Variance(new[] { 1e200, -1e200 })).Should().BeTrue();
+        double.IsNaN(StatsCore.VarianceP(new[] { 1e200, -1e200 })).Should().BeTrue();
+        double.IsNaN(StatsCore.Stdev(new[] { 1e200, -1e200 })).Should().BeTrue();
+        double.IsNaN(StatsCore.StdevP(new[] { 1e200, -1e200 })).Should().BeTrue();
+    }
+
+    [Fact] public void Mean_huge_values_stay_finite()
+    {
+        // R22b：Mean 的真值 {1e308,1e308} = 1e308 本身可表示——MathNet 用增量均值算法
+        // 不经朴素累加（Σ=2e308 溢出），返回精确 1e308。封顶守卫保留为纵深防御
+        // （Mean 对有限输入实测不产生 Inf，无公共触发路径，同 N07 静态依据模式）。
+        StatsCore.Mean(new[] { 1e308, 1e308 }).Should().BeApproximately(1e308, 1e300);
+    }
+
+    [Fact] public void Covariance_overflow_returns_NaN()
+    {
+        // R22b：COVAR 两遍平方和溢出 → NaN 封顶。
+        double.IsNaN(StatsCore.Covariance(new[] { 1e200, -1e200 }, new[] { 1e200, -1e200 })).Should().BeTrue();
+        double.IsNaN(StatsCore.CovarianceP(new[] { 1e200, -1e200 }, new[] { 1e200, -1e200 })).Should().BeTrue();
+    }
 }
 }

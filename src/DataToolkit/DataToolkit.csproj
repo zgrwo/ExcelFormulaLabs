@@ -92,6 +92,24 @@
     <ExcelDnaPackExcludeDependencies>System.Data.SQLite.dll;System.Data.SQLite.Core.dll;ExcelDna.IntelliSense.dll</ExcelDnaPackExcludeDependencies>
   </PropertyGroup>
 
+  <!-- review 2026-09-05（R25）：SQLite 原生 DLL 路径钉死传递依赖字面版本（共 6 处字面量：
+       ①② net8 e_sqlite3 x86/x64 EmbeddedResource；③④ net48 SQLite.Interop x86/x64
+       EmbeddedResource；⑤⑥ CopySQLiteInteropToPublish 的 x86/x64 Copy SourceFiles
+       （③④⑤⑥ 同路径同版本，4 个文件检查覆盖全部 6 处）。刻意不做自动版本解析（脆弱）；
+       依赖升级若漏改字面量，EmbeddedResource/Copy 会在编译深处以 MSB3030 失败且无版本提示。
+       此 Target 在编译/拷贝前执行，缺失时给出可读错误：缺哪个文件、该版本来自哪个传递依赖、
+       需同步改哪 6 处。双 TFM 条件隔离：各 TFM 只检查自己恢复的包，互不误伤。 -->
+  <Target Name="VerifySqliteNativePaths" BeforeTargets="Build">
+    <Error Condition="'$(TargetFramework)' == 'net8.0-windows' AND !Exists('$(NuGetPackageRoot)sqlitepclraw.lib.e_sqlite3\2.1.12\runtimes\win-x86\native\e_sqlite3.dll')"
+           Text="[VerifySqliteNativePaths] 缺少原生 DLL：sqlitepclraw.lib.e_sqlite3\2.1.12\runtimes\win-x86\native\e_sqlite3.dll（$(NuGetPackageRoot) 下）。该字面版本来自传递依赖 Microsoft.Data.Sqlite 8.0.30 → SQLitePCLRaw 2.1.12。升级依赖时请同步修改 DataToolkit.csproj 中 6 处字面版本（e_sqlite3 x86/x64 EmbeddedResource、SQLite.Interop x86/x64 EmbeddedResource、CopySQLiteInteropToPublish 的 x86/x64 SourceFiles）并实测双 TFM 构建。" />
+    <Error Condition="'$(TargetFramework)' == 'net8.0-windows' AND !Exists('$(NuGetPackageRoot)sqlitepclraw.lib.e_sqlite3\2.1.12\runtimes\win-x64\native\e_sqlite3.dll')"
+           Text="[VerifySqliteNativePaths] 缺少原生 DLL：sqlitepclraw.lib.e_sqlite3\2.1.12\runtimes\win-x64\native\e_sqlite3.dll（$(NuGetPackageRoot) 下）。该字面版本来自传递依赖 Microsoft.Data.Sqlite 8.0.30 → SQLitePCLRaw 2.1.12。升级依赖时请同步修改 DataToolkit.csproj 中 6 处字面版本（e_sqlite3 x86/x64 EmbeddedResource、SQLite.Interop x86/x64 EmbeddedResource、CopySQLiteInteropToPublish 的 x86/x64 SourceFiles）并实测双 TFM 构建。" />
+    <Error Condition="'$(TargetFramework)' == 'net48' AND !Exists('$(NuGetPackageRoot)stub.system.data.sqlite.core.netframework\1.0.119\build\net46\x86\SQLite.Interop.dll')"
+           Text="[VerifySqliteNativePaths] 缺少原生 DLL：stub.system.data.sqlite.core.netframework\1.0.119\build\net46\x86\SQLite.Interop.dll（$(NuGetPackageRoot) 下）。该字面版本来自传递依赖 System.Data.SQLite.Core 1.0.119。升级依赖时请同步修改 DataToolkit.csproj 中 6 处字面版本（e_sqlite3 x86/x64 EmbeddedResource、SQLite.Interop x86/x64 EmbeddedResource、CopySQLiteInteropToPublish 的 x86/x64 SourceFiles）并实测双 TFM 构建。" />
+    <Error Condition="'$(TargetFramework)' == 'net48' AND !Exists('$(NuGetPackageRoot)stub.system.data.sqlite.core.netframework\1.0.119\build\net46\x64\SQLite.Interop.dll')"
+           Text="[VerifySqliteNativePaths] 缺少原生 DLL：stub.system.data.sqlite.core.netframework\1.0.119\build\net46\x64\SQLite.Interop.dll（$(NuGetPackageRoot) 下）。该字面版本来自传递依赖 System.Data.SQLite.Core 1.0.119。升级依赖时请同步修改 DataToolkit.csproj 中 6 处字面版本（e_sqlite3 x86/x64 EmbeddedResource、SQLite.Interop x86/x64 EmbeddedResource、CopySQLiteInteropToPublish 的 x86/x64 SourceFiles）并实测双 TFM 构建。" />
+  </Target>
+
   <!-- Generate correct .dna from templates per target before ExcelDnaBuild,
        then clean up afterward. The generated DNA file is shared across inner
        builds; a stale file on disk can poison incremental builds.

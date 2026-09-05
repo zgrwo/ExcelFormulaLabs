@@ -21,8 +21,12 @@ namespace ExcelFormulaLabs.DataToolkit
         /// Rejects DDL (CREATE/ALTER/DROP), DML (INSERT/UPDATE/DELETE),
         /// ATTACH/DETACH, and PRAGMA for safety in shared-workbook scenarios.
         /// Accepts SELECT and WITH (CTE) prefixes.</summary>
+        // review 2026-09-05（N10）：SelectOnly/ForbiddenKeyword 补 RegexOptions.CultureInvariant，
+        // 对齐 RegexCore.cs 的强制风格——IgnoreCulture 下 IgnoreCase 依赖 CurrentCulture，
+        // 土耳其语 locale（i→İ）会让小写 "insert" 无法命中 INSERT 黑名单，安全检查失效。
         private static readonly System.Text.RegularExpressions.Regex SelectOnly =
             new(@"^\s*(?:SELECT|WITH)\s", System.Text.RegularExpressions.RegexOptions.IgnoreCase
+                | System.Text.RegularExpressions.RegexOptions.CultureInvariant
                 | System.Text.RegularExpressions.RegexOptions.Compiled,
                 TimeSpan.FromSeconds(5));
 
@@ -38,6 +42,7 @@ namespace ExcelFormulaLabs.DataToolkit
         private static readonly System.Text.RegularExpressions.Regex ForbiddenKeyword =
             new(@"\b(INSERT|UPDATE|DELETE|REPLACE\s+INTO|ATTACH|DETACH|PRAGMA|DROP|CREATE|ALTER|VACUUM|REINDEX|RECURSIVE)\b",
                 System.Text.RegularExpressions.RegexOptions.IgnoreCase
+                | System.Text.RegularExpressions.RegexOptions.CultureInvariant
                 | System.Text.RegularExpressions.RegexOptions.Compiled,
                 TimeSpan.FromSeconds(5));
 
@@ -69,8 +74,11 @@ namespace ExcelFormulaLabs.DataToolkit
             // review 2026-08-31（深度审查 P0-2）：原实现 `rows.Add(row)` 无上界 + 末尾整体复制
             // （峰值 2× 内存）——`SELECT * FROM a, b`（100k 行 → 1e10 行）等失控查询触发
             // **不可捕获的 OOM → Excel 进程崩溃**（ExceptionFilters 排除 OOM，WrapError 不兜底）。
-            // 防线：① SQLITE_LIMIT_LENGTH=100MB（单值超限由 SQLite 层拒绝，randomblob(1e9) 在
-            // 分配前拦截）；② 读取循环行数 + 耗时双上限；③ 直接写入预分配 object[,]（消除 2× 峰值）。
+            // 防线：① 读取循环行数 + 耗时双上限；② 直接写入预分配 object[,]（消除 2× 峰值）。
+            // review 2026-09-05（R11）：原此处声称「SQLITE_LIMIT_LENGTH=100MB，randomblob 在
+            // 分配前拦截」与事实不符——全库 0 次 SetLimit，SQLite 默认 SQLITE_MAX_LENGTH=1e9，
+            // randomblob(5e8) 先整体分配 500MB 才被下方事后 10MB 检查拒绝。当前防线 = 事后拒绝，
+            // 分配峰值窗口为已知残余（与下方 blob 检查处注释口径一致，消除自相矛盾）。
             int cols = reader.FieldCount;
             const int maxRows = 200_000;
             var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -104,7 +112,10 @@ namespace ExcelFormulaLabs.DataToolkit
                         throw new ArgumentException(
                             $"SQL query returned a {blob.Length:N0}-byte blob at row {row}, column {i} — " +
                             "possible runaway query (randomblob). Limit blobs to 10 MB.");
-                    result[row, i] = reader.IsDBNull(i) ? null : v;
+                    // review 2026-09-05（R10）：null =「空单元格」哨兵（DBNull→null，与 Excel 空单元格
+                    // 语义一致），null! 豁免的是可空性分析而非断言运行时非空（经 warnlab 实证：
+                    // object?[,] 本地数组方案会在返回处触发 CS8619，不可用）。
+                    result[row, i] = reader.IsDBNull(i) ? null! : v;
                 }
                 row++;
             }

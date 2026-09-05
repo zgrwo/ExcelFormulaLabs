@@ -1,7 +1,7 @@
 ﻿# verify-docs.ps1 - 文档一致性验证（唯一实现；verify-docs.sh 为包装器）
 # ============================================================================
 # 用法：.\scripts\verify-docs.ps1 [-RepoRoot <path>]
-# 18 项检查：
+# 19 项检查（R08 review 2026-09-05：检查 19 于 2026-08-31 加入后头注计数漏更）：
 #   1.  UDF 数量：api-reference.md 为准，与源码 [ExcelFunction] 一致
 #   2.  UDF 全覆盖：每个源码 UDF 在 api-reference.md 有条目
 #   3.  skill.md 含 RangeExport（数据工具模块技能覆盖）
@@ -20,6 +20,7 @@
 #  16.  散文式 UDF 计数（AGENTS/CONTRIBUTING/CHANGELOG/注释/Total 表）== 推导值
 #  17.  [ExcelArgument] 名称 ↔ api-reference 参数列（自动比对，剥离可选标记）
 #  18.  src/ 实际文件必须被目录树声明（反向检查：存在→声明）
+#  19.  文档版本头 == Directory.Build.props <Version>（specification / user-manual）
 #
 # 注意：文件一律用显式 UTF-8 读取（本脚本兼容 Windows PowerShell 5.1 与 pwsh 7）。
 # ============================================================================
@@ -55,7 +56,7 @@ function Check-Skip {
 }
 
 # ---------- 1. UDF 数量 ----------
-$docUdfs = (Select-String -Path (Join-Path $RepoRoot "docs\specification\api-reference.md") -Pattern '^\| `[A-Z]+\.[A-Z]' | Measure-Object).Count
+$docUdfs = (Select-String -Path (Join-Path $RepoRoot "docs/specification/api-reference.md") -Pattern '^\| `[A-Z]+\.[A-Z]' | Measure-Object).Count
 $codeUdfs = (Get-ChildItem -Path (Join-Path $RepoRoot "src") -Recurse -Filter "*.cs" |
     Where-Object { $_.FullName -notmatch "\\obj\\" -and $_.FullName -notmatch "\\bin\\" } |
     Select-String -Pattern 'ExcelFunction\(Name\s*=\s*"([^"]*)"' -AllMatches |
@@ -65,7 +66,7 @@ if ($docUdfs -eq $codeUdfs) { Check "UDF count ($docUdfs)" "OK" }
 else { Check "UDF count" "doc=$docUdfs code=$codeUdfs" }
 
 # ---------- 2. UDF 全覆盖 ----------
-$apiContent = Read-Utf8 (Join-Path $RepoRoot "docs\specification\api-reference.md")
+$apiContent = Read-Utf8 (Join-Path $RepoRoot "docs/specification/api-reference.md")
 $missing = @()
 Get-ChildItem -Path (Join-Path $RepoRoot "src") -Recurse -Filter "*.cs" |
     Where-Object { $_.FullName -notmatch "\\obj\\" -and $_.FullName -notmatch "\\bin\\" } |
@@ -78,7 +79,7 @@ if ($missing.Count -eq 0) { Check "UDF full coverage" "OK" }
 else { Check "UDF full coverage" "missing: $($missing -join ', ')" }
 
 # ---------- 3. skill.md 含 RangeExport ----------
-$skillContent = Read-Utf8 (Join-Path $RepoRoot "skills\excel-dna-project.md")
+$skillContent = Read-Utf8 (Join-Path $RepoRoot "skills/excel-dna-project.md")
 if ($skillContent -match 'RangeExport') { Check "skill.md RangeExport" "OK" }
 else { Check "skill.md RangeExport" "missing" }
 
@@ -90,8 +91,8 @@ if ($readmeContent -match 'ElementWiseMapper') { Check "README no internal class
 else { Check "README no internal impl details" "OK" }
 
 # ---------- 5. MathNet 版本匹配 ----------
-$docVer = if ((Read-Utf8 (Join-Path $RepoRoot "docs\governance\context.md")) -match 'MathNet\.Numerics\s+([0-9.]+)') { $Matches[1] } else { "?" }
-$csprojVer = if ((Read-Utf8 (Join-Path $RepoRoot "src\Analytics\Analytics.csproj")) -match 'MathNet\.Numerics.*Version="([0-9.]+)"') { $Matches[1] } else { "?" }
+$docVer = if ((Read-Utf8 (Join-Path $RepoRoot "docs/governance/context.md")) -match 'MathNet\.Numerics\s+([0-9.]+)') { $Matches[1] } else { "?" }
+$csprojVer = if ((Read-Utf8 (Join-Path $RepoRoot "src/Analytics/Analytics.csproj")) -match 'MathNet\.Numerics.*Version="([0-9.]+)"') { $Matches[1] } else { "?" }
 if ($docVer -eq $csprojVer) { Check "MathNet version ($docVer)" "OK" }
 else { Check "MathNet version" "doc=$docVer csproj=$csprojVer" }
 
@@ -103,15 +104,15 @@ if ($bareCatches.Count -eq 0) { Check "No bare catch" "OK" }
 else { Check "No bare catch" "$($bareCatches.Count) found" }
 
 # ---------- 7. .dna 模板完整 ----------
-if (Test-Path (Join-Path $RepoRoot "src\DataToolkit\DataToolkit-AddIn-net8.dna.tpl")) { Check "net8 .dna template" "OK" }
+if (Test-Path (Join-Path $RepoRoot "src/DataToolkit/DataToolkit-AddIn-net8.dna.tpl")) { Check "net8 .dna template" "OK" }
 else { Check "net8 .dna template" "missing" }
-if (Test-Path (Join-Path $RepoRoot "src\DataToolkit\DataToolkit-AddIn-net48.dna.tpl")) { Check "net48 .dna template" "OK" }
+if (Test-Path (Join-Path $RepoRoot "src/DataToolkit/DataToolkit-AddIn-net48.dna.tpl")) { Check "net48 .dna template" "OK" }
 else { Check "net48 .dna template" "missing" }
 
 # ---------- 8. 无残留生成 .dna ----------
 # P2 (review): generated .dna files carry TFM suffixes (*-net48.dna / *-net8.0.dna);
 # the old no-suffix pattern missed stale files from interrupted builds.
-$residual = Get-ChildItem -Path (Join-Path $RepoRoot "src\DataToolkit") -Filter "*.dna" -File -ErrorAction SilentlyContinue |
+$residual = Get-ChildItem -Path (Join-Path $RepoRoot "src/DataToolkit") -Filter "*.dna" -File -ErrorAction SilentlyContinue |
     Where-Object { $_.Name -notlike "*.tpl" }
 if (-not $residual) { Check "No residual .dna" "OK" }
 else { Check "No residual .dna" "found residual" }
@@ -144,6 +145,19 @@ if ($LASTEXITCODE -ne 0) {
     if ($untracked.Count -eq 0) { Check "CHANGELOG covers all tags ($($semverTags.Count) tags)" "OK" }
     else { Check "CHANGELOG covers all tags" "missing entries: $($untracked -join ', ')" }
 
+    # N11 (review-2026-09-05)：反向对账——原检查只做 tag→CHANGELOG 单向校验，CHANGELOG 新增
+    # `## [X.Y.Z]` 条目而忘记打 tag（或 tag 名打错）时门禁放过。补反向：CHANGELOG 每个语义化
+    # 版本条目必须有对应 v* tag。已知例外 1.0.8：历史幽灵条目（无 v1.0.8 tag，发版制度建立前
+    # 遗留；文档面处置归文档代理，此处显式豁免）。
+    $ghostAllow = @("1.0.8")
+    $ghosts = @()
+    foreach ($m in [regex]::Matches($changelog, '(?m)^##\s*\[(\d+\.\d+\.\d+)\]')) {
+        $v = $m.Groups[1].Value
+        if ($ghostAllow -notcontains $v -and ($semverTags -notcontains "v$v")) { $ghosts += $v }
+    }
+    if ($ghosts.Count -eq 0) { Check "CHANGELOG entries all tagged" "OK" }
+    else { Check "CHANGELOG entries all tagged" "no tag for: $($ghosts -join ', ')" }
+
     # H3 (review-2026-08-29)：字符串排序会将 v2.9.0 排在 v2.10.0 之前，误选最新 tag。
     # 改为语义化版本（major/minor/patch）比较。
     $latestTag = $semverTags |
@@ -152,7 +166,7 @@ if ($LASTEXITCODE -ne 0) {
                 $parts = $v -split '\.'
                 [long]$parts[0] * 1000000 + [long]$parts[1] * 1000 + [long]$parts[2]
             } } -Descending | Select-Object -First 1
-    $props = Read-Utf8 (Join-Path $RepoRoot "src\Directory.Build.props")
+    $props = Read-Utf8 (Join-Path $RepoRoot "src/Directory.Build.props")
     $propsVer = if ($props -match '<Version>([0-9.]+)</Version>') { $Matches[1] } else { "?" }
     $latestVer = $latestTag -replace '^v', ''
     if ($propsVer -eq $latestVer) { Check "Directory.Build.props version == latest tag ($latestVer)" "OK" }
@@ -174,8 +188,8 @@ if ($LASTEXITCODE -ne 0) {
 
 # ---------- 11. 模块 csproj 描述数量 == [ExcelFunction] 计数 ----------
 foreach ($module in @("Analytics", "DataToolkit")) {
-    $count = (Select-String -Path (Join-Path $RepoRoot "src\$module\*.cs") -Pattern '\[ExcelFunction' -AllMatches | Measure-Object).Count
-    $csprojText = Read-Utf8 (Join-Path $RepoRoot "src\$module\$module.csproj")
+    $count = (Select-String -Path (Join-Path $RepoRoot "src/$module/*.cs") -Pattern '\[ExcelFunction' -AllMatches | Measure-Object).Count
+    $csprojText = Read-Utf8 (Join-Path $RepoRoot "src/$module/$module.csproj")
     $descNum = if ($csprojText -match '(\d+)\s*个') { [int]$Matches[1] } else { -1 }
     if ($descNum -eq $count) { Check "$module csproj description count ($count)" "OK" }
     else { Check "$module csproj description count" "desc=$descNum code=$count" }
@@ -187,7 +201,9 @@ $mdFiles = Get-ChildItem -Path $RepoRoot -Recurse -Filter "*.md" |
 $broken = @()
 foreach ($f in $mdFiles) {
     $text = Read-Utf8 $f.FullName
-    if (-not $text) { continue }
+    # review 2026-09-05（N19）：读文件失败原为静默 continue——与检查 19 同法改为 SKIP 计数
+    # 输出，对齐"SKIP 不计入 pass"语义，防止文件不可读时检查 12 静默空转。
+    if (-not $text) { Check-Skip "Markdown broken links" "unreadable: $($f.Name)"; continue }
     foreach ($m in [regex]::Matches($text, '\]\(([^)]+)\)')) {
         $target = $m.Groups[1].Value.Trim()
         if ($target -match '^(https?://|mailto:|#|ftp://|file://)') { continue }
@@ -205,9 +221,9 @@ if ($broken.Count -eq 0) { Check "Markdown broken links" "OK" }
 else { Check "Markdown broken links" "$($broken.Count): $($broken -join ' | ')" }
 
 # ---------- 13. .qoder skills 镜像一致性（本地工具镜像，不入库；缺失则跳过）----------
-if (Test-Path (Join-Path $RepoRoot ".qoder\skills")) {
+if (Test-Path (Join-Path $RepoRoot ".qoder/skills")) {
     $psExe = if ($PSVersionTable.PSEdition -eq 'Core') { 'pwsh' } else { 'powershell' }
-    & $psExe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $RepoRoot "scripts\sync-qoder-skills.ps1") -CheckOnly 2>&1 | ForEach-Object { Write-Host "      $_" }
+    & $psExe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $RepoRoot "scripts/sync-qoder-skills.ps1") -CheckOnly 2>&1 | ForEach-Object { Write-Host "      $_" }
     if ($LASTEXITCODE -eq 0) { Check ".qoder skills mirror" "OK" }
     else { Check ".qoder skills mirror" "drifted (run scripts/sync-qoder-skills.ps1)" }
 } else {
@@ -249,7 +265,7 @@ function Get-TreeBlock {
     return $m.Groups[1].Value
 }
 
-$structText = Read-Utf8 (Join-Path $RepoRoot "docs\governance\project-structure.md")
+$structText = Read-Utf8 (Join-Path $RepoRoot "docs/governance/project-structure.md")
 $structBlock = Get-TreeBlock $structText
 $structEntries = if ($structBlock) { Get-TreeEntries $structBlock } else { @() }
 # 「不入库」目录（.gitignore 覆盖，如 logs/）：干净 checkout 下不存在，豁免存在性检查
@@ -305,13 +321,27 @@ $proseFiles = @("src/Foundation/ElementWiseMapper.cs") +
 $proseMismatches = @()
 foreach ($rel in $proseFiles) {
     $text = Read-Utf8 (Join-Path $RepoRoot $rel)
-    if (-not $text) { continue }
+    # review 2026-09-05（N19）：读文件失败原为静默 continue——改为 SKIP 计数输出（同检查 19）。
+    if (-not $text) { Check-Skip "Prose UDF counts" "unreadable: $rel"; continue }
     $isHistorical = ($rel -eq "CHANGELOG.md")
     # 模式 1：`N UDF`（如 "236 UDF"）与中文 `N 个 UDF`——除历史文件外强制执行 == codeUdfs
     # P0-4 (review-2026-08-31)：原正则 `(\d+)\s+UDF` 匹配不上中文「236 个 UDF」（中间隔着
     # 「个」），中文 README 计数漂移全绿通过（负向注入 236→999 仅英文被拦）。
+    # R13 (review-2026-09-05)：词表化扩三个变体——量词扩 个|项（`236 项 UDF`）、倒装形式
+    # （`UDF 数量 236` / `UDF 总数 236` / `UDF 共 236` / `UDF: 236`）、`236 个函数（UDF）`。
+    # 三个变体均经负向注入实测（test_verify_docs 场景 G2/G3/G4）。倒装模式仅对非历史文件
+    # 生效：CHANGELOG 的「UDF 总数 232→236」由下方模式 2 单独断言终值。
     if (-not $isHistorical) {
-        foreach ($m in [regex]::Matches($text, '(\d+)\s*(?:个)?\s*UDF')) {
+        # 模式 1a：`N UDF` / `N 个 UDF` / `N 项 UDF`
+        foreach ($m in [regex]::Matches($text, '(\d+)\s*(?:个|项)?\s*UDF')) {
+            if ([int]$m.Groups[1].Value -ne $codeUdfs) { $proseMismatches += "${rel}: '$($m.Value)'" }
+        }
+        # 模式 1b：倒装形式 `UDF (数量|总数|共)?[:：=]? N`
+        foreach ($m in [regex]::Matches($text, 'UDF\s*(?:数量|总数|共)?\s*[:：=]?\s*(\d+)')) {
+            if ([int]$m.Groups[1].Value -ne $codeUdfs) { $proseMismatches += "${rel}: 倒装 '$($m.Value)'" }
+        }
+        # 模式 1c：`N 个函数（UDF）`（全角/半角括号均收）
+        foreach ($m in [regex]::Matches($text, '(\d+)\s*个函数\s*[（(]\s*UDF\s*[）)]')) {
             if ([int]$m.Groups[1].Value -ne $codeUdfs) { $proseMismatches += "${rel}: '$($m.Value)'" }
         }
         # 分数形式 `X/Y UDF`（README "224/236 个 UDF"）：分母是总数声明必须 == codeUdfs，
@@ -371,7 +401,10 @@ foreach ($e in $structEntries) {
     if (-not $e.IsDir -and $e.Path -like 'src/*') { $declaredSrcFiles += $e.Path }
 }
 $srcFiles = Get-ChildItem -Path (Join-Path $RepoRoot "src") -Recurse -File |
-    Where-Object { $_.FullName -notmatch "\\obj\\" -and $_.FullName -notmatch "\\bin\\" }
+    Where-Object { $_.FullName -notmatch "\\obj\\" -and $_.FullName -notmatch "\\bin\\" -and $_.Extension -ne ".dna" }
+# review 2026-09-05（N17）：排除 .dna 生成物——构建并发时 GenerateDna 产物可能瞬时落盘
+# （.gitignore:12 已声明 src/**/*.dna 为生成物，不入库），检查 18 会把瞬时 .dna 当未登记
+# 文件假 FAIL（本轮实测复现）。
 $undeclaredFiles = @()
 foreach ($f in $srcFiles) {
     # 相对路径统一归一化为正斜杠 + 去前导分隔符（Windows \ / Linux /，pwsh 双平台兼容）
@@ -390,9 +423,14 @@ $propsVersion = [regex]::Match((Read-Utf8 (Join-Path $RepoRoot "src/Directory.Bu
 $verMismatches = @()
 foreach ($vf in @("docs/specification/specification.md", "docs/user-manual/user-manual.md")) {
     $vt = Read-Utf8 (Join-Path $RepoRoot $vf)
-    if (-not $vt) { continue }
-    # specification「版本：v2.2.3」/ user-manual「**版本**：2.2.3」
-    $m = [regex]::Match($vt, '(?:版本|v)\s*[:：*]*\s*(v?\d+\.\d+\.\d+)')
+    # R16 (review-2026-09-05)：文件缺失/不可读原为静默 continue——改为 SKIP 计数输出，
+    # 对齐 Check-Skip"不计入 pass"语义（防止两文件全丢时检查 19 静默空转成 PASS）。
+    if (-not $vt) { Check-Skip "Doc version header ($vf)" "file missing/unreadable"; continue }
+    # specification「版本：v2.2.5」/ user-manual「**版本**：v2.2.5」
+    # R16：行首锚定——原无锚正则会命中正文任意位置的「版本：X.Y.Z」（如变更记录、示例），
+    # 与真正的文档版本头混淆。锚定后需保证 spec/user-manual 的版本头行（行首 + Markdown
+    # 前缀 > * #）仍命中（正向已实测）。
+    $m = [regex]::Match($vt, '(?m)^\s*[>*#\s]*(?:版本|Version|v)\s*[:：*]*\s*(v?\d+\.\d+\.\d+)')
     if (-not $m.Success -or $m.Groups[1].Value.TrimStart('v') -ne $propsVersion) {
         $verMismatches += "${vf}: '$($m.Groups[1].Value)' (props=$propsVersion)"
     }

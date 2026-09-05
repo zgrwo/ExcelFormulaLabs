@@ -82,7 +82,7 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 
 ### 4.1 测试体系
 
-- 2,466 个 [Fact]（xUnit + FluentAssertions；[Theory]=0，review-2026-08-31 修正——原"2,444 单元测试（[Fact]/[Theory]）"的措辞与数字均过期）
+- 2,540 个 [Fact]（xUnit + FluentAssertions；[Theory]=0，review-2026-08-31 修正——原"2,444 单元测试（[Fact]/[Theory]）"的措辞与数字均过期；2026-09-05 修复轮 rg 实测回填）
 - Python 交叉验证（scipy/numpy 独立计算，容差 1e-10）
 - 手册示例验证（verify-manual.py 全 UDF 覆盖）
 - XLL 加载/卸载自动化测试
@@ -97,14 +97,14 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 ### 4.3 已知限制
 
 - IntelliSense 仅限 net48（Excel-DNA Issue #343）
-- MathNet QR 不支持宽矩阵 m<n（已用零填充绕过）
+- MathNet QR 不支持宽矩阵 m<n（宽矩阵输入显式抛 NotSupportedException 并引导 SVD/转置；零填充方案已废弃——会产生静默错误结果）
 - 双加载项同时卸载需逐一操作
 
 ## 5. 历史演化摘要
 
 | 阶段 | 时间 |  commits | 关键事件 |
 |------|------|----------|----------|
-| 初始版本 | 06-22 | 1 | 236 UDF + 2,466 测试（现计数） |
+| 初始版本 | 06-22 | 1 | 236 UDF + 2,540 测试（现计数） |
 | 审查修复期 | 06-22 ~ 07-05 | ~60 | 多轮深度审查，NaN守卫/安全加固/文档体系 |
 | 功能扩展期 | 07-05 ~ 07-15 | ~30 | CORRMATRIX/交叉验证/IntelliSense |
 | 稳定发行期 | 07-15 ~ 07-23 | ~47 | v1.0.4→v1.0.7，审查修复+性能优化 |

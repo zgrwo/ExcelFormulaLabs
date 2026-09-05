@@ -72,12 +72,12 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
 | `LINALG.DET` | (array) | `double` | 矩阵行列式值。对标 Excel MDETERM |
-| `LINALG.SOLVE` | (array1, array2) | `double[]` | 解线性方程组 Ax = b |
+| `LINALG.SOLVE` | (array1, array2) | `double[]` | 解线性方程组 Ax = b。奇异/病态（条件数 > 1e14）→ `#VALUE!`（奇异系统可用 `LINALG.PINV`） |
 | `LINALG.MATMUL` | (array1, array2) | `double[,]` | 矩阵乘法。对标 Excel MMULT |
 | `LINALG.TRANSPOSE` | (array) | `double[,]` | 矩阵转置。对标 Excel TRANSPOSE |
 | `LINALG.TRACE` | (array) | `double` | 矩阵迹（对角线元素之和） |
 | `LINALG.RANK` | (array, [tolerance]) | `long` | 数值秩（默认容差 0 = 相对，numpy 约定；显式传绝对阈值仍支持） |
-| `LINALG.COND` | (array) | `double` | 条件数（2-范数） |
+| `LINALG.COND` | (array) | `double` | 条件数（2-范数）。奇异矩阵 → `NaN`（原 +∞，2026-09-05 改为 NaN 封顶） |
 | `LINALG.EIGEN` | (array) | `double[]` | 特征值。要求对称矩阵，非对称输入返回错误 |
 | `LINALG.SVD_U` | (array) | `double[,]` | SVD 左奇异向量矩阵 U。A = U·diag(S)·Vt |
 | `LINALG.SVD_S` | (array) | `double[]` | SVD 奇异值向量 S（降序排列） |
@@ -88,7 +88,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `LINALG.LU_U` | (array) | `double[,]` | LU 分解上三角矩阵 U。A = P*L*U |
 | `LINALG.LU_P` | (array) | `double[,]` | LU 分解置换矩阵 P。A = P*L*U |
 | `LINALG.PINV` | (array) | `double[,]` | Moore-Penrose 伪逆 |
-| `LINALG.CHOLESKY` | (array) | `double[,]` | Cholesky 分解 |
+| `LINALG.CHOLESKY` | (array) | `double[,]` | Cholesky 分解。要求对称矩阵，非对称 → `#VALUE!` |
 | `LINALG.IDENTITY` | (size) | `double[,]` | 生成 n×n 单位矩阵 |
 | `LINALG.SVD_U_ASYNC` | (array) | `double[,]` | SVD 左奇异向量 U（异步，大矩阵不阻塞 UI） |
 | `LINALG.SVD_S_ASYNC` | (array) | `double[]` | SVD 奇异值 S（异步） |
@@ -112,7 +112,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 |------|------|------|------|
 | `REGRESS.OLS` | (known_y, known_x) | `object[11,?]` | **普通最小二乘法**。对标 Excel LINEST。返回 11 行报告：`coefficients`(系数)、`sse`(残差平方和)、`r_squared`(R²)、`adj_r_squared`(调整R²)、`residuals`(残差)、`fitted_values`(拟合值)、`standard_errors`(标准误)、`t_stats`(t值)、`p_values`(p值)、`n`(样本量)、`df`(自由度)。数组字段横向展开到多列。`p<0.05` 该系数显著。 |
 | `REGRESS.WLS` | (known_y, known_x, weights) | `object[11,?]` | **加权最小二乘法**（异方差数据）。返回同 OLS 的 11 行报告。 |
-| `REGRESS.RIDGE` | (known_y, known_x, [lambda]) | `object[8,?]` | **岭回归**（L2 正则化，防过拟合）。λ 默认 1.0。返回 8 行：`coefficients`、`sse`、`r_squared`、`residuals`、`fitted_values`、`lambda`(惩罚参数)、`n`、`df`。**不返回**标准误/t值/p值（正则化下推断无效）。 |
+| `REGRESS.RIDGE` | (known_y, known_x, [lambda]) | `object[8,?]` | **岭回归**（L2 正则化，防过拟合）。λ 默认 1.0。返回 8 行：`coefficients`、`sse`、`r_squared`、`residuals`、`fitted_values`、`lambda`(惩罚参数)、`n`、`df`(简化口径 = 预测变量数 p；岭回归有效自由度严格应为 tr(H)，当前实现按 p 报告)。**不返回**标准误/t值/p值（正则化下推断无效）。 |
 | `REGRESS.ANOVA1` | (input_range) | `object[12,?]` | **单因素方差分析**。数据按列分组（每列一组）。返回 12 行：`ss_between`(组间平方和)、`ss_within`(组内平方和)、`ss_total`、`df_between`、`df_within`、`df_total`、`ms_between`、`ms_within`、`f_stat`(F值)、`p_value`(p值)、`group_means`(各组均值)、`group_counts`(各组样本量)。数组字段横向展开到多列。`p<0.05` = 至少有一组均值显著不同。 |
 | `REGRESS.FACTORIMP` | (known_y, known_x) | `double[]` | **因子重要性排名**。按标准化后的 \|t\| 降序排列，返回 0-based 列索引数组。 |
 | `REGRESS.COEF` | (known_y, known_x) | `double[]` | OLS 回归系数向量（仅 beta）。 |
@@ -247,7 +247,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `REGEX.MATCH` | (text, pattern, [ignore_case], [instance_num]) | `string` | 第 instance_num 个匹配子串。1=第一个（默认），-1=最后一个，无匹配或越界返回 `""` |
 | `REGEX.MATCHALL` | (text, pattern, [ignore_case]) | `string[]` | 所有正则匹配为数组。**不支持数组公式**（直接处理标量文本） |
 | `REGEX.REPLACE` | (text, pattern, replacement, [ignore_case], [instance_num]) | `string` | 替换第 instance_num 个正则匹配。0/省略=全部（默认），1=第一个，-1=最后一个 |
-| `REGEX.SPLIT` | (text, pattern, [ignore_case], [instance_num]) | `string[]` | 按正则分隔符拆分。0/省略=全部（默认），>0=最多拆 instance_num 次（得 instance_num+1 段） |
+| `REGEX.SPLIT` | (text, pattern, [ignore_case], [instance_num]) | `string[]` | 按正则分隔符拆分。0/省略=无限拆分（默认），>0=最多拆 instance_num 次（得 instance_num+1 段），>100,000 饱和到 100,000（不报错） |
 | `REGEX.GROUPS` | (text, pattern, [ignore_case]) | `object[2,n]` | 捕获组。row0=组名, row1=值。`[0]`=完整匹配 |
 | `REGEX.ESCAPE` | (text) | `string` | 转义正则特殊字符 |
 | `REGEX.ISMATCH` | (text, pattern) | `bool` | 不区分大小写匹配（REGEX.TEST ignore_case=true 的别名） |
@@ -301,7 +301,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
-| `JSON.PARSE` | (json_text) | `object[,]` | 解析 JSON 为嵌套表/数组 |
+| `JSON.PARSE` | (json_text) | `object` | 解析 JSON 为原生结构：标量/一维标量数组正常返回；嵌套对象/数组渲染为非表格（需二维表时用 `JSON.TOTABLE`） |
 | `JSON.QUERY` | (json_text, json_path) | `object` | 点路径查询。如 `"store.book[0].title"` |
 | `JSON.VALIDATE` | (json_text) | `bool` | 是否为合法 JSON |
 | `JSON.PRETTIFY` | (json_text) | `string` | JSON 格式化（缩进美化） |

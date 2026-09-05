@@ -27,30 +27,14 @@ namespace ExcelFormulaLabs.Analytics
         // review 2026-08-31（深度审查 P1-20）：M(d)/V(d) 原在 ExcelAsyncUtil.Run 的 lambda 内——
         // 委托在线程池线程执行，而 PrepM/PrepV → NormalizeTo2D → TryExtractComRangeValue 会做
         // Marshal.IsComObject + dynamic COM 派发，跨线程触碰 COM 是 Excel-DNA 异步契约禁止的
-        // （经典随机崩溃模式）。全部改为在调用线程完成转换，lambda 只接收纯 double[,]/double[]；
-        // RTD topic key 用紧凑的"维度+内容哈希"（原把整个 object[,] 作为 key 成员，有长度/唯一性风险）。
-        private static object AsyncKey(double[,] m)
-        {
-            unchecked
-            {
-                long h = 17;
-                for (int r = 0; r < m.GetLength(0); r++)
-                    for (int c = 0; c < m.GetLength(1); c++)
-                        h = h * 31 + BitConverter.DoubleToInt64Bits(m[r, c]);
-                return $"{m.GetLength(0)}x{m.GetLength(1)}:{h:X16}";
-            }
-        }
+        // （经典随机崩溃模式）。全部改为在调用线程完成转换，lambda 只接收纯 double[,]/double[]。
+        // review 2026-09-05（R24）：topic key 原为单 64 位 31-进制哈希——哈希碰撞会使 RTD 把
+        // 另一个矩阵/向量的缓存结果静默返回给本单元格（错值无任何信号）。改为复用 LinalgCore
+        // 的 128 位双 FNV-1a 内容哈希（与 DecompCache.MatrixHash 同一实现：32 个十六进制位
+        // + 维度/长度后缀），碰撞概率与分解缓存对齐。
+        private static object AsyncKey(double[,] m) => LinalgCore.MatrixHash(m);
 
-        private static object AsyncKeyV(double[] v)
-        {
-            unchecked
-            {
-                long h = 17;
-                for (int i = 0; i < v.Length; i++)
-                    h = h * 31 + BitConverter.DoubleToInt64Bits(v[i]);
-                return $"V{v.Length}:{h:X16}";
-            }
-        }
+        private static object AsyncKeyV(double[] v) => LinalgCore.VectorHash(v);
 
         [ExcelFunction(Name = "LINALG.SVD_U_ASYNC", Description = "SVD left singular vectors (U matrix), computed asynchronously.")]
         public static object UDF_LINALG_SVD_U_ASYNC([ExcelArgument(Name = "array", Description = "A range or 2D array")] object d)

@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Text.RegularExpressions;
 using ExcelFormulaLabs.Analytics;
 using FluentAssertions;
 using Xunit;
@@ -126,12 +127,13 @@ namespace ExcelFormulaLabs.Analytics.Tests
             act.Should().Throw<ArgumentException>().WithMessage("*symmetric*");
         }
 
-        [Fact] public void ConditionNumber_singular()
+        [Fact] public void ConditionNumber_singular_returns_NaN()
         {
-            // Singular matrix → condition number approaches ∞
+            // review 2026-09-05（N05）：奇异矩阵 cond=+∞ 原样返回违反模块 Inf→NaN 约定。
+            // 原断言 BeGreaterThan(1e10) 隐式接受 +Inf，按新语义更新为 NaN（封顶后）。
             var cond = LinalgCore.ConditionNumber(
                 new double[,] { { 1, 2 }, { 2, 4 } });
-            cond.Should().BeGreaterThan(1e10);
+            double.IsNaN(cond).Should().BeTrue();
         }
 
         [Fact] public void NormFrobenius_non_square()
@@ -389,6 +391,121 @@ namespace ExcelFormulaLabs.Analytics.Tests
         // 尺度化实现应返回 1.4142135623730951e200。
         var m = new double[,] { { 1e200, 1e200 } };
         LinalgCore.NormFrobenius(m).Should().BeApproximately(1.4142135623730951e200, 1e185);
+    }
+
+    // ── review-2026-09-05（R05）：EnsureSymmetric 纯相对判据 ──
+    [Fact] public void Eigenvalues_small_scale_asymmetric_rejected()
+    {
+        // [[0,0],[1e-9,0]]：相对 100% 非对称。修复前 scale 下限 1.0 → 阈值 1e-8 →
+        // diff=1e-9 < 1e-8 被误判对称 → Evd 静默按错误矩阵分解。现与大量纲同路径拒绝。
+        var act = () => LinalgCore.Eigenvalues(new double[,] { { 0.0, 0.0 }, { 1e-9, 0.0 } });
+        act.Should().Throw<ArgumentException>().WithMessage("*symmetric*");
+    }
+
+    [Fact] public void Eigenvalues_zero_matrix_accepted()
+    {
+        // 全零矩阵：diff=0、scale=0 → `0 > 0` 不触发（无除法，无除零），正常分解。
+        var e = LinalgCore.Eigenvalues(new double[2, 2]);
+        e.Length.Should().Be(2);
+        e.Should().AllBeEquivalentTo(0.0);
+    }
+
+    [Fact] public void Eigenvalues_large_scale_rounding_asymmetry_tolerated()
+    {
+        // P1-5 既有行为锁定：1e9 量纲 ULP≈2.4e-7，理论对称矩阵因舍入差 1 ULP 仍判对称
+        // （阈值 = 1e-8×scale，scale 由 Math.Max(1.0,·) 改 maxAbs 后在大量纲下不变）。
+        double ulp = BitConverter.Int64BitsToDouble(BitConverter.DoubleToInt64Bits(1e9) + 1) - 1e9;
+        var m = new double[,] { { 1e9, 1e9 }, { 1e9 + ulp, 1e9 } };
+        LinalgCore.Eigenvalues(m).Length.Should().Be(2);
+    }
+
+    // ── review-2026-09-05（N04）：Cholesky 非对称拒绝（与 Eigen 同族对齐）──
+    [Fact] public void Cholesky_non_symmetric_throws()
+    {
+        // 非对称 {1,0.5;0,1} 原先被 MathNet 静默按 {1,0;0.5,1} 分解（只读三角）。
+        // 现复用 EnsureSymmetric → 与 Eigenvalues 相同的拒绝路径与异常类型。
+        var act = () => LinalgCore.Cholesky(new double[,] { { 1, 0.5 }, { 0, 1 } });
+        act.Should().Throw<ArgumentException>().WithMessage("*symmetric*");
+    }
+
+    [Fact] public void Cholesky_small_scale_symmetric_ok()
+    {
+        // R05 联动：小量纲对称矩阵（scale < 1）不再被下限干扰，正常分解。
+        // SPD：[[1e-9,0],[0,1e-9]] → L = diag(√1e-9)=diag(3.1622776601683795e-5)。
+        var l = LinalgCore.Cholesky(new double[,] { { 1e-9, 0.0 }, { 0.0, 1e-9 } });
+        l[0, 0].Should().BeApproximately(3.1622776601683795e-5, 1e-20);
+        l[1, 1].Should().BeApproximately(3.1622776601683795e-5, 1e-20);
+        l[0, 1].Should().Be(0.0);
+        l[1, 0].Should().Be(0.0);
+    }
+
+    // ── review-2026-09-05（R21）：求解前条件数守卫 ──
+    private static double[,] Hilbert(int n)
+    {
+        var h = new double[n, n];
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < n; j++)
+                h[i, j] = 1.0 / (i + j + 1);
+        return h;
+    }
+    // b = H·ones → 构造解恒为全 1（独立于被测实现构造 b）。
+    private static double[] HilbertTimesOnes(int n)
+    {
+        var b = new double[n];
+        for (int i = 0; i < n; i++)
+        {
+            double s = 0;
+            for (int j = 0; j < n; j++) s += 1.0 / (i + j + 1);
+            b[i] = s;
+        }
+        return b;
+    }
+
+    [Fact] public void Solve_hilbert12_near_singular_throws()
+    {
+        // Hilbert 12×12：cond≈1.6e16 > 1e14。修复前 MathNet LU 静默返回错得离谱但
+        // 全部有限的解。现求解前显式拒绝；消息含 "singular" 与实测 cond 值。
+        var act = () => LinalgCore.Solve(Hilbert(12), HilbertTimesOnes(12));
+        act.Should().Throw<ArgumentException>().WithMessage("*singular*condition number*");
+    }
+
+    [Fact] public void Solve_hilbert8_ill_but_solvable()
+    {
+        // Hilbert 8×8：cond≈1.5e10 < 1e14 → 病态但可解区间不得误拒。
+        // b = H·ones（手工构造）→ 解 ≈ 全 1（前向误差 ~cond·eps ≈ 3e-6，容差 1e-4）。
+        var x = LinalgCore.Solve(Hilbert(8), HilbertTimesOnes(8));
+        for (int i = 0; i < 8; i++) x[i].Should().BeApproximately(1.0, 1e-4);
+    }
+
+    [Fact] public void Solve_exact_singular_still_throws_singular_message()
+    {
+        // 精确奇异（cond=+∞ 非有限）→ 新守卫先行抛出；消息保留 "singular" 契约
+        // （既有 WithMessage("*singular*") 断言由此继续成立）。
+        var act = () => LinalgCore.Solve(new double[,] { { 1, 1 }, { 1, 1 } }, new[] { 1.0, 2.0 });
+        act.Should().Throw<ArgumentException>().WithMessage("*singular*condition number*");
+    }
+
+    // ── review-2026-09-05（R24）：128 位内容哈希（async topic key / 分解缓存共用）──
+    [Fact] public void MatrixHash_is_128bit_and_content_sensitive()
+    {
+        var k1 = LinalgCore.MatrixHash(new double[,] { { 1, 2 }, { 3, 4 } });
+        var k2 = LinalgCore.MatrixHash(new double[,] { { 1, 2 }, { 3, 4.0000001 } });
+        var k3 = LinalgCore.MatrixHash(new double[,] { { 1, 2 }, { 3, 4 } });
+        k1.Should().Be(k3);      // 同内容 → 同 key
+        k1.Should().NotBe(k2);   // 内容不同 → key 不同
+        k1.Should().NotBe(LinalgCore.MatrixHash(new double[,] { { 1, 2 }, { 3, 4 }, { 5, 6 } })); // 维度参与
+        // 128 位 = 32 个十六进制位 + "_RxC" 后缀。
+        Regex.IsMatch(k1, @"^[0-9A-F]{32}_2x2$").Should().BeTrue();
+    }
+
+    [Fact] public void VectorHash_is_128bit_and_content_sensitive()
+    {
+        var k1 = LinalgCore.VectorHash(new[] { 1.0, 2.0, 3.0 });
+        k1.Should().Be(LinalgCore.VectorHash(new[] { 1.0, 2.0, 3.0 }));   // 同内容 → 同 key
+        k1.Should().NotBe(LinalgCore.VectorHash(new[] { 1.0, 2.0, 4.0 })); // 内容不同
+        k1.Should().NotBe(LinalgCore.VectorHash(new[] { 1.0, 2.0 }));      // 长度参与两路哈希
+        k1.Should().NotBe(LinalgCore.MatrixHash(new double[,] { { 1 }, { 2 }, { 3 } })); // 与矩阵 key 域分离
+        Regex.IsMatch(k1, @"^V3:[0-9A-F]{32}$").Should().BeTrue();
     }
 }
 }

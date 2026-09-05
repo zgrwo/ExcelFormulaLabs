@@ -14,8 +14,11 @@ foreach ($s in $scripts) {
     Write-Host ""
     Write-Host "===== 运行 $s =====" -ForegroundColor Cyan
     # P2-6 (review-2026-08-31): 优先 pwsh 7（与 release.yml 一致，暴露 pwsh7 语义差异），回退 powershell 5.1
+    # R14 (review-2026-09-05)：原 L17-18 畸形拼接——$hostCmd 计算后未使用，L18 实为双重
+    # -File 拼接（$hostCmd 连同第二组参数被当脚本位置参数吞进 $args），pwsh 优先策略从未
+    # 生效、恒以 powershell 运行。改为单一 & $hostCmd 调用。
     $hostCmd = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell" }
-        & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $dir "scripts\$s") $hostCmd -NoProfile -ExecutionPolicy Bypass -File (Join-Path $dir "scripts\$s")
+    & $hostCmd -NoProfile -ExecutionPolicy Bypass -File (Join-Path $dir "scripts\$s")
     if ($LASTEXITCODE -ne 0) { $failures += $s }
 }
 Write-Host ""

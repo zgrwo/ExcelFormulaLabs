@@ -81,7 +81,10 @@ public static class Dispatcher
         Register("LinalgCore", "MatMul", (a, _) => LinalgCore.MatMul(ToDouble2D(a[0]), ToDouble2D(a[1])));
         Register("LinalgCore", "Transpose", (a, _) => LinalgCore.Transpose(ToDouble2D(a[0])));
         Register("LinalgCore", "Trace", (a, _) => LinalgCore.Trace(ToDouble2D(a[0])));
-        Register("LinalgCore", "Rank", (a, k) => LinalgCore.Rank(ToDouble2D(a[0]), Kwarg(k, "tol", 1e-10)));
+        // review 2026-09-05（R12）：tol 默认对齐 LinalgCore.Rank(:266)/LinalgUdf(:77)/api-reference
+        // （0 = 相对容差，MATLAB/numpy 约定）——此前 harness 独用 1e-10 绝对默认，Excel 中用户
+        // 实际走的相对默认路径从未被 CrossVal 覆盖。
+        Register("LinalgCore", "Rank", (a, k) => LinalgCore.Rank(ToDouble2D(a[0]), Kwarg(k, "tol", 0d)));
         Register("LinalgCore", "ConditionNumber", (a, _) => LinalgCore.ConditionNumber(ToDouble2D(a[0])));
         Register("LinalgCore", "Eigenvalues", (a, _) => LinalgCore.Eigenvalues(ToDouble2D(a[0])));
         Register("LinalgCore", "Cholesky", (a, _) => LinalgCore.Cholesky(ToDouble2D(a[0])));
@@ -222,7 +225,9 @@ public static class Dispatcher
                 .Select<JsonElement, object?>(x => x.ValueKind == JsonValueKind.String ? x.GetString() : x.GetDouble()).ToArray()).ToArray();
             int h = rows.Length, w = rows.Length > 0 ? rows[0].Length : 0;
             var m2 = new object[h, w];
-            for (int i = 0; i < h; i++) for (int j = 0; j < w; j++) m2[i, j] = rows[i][j];
+            // review 2026-09-05（R10）：JSON 数组元素已解析为 string/double（ValueKind Null
+            // 走不到此处——GetDouble 会响亮抛出），元素不可能为 null，null-forgiving 消除 CS8601。
+            for (int i = 0; i < h; i++) for (int j = 0; j < w; j++) m2[i, j] = rows[i][j]!;
             return m2;
         }
         throw new ArgumentException($"Cannot convert to object[,]: {v?.GetType().Name}");
@@ -237,7 +242,9 @@ public static class Dispatcher
             return je.ValueKind switch
             {
                 JsonValueKind.Number => je.TryGetInt64(out long l) ? l : je.GetDouble(),
-                JsonValueKind.String => je.GetString(),
+                // review 2026-09-05（R10）：ValueKind==String 时 GetString() 非 null（JSON 字符串
+                // 节点），null-forgiving 消除 CS8603；Null 节点落入 `_` 分支返回 GetRawText()。
+                JsonValueKind.String => je.GetString()!,
                 JsonValueKind.True => true,
                 JsonValueKind.False => false,
                 _ => je.GetRawText(),

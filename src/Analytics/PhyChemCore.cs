@@ -33,6 +33,8 @@ namespace ExcelFormulaLabs.Analytics
         };
 
         private static readonly Regex ElemRx = new(@"([A-Z][a-z]?)(\d*)", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
+        // review 2026-09-05（N06）：整串消费校验——元素记号必须覆盖全部输入（与 ElemRx 同构）。
+        private static readonly Regex ElemFullRx = new(@"^([A-Z][a-z]?\d*)+$", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
         private static readonly Regex ParenRx = new(@"\(([^()]+)\)(\d*)", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
         private static readonly Regex BrackRx = new(@"\[([^\[\]]+)\](\d*)", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
 
@@ -86,6 +88,10 @@ namespace ExcelFormulaLabs.Analytics
                 ExpandGroup(m.Groups[1].Value, ParseCount(m.Groups[2].Value)));
             formula = ParenRx.Replace(formula, m =>
                 ExpandGroup(m.Groups[1].Value, ParseCount(m.Groups[2].Value)));
+            // review 2026-09-05（N06）：元素扫描后若残留未消费字符（如 "H2Oxyz"），原实现
+            // 静默按已匹配部分计算（= 18.015），而全小写 "h2o"（零匹配）却返回 NaN——拒收
+            // 不一致。改为整串必须被元素记号完全消费，残留 → NaN（拒收口径一致化）。
+            if (!ElemFullRx.IsMatch(formula)) return double.NaN;
             double mw = 0;
             bool matched = false;
             foreach (Match m in ElemRx.Matches(formula))
@@ -135,14 +141,18 @@ namespace ExcelFormulaLabs.Analytics
                 "K" or "KELVIN" => v,
                 _ => double.NaN,
             };
-            if (double.IsNaN(k)) return double.NaN;
-            return to.ToUpperInvariant() switch
+            // review 2026-09-05（N08b）：绝对零守卫（对齐 GASSTP 的 tK<=0 拒收）——k 即
+            // 换算中间量/结果所在的 K 温标值，≤ 0 物理无意义（-300℃ → -26.85 K 曾静默返回）。
+            if (double.IsNaN(k) || k <= 0) return double.NaN;
+            // review 2026-09-05（N08a）：有限大输入（1e308）× 换算常数可溢出 ±Inf → NaN 封顶
+            // （模块约定，见 CapNaN）。
+            return CapNaN(to.ToUpperInvariant() switch
             {
                 "C" or "CELSIUS" => k - 273.15,
                 "F" or "FAHRENHEIT" => (k - 273.15) * 9.0 / 5.0 + 32,
                 "K" or "KELVIN" => k,
                 _ => double.NaN,
-            };
+            });
         }
 
         internal static double ConvertPressure(double v, string from, string to)
@@ -155,12 +165,14 @@ namespace ExcelFormulaLabs.Analytics
                 _ => double.NaN,
             };
             if (double.IsNaN(pa)) return double.NaN;
-            return to.ToUpperInvariant() switch
+            // review 2026-09-05（N08a）：有限大输入 × 换算常数（如 1e308 atm → Pa）可溢出
+            // ±Inf → NaN 封顶（模块约定）。
+            return CapNaN(to.ToUpperInvariant() switch
             {
                 "ATM" => pa / 101325, "PA" or "PASCAL" => pa, "KPA" => pa / 1000,
                 "BAR" => pa / 100000, "PSI" => pa / 6894.757293168, "MMHG" or "TORR" => pa / 133.322387415,
                 _ => double.NaN,
-            };
+            });
         }
 
         internal static double ConvertVolume(double v, string from, string to)
@@ -172,12 +184,13 @@ namespace ExcelFormulaLabs.Analytics
                 "GAL" or "GALLON" => v * 3.78541, "QT" or "QUART" => v * 0.946353,
                 "FT3" => v * 28.3168, _ => double.NaN,
             };
-            return to.ToUpperInvariant() switch
+            // review 2026-09-05（N08a）：有限大输入 × 换算常数可溢出 ±Inf → NaN 封顶（模块约定）。
+            return CapNaN(to.ToUpperInvariant() switch
             {
                 "L" or "LITER" => l, "ML" => l * 1000, "M3" => l / 1000,
                 "GAL" or "GALLON" => l / 3.78541, "QT" or "QUART" => l / 0.946353,
                 "FT3" => l / 28.3168, _ => double.NaN,
-            };
+            });
         }
 
         internal static double ConvertMass(double v, string from, string to)
@@ -189,12 +202,13 @@ namespace ExcelFormulaLabs.Analytics
                 "LB" or "LBS" => v * 453.59237, "OZ" => v * 28.3495, "TON" => v * 1e6,
                 _ => double.NaN,
             };
-            return to.ToUpperInvariant() switch
+            // review 2026-09-05（N08a）：有限大输入 × 换算常数可溢出 ±Inf → NaN 封顶（模块约定）。
+            return CapNaN(to.ToUpperInvariant() switch
             {
                 "KG" => g / 1000, "G" or "GRAM" => g, "MG" => g * 1000,
                 "LB" or "LBS" => g / 453.59237, "OZ" => g / 28.3495, "TON" => g / 1e6,
                 _ => double.NaN,
-            };
+            });
         }
 
         internal static double IdealGasLaw(double? p = null, double? v = null,

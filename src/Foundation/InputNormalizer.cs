@@ -183,6 +183,14 @@ namespace ExcelFormulaLabs.Foundation
         // Safe type coercion
         // ─────────────────────────────────────────────────────────────────
 
+        // review 2026-09-05（R23）：Excel-DNA 哨兵类型全名由"魔法字符串"收敛为 const。
+        // Foundation 不直接引用 ExcelDna.Integration（零依赖红线），只能按类型全名识别；
+        // 字面量由 Foundation.Tests 的 InputNormalizerSentinelTypeNames 测试锁定——若 Excel-DNA
+        // 升级改型名，测试会失败并提示同步。
+        private const string ExcelDnaMissingTypeName = "ExcelDna.Integration.ExcelMissing";
+        private const string ExcelDnaEmptyTypeName = "ExcelDna.Integration.ExcelEmpty";
+        private const string ExcelDnaErrorTypeName = "ExcelDna.Integration.ExcelError";
+
         /// <summary>
         /// Detect Excel-DNA's <c>ExcelMissing.Value</c> sentinel without a hard
         /// assembly reference. When a user omits an optional UDF argument in the
@@ -192,7 +200,7 @@ namespace ExcelFormulaLabs.Foundation
         public static bool IsExcelMissing(object? value)
         {
             return value != null
-                && value.GetType().FullName == "ExcelDna.Integration.ExcelMissing";
+                && value.GetType().FullName == ExcelDnaMissingTypeName;
         }
 
         /// <summary>
@@ -208,7 +216,7 @@ namespace ExcelFormulaLabs.Foundation
         {
             if (value == null) return false;
             return ReferenceEquals(value, ExcelEmpty.Value)
-                || value.GetType().FullName == "ExcelDna.Integration.ExcelEmpty";
+                || value.GetType().FullName == ExcelDnaEmptyTypeName;
         }
 
         /// <summary>
@@ -220,7 +228,7 @@ namespace ExcelFormulaLabs.Foundation
         {
             if (value == null) return false;
             return value is ExcelError
-                || value.GetType().FullName == "ExcelDna.Integration.ExcelError";
+                || value.GetType().FullName == ExcelDnaErrorTypeName;
         }
 
         /// <summary>
@@ -274,6 +282,10 @@ namespace ExcelFormulaLabs.Foundation
             if (value is double d)
             {
                 if (double.IsNaN(d) || double.IsInfinity(d)) return 0; // L1 NaN/Inf guard
+                // review 2026-09-05（R26 修正）：Math.Round 默认 ToEven（中点取偶）为有意行为——
+                // 与移植源 VBA CLng 的银行家舍入一致（保真）。真实影响面 = 所有经 ToLong/ToInt32
+                // 的半整数参数（如 STR.SUBSTITUTE 的 instance_num），与 Excel INT 截断的分歧仅限
+                // 奇数半整数且多被后续 clamp 掩盖。
                 double rd = Math.Round(d);
                 // review 2026-08-31（深度审查 P2-8）：`rd > long.MaxValue` 有 2⁶³ 漏洞——
                 // (double)long.MaxValue 不可精确表示，舍入为 2⁶³ = 9.223372036854776E18，
@@ -516,7 +528,7 @@ namespace ExcelFormulaLabs.Foundation
                 return result;
             }
 
-            if (input is Array multiDimArr && multiDimArr.Rank >= 2)
+            if (input is Array multiDimArr && multiDimArr.Rank == 2)
             {
                 int rows = multiDimArr.GetLength(0);
                 int cols = multiDimArr.GetLength(1);
@@ -524,6 +536,28 @@ namespace ExcelFormulaLabs.Foundation
                 for (int r = 0; r < rows; r++)
                     for (int c = 0; c < cols; c++)
                         result[r, c] = multiDimArr.GetValue(r, c)!;
+                return result;
+            }
+
+            // review 2026-09-05（N13）：Rank≥3 数组原落入 Rank≥2 分支，GetValue(int,int) 按 CLR
+            // 契约抛未捕获 ArgumentException（且只读 dim 0/1）。与 P2-17（NormalizeTo1D 多维
+            // 展平，2026-08-31）同法但保留 2D 形状：按行优先展平为 [n,1] 列向量（最右维最快
+            // 变化，与 object[,] 分支一致），不丢数据、不抛裸异常。
+            if (input is Array highRankArr && highRankArr.Rank >= 3)
+            {
+                var result = new object[highRankArr.Length, 1];
+                var idxArr = new int[highRankArr.Rank];
+                for (int i = 0; i < highRankArr.Length; i++)
+                {
+                    int rem = i;
+                    for (int d = highRankArr.Rank - 1; d >= 0; d--)
+                    {
+                        int dim = highRankArr.GetLength(d);
+                        idxArr[d] = rem % dim;
+                        rem /= dim;
+                    }
+                    result[i, 0] = highRankArr.GetValue(idxArr)!;
+                }
                 return result;
             }
 

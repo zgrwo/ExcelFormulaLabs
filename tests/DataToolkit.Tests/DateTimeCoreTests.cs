@@ -251,9 +251,13 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
     [Fact] public void WorkdaysBetween_reversed_dates_returns_negative()
     {
         // P1-12：日期倒置原静默返回 0（守卫只查上界）。Excel NETWORKDAYS 契约：倒置返回负数（对称）。
+        // review 2026-09-05（N14）：原断言 Be(-WorkdaysBetween(to,from)) 为自引用（期望由被测实现
+        // 生成）。改硬编码手算值：2026-03-02(一)→2026-03-20(五)，区间不含起点逐日数非周末：
+        // 3/3-3/6(4) + 3/9-3/13(5) + 3/16-3/20(5) = 14 个工作日。
         var from = new DateTime(2026, 3, 20);   // 周五
-        var to = new DateTime(2026, 3, 2);      // 早于 from
-        DateTimeCore.WorkdaysBetween(from, to).Should().Be(-DateTimeCore.WorkdaysBetween(to, from));
+        var to = new DateTime(2026, 3, 2);      // 周一，早于 from
+        DateTimeCore.WorkdaysBetween(from, to).Should().Be(-14);
+        DateTimeCore.WorkdaysBetween(to, from).Should().Be(14);
     }
 
     [Fact] public void AddWorkdays_long_min_value_throws()

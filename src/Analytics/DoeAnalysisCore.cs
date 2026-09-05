@@ -68,8 +68,16 @@ namespace ExcelFormulaLabs.Analytics
             for (int j = 0; j < nTerms; j++)
             {
                 double t = ts[j + 1];
-                double ssJ = double.IsNaN(t) || double.IsInfinity(t) ? double.NaN : mse * t * t;
-                double fJ = double.IsNaN(t) || double.IsInfinity(t) ? double.NaN : t * t;
+                // review 2026-09-05（N07）：原守卫只挡输入侧 t（NaN/Inf）——|t| ≤ 1e154 的
+                // 有限大 t 仍可能使 mse·t² / t² 溢出 ±Inf 直漏。结果侧补非有限→NaN 封顶
+                // （CapNaN，与 PhyChemCore 同一模块约定）。
+                // 静态依据（无法经公共输入触发，封顶为纵深防御）：上游 FitOLSCore 已守卫
+                // tss/sse 非有限；含截距时 x̃_j ⊥ 1 → SS_j = mse·t² ≤ tss（有限），且残差
+                // 量化下限 sse ≳ (ULP·‖y‖)² 使 |t| ≲ √(n·df)/eps ≈ 1e16（实测 y=4e153·±1
+                // + 1ULP 噪声 → F=3.15e31、SS=1.28e308 全部有限）——t 路径当前不可达 Inf，
+                // 封顶仅防御上游守卫被移除/语义变更后的回归。
+                double ssJ = double.IsNaN(t) || double.IsInfinity(t) ? double.NaN : CapNaN(mse * t * t);
+                double fJ = double.IsNaN(t) || double.IsInfinity(t) ? double.NaN : CapNaN(t * t);
                 result[j + 1, 0] = terms[j];
                 result[j + 1, 1] = ssJ;
                 result[j + 1, 2] = 1L;
@@ -220,5 +228,8 @@ namespace ExcelFormulaLabs.Analytics
             }
             return col;
         }
+
+        /// <summary>Non-finite result → NaN（模块约定：不向 Excel 泄漏 ±Inf）。</summary>
+        private static double CapNaN(double v) => double.IsInfinity(v) ? double.NaN : v;
     }
 }

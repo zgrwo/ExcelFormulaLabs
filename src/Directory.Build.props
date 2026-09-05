@@ -9,5 +9,8 @@
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/zgrwo/ExcelFormulaLabs</PackageProjectUrl>
+    <!-- review 2026-09-05（R10）：警告不进红线 → 静默回潮（实测 23 警告曾在门禁全绿下合入）。
+         src/ 全部警告清零后启用；tests 侧警告已同步清零但暂不强制（CrossValRunner 等工具工程独立演进）。 -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 </Project>

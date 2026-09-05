@@ -10,8 +10,25 @@ namespace ExcelFormulaLabs.DataToolkit
     /// <summary>Range export to HTML, JSON, Markdown, CSV + row/column operations. Ported from RangeUtils.bas.</summary>
     internal static class RangeExportCore
     {
+        // review 2026-09-05（N02）：四个导出函数补输出规模守卫——与 PivotCore 的 maxCells=1e6
+        // 纪律对齐（Pivot/Unpivot/GroupBy/CrossJoin 四处已有，RangeExport 全员缺位）。
+        // 整列选择（1,048,576 行 × 多列）此前会建巨型 StringBuilder（几十 MB～GB 级字符串），
+        // 32 位 Excel 冻结 + OOM 不可捕获（ExceptionFilters 排除 OOM）。分配前检查 + long 乘法防回绕。
+        private const long MaxExportCells = 1_000_000;
+
+        /// <summary>Guard: (rows × cols) must not exceed MaxExportCells. Call before any StringBuilder allocation.</summary>
+        private static void GuardExportSize(object[,] data, string op)
+        {
+            long cells = (long)data.GetLength(0) * data.GetLength(1);
+            if (cells > MaxExportCells)
+                throw new ArgumentException(
+                    $"{op} would export {data.GetLength(0):N0} rows × {data.GetLength(1):N0} cols = {cells:N0} cells. " +
+                    $"Maximum is {MaxExportCells:N0}. Reduce the range before exporting.");
+        }
+
         internal static string RangeToHtml(object[,] data, bool hasHeaders = true, string? tableClass = null)
         {
+            GuardExportSize(data, "RANGE.TOHTML");
             int rows = data.GetLength(0), cols = data.GetLength(1); var sb = new StringBuilder();
             string cls = tableClass != null ? $" class=\"{System.Net.WebUtility.HtmlEncode(tableClass)}\"" : "";
             sb.Append($"<table{cls}>");
@@ -21,6 +38,7 @@ namespace ExcelFormulaLabs.DataToolkit
 
         internal static string RangeToJson(object[,] data, bool hasHeaders = true, bool pretty = false)
         {
+            GuardExportSize(data, "RANGE.TOJSON");
             int rows = data.GetLength(0), cols = data.GetLength(1); var sb = new StringBuilder();
             string nl = pretty ? "\n" : "", sp = pretty ? "  " : ""; sb.Append('[');
             int startRow = hasHeaders ? 1 : 0;
@@ -32,6 +50,7 @@ namespace ExcelFormulaLabs.DataToolkit
 
         internal static string RangeToMarkdown(object[,] data, bool hasHeaders = true)
         {
+            GuardExportSize(data, "RANGE.TOMD");
             int rows = data.GetLength(0), cols = data.GetLength(1); if (rows == 0) return ""; var sb = new StringBuilder();
             for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(" | "); sb.Append(EscapeMarkdownCell(hasHeaders ? InputNormalizer.ToString(data[0, c]) : $"Col{c + 1}")); } sb.AppendLine();
             for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(" | "); sb.Append("---"); } sb.AppendLine();
@@ -52,6 +71,7 @@ namespace ExcelFormulaLabs.DataToolkit
         /// Kept for API compatibility with RangeToJson / RangeToMarkdown / RangeToHtml.</param>
         internal static string RangeToCsv(object[,] data, string delim = ",", bool quote = true, bool hasHeaders = true)
         {
+            GuardExportSize(data, "RANGE.TOCSV");
             int rows = data.GetLength(0), cols = data.GetLength(1); var sb = new StringBuilder(); int startRow = 0;
             for (int r = startRow; r < rows; r++)
             {

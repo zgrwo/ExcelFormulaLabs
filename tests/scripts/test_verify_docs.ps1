@@ -1,12 +1,15 @@
 ﻿# ============================================================================
-# test_verify_docs.ps1 — verify-docs.ps1 回归守卫（6 场景）
-# 场景 A：真实仓库副本 → 18 项检查全过（基线，防门禁自身回归）
+# test_verify_docs.ps1 — verify-docs.ps1 回归守卫（7 场景 A–G；G 含 3 个中文变体子用例）
+# 场景 A：真实仓库副本 → 19 项检查全过（基线，防门禁自身回归）
 # 场景 B：README 硬编码徽章 → 检查 9 FAIL
 # 场景 C：README 断链 → 检查 12 FAIL
 # 场景 D：.qoder 镜像漂移 → 检查 13 FAIL
 # 场景 E：api-reference UDF 计数漂移 → 检查 1 FAIL
 # 场景 F：csproj 描述函数计数漂移 → 检查 11 FAIL
 # 场景 G：散文式 UDF 计数漂移（AGENTS.md）→ 检查 16 FAIL
+#   G2/G3/G4：中文变体负向注入（R13 词表化 review-2026-09-05）：
+#     G2 `N 项 UDF`（模式 1a 量词扩 项）/ G3 `UDF 数量 N`（模式 1b 倒装）/
+#     G4 `N 个函数（UDF）`（模式 1c）——注入后检查 16 必须 FAIL
 # 用法：powershell -NoProfile -ExecutionPolicy Bypass -File tests/scripts/test_verify_docs.ps1
 # 注意：本测试复制仓库（排除 bin/obj/.git 等），耗时数秒，仅在 CI windows job 与本地运行。
 # ============================================================================
@@ -50,7 +53,7 @@ function Run-VerifyDocs {
 }
 
 # --- 场景 A：基线（真实仓库副本全绿）---
-Write-Host "[A] 基线：仓库副本 18 项检查全过"
+Write-Host "[A] 基线：仓库副本 19 项检查全过"
 $fixture = Copy-RepoFixture
 Run-VerifyDocs $fixture "全部通过" $false
 
@@ -103,6 +106,29 @@ $contentG = [System.IO.File]::ReadAllText($agentsG, (New-Object System.Text.UTF8
 $contentG = $contentG -replace '236 UDF', '999 UDF'
 [System.IO.File]::WriteAllText($agentsG, $contentG, (New-Object System.Text.UTF8Encoding($false)))
 Run-VerifyDocs $fixtureG "Prose UDF counts" $true
+
+# --- 场景 G2/G3/G4：中文变体负向注入（R13 词表化，review-2026-09-05）---
+# 注入文本用码点构造：规避本测试脚本在 PS5.1 无 BOM 环境下的编码歧义（与注入目标无关）。
+$cXiang  = [char]0x9879                                     # 项
+$cShu    = [string][char]0x6570 + [char]0x91CF              # 数量
+$cGeFn   = [string][char]0x4E2A + [char]0x51FD + [char]0x6570  # 个函数
+$cLp     = [char]0xFF08                                     # （
+$cRp     = [char]0xFF09                                     # ）
+
+Write-Host "[G2] 中文变体「N 项 UDF」漂移应 FAIL（检查 16 模式 1a）"
+$fixtureG2 = Copy-RepoFixture
+[System.IO.File]::AppendAllText((Join-Path $fixtureG2 "AGENTS.md"), "`n999 $cXiang UDF`n", (New-Object System.Text.UTF8Encoding($false)))
+Run-VerifyDocs $fixtureG2 "Prose UDF counts" $true
+
+Write-Host "[G3] 中文倒装「UDF 数量 N」漂移应 FAIL（检查 16 模式 1b）"
+$fixtureG3 = Copy-RepoFixture
+[System.IO.File]::AppendAllText((Join-Path $fixtureG3 "AGENTS.md"), "`nUDF $cShu 999`n", (New-Object System.Text.UTF8Encoding($false)))
+Run-VerifyDocs $fixtureG3 "Prose UDF counts" $true
+
+Write-Host "[G4] 中文变体「N 个函数（UDF）」漂移应 FAIL（检查 16 模式 1c）"
+$fixtureG4 = Copy-RepoFixture
+[System.IO.File]::AppendAllText((Join-Path $fixtureG4 "AGENTS.md"), "`n999 $cGeFn$cLp UDF $cRp`n", (New-Object System.Text.UTF8Encoding($false)))
+Run-VerifyDocs $fixtureG4 "Prose UDF counts" $true
 
 # --- 汇总 ---
 Remove-Item -Recurse -Force $tmpRoot

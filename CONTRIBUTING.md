@@ -35,31 +35,32 @@ python scripts/verify-manual.py
 1. **Fork** 本仓库到你的 GitHub 账户
 2. **创建分支**：`git checkout -b fix/描述` 或 `feat/描述`
 3. **编写代码**（遵循下方规范）
-4. **本地验证**：确保 5 步验证全部通过
+4. **本地验证**：确保 6 步验证全部通过
 5. **提交 PR**：填写 PR 模板，描述变更内容和测试结果
 
-### 5 步验证（提交前必须通过）
+### 6 步验证（提交前必须通过，与 `scripts/verify-all.ps1` 同序）
 
 ```powershell
-# ① 文档一致性（18 项检查）
+# ① 文档一致性（19 项检查）
 powershell -File scripts/verify-docs.ps1
 
-# ② 全量单元测试（双 TFM）
+# ② 构建（双 TFM）
+dotnet build
+
+# ③ 全量单元测试（双 TFM）
 dotnet test --verbosity normal
 
-# ③ 交叉验证
-dotnet build tests/CrossValRunner
-dotnet run --project tests/CrossValRunner -- tests/CrossValRunner/test_manifest.json
-
-# ④ 手册验证
+# ④ 交叉验证（verify-manual.py 内部运行 CrossValRunner.exe 做 C# 对照）
 python scripts/verify-manual.py
 
-# ⑤ Release 构建
+# ⑤ 提交前红线（6 项）
+powershell -File scripts/pre-commit-check.ps1
+
+# ⑥ Release 构建
 dotnet build -c Release
 ```
 
-> 另有两条轻量门禁：`powershell -File scripts/pre-commit-check.ps1`（6 项红线）与
-> `powershell -File tests/scripts/run-tests.ps1`（治理脚本自测）。使用 Qoder 本地工具时，修改
+> 另有治理脚本自测：`powershell -File tests/scripts/run-tests.ps1`。使用 Qoder 本地工具时，修改
 > `skills/` 后运行 `powershell -File scripts/sync-qoder-skills.ps1` 同步本地 .qoder 镜像（不入库）。
 
 ## 编码规范
@@ -131,7 +132,7 @@ git config core.hooksPath scripts/git-hooks
 4. 提交并推送（提交信息建议 `release: vX.Y.Z`）
 5. 打 tag 并推送：`git tag vX.Y.Z && git push origin vX.Y.Z` → release.yml 自动构建、打包 xll、推送 NuGet、创建 GitHub Release
 
-> 发布前本地运行 `scripts/verify-all.ps1`（5 步门）+ `scripts/verify-docs.ps1` 确认全绿。
+> 发布前本地运行 `scripts/verify-all.ps1`（6 步门）+ `scripts/verify-docs.ps1` 确认全绿。
 
 ## 许可证
 

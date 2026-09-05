@@ -84,12 +84,24 @@ namespace ExcelFormulaLabs.DataToolkit
         /// Split by regex with optional max-split limit.
         /// n=0 (default) = split at all matches (unlimited).
         /// n>0 = split at most n times (yields at most n+1 parts).
+        /// n saturates at 100,000 (project allocation discipline): n > 100,000
+        /// is clamped — for any input within that cap this equals a full split.
+        /// Negative n falls back to the n≤0 unlimited path.
         /// Uses lazy foreach over MatchCollection — early exit avoids scanning beyond n splits.
         /// </summary>
         internal static string[] RegexSplit(string i, string p, long n, bool ic=true)
         {
             ValidatePattern(p);
             if (n <= 0) return Regex.Split(i, p, F(ic), Timeout);
+            // review 2026-09-05（R01）：原实现 `new List<string>((int)n + 1)` 在任何 regex 求值前执行——
+            // n∈(2³⁰,2³¹) 预分配 8.6–17.2GB（OOM 不可捕获，ExceptionFilters 排除 OOM → Excel 崩溃）；
+            // n=2³¹-1/2³¹ 时 (int) 回绕为负容量 → ArgumentOutOfRangeException。
+            // 修法镜像 RegexMatch(:43)/RegexReplace(:73) 的越界友好语义（不抛）+ 项目 100k 上限纪律
+            // （StringCore Pad/RandomString 0–100k）：n 超上限饱和到 100_000（对纪律内输入等价于全拆分），
+            // 容量提示随之 ≤ 100_001（约 800KB）。容量须先饱和再 +1：字面 `(int)Math.Min(n + 1, 上限+1)`
+            // 在 n=long.MaxValue 时 n+1 回绕为负，仍会抛。
+            const long MaxSplitCount = 100_000;
+            if (n > MaxSplitCount) n = MaxSplitCount;
             var result = new System.Collections.Generic.List<string>((int)n + 1);
             int pos = 0, splitCount = 0;
             foreach (Match m in Regex.Matches(i, p, F(ic), Timeout))

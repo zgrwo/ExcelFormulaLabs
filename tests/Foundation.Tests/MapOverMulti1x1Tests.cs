@@ -20,8 +20,9 @@ namespace ExcelFormulaLabs.Foundation.Tests
             {
                 var r = ElementWiseMapper.MapOverMulti<double, double, double>(one, many, (a, b) => a + b);
                 _o.WriteLine($"1×1 广播结果类型: {r?.GetType().Name}");
-                var arr = (object[,])r;
-                _o.WriteLine($"shape: {arr.GetLength(0)}×{arr.GetLength(1)}  [0,0]={arr[0,0]}  [2,0]={arr[2,0]}");
+                r.Should().NotBeNull(); // 哨兵语义守卫（:116 空输入返回 null）；实质断言在下方 13.0
+                var arr = (object[,])r!;
+                _o.WriteLine($"shape: {arr.GetLength(0)}×{arr.GetLength(1)}  [0,0]={arr[0, 0]}  [2,0]={arr[2, 0]}");
                 Convert.ToDouble(arr[2, 0]).Should().Be(13.0);
             }
             catch (Exception ex)

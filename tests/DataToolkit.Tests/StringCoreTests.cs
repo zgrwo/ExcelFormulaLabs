@@ -72,9 +72,12 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void HtmlDecode() => StringCore.HtmlDecode("&lt;tag&gt;").Should().Be("<tag>");
         [Fact] public void HtmlEncode_roundtrip() => StringCore.HtmlDecode(StringCore.HtmlEncode("<tag>")).Should().Be("<tag>");
         [Fact] public void IsNullOrWhitespaceStr() { StringCore.IsNullOrWhitespaceStr("   ").Should().BeTrue(); StringCore.IsNullOrWhitespaceStr(" a ").Should().BeFalse(); StringCore.IsNullOrWhitespaceStr("").Should().BeTrue(); }
+        // review 2026-09-05（R09）：STR.COALESCE 语义改为「null 或空串 → fallback」
+        // （与 StringUdf.cs:40 / api-reference.md / user-manual 文档契约一致），期望全部硬编码。
         [Fact] public void Coalesce_first() => StringCore.Coalesce("hello","world").Should().Be("hello");
         [Fact] public void Coalesce_null() => StringCore.Coalesce(null!,"fallback").Should().Be("fallback");
-        [Fact] public void Coalesce_empty() => StringCore.Coalesce("","fallback").Should().Be("");
+        [Fact] public void Coalesce_empty() => StringCore.Coalesce("","fallback").Should().Be("fallback");
+        [Fact] public void Coalesce_both_empty() => StringCore.Coalesce("","").Should().Be("");
         [Fact] public void RandomString_custom_charset() => Regex.IsMatch(StringCore.RandomString(100,"ABC"), "^[ABC]+$").Should().BeTrue();
 
         // =====================================================================
@@ -155,7 +158,13 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
 
         [Fact] public void Levenshtein_identical() => StringCore.LevenshteinDistance("abc", "abc").Should().Be(0);
         [Fact] public void Levenshtein_insertion() => StringCore.LevenshteinDistance("abc", "abcd").Should().Be(1);
-        [Fact] public void Soundex_same_sounding() => StringCore.Soundex("Robert").Should().Be(StringCore.Soundex("Rupert"));
+        [Fact] public void Soundex_same_sounding()
+        {
+            // review 2026-09-05（N14）：原断言 Be(Soundex("Rupert")) 为自引用（两参均来自被测实现）。
+            // 改硬编码经典参考值 R163（与下方 CrossVal_Soundex_Robert/Rupert 及 jellyfish 锚定一致）。
+            StringCore.Soundex("Robert").Should().Be("R163");
+            StringCore.Soundex("Rupert").Should().Be("R163");
+        }
         [Fact] public void Soundex_different() => StringCore.Soundex("abc").Should().NotBe(StringCore.Soundex("xyz"));
         [Fact] public void HtmlEncode_all_entities() => StringCore.HtmlEncode("<&\">").Should().Contain("&lt;").And.Contain("&amp;");
         [Fact] public void CommonPrefix_no_match() => StringCore.CommonPrefix("abc", "xyz").Should().Be("");

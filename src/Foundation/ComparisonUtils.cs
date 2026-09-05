@@ -25,7 +25,8 @@ namespace ExcelFormulaLabs.Foundation
         /// </summary>
         /// <param name="a">First value.</param>
         /// <param name="b">Second value.</param>
-        /// <param name="epsilon">Tolerance for numeric comparison (default 1e-12).</param>
+        /// <param name="epsilon">Relative tolerance for numeric comparison (default 1e-12);
+        /// compared as |a−b| &lt; epsilon·max(|a|,|b|). Scale-free — safe for ppm/ppb data.</param>
         /// <returns><c>true</c> if the values are semantically equal.</returns>
         /// <remarks>
         /// Comparison order (matches VBA VariantKit.ValuesEqual exactly):
@@ -86,7 +87,13 @@ namespace ExcelFormulaLabs.Foundation
                 // Handle Infinity explicitly — same-sign infinities are equal, cross-sign are not.
                 if (double.IsInfinity(dA) && double.IsInfinity(dB)) return dA == dB;
                 if (double.IsInfinity(dA) || double.IsInfinity(dB)) return false;
-                return Math.Abs(dA - dB) < epsilon;
+                // review 2026-09-05（R04）：原绝对容差 |a−b| < 1e-12 与数据量纲无关，
+                // 小量纲数据（ppm/ppb）下 100% 相对差也命中（1.5e-16≈2.5e-16 判真）。
+                // 与 review-2026-09-04（reaudit D1）Index 相对容差同族同步：
+                // 相等快路径（覆盖 0==0，相对窗口双零下溢）+ 纯相对容差 |a−b| < ε·max(|a|,|b|)。
+                if (dA == dB) return true;
+                return Math.Abs(dA - dB) <
+                    epsilon * Math.Max(Math.Abs(dA), Math.Abs(dB));
             }
 
             // 7. Fallback: case-sensitive string comparison (= VBA's CStr = operator)

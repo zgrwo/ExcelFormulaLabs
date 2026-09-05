@@ -1,4 +1,4 @@
-# verify-all.ps1 - One-command local verification (5-step gate)
+# verify-all.ps1 - One-command local verification (6-step gate)
 # Usage: .\scripts\verify-all.ps1 [-Configuration Release] [-SkipCrossVal]
 # Runs all verification steps required before a PR or release.
 
@@ -34,7 +34,8 @@ Write-Host "============================================"
 
 # P1-17 (review-2026-08-31)：AGENTS.md 定义全量验证 5 步 = ① verify-docs ② dotnet test
 # ③ CrossVal ④ verify-manual.py ⑤ Release build——原实现没有 verify-docs 步骤。插入为 Step 1。
-# Step 1: verify-docs（文档一致性 18+1 项）
+# R26 (review-2026-09-05)：本脚本实际为 6 步（另含 Step 5 Pre-commit Checks），头注 5-step→6-step。
+# Step 1: verify-docs（文档一致性 19 项）
 Step "1/6 verify-docs" {
     powershell -NoProfile -File "$root\scripts\verify-docs.ps1"
 }

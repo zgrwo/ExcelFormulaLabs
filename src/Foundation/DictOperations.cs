@@ -94,6 +94,9 @@ namespace ExcelFormulaLabs.Foundation
             return result;
         }
 
+        // review 2026-09-05（N18）：字符串化键空间有已知歧义——double NaN→"NaN"、bool→"TRUE"/"FALSE"
+        // 与真实字符串键同形冲突。VBA/VBA Dictionary 键本无类型区分，此为移植保真的有意取舍，
+        // 调用方若混用类型键需自行保证无歧义（文档已在 context.md「字典」语义说明）。
         private static string KeyToString(object value)
         {
             if (value is string s) return s;

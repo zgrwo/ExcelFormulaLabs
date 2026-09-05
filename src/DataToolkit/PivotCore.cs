@@ -103,9 +103,11 @@ namespace ExcelFormulaLabs.DataToolkit
             for (int r = 0; r < keys.Count; r++) { result[r + 1, 0] = keys[r]; for (int c = 0; c < pivots.Count; c++)
             {
                 var kv = (keys[r], pivots[c]);
+                // review 2026-09-05（R10）：缺测单元格写入 null =「空单元格」哨兵（与其它网格输出
+                // 的空值语义一致），null! 豁免的是可空性分析而非断言运行时非空。
                 result[r + 1, c + 1] = map.TryGetValue(kv, out var cell)
                     ? AggResult(agg, cell.val, cell.comp, cnt[kv])
-                    : null;
+                    : null!;
             } }
             return result;
         }

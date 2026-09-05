@@ -112,6 +112,8 @@ namespace ExcelFormulaLabs.Foundation
             // both native object[,] and COM-Range-originated 2D arrays.
             bool was2D = input1 is object[,] || input2 is object[,];
 
+            // review 2026-09-05（N18）：任一输入展平为空 → 返回 null（而非 ExcelError）——
+            // 空区域广播无目标单元格，UDF 层把 null 渲染为空白。此语义此前未写入 skill 契约表。
             if (flat1.Length == 0 || flat2.Length == 0)
                 return null!;
 
@@ -153,6 +155,7 @@ namespace ExcelFormulaLabs.Foundation
 
             bool was2D = input1 is object[,] || input2 is object[,] || input3 is object[,];
 
+            // 同上（N18）：三参版本空输入 → null。
             if (flat1.Length == 0 || flat2.Length == 0 || flat3.Length == 0)
                 return null!;
 
@@ -178,7 +181,11 @@ namespace ExcelFormulaLabs.Foundation
             }
 
             if (was2D)
-                return ReshapeFlatToOriginal2D(result, input1, input2, input3);
+                // review 2026-09-05（R10）：与 :124/:127/:130 同款 —— was2D 门卫保证至少一个输入
+                // 是 object[,]（非 null）；其余输入可为 null 标量，ReshapeFlatToOriginal2D 对
+                // 非 object[,] 元素安全跳过（`orig is object[,]`），故用 null-forgiving 消除
+                // CS8604（0b3a4da 清扫时漏掉的 3 参重载）。
+                return ReshapeFlatToOriginal2D(result, input1!, input2!, input3!);
 
             return result;
         }

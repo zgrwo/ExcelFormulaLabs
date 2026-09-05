@@ -150,7 +150,7 @@ FileSystemCore.Initialize(new SandboxConfig(@"C:\Users\Public\Documents"));
 
 - **双 .NET 版本全量测试**，覆盖正常路径和退化输入（零值/空值/单元素/全等值）
 - **Python 交叉验证**：Stats/Regression 与 numpy/scipy 逐项对照，精度 1e-10；DataToolkit 集成管道测试覆盖跨模块组合
-- **手册验证**：236 个 UDF 的 224 项手册示例由 Python 独立复算逐项对照（期望值硬编码，防自校验）；其中真正调用 C# 交叉对照的用例与纯 Python 自校验分开计数分报（`verify-manual.py` 输出 manual-only / cross-validated 双通道），不再以“交叉验证”统称全部示例（其余 12 个无独立示例的 *_ASYNC/共享 Core 变体由 UDF 层测试覆盖）
+- **手册验证**：224/236 个 UDF 有硬编码期望值的手册示例，由 Python 独立复算逐项对照（防自校验）；`verify-manual.py` 按双通道分报：manual-only 223 / cross-validated 138（合计 364 项检查），其中真正与 C# 实现对照的 UDF 为 106/236（44.9%）（其余 12 个无独立示例的 *_ASYNC/共享 Core 变体由 UDF 层测试覆盖）
 
 ---
 

@@ -125,8 +125,15 @@ namespace ExcelFormulaLabs.Analytics
                 }
                 else if (val is System.Array arr)
                 {
+                    // review 2026-09-05（R10/CS8601）：Array.GetValue 返回 object?——数组元素
+                    // 允许为 null，且 null 是合法值（Excel 空单元格语义，与下方 padding 的
+                    // 显式 null 一致），此处为有意的 null 透传；分支写法同时满足可空流分析。
                     for (int j = 0; j < arr.Length; j++)
-                        result[i, j + 1] = arr.GetValue(j);
+                    {
+                        var cell = arr.GetValue(j);
+                        if (cell is null) result[i, j + 1] = null;
+                        else result[i, j + 1] = cell;
+                    }
                     len = arr.Length;
                 }
                 else

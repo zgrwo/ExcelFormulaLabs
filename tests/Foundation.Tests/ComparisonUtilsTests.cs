@@ -36,6 +36,22 @@ public class ValuesEqualTests
     [Fact] public void PositiveInfinity_not_equal_to_NegativeInfinity() => ComparisonUtils.ValuesEqual(double.PositiveInfinity, double.NegativeInfinity).Should().BeFalse();
     [Fact] public void Infinity_not_equal_to_finite() => ComparisonUtils.ValuesEqual(double.PositiveInfinity, 1e300).Should().BeFalse();
     [Fact] public void NaN_not_equal_to_Infinity() => ComparisonUtils.ValuesEqual(double.NaN, double.PositiveInfinity).Should().BeFalse();
+
+    // ── R04（review-2026-09-05）：相对容差——量纲无关，期望全部硬编码 ──
+    // 复现反例（旧绝对 1e-12 判 True，相对判据必须 False）：小量纲 100% 相对差
+    [Fact] public void Small_scale_relative_difference_is_not_equal() => ComparisonUtils.ValuesEqual(1.5e-16, 2.5e-16).Should().BeFalse();
+    // 复现反例：0 与小量纲值不再假命中（相对窗口随 |b| 下溢）
+    [Fact] public void Zero_and_small_value_are_not_equal() => ComparisonUtils.ValuesEqual(0.0, 3e-13).Should().BeFalse();
+    // 正常量纲行为不变：浮点累差桥接保留
+    [Fact] public void Unit_scale_accumulated_error_still_bridges() => ComparisonUtils.ValuesEqual(1.0, 1.0 + 5e-13).Should().BeTrue();
+    // 大量纲：1e6 相邻值 1e-6 相对差 < 1e-12 → 在相对窗口内（量纲同尺判据）
+    [Fact] public void Large_scale_tiny_relative_difference_is_equal() => ComparisonUtils.ValuesEqual(1e6, 1e6 * (1.0 + 1e-13)).Should().BeTrue();
+    // 大量纲：1e-6 绝对差 = 1e-12 相对差（边界，严格小于 → 不等）
+    [Fact] public void Large_scale_boundary_difference_is_not_equal() => ComparisonUtils.ValuesEqual(1e6, 1e6 + 1e-6).Should().BeFalse();
+    // 双零精确相等走快路径（相对窗口下溢不吞掉 0==0）
+    [Fact] public void Exact_zero_equality_fast_path() => ComparisonUtils.ValuesEqual(0.0, 0.0).Should().BeTrue();
+    // ARR.FILTER "=" 消费链（FilterUtils → ValuesEqual）：小量纲数据不再假命中
+    [Fact] public void Filter_equality_small_scale_not_matched() => ComparisonUtils.ValuesEqual(1e-16, 2e-16, 1e-12).Should().BeFalse();
 }
 
 public class CompareTests

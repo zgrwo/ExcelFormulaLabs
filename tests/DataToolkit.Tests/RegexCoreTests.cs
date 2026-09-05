@@ -204,5 +204,32 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Replace_all_dollar_is_literal() => RegexCore.RegexReplace("a1b2", @"\d", "$1").Should().Be("a$1b$1");
         [Fact] public void Replace_first_dollar_is_literal() => RegexCore.RegexReplace("a1b2", @"\d", "$1", n: 1).Should().Be("a$1b2");
         [Fact] public void Replace_nth_dollar_is_literal() => RegexCore.RegexReplace("a1b2", @"\d", "$&", n: -1).Should().Be("a1b$&");
+
+        // ── R01 回归守卫（review 2026-09-05）─────────────────────────────────
+        // 原实现 `new List<string>((int)n + 1)` 在任何 regex 求值前执行：巨型 n →
+        // 8.6–17.2GB 预分配（OOM 不可捕获）或 (int) 回绕负容量（ArgumentOutOfRangeException）。
+        // 现契约：n 饱和到 100_000、不抛异常；对纪律内输入等价于全拆分。期望硬编码。
+        [Fact] public void Split_n2_normal_unchanged() => RegexCore.RegexSplit("a,b,c,d", ",", n: 2).Should().Equal("a", "b", "c,d");
+        [Fact] public void Split_int_max_n_full_split_no_throw()
+            => RegexCore.RegexSplit("a,b,c,d", ",", n: 2147483647L).Should().Equal("a", "b", "c", "d");
+        [Fact] public void Split_n_beyond_int_max_full_split_no_throw()
+            => RegexCore.RegexSplit("a,b,c,d", ",", n: 2147483648L).Should().Equal("a", "b", "c", "d");
+        [Fact] public void Split_huge_n_full_split_no_throw()
+            => RegexCore.RegexSplit("a,b,c,d", ",", n: 5000000000L).Should().Equal("a", "b", "c", "d");
+        [Fact] public void Split_negative_n_falls_back_to_unlimited()
+            => RegexCore.RegexSplit("a,b,c,d", ",", n: -1L).Should().Equal("a", "b", "c", "d");
+        [Fact] public void Split_n_over_cap_saturates_to_cap()
+        {
+            // n=100_001 饱和到 100_000（上限语义）：100_002 个逗号的输入在无限拆分下
+            // 应得 100_003 段；上限语义截为 100_001 段（100_000 次拆分 + 1 段尾部）。
+            var s = new string(',', 100_002);
+            var parts = RegexCore.RegexSplit(s, ",", n: 100_001L);
+            parts.Length.Should().Be(100_001);
+        }
+        [Fact] public void Split_n_at_cap_boundary_unchanged()
+        {
+            // 边界内 n（100_000）行为与既有语义一致：3 个匹配的输入全拆。
+            RegexCore.RegexSplit("a,b,c,d", ",", n: 100_000L).Should().Equal("a", "b", "c", "d");
+        }
     }
 }
