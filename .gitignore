@@ -18,6 +18,10 @@ CLAUDE.md
 BenchmarkDotNet.Artifacts/
 # Qoder 本地工具配置/技能镜像（不入库，本地保留）
 .qoder/
+# N-B (review 2026-09-06)：本地代码智能/审查工具的索引与目标目录——不忽略会污染
+# 每次审查的 git status 基线（ai-review-prompt §4.1 第一步）。
+.codegraph/
+.opencode-goal/
 logs/
 coverage*/
 nupkg/

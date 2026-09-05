@@ -28,7 +28,7 @@
 
 .EXAMPLE
     .\patch-xll-version.ps1 -XllPath "Analytics-AddIn-packed.xll" `
-        -FileDescription "统计 · 线性代数 · 回归 · 物理化学 — 75 个科学计算函数" `
+        -FileDescription "统计 · 线性代数 · 回归 · 物理化学 — 科学计算函数库（示例文案，数字以 api-reference 为准）" `
         -ProductName "Excel 函数增强库"
 #>
 
@@ -42,8 +42,10 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 if (-not (Test-Path $XllPath)) {
-    Write-Host "Skipping VERSIONINFO patch: $XllPath not found"
-    exit 0
+    # N-D (review 2026-09-06)：文件缺失曾 exit 0 软跳过——与"参数 Mandatory"的严格
+    # 姿态矛盾，路径笔误会被静默吞掉。改 exit 1（真要跳过请先自行判存在）。
+    Write-Host "ERROR: VERSIONINFO patch aborted - XllPath not found: $XllPath"
+    exit 1
 }
 
 $resolvedPath = (Resolve-Path $XllPath).Path

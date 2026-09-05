@@ -36,7 +36,7 @@ namespace ExcelFormulaLabs.{Module}
             => OutputWrapper.WrapError(() =>
                 ElementWiseMapper.MapOver<string, string>(text, {Name}Core.Process));
 
-        // ── 辅助方法 ──
+        // ── 辅助方法（按需保留/删除；标量参数经 InputNormalizer 转换后传 Core）──
         private static string S(object o) => InputNormalizer.ToString(o);
         private static double D(object o) => InputNormalizer.ToDouble(o);
     }

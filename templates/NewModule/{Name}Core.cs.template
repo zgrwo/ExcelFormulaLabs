@@ -14,12 +14,13 @@ namespace ExcelFormulaLabs.{Module}
     internal static class {Name}Core
     {
         // ====================================================================
-        // 哨兵契约 (L1-L5)：
-        //   L1: 不可转换值 → 返回类型零值（double→NaN, string→""）
-        //   L2: 除零 → NaN（不抛异常）
-        //   L3: 空集合 → NaN 或空结果
-        //   L4: 溢出 → NaN（不抛异常）
-        //   L5: 未知类型 Convert 失败 → throw
+        // 哨兵契约 (L1-L5)（编号与 docs/governance/context.md 术语表对齐，N-H）：
+        //   L1 守卫：类型转换前显式判定 NaN/Inf（不依赖 IEEE 传播）
+        //   L2 哨兵：不可转换值 → 类型零值（double→NaN, long→0, string→""）
+        //   L3 Excel 信号：null/Empty/Error/missing → 哨兵语义（跳过，不抛）
+        //   L4 已知取舍：long/bool 的 0/false 与真实值不可区分（文档化）
+        //   L5 最终边界：未知类型 Convert 失败 → throw（禁 return default 静默）
+        //   常用数值速查：除零/空集合/溢出 → NaN（不抛异常）
         // ====================================================================
 
         /// <summary>

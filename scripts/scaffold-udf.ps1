@@ -25,6 +25,17 @@ if (-not (Test-Path $modulePath)) {
     exit 1
 }
 
+# N-E (review 2026-09-06)：$Name/$Prefix 进入文件路径与生成代码——无格式校验时
+# 可路径穿越（..\..\x）或产生非法 C# 标识符。仅允许字母开头的字母数字组合。
+if ($Name -notmatch '^[A-Za-z][A-Za-z0-9]*$') {
+    Write-Host "[FAIL] -Name must be a PascalCase identifier (letters/digits, starting with a letter): '$Name'"
+    exit 1
+}
+if ($Prefix -notmatch '^[A-Za-z][A-Za-z0-9]*$') {
+    Write-Host "[FAIL] -Prefix must be alphanumeric (UDF prefix, e.g. WEATHER, FIN): '$Prefix'"
+    exit 1
+}
+
 # Template directory
 $tplDir = Join-Path $root "templates" "NewModule"
 if (-not (Test-Path $tplDir)) {
@@ -85,6 +96,6 @@ Write-Host "=== Done. Next steps: ==="
 Write-Host "  1. Implement core logic in src/$Module/$Name`Core.cs"
 Write-Host "  2. Adjust UDF signatures in src/$Module/$Name`Udf.cs"
 Write-Host "  3. Add tests in tests/$Module.Tests/$Name`CoreTests.cs"
-Write-Host "  4. Merge CrossVal entries into scripts/verify-manual.py"
+Write-Host "  4. Merge CrossVal entries into scripts/verify-manual.py, then DELETE scripts/$Name`CrossVal.py (standalone residue, not consumed by verify-manual)"
 Write-Host "  5. Run: dotnet build; dotnet test --filter $Name"
 Write-Host ""

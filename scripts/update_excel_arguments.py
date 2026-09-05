@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Strip old [ExcelArgument("name")] and inject [ExcelArgument(Name="...", Description="...")]."""
 import re
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
@@ -99,6 +100,12 @@ def sync_udf_arguments():
             func_name = m.group(1)
             raw_params = m.group(2).strip()
             if not raw_params:
+                continue
+            # N-A (review 2026-09-06)：现代签名参数段内已含 [ExcelArgument(Name=...)]——
+            # 其内部 ")" 会让上面 [^)]* 捕获截断，split 计数偶合命中后 replace 会产生
+            # 双属性注入损坏源码。凡参数段已含注解的签名一律跳过（本工具只服务旧式
+            # [ExcelArgument("name")] 位置风格的一次性迁移）。
+            if "[ExcelArgument" in raw_params:
                 continue
             csharp_params = [p.strip() for p in raw_params.split(",") if p.strip()]
             new_names = func_params.get(func_name, [])

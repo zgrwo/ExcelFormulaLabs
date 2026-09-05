@@ -79,7 +79,12 @@ foreach ($file in $ChangedFiles) {
         $suffix = $Matches[3]
 
         $testProject = $moduleMap[$module]
-        if (-not $testProject) { continue }
+        # N-G (review 2026-09-06)：新模块未进 $moduleMap 时曾静默 continue → "Nothing to run"
+        # exit 0——测试路由缺口的假绿。改为显式告警（不失败：映射缺失非变更错误）。
+        if (-not $testProject) {
+            Write-Host "  [WARN] no test project mapped for module '$module' - update \$moduleMap in run-affected-tests.ps1" -ForegroundColor Yellow
+            continue
+        }
 
         if (-not $affectedProjects.ContainsKey($testProject)) {
             $affectedProjects[$testProject] = @()

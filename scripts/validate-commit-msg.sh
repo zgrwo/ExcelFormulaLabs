@@ -1,6 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 # ============================================================================
-# validate-commit-msg.sh — Conventional Commits 提交信息校验（零依赖，POSIX sh）
+# validate-commit-msg.sh — Conventional Commits 提交信息校验（零依赖，bash）
+# N-C (review 2026-09-06)：shebang 由 sh 改 bash——:38 的 ${#subject} 字符计数是
+# bash 内建语义，dash/sh 按字节计数（中文标题约 24 字即误报过长）。调用方：
+# git-hooks/commit-msg（exec bash）与 ci.yml（bash 调用）均为 bash，此处对齐。
 #
 # 用途（SSOT 校验规则）：
 #   - 本地 git hook：scripts/git-hooks/commit-msg 调用本脚本
