@@ -1071,7 +1071,7 @@ cross_check_matrix("DOE.PARETO", (2*beta_doe[1:])[order_doe].reshape(-1, 1))
 # 如 DOE.FULL_2x2 → DOE.PLAN）；③ 与 api-reference 的 236 UDF 名集合前缀匹配。
 # section() 声明保留用于分段展示，不再作为覆盖数信源（声明曾因手写错误导致 221 vs README 224 漂移）。
 _API_UDFS = set()
-for _m in re.finditer(r'\| `([A-Z]+\.[A-Z0-9_]+)`', (Path(__file__).parent.parent / "rules" / "api-reference.md").read_text(encoding="utf-8")):
+for _m in re.finditer(r'\| `([A-Z]+\.[A-Z0-9_]+)`', (Path(__file__).parent.parent / "docs" / "specification" / "api-reference.md").read_text(encoding="utf-8")):
     _API_UDFS.add(_m.group(1))
 _ID2UDF = {
     "DOE.FULL_2x2": "DOE.PLAN", "DOE.FULL_2x3": "DOE.PLAN", "DOE.FULL_3x3": "DOE.PLAN",

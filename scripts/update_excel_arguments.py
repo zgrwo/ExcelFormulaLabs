@@ -85,7 +85,7 @@ PARAM_DESC = {
 
 def sync_udf_arguments():
     """Sync [ExcelArgument] attributes from api-reference.md param lists. Returns count updated."""
-    api_md = ROOT / "rules" / "api-reference.md"
+    api_md = ROOT / "docs" / "specification" / "api-reference.md"
     func_params = {}
     for m in re.finditer(r"\| `([A-Z]+\.[A-Z0-9_]+)` \| \(([^)]*)\) \|", api_md.read_text(encoding="utf-8")):
         func_params[m.group(1)] = [p.strip() for p in m.group(2).split(",") if p.strip()]

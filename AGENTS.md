@@ -100,6 +100,7 @@ ExcelFormulaLabs/
 ├── LICENSE                       # MIT
 ├── FUNDING.yml                   # 资助信息
 ├── nuget.config                  # NuGet 源
+├── requirements.txt              # Python 交叉验证依赖固定（verify-manual.py / CrossVal）
 ├── ExcelFormulaLabs.sln          # 解决方案
 ├── .editorconfig                 # 编辑器统一风格
 ├── .gitattributes                # 换行符/二进制标记

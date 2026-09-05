@@ -119,7 +119,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         {
             // Cross-check against docs/specification/api-reference.md (single source of truth):
             // every *_ASYNC name in the doc must have a matching registration and vice versa.
-            var api = File.ReadAllText(Path.Combine(TestRoot(), "rules", "api-reference.md"));
+            var api = File.ReadAllText(Path.Combine(TestRoot(), "docs", "specification", "api-reference.md"));
             var pattern = new Regex(@"\|\s*`((?:LINALG|REGRESS)\.[A-Z_]+_ASYNC)`");
             var docNames = pattern.Matches(api).Cast<Match>().Select(m => m.Groups[1].Value).Distinct().OrderBy(x => x).ToArray();  // Cast: MatchCollection is non-generic on net48
             var codeNames = AsyncContract.Select(c => c.Name).OrderBy(x => x).ToArray();

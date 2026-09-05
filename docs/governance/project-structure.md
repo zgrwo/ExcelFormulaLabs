@@ -41,7 +41,7 @@ ExcelFormulaLabs/
 │   ├── release/                    #   发布审计
 │   └── probes/                     #   探针脚本与复现证据
 │
-├── docs/                           # 项目文档（原 rules/，按职责分类重组）
+├── docs/                           # 项目文档（按职责分类重组）
 │   ├── README.md                   #   分类导航索引
 │   ├── governance/                 #   治理与基础
 │   │   ├── context.md              #     领域术语表
@@ -151,7 +151,7 @@ ExcelFormulaLabs/
 │       └── {Name}CrossVal.py.template    # 含 cross_check() 调用
 │
 ├── tests/                          # 测试
-│   ├── Foundation.Tests/           #   Foundation 层单元测试（含 csproj 与 13 个测试文件）
+│   ├── Foundation.Tests/           #   Foundation 层单元测试（含 csproj 与 14 个测试文件）
 │   ├── Analytics.Tests/            #   Analytics 层单元测试（含 csproj 与 17 个测试文件）
 │   ├── DataToolkit.Tests/          #   DataToolkit 层单元测试（含 csproj 与 20 个测试文件）
 │   ├── CrossValRunner/             #   C# 交叉验证调度器
