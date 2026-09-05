@@ -32,6 +32,9 @@ param(
 # 3 字符，Substring($RepoRoot.Length) 前缀错位会让检查 16/18 的相对路径变成
 # "ure/src/..." 而全部失配（test_verify_docs 场景 A 在 CI 上复现）。
 $RepoRoot = [System.IO.Path]::GetFullPath($RepoRoot)
+# F-26/N-15 (review 2026-09-06)：尾分隔符会让 Substring($RepoRoot.Length) 多剥一字符
+# （检查 16/18 相对路径错位）。修剪之；盘根（如 D:\，长度 3）不动。
+if ($RepoRoot.Length -gt 3) { $RepoRoot = $RepoRoot.TrimEnd('\', '/') }
 $ErrorActionPreference = "Continue"
 $script:pass = 0; $script:fail = 0; $script:skip = 0
 
@@ -87,13 +90,18 @@ else { Check "skill.md RangeExport" "missing" }
 if ($skillContent -match 'MapOver') { Check "skill.md MapOver term" "OK" }
 else { Check "skill.md MapOver term" "missing" }
 $readmeContent = Read-Utf8 (Join-Path $RepoRoot "README.md")
-if ($readmeContent -match 'ElementWiseMapper') { Check "README no internal class names" "should use MapOver not internal class" }
+# F-22 (review 2026-09-06)：README 缺失曾使本检查与检查 9 静默 PASS——显式 FAIL。
+if ($null -eq $readmeContent) { Check "README.md present" "missing" }
+elseif ($readmeContent -match 'ElementWiseMapper') { Check "README no internal class names" "should use MapOver not internal class" }
 else { Check "README no internal impl details" "OK" }
 
 # ---------- 5. MathNet 版本匹配 ----------
 $docVer = if ((Read-Utf8 (Join-Path $RepoRoot "docs/governance/context.md")) -match 'MathNet\.Numerics\s+([0-9.]+)') { $Matches[1] } else { "?" }
 $csprojVer = if ((Read-Utf8 (Join-Path $RepoRoot "src/Analytics/Analytics.csproj")) -match 'MathNet\.Numerics.*Version="([0-9.]+)"') { $Matches[1] } else { "?" }
-if ($docVer -eq $csprojVer) { Check "MathNet version ($docVer)" "OK" }
+# F-05 (review 2026-09-06)：任一侧解析失败（"?"）→ FAIL——两侧同为 "?" 曾恒真 PASS，
+# 版本一致性门禁整体空转且全绿。
+if ($docVer -eq "?" -or $csprojVer -eq "?") { Check "MathNet version" "unparseable (doc=$docVer csproj=$csprojVer)" }
+elseif ($docVer -eq $csprojVer) { Check "MathNet version ($docVer)" "OK" }
 else { Check "MathNet version" "doc=$docVer csproj=$csprojVer" }
 
 # ---------- 6. 无裸 catch ----------
@@ -104,25 +112,44 @@ if ($bareCatches.Count -eq 0) { Check "No bare catch" "OK" }
 else { Check "No bare catch" "$($bareCatches.Count) found" }
 
 # ---------- 7. .dna 模板完整 ----------
-if (Test-Path (Join-Path $RepoRoot "src/DataToolkit/DataToolkit-AddIn-net8.dna.tpl")) { Check "net8 .dna template" "OK" }
-else { Check "net8 .dna template" "missing" }
-if (Test-Path (Join-Path $RepoRoot "src/DataToolkit/DataToolkit-AddIn-net48.dna.tpl")) { Check "net48 .dna template" "OK" }
-else { Check "net48 .dna template" "missing" }
+# F-06 (review 2026-09-06)：原硬编码 DataToolkit 两个 tpl 路径——Analytics 的 2 个模板
+# 零门禁（删除无拦截）。改为推导：凡 csproj 引用 .dna 的 src 模块目录必须齐 net48+net8 模板。
+$dnaModules = Get-ChildItem -Path (Join-Path $RepoRoot "src") -Directory | Where-Object {
+    (Get-ChildItem $_.FullName -Filter "*.csproj" -File -ErrorAction SilentlyContinue |
+        ForEach-Object { [System.IO.File]::ReadAllText($_.FullName, [System.Text.Encoding]::UTF8) }) -match '\.dna'
+}
+$tplMissing = @()
+foreach ($md in $dnaModules) {
+    if (-not (Get-ChildItem $md.FullName -Filter "*-net48.dna.tpl" -File -ErrorAction SilentlyContinue)) { $tplMissing += "$($md.Name): net48 tpl missing" }
+    if (-not (Get-ChildItem $md.FullName -Filter "*-net8.dna.tpl" -File -ErrorAction SilentlyContinue)) { $tplMissing += "$($md.Name): net8 tpl missing" }
+}
+if ($dnaModules.Count -eq 0) { Check ".dna templates" "no add-in module found (csproj referencing .dna)" }
+elseif ($tplMissing.Count -eq 0) { Check ".dna templates ($($dnaModules.Count) modules)" "OK" }
+else { Check ".dna templates" "$($tplMissing -join '; ')" }
 
 # ---------- 8. 无残留生成 .dna ----------
 # P2 (review): generated .dna files carry TFM suffixes (*-net48.dna / *-net8.0.dna);
 # the old no-suffix pattern missed stale files from interrupted builds.
-$residual = Get-ChildItem -Path (Join-Path $RepoRoot "src/DataToolkit") -Filter "*.dna" -File -ErrorAction SilentlyContinue |
-    Where-Object { $_.Name -notlike "*.tpl" }
+# F-06 (review 2026-09-06)：扫描域由 src/DataToolkit 扩至 src 全模块（Analytics 残留曾不设防）。
+$residual = Get-ChildItem -Path (Join-Path $RepoRoot "src") -Recurse -Filter "*.dna" -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -notlike "*.tpl" -and $_.FullName -notmatch '\\(bin|obj)\\' }
 if (-not $residual) { Check "No residual .dna" "OK" }
-else { Check "No residual .dna" "found residual" }
+else {
+    $rel = $residual | ForEach-Object { $_.FullName.Substring($RepoRoot.Length) -replace '\\', '/' }
+    Check "No residual .dna" "found residual: $($rel -join ', ')"
+}
 
 # ---------- 9. README 无硬编码数量徽章 ----------
-$badgeHits = @()
-if ($readmeContent -match 'badge/tests-') { $badgeHits += "tests-" }
-if ($readmeContent -match 'badge/UDFs-') { $badgeHits += "UDFs-" }
-if ($badgeHits.Count -eq 0) { Check "README no hardcoded count badges" "OK" }
-else { Check "README no hardcoded count badges" "found $($badgeHits -join ', ')（数量只能见 api-reference.md）" }
+# F-21/F-22 (review 2026-09-06)：① 扩展到 README.en.md（原仅 README.md）；② README 缺失 → FAIL。
+$badgeFail = @()
+foreach ($rf in @("README.md", "README.en.md")) {
+    $rc = Read-Utf8 (Join-Path $RepoRoot $rf)
+    if ($null -eq $rc) { $badgeFail += "$rf missing"; continue }
+    if ($rc -match 'badge/tests-') { $badgeFail += "${rf}: tests-" }
+    if ($rc -match 'badge/UDFs-') { $badgeFail += "${rf}: UDFs-" }
+}
+if ($badgeFail.Count -eq 0) { Check "README no hardcoded count badges" "OK" }
+else { Check "README no hardcoded count badges" "found $($badgeFail -join ', ')（数量只能见 api-reference.md）" }
 
 # ---------- 10. CHANGELOG 覆盖全部 v* tag + props 版本 == 最新 tag ----------
 $changelog = Read-Utf8 (Join-Path $RepoRoot "CHANGELOG.md")
@@ -187,17 +214,32 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # ---------- 11. 模块 csproj 描述数量 == [ExcelFunction] 计数 ----------
+# F-21 (review 2026-09-06)：① 计命中数而非行数（同行双 [ExcelFunction 曾少计）；
+# ② 描述数量锚定 <Description> 标签（防 csproj 前部注释里的"N 个"被首匹配吞掉）；
+# ③ 反向守卫——src/ 下出现含 [ExcelFunction] 而不在名单的模块目录即指名 FAIL（防新模块漏对账）。
 foreach ($module in @("Analytics", "DataToolkit")) {
-    $count = (Select-String -Path (Join-Path $RepoRoot "src/$module/*.cs") -Pattern '\[ExcelFunction' -AllMatches | Measure-Object).Count
+    $count = (Select-String -Path (Join-Path $RepoRoot "src/$module/*.cs") -Pattern '\[ExcelFunction' -AllMatches |
+        ForEach-Object { $_.Matches } | Measure-Object).Count
     $csprojText = Read-Utf8 (Join-Path $RepoRoot "src/$module/$module.csproj")
-    $descNum = if ($csprojText -match '(\d+)\s*个') { [int]$Matches[1] } else { -1 }
+    $descNum = if ($csprojText -match '<Description>[^<]*?(\d+)\s*个') { [int]$Matches[1] } else { -1 }
     if ($descNum -eq $count) { Check "$module csproj description count ($count)" "OK" }
     else { Check "$module csproj description count" "desc=$descNum code=$count" }
 }
+$knownModules = @("Analytics", "DataToolkit")
+$unlistedModules = Get-ChildItem -Path (Join-Path $RepoRoot "src") -Directory | Where-Object {
+    $knownModules -notcontains $_.Name -and
+    (Get-ChildItem $_.FullName -Recurse -Filter "*.cs" -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' } |
+        Select-String -Pattern '\[ExcelFunction' | Measure-Object).Count -gt 0
+}
+if ($unlistedModules.Count -eq 0) { Check "csproj count covers all UDF modules" "OK" }
+else { Check "csproj count covers all UDF modules" "unlisted module(s) with UDFs: $($unlistedModules.Name -join ', ')" }
 
 # ---------- 12. Markdown 相对链接断链扫描 ----------
+# F-26 (review 2026-09-06)：排除正则原为反斜杠形态——Linux 下 FullName 用 '/' 时排除失效
+# （.git/TestResults/logs 内 .md 会被误扫）。统一归一化为 '/' 后匹配。
 $mdFiles = Get-ChildItem -Path $RepoRoot -Recurse -Filter "*.md" |
-    Where-Object { $_.FullName -notmatch '\\\.git\\|\\bin\\|\\obj\\|\\\.qoder\\|\\TestResults\\|\\logs\\' }
+    Where-Object { ($_.FullName -replace '\\', '/') -notmatch '\.git/|/bin/|/obj/|\.qoder/|TestResults/|/logs/' }
 $broken = @()
 foreach ($f in $mdFiles) {
     $text = Read-Utf8 $f.FullName
@@ -231,6 +273,9 @@ if (Test-Path (Join-Path $RepoRoot ".qoder/skills")) {
 }
 
 # ---------- 14. project-structure.md 目录树条目存在性 ----------
+# 范围注记（F-21，review 2026-09-06）：检查 14 前向（声明→存在）覆盖全树；检查 18 反向
+# （存在→声明）有意仅覆盖 src/——tests/docs/skills 等处新增文件不强制逐个登记。
+# 若需扩展反向范围，须先确认现有树已 100% 登记目标目录，否则门禁立即全量误报。
 function Get-TreeEntries {
     param([string]$TreeText)
     $entries = @()
@@ -277,7 +322,9 @@ if (-not $structEntries) {
     foreach ($e in $structEntries) {
         $top = ($e.Path -split '/')[0]
         if ($top -in $ignoredDirs) { continue }
-        $local = $e.Path -replace '/', '\'
+        # F-26 (review 2026-09-06)：原恒转反斜杠——Linux 下 Test-Path 收到 '\' 路径恒 false，
+        # 全树误报 missing。Windows 用 '\'，其余平台保留 '/'。
+        $local = if ($IsWindows -or $env:OS -eq 'Windows_NT') { $e.Path -replace '/', '\' } else { $e.Path }
         if (-not (Test-Path (Join-Path $RepoRoot $local))) { $missingEntries += $e.Path }
     }
     if ($missingEntries.Count -eq 0) { Check "project-structure.md tree entries ($($structEntries.Count) entries)" "OK" }

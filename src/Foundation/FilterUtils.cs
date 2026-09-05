@@ -128,13 +128,14 @@ namespace ExcelFormulaLabs.Foundation
                         RegexTimeout));
                 // P2 (pre-release review): evict OUTSIDE the GetOrAdd factory — eviction
                 // inside the factory raced other threads (non-deterministic victim, possible
-                // eviction of a pattern another thread just cached). Best-effort single
-                // eviction after a successful add keeps the cache bounded.
-                if (RegexCache.Count > MaxCachedRegex)
+                // eviction of a pattern another thread just cached).
+                // F-32 (review 2026-09-06)：单条驱逐在高并发独特模式下可短暂超上限 → 循环清至
+                // 预算内（受害选择保持 first、永不驱逐本次 pattern，防自逐与死循环）。
+                while (RegexCache.Count > MaxCachedRegex)
                 {
                     var first = RegexCache.Keys.FirstOrDefault();
-                    if (first != null && first != pattern)
-                        RegexCache.TryRemove(first, out _);
+                    if (first == null || first == pattern) break;
+                    RegexCache.TryRemove(first, out _);
                 }
                 return regex.IsMatch(InputNormalizer.ToString(element));
             }

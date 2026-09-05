@@ -14,6 +14,22 @@ namespace ExcelFormulaLabs.Analytics
     /// </summary>
     internal static class DoeAnalysisCore
     {
+        // F-32 (review 2026-09-06)：terms 参数解析从 UDF 层下沉（红线：UDF 仅分发适配）。
+        internal static (int maxOrder, bool quadratic) ParseTerms(object terms)
+        {
+            if (terms == null || InputNormalizer.IsExcelMissing(terms))
+                return (2, false); // default: main + 2-way interactions
+            string t = InputNormalizer.ToString(terms).Trim().ToUpperInvariant();
+            return t switch
+            {
+                "MAIN" or "1" => (1, false),
+                "2WAY" or "2" => (2, false),
+                "QUADRATIC" or "Q" or "FULL" => (2, true),
+                _ => throw new ArgumentException(
+                    $"Unknown terms '{t}'. Supported: main, 2way, quadratic.")
+            };
+        }
+
         /// <summary>
         /// Effect table: one row per term — [Term, Coef, Effect, t, p].
         /// Effect = 2×Coef (the standard DOE effect estimate for ±1-coded factors).

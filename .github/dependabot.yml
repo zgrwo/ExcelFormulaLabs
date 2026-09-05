@@ -20,6 +20,8 @@ updates:
       # 改变 SQLitePCLRaw bundle 版本（P2 审查修复：semver-major → semver-minor）
       # R20 (review-2026-09-05)：补 semver-patch——注释声称 patch/minor 均拦截，
       # 原 update-types 漏 patch，配置与注释不一致。
+      # F-26 (review-2026-09-06) 已知代价：ignore 同样屏蔽 dependabot 的安全更新 PR——
+      # 该依赖的 CVE 修复需人工跟进（升级时须同步适配 e_sqlite3.dll 嵌入路径）。
       - dependency-name: "Microsoft.Data.Sqlite"
         update-types: ["version-update:semver-major", "version-update:semver-minor", "version-update:semver-patch"]
 

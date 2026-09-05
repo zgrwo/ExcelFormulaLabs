@@ -23,7 +23,8 @@ for ($r = 1; $r -le $ROUNDS; $r++) {
     $xl = New-Object -ComObject Excel.Application
     $xl.Visible = $false; $xl.DisplayAlerts = $false
     foreach ($x in $xlls) {
-        if (-not (Test-Path $x.Path)) { Write-Output "  SKIP $($x.Name): missing"; $fail++; continue }
+        # F-26 (review 2026-09-06)：SKIP 不计 fail（标签与计数曾不一致）。
+        if (-not (Test-Path $x.Path)) { Write-Output "  SKIP $($x.Name): missing"; continue }
         try {
             $xl.RegisterXLL($x.Path) | Out-Null
             $val = $xl.Evaluate($x.F)

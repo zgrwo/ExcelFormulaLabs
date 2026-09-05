@@ -107,7 +107,10 @@ namespace ExcelFormulaLabs.Foundation
             if (value is long l) return l.ToString(System.Globalization.CultureInfo.InvariantCulture);
             if (value is short s16) return s16.ToString(System.Globalization.CultureInfo.InvariantCulture);
             if (value is byte b8) return b8.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            if (value is DateTime dt) return dt.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+            // F-14 (review 2026-09-06)：与 SafeKey 同步——带亚秒的 DateTime 追加小数段，防塌缩。
+            if (value is DateTime dt) return dt.Ticks % TimeSpan.TicksPerSecond == 0
+                ? dt.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture)
+                : dt.ToString("yyyy-MM-dd HH:mm:ss.fffffff", System.Globalization.CultureInfo.InvariantCulture);
             if (value is bool b) return b ? "TRUE" : "FALSE";
             return Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? "";
         }

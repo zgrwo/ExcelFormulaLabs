@@ -34,6 +34,9 @@ namespace ExcelFormulaLabs.DataToolkit
             foreach(var el in d.RootElement.EnumerateArray())
             { if(el.ValueKind==JsonValueKind.Object){ var row=new Dictionary<string,object?>(); foreach(var p in el.EnumerateObject()){row[p.Name]=Elm(p.Value);if(seen.Add(p.Name))keys.Add(p.Name);} rows.Add(row); } }
             if(rows.Count==0)return null;
+            // F-29 (review 2026-09-06)：纵深防御——UDF 输入经单元格字符串（32,767 字符）天然有界，
+            // 但 .NET 直调方无此约束；对齐 PivotCore/RangeExportCore 的规模纪律（分配前拒绝）。
+            if(rows.Count>100_000) throw new ArgumentException($"JSON input produces {rows.Count} rows; maximum is 100000.");
             var ka=keys.ToArray(); var r=new object[rows.Count+1,ka.Length];
             for(int c=0;c<ka.Length;c++)r[0,c]=ka[c];
             // review 2026-09-05（R10）：网格单元的 null =「空单元格」哨兵（JSON null 值与缺键均
@@ -89,7 +92,8 @@ namespace ExcelFormulaLabs.DataToolkit
 
         internal static object[,]? XmlToTable(string xml, string? rowPath=null)
             // review 2026-09-05（R10）：缺元素单元格写 null =「空单元格」哨兵，null! 豁免可空性分析。
-        { try{var d=ParseXmlSafe(xml);var rows=rowPath!=null?d.XPathSelectElements(rowPath):d.Root?.Elements()??Enumerable.Empty<XElement>();var rl=rows.ToList();if(rl.Count==0)return null;var cn=rl.SelectMany(r=>r.Elements()).Select(e=>e.Name.LocalName).Distinct().ToArray();var rt=new object[rl.Count+1,cn.Length];for(int c=0;c<cn.Length;c++)rt[0,c]=cn[c];for(int i=0;i<rl.Count;i++){var row=rl[i];for(int c=0;c<cn.Length;c++){var el=row.Element(cn[c]);rt[i+1,c]=el!=null?el.Value:null!;}}return rt;}catch(Exception ex) when(ExceptionFilters.IsCatchable(ex)){System.Diagnostics.Debug.WriteLine($"[XmlToTable] Failed: {ex.Message}");return null;} }
+            // F-29：同 JsonToTable——行数 >100_000 分配前拒绝（.NET 直调方纵深防御）。
+        { try{var d=ParseXmlSafe(xml);var rows=rowPath!=null?d.XPathSelectElements(rowPath):d.Root?.Elements()??Enumerable.Empty<XElement>();var rl=rows.ToList();if(rl.Count==0)return null;if(rl.Count>100_000)throw new ArgumentException($"XML input produces {rl.Count} rows; maximum is 100000.");var cn=rl.SelectMany(r=>r.Elements()).Select(e=>e.Name.LocalName).Distinct().ToArray();var rt=new object[rl.Count+1,cn.Length];for(int c=0;c<cn.Length;c++)rt[0,c]=cn[c];for(int i=0;i<rl.Count;i++){var row=rl[i];for(int c=0;c<cn.Length;c++){var el=row.Element(cn[c]);rt[i+1,c]=el!=null?el.Value:null!;}}return rt;}catch(Exception ex) when(ExceptionFilters.IsCatchable(ex)){System.Diagnostics.Debug.WriteLine($"[XmlToTable] Failed: {ex.Message}");return null;} }
 
         internal static bool XmlValidate(string xml)
         { try{ParseXmlSafe(xml);return true;}catch(Exception ex) when(ExceptionFilters.IsCatchable(ex)){return false;} }

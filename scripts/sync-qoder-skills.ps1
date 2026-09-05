@@ -10,6 +10,9 @@
 #   嵌套目录布局（如 ../../docs/governance/context.md）。
 #   本脚本执行「复制 + 链接重写」；本机存在 .qoder 时 verify-docs.ps1 检查 13 会
 #   以 -CheckOnly 校验镜像一致性（CI 环境无 .qoder 自动跳过，不视为失败）。
+#   F-27 (review 2026-09-06) 已知边界：链接重写表（ConvertTo-QoderLinks）为硬编码
+#   映射——新增技能互链或新顶层目录未进表时，源与镜像会同错，-CheckOnly 恒 PASS。
+#   新增技能/目录时必须同步扩充重写表（无自动对账）。
 # ============================================================================
 param(
     [switch]$CheckOnly

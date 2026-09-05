@@ -5,4 +5,7 @@
 #       或复制到 .git/hooks/commit-msg
 # ============================================================================
 repo_root=$(git rev-parse --show-toplevel)
-exec sh "$repo_root/scripts/validate-commit-msg.sh" "$1"
+# F-26 (review 2026-09-06)：改 exec bash——validate-commit-msg.sh 的 ${#subject} 字符计数
+# 是 bash 语义，dash/sh（Ubuntu 默认 sh）按字节计数，中文标题约 24 字即误报"过长"。
+# 与 CI（bash scripts/validate-commit-msg.sh）口径一致。
+exec bash "$repo_root/scripts/validate-commit-msg.sh" "$1"

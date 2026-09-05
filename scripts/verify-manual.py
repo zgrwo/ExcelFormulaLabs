@@ -150,6 +150,10 @@ def cross_check(name, python_computed, tol=None):
     # 旧 max 语义下 0 实际生效值也是 max(EPS,0)=1e-10，行为对齐。
     tol_eff = tol if tol is not None else (
         float(ref.get("tolerance")) if ref.get("tolerance") else EPS)
+    # F-34 (review 2026-09-06)：显式 tol 放宽 manifest 预算时打印审计提示（收紧是 N01 预期
+    # 语义；放宽属断言级声明，须可见——FitRidge R² 1e-3 vs manifest 1e-10 曾放宽 7 个数量级）。
+    if tol is not None and ref.get("tolerance") and float(ref["tolerance"]) > 0 and tol > float(ref["tolerance"]):
+        print(f"  [note] {name}: explicit tol {tol:g} 放宽 manifest {float(ref['tolerance']):g}")
     # C# 特殊值（NaN/±Inf）：必须与 Python 同类型同符号才算 PASS（P0-3a 修复）
     if isinstance(cs_val, float) and (np.isnan(cs_val) or np.isinf(cs_val)):
         if isinstance(python_computed, (float, np.floating)) and \
@@ -205,6 +209,10 @@ def cross_vs_csharp(name, py_value, manifest_id, tol=None, field=None, xform=Non
         cs = xform(cs)
     tol_eff = tol if tol is not None else (
         float(ref.get("tolerance")) if ref.get("tolerance") else EPS)
+    # F-34 (review 2026-09-06)：显式 tol 放宽 manifest 预算时打印审计提示（收紧是 N01 预期
+    # 语义；放宽属断言级声明，须可见——FitRidge R² 1e-3 vs manifest 1e-10 曾放宽 7 个数量级）。
+    if tol is not None and ref.get("tolerance") and float(ref["tolerance"]) > 0 and tol > float(ref["tolerance"]):
+        print(f"  [note] {name}: explicit tol {tol:g} 放宽 manifest {float(ref['tolerance']):g}")
     # 特殊值（NaN/±Inf/null）：与 cross_check 同款语义——同型同符号才 PASS
     if isinstance(cs, float) and (np.isnan(cs) or np.isinf(cs)):
         if isinstance(py_value, (float, np.floating)) and \
@@ -358,12 +366,18 @@ _cs_luu = csharp_results().get("LINALG.LU_U")
 if _cs_luu and _cs_luu["status"] == "ok":
     _U = np.array(unwrap(_cs_luu["result"]), dtype=float)
     check("LINALG.LU_U upper-triangular", bool(np.allclose(_U, np.triu(_U), atol=1e-9)), True)
+else:
+    # F-03 (review 2026-09-06)：C# 缺失/出错不得静默零计数（P1-9 语义）——
+    # SKIP 致命化保证显式暴露（与 QR/LU 主块的 else 兜底口径一致）。
+    SKIP += 1; print("  SKIP LINALG.LU_U upper-triangular: no C# reference")
 _cs_lup = csharp_results().get("LINALG.LU_P")
 if _cs_lup and _cs_lup["status"] == "ok":
     _P = np.array(unwrap(_cs_lup["result"]), dtype=float)
     _uniq = set(np.unique(_P))
     _perm = bool(np.all(_P.sum(axis=0) == 1) and np.all(_P.sum(axis=1) == 1) and _uniq <= {0.0, 1.0})
     check("LINALG.LU_P permutation", _perm, True)
+else:
+    SKIP += 1; print("  SKIP LINALG.LU_P permutation: no C# reference")
 # PINV
 Ap = np.linalg.pinv(np.array([[1,4],[2,5],[3,6]],dtype=float))
 cross_vs_csharp("LINALG.PINV[0,0] vs C#", Ap[0,0], "LINALG.PINV", tol=1e-3, field=(0, 0))
@@ -1030,7 +1044,7 @@ def cross_check_matrix(name, py_rows, tol=None):
     CROSS_REFERENCED.add(name)  # F2 (review-2026-09-04): cross_* 族都计入 C# 对照集合
     ref = csharp_results().get(name)
     if ref is None or ref["status"] != "ok":
-        global PASS, FAIL
+        global PASS, FAIL, SKIP, CROSS_PASS
         FAIL += 1; print(f"  FAIL {name}: no C# reference")
         return
     cs = unwrap(ref["result"])
@@ -1055,7 +1069,9 @@ def cross_check_matrix(name, py_rows, tol=None):
                 ok = False
                 maxdiff = max(maxdiff, abs(float(cv) - float(pv)) if cv is not None and pv is not None else 1e9)
     if ok:
-        PASS += 1; print(f"  OK {name}: matrix match ({len(py_rows)} rows)")
+        # F-02 (review 2026-09-06)：矩阵通道曾只计总 PASS、不入 CROSS_PASS——
+        # "manual-only + cross-validated" 汇报口径漏掉 DOE 三条真 C# 对照（364 ≠ 223+138）。
+        PASS += 1; CROSS_PASS += 1; print(f"  OK {name}: matrix match ({len(py_rows)} rows)")
     else:
         FAIL += 1; print(f"  FAIL {name}: max diff {maxdiff:.2e}")
 

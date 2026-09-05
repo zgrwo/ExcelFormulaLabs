@@ -62,6 +62,14 @@ namespace ExcelFormulaLabs.Analytics
                         return (T)entry.Value;
                     }
 
+                    // F-16 (review 2026-09-06)：单条目自身超 MaxTotalElems 时，下面的 while 会
+                    // 清空整个缓存后仍插入（与"总内存有界"口径不符）→ 直接放弃缓存该条目，
+                    // 结果照常返回（下次访问重算）。当前最大合法条目 2000 万元素 ≈160MB。
+                    if (elems > MaxTotalElems)
+                    {
+                        return result;
+                    }
+
                     // Evict LRU entries until both count and total-element budgets fit.
                     long total = 0;
                     foreach (var kv in Store) total += kv.Value.Elems;
@@ -189,7 +197,9 @@ namespace ExcelFormulaLabs.Analytics
         internal static double Determinant(double[,] m)
         {
             NumericGuard.AgainstNonFinite(m);
-            return Matrix<double>.Build.DenseOfArray(m).Determinant();
+            var r = Matrix<double>.Build.DenseOfArray(m).Determinant();
+            // F-09 (review 2026-09-06)：溢出真值不可表示 → NaN 封顶（模块约定，对齐 COND/Sum）。
+            return double.IsInfinity(r) ? double.NaN : r;
         }
 
         internal static double[] Solve(double[,] A, double[] b)
@@ -354,7 +364,12 @@ namespace ExcelFormulaLabs.Analytics
         {
             NumericGuard.AgainstNonFinite(A);
             NumericGuard.AgainstNonFinite(B);
-            return (Matrix<double>.Build.DenseOfArray(A) * Matrix<double>.Build.DenseOfArray(B)).ToArray();
+            var r = (Matrix<double>.Build.DenseOfArray(A) * Matrix<double>.Build.DenseOfArray(B)).ToArray();
+            // F-09 (review 2026-09-06)：逐元素 Inf → NaN 封顶（1e300×1e300 曾直漏 +Inf 进单元格）。
+            for (int i = 0; i < r.GetLength(0); i++)
+                for (int j = 0; j < r.GetLength(1); j++)
+                    if (double.IsInfinity(r[i, j])) r[i, j] = double.NaN;
+            return r;
         }
 
         internal static double[,] Transpose(double[,] m)
@@ -366,7 +381,9 @@ namespace ExcelFormulaLabs.Analytics
         internal static double Trace(double[,] m)
         {
             NumericGuard.AgainstNonFinite(m);
-            return Matrix<double>.Build.DenseOfArray(m).Trace();
+            var r = Matrix<double>.Build.DenseOfArray(m).Trace();
+            // F-09 (review 2026-09-06)：对角和溢出 → NaN 封顶（模块约定）。
+            return double.IsInfinity(r) ? double.NaN : r;
         }
 
         // ── Cached decomposition accessors ──────────────────────────

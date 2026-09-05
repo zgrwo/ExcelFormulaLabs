@@ -157,7 +157,9 @@ namespace ExcelFormulaLabs.Foundation
         {
             string sA = a?.ToString() ?? "";
             string sB = b?.ToString() ?? "";
-            return string.Compare(sA, sB, StringComparison.CurrentCultureIgnoreCase);
+            // F-13 (review 2026-09-06)：CurrentCulture 随用户 locale 漂移（tr-TR 的 i/İ 等），
+            // ARR.SORTTEXT 结果不确定；与全库 InvariantCulture/Ordinal 纪律对齐。
+            return string.Compare(sA, sB, StringComparison.InvariantCultureIgnoreCase);
         }
 
         private static int CompareAuto<T>(T a, T b) => ComparisonUtils.Compare(a!, b!);

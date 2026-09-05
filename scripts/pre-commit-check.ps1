@@ -157,7 +157,10 @@ if ($leaked.Count -gt 0) {
 Write-Host ""
 Write-Host "[4/6] Checking Core layer isolation ..."
 
-$coreFiles = Get-ChildItem -Path "$RepoRoot/src" -Recurse -Filter "*Core.cs" -ErrorAction SilentlyContinue
+# F-19 (review 2026-09-06)：补 bin/obj 排除（与检查 5 口径一致）。名字通配 *Core.cs 的
+# 局限（Core 逻辑放非 *Core.cs 文件会漏网）为已知边界，审查提示见 ai-review-prompt §G2。
+$coreFiles = Get-ChildItem -Path "$RepoRoot/src" -Recurse -Filter "*Core.cs" -ErrorAction SilentlyContinue |
+    Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' }
 $coreHits = $coreFiles | Select-String -Pattern "ExcelDna"
 
 if ($coreHits) {
@@ -194,7 +197,9 @@ foreach ($f in $coreFiles) {
     $code = [regex]::Replace($code, '(?m)//.*$', '')
     # P2-1：剥离字符串字面量——SqlCore 的 "DDL/DML" 等字符串里的斜杠被误判为除法。
     $code = [regex]::Replace($code, '"[^"]*"', '""')
-    $hasDivision = $code -match '/\s*(?!0\b)\w+'
+    # F-20 (review 2026-09-06)：补 '/=' 复合赋值——原正则 '/' 后必须跟标识符，
+    # 仅用 x /= y 的 Core 文件曾可绕过 NaN/Inf 守卫检查（当前全库 0 现症，防患）。
+    $hasDivision = ($code -match '/\s*(?!0\b)\w+') -or ($code -match '/=')
     # P2-1：int 除法豁免（显式名单，非"任一 ArgumentException"）
     if ($intDivOnlyFiles -contains $f.Name) { continue }
     if ($hasDivision) {
@@ -238,12 +243,17 @@ $structuralExempt = @('Transpose','SelectColumns','SelectRows','CrossJoin','Flat
 
 foreach ($f in $allCoreCs) {
     $content = Read-Utf8Text $f.FullName
+    # F-22 (review 2026-09-06)：不可读文件 → SKIP 计数，不静默空转（对齐检查 5 的 N19 语义）。
+    if (-not $content) { $script:skipped++; Write-Host "  [SKIP] $($f.Name) unreadable, hasHeaders check skipped" -ForegroundColor DarkYellow; continue }
     # Match method signatures with object[,] as PARAMETER (not return type)
     # R18 (review-2026-09-05)：原 `\([^)]*object...[^)]*\)` 对参数段含嵌套括号的签名漏报
     #（如元组参数 `(int,int) key, object[,] data`——首个 `)` 提前终结 [^)]*，实测漏报）。
     # 改为允许一层嵌套括号的参数段提取（分支两选择首字符不相交，无回溯风险）；
     # 泛型 Func<object[,],bool> 形态保持命中（test_precommit 场景 10/11）。
-    $paramMatches = [regex]::Matches($content, '(private|internal|public)\s+(?:static\s+)?\S+\s+(\w+)\s*\((?:[^()]|\([^()]*\))*object\s*\[,\s*\][^)]*\)')
+    # F-04 (review 2026-09-06，fixture 实测)：一层嵌套仍漏二层元组 `((int,(int,string)) t, object[,] d)`
+    # ——嵌套扩为两层（内层同构递归一层）；并补：修饰符链（override/virtual/sealed/async/extern）、
+    # protected、NRT `object?[,]`。
+    $paramMatches = [regex]::Matches($content, '(private|protected internal|protected|internal|public)\s+(?:(?:static|override|virtual|sealed|async|extern|new)\s+)*(?:[\w<>.,\[\]?]+\s+)?(\w+)\s*\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*object\s*\??\s*\[,\s*\][^)]*\)')
     foreach ($pm in $paramMatches) {
         $sig = $pm.Value
         $accessMod = $pm.Groups[1].Value

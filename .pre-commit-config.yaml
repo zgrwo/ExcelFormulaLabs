@@ -11,6 +11,8 @@
 #   - pre-commit 与 scripts/git-hooks/commit-msg 可共存（pre-commit 管代码质量，
 #     commit-msg 管 Conventional Commits 格式）
 #   - 项目红线检查（裸 catch/自校验/Core 隔离等）以 scripts/pre-commit-check.ps1 为准
+#   - F-26 (review-2026-09-06)：rev 版本不受任何 dependabot ecosystem 管理（pre-commit
+#     hooks 无对应生态），需人工定期升级
 # ============================================================================
 
 repos:

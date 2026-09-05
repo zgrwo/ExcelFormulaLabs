@@ -263,7 +263,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `ARR.SORTDESC` | (array) | `object[]` | 降序排列（自动检测类型） |
 | `ARR.SORTNUM` | (array) | `object[]` | 按数值升序排列 |
 | `ARR.SORTTEXT` | (array) | `object[]` | 按文本升序排列（不区分大小写） |
-| `ARR.UNIQUE` | (array) | `object[]` | 去重，保留首次出现顺序。对标 Excel UNIQUE |
+| `ARR.UNIQUE` | (array) | `object[]` | 去重，保留首次出现顺序。对标 Excel UNIQUE。**区分大小写**（Ordinal 精确比较，"a"/"A" 为两个值）；带亚秒的 DateTime 按完整精度参与去重 |
 | `ARR.INDEXOF` | (array, lookup_value) | `long` | 值首次出现的 0-based 索引，未找到返回 -1。对标 Excel MATCH |
 | `ARR.SLICE` | (array, start_index, num_elements) | `object[]` | 从索引 start_index 起取 num_elements 个元素 |
 | `ARR.FLATTEN` | (array) | `object[]` | 二维区域按行展为一维。对标 Excel TOROW |
@@ -288,9 +288,9 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
 | `DICT.FREQUENCY` | (key_array) | `object[2,n]` | 频率统计。返回两列：value, count |
-| `DICT.INTERSECT` | (array1, array2) | `object[]` | 交集：两个数组都有的值 |
-| `DICT.UNION` | (array1, array2) | `object[]` | 并集：两个数组所有不重复值 |
-| `DICT.EXCEPT` | (array1, array2) | `object[]` | 差集：在 array1 但不在 array2 的值 |
+| `DICT.INTERSECT` | (array1, array2) | `object[]` | 交集：两个数组都有的值。**不区分大小写**（字符串键 IgnoreCase 归一）——与 ARR.UNIQUE 的区分大小写语义不同，见 context.md |
+| `DICT.UNION` | (array1, array2) | `object[]` | 并集：两个数组所有不重复值。**不区分大小写**（同 DICT.INTERSECT） |
+| `DICT.EXCEPT` | (array1, array2) | `object[]` | 差集：在 array1 但不在 array2 的值。**不区分大小写**（同 DICT.INTERSECT） |
 | `DICT.DICT` | (key_array, value_array) | `object[2,n]` | 用并行 key/value 数组构建双列表格 |
 | `DICT.COUNT` | (dict_table) | `long` | 字典行数 |
 | `DICT.KEYS` | (dict_table) | `object[]` | 提取字典第一列（键） |
@@ -376,7 +376,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `RANGE.TOHTML` | (source_range, [has_headers], [css_class]) | `string` | 导出为 HTML 表格。has_headers=首行是否表头（默认 TRUE） |
 | `RANGE.TOJSON` | (source_range, [has_headers], [pretty_print]) | `string` | 导出为 JSON。has_headers=首行是否表头（默认 TRUE） |
 | `RANGE.TOMD` | (source_range, [has_headers]) | `string` | 导出为 Markdown 表格。has_headers=首行是否表头（默认 TRUE） |
-| `RANGE.TOCSV` | (source_range, [delimiter], [quote_fields], [has_headers]) | `string` | 导出为 CSV（自定义分隔符、字段引用与表头）。has_headers=首行是否表头（默认 TRUE） |
+| `RANGE.TOCSV` | (source_range, [delimiter], [quote_fields], [has_headers]) | `string` | 导出为 CSV（自定义分隔符与字段引用）。**has_headers 为兼容参数、无实际效果**——CSV 恒导出全部行（含首行），该参数仅为与其他 RANGE.* 导出签名一致而保留 |
 | `RANGE.TOCSVTAB` | (source_range) | `string` | 导出为 TSV（制表符分隔） |
 | `RANGE.TOCSVSEMI` | (source_range) | `string` | 导出为分号分隔 CSV |
 | `RANGE.TRANSPOSE` | (source_range) | `object[,]` | 行列转置。对标 Excel TRANSPOSE |

@@ -400,10 +400,14 @@ namespace ExcelFormulaLabs.Analytics
             double msB = ssB / dfB, msW = ssW / dfW;
             double f = msB / msW;
             double p = FDistPValue(f, dfB, dfW);
+            // F-12 (review 2026-09-06)：ssB/ssW 各自有限但之和可溢出 ±Inf → NaN 封顶
+            // （f_stat/p_value 已守卫，Total 行是最后一个漏口；模块约定不向 Excel 泄漏 ±Inf）。
+            double ssTotal = ssB + ssW;
+            if (double.IsInfinity(ssTotal)) ssTotal = double.NaN;
 
             return new Dictionary<string, object>
             {
-                ["ss_between"] = ssB, ["ss_within"] = ssW, ["ss_total"] = ssB + ssW,
+                ["ss_between"] = ssB, ["ss_within"] = ssW, ["ss_total"] = ssTotal,
                 ["df_between"] = dfB, ["df_within"] = dfW, ["df_total"] = totalN - 1,
                 ["ms_between"] = msB, ["ms_within"] = msW,
                 ["f_stat"] = f, ["p_value"] = p,

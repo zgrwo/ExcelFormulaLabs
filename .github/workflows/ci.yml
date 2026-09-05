@@ -127,6 +127,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # F-26 (review-2026-09-06) 已知边界：restore 缓存键仅含 *.csproj——
+      # src/Directory.Build.props 变更（如 TreatWarningsAsErrors）不击穿缓存；
+      # 当前无 Directory.Packages.props、props 无包引用，暂安全。
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:

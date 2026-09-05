@@ -32,11 +32,12 @@ namespace ExcelFormulaLabs.Analytics
             ["Bk"]=247.0,["Cf"]=251.0,["Es"]=252.0,["Fm"]=257.0,
         };
 
-        private static readonly Regex ElemRx = new(@"([A-Z][a-z]?)(\d*)", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
+        // F-32 (review 2026-09-06)：补 CultureInvariant——元素/括号记号与文化无关，与全库约定一致。
+        private static readonly Regex ElemRx = new(@"([A-Z][a-z]?)(\d*)", RegexOptions.Compiled | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(5));
         // review 2026-09-05（N06）：整串消费校验——元素记号必须覆盖全部输入（与 ElemRx 同构）。
-        private static readonly Regex ElemFullRx = new(@"^([A-Z][a-z]?\d*)+$", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
-        private static readonly Regex ParenRx = new(@"\(([^()]+)\)(\d*)", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
-        private static readonly Regex BrackRx = new(@"\[([^\[\]]+)\](\d*)", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
+        private static readonly Regex ElemFullRx = new(@"^([A-Z][a-z]?\d*)+$", RegexOptions.Compiled | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(5));
+        private static readonly Regex ParenRx = new(@"\(([^()]+)\)(\d*)", RegexOptions.Compiled | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(5));
+        private static readonly Regex BrackRx = new(@"\[([^\[\]]+)\](\d*)", RegexOptions.Compiled | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(5));
 
         /// <summary>
         /// Compute molecular weight from a chemical formula string.
@@ -111,7 +112,14 @@ namespace ExcelFormulaLabs.Analytics
             ElemRx.Replace(inner, m =>
             {
                 string el = m.Groups[1].Value;
-                int c = ParseCount(m.Groups[2].Value) * mult;
+                // review 2026-09-06（F-01）：ParseCount ≤ int.MaxValue 与倍数 mult ≤ int.MaxValue 的
+                // 乘积在 unchecked int 乘法下回绕为负（"(H2)1073741824" 曾静默按 H1 计算返回 1.008）。
+                // 改 long 相乘；展开后的下标还要经外层 ParseCount 复析（上限 int.MaxValue），
+                // 故乘积超限与同族 ParseCount/水合物系数一致显式抛错。
+                long c = (long)ParseCount(m.Groups[2].Value) * mult;
+                if (c > int.MaxValue)
+                    throw new ArgumentException(
+                        $"Group subscript product is too large ({el}×{mult} → {c}). The maximum supported atom count is {int.MaxValue}.");
                 return c > 1 ? $"{el}{c}" : el;
             });
 
@@ -219,6 +227,9 @@ namespace ExcelFormulaLabs.Analytics
             if (v.HasValue && (double.IsNaN(v.Value) || double.IsInfinity(v.Value))) return double.NaN;
             if (n.HasValue && (double.IsNaN(n.Value) || double.IsInfinity(n.Value))) return double.NaN;
             if (t.HasValue && (double.IsNaN(t.Value) || double.IsInfinity(t.Value))) return double.NaN;
+            // F-11 (review 2026-09-06)：r 为 L·atm/(mol·K)，t 为 K 温标——t≤0 物理无意义
+            // （曾算出负压）。对齐 TEMP/GASSTP 的绝对零拒收。
+            if (t.HasValue && t.Value <= 0) return double.NaN;
             if (r == 0 || double.IsNaN(r) || double.IsInfinity(r)) return double.NaN;
             int missing = (p.HasValue?0:1)+(v.HasValue?0:1)+(n.HasValue?0:1)+(t.HasValue?0:1);
             if (missing != 1) return double.NaN;
@@ -263,6 +274,7 @@ namespace ExcelFormulaLabs.Analytics
         private static double CapNaN(double v) => double.IsInfinity(v) ? double.NaN : v;
 
         // review 2026-08-29：DENSITY 下沉（原 L2 零分母守卫写在 UDF lambda，红线① UDF 仅分发）
-        internal static double Density(double m, double v) => v == 0 ? double.NaN : m / v;
+        // F-10 (review 2026-09-06)：m/v 溢出 ±Inf → NaN 封顶（N08a 同族收尾，1e308/1e-308 曾直漏）。
+        internal static double Density(double m, double v) => v == 0 ? double.NaN : CapNaN(m / v);
     }
 }

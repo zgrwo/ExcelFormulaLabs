@@ -35,23 +35,61 @@ namespace ExcelFormulaLabs.Analytics
             return double.IsInfinity(r) ? double.NaN : r;  // output cap (file convention)
         }
 
-        internal static double Median(double[] d) =>
-            d.Length == 0 ? double.NaN : Statistics.Median(d);
+        internal static double Median(double[] d)
+        {
+            if (d.Length == 0) return double.NaN;
+            var r = Statistics.Median(d);
+            // F-07 (review 2026-09-06)：MathNet 中位数为 (lo+hi)/2，1e308 级数据求和溢出 → +Inf
+            // （SUMMARY median 列曾泄漏）。凸组合回退（≡R7 τ=0.5，与 R8 中位数同值）。
+            return !double.IsNaN(r) && !double.IsInfinity(r) ? r : QuantileSafe(d, 0.5);
+        }
 
-        // review 2026-09-05（R22）：方差两遍平方和对 |x| > 1e154 级输入溢出 ±Inf → NaN 封顶。
-        // VAR/STDEV 溢出真值本不可表示，封顶后语义 = "不可表示"（对齐 Sum/Range 封顶约定）。
+        // F-08 (review 2026-09-06)：两遍平方和（Σx²）对 |x| > 1e154 级输入溢出 ±Inf → NaN 封顶
+        // （R22 语义保留）；但大规模常数数组真方差 = 0，溢出路径曾误报 NaN → 改两遍中心化
+        // （先均值后 Σ(x−mean)²，与 numpy.var 同构、CrossVal 对照更贴），真值不可表示的大尺度
+        // 方差仍封顶 NaN。
         internal static double VarianceP(double[] d)
         {
             if (d.Length < 1) return double.NaN;
-            var r = Statistics.PopulationVariance(d);
-            return double.IsInfinity(r) ? double.NaN : r;
+            if (d.Length == 1) return 0.0;
+            return CenteredSS(d) / d.Length;
         }
 
         internal static double Variance(double[] d)
         {
             if (d.Length < 2) return double.NaN;
-            var r = Statistics.Variance(d);
-            return double.IsInfinity(r) ? double.NaN : r;
+            return CenteredSS(d) / (d.Length - 1);
+        }
+
+        private static double CenteredSS(double[] d)
+        {
+            double m = Mean(d);
+            if (double.IsNaN(m)) return double.NaN;
+            double ss = 0;
+            foreach (double x in d) { double dv = x - m; ss += dv * dv; }
+            return double.IsInfinity(ss) ? double.NaN : ss;
+        }
+
+        // F-07 (review 2026-09-06)：R7 安全分位数回退。MathNet R7 插值 x_lo + f*(x_hi−x_lo)
+        // 在跨符号 1e308 级数据上 hi−lo 溢出 → PERCENTILE({-1e308,1e308},50) 曾返回 +Inf
+        // （真值 0）。lo*(1−f)+hi*f 数学等价且凸组合不超 [lo,hi]，有限输入必得有限结果。
+        // 仅在主路径返回非有限时启用（见 QuantileCapped），常规量纲与 MathNet/scipy 逐位一致。
+        private static double QuantileSafe(double[] d, double tau)
+        {
+            var s = (double[])d.Clone();
+            Array.Sort(s);
+            double h = (s.Length - 1) * tau;
+            int lo = (int)Math.Floor(h), hi = (int)Math.Ceiling(h);
+            if (lo == hi) return s[lo];
+            double f = h - lo;
+            return s[lo] * (1.0 - f) + s[hi] * f;
+        }
+
+        private static double QuantileCapped(double[] d, double tau, QuantileDefinition qd)
+        {
+            var r = Statistics.QuantileCustom(d, tau, qd);
+            return !double.IsNaN(r) && !double.IsInfinity(r) ? r
+                : qd == QuantileDefinition.R7 ? QuantileSafe(d, tau) : r;
         }
 
         internal static double StdevP(double[] d) =>
@@ -133,21 +171,28 @@ namespace ExcelFormulaLabs.Analytics
             return mode;
         }
 
-        // review 2026-09-05（R22）：协方差两遍平方和对 |x| > 1e154 级输入溢出 ±Inf → NaN 封顶
-        // （对齐 Sum/Range 封顶约定）。
+        // review 2026-09-05（R22）+ F-08：协方差与方差同族——改两遍中心化（与 np.cov 同构），
+        // 大规模常数数组真协方差 = 0 不再误报 NaN；真值不可表示仍封顶 NaN。
         internal static double CovarianceP(double[] a, double[] b)
         {
             if (a.Length != b.Length || a.Length < 1) return double.NaN;
             if (a.Length == 1) return 0.0; // single-point population covariance is 0 (MathNet sample form would yield 0/0=NaN)
-            var r = Statistics.Covariance(a, b) * (a.Length - 1) / a.Length;
-            return double.IsInfinity(r) ? double.NaN : r;
+            return CenteredCross(a, b) / a.Length;
         }
 
         internal static double Covariance(double[] a, double[] b)
         {
             if (a.Length != b.Length || a.Length < 2) return double.NaN;
-            var r = Statistics.Covariance(a, b);
-            return double.IsInfinity(r) ? double.NaN : r;
+            return CenteredCross(a, b) / (b.Length - 1);
+        }
+
+        private static double CenteredCross(double[] a, double[] b)
+        {
+            double ma = Mean(a), mb = Mean(b);
+            if (double.IsNaN(ma) || double.IsNaN(mb)) return double.NaN;
+            double ss = 0;
+            for (int i = 0; i < a.Length; i++) ss += (a[i] - ma) * (b[i] - mb);
+            return double.IsInfinity(ss) ? double.NaN : ss;
         }
 
         /// <summary>
@@ -164,19 +209,24 @@ namespace ExcelFormulaLabs.Analytics
             if (d.Length == 0) return Array.Empty<double>();
             if (d.Length == 1) return new[] { 1.0, d[0], double.NaN, d[0], d[0], d[0], d[0], d[0], 0.0 };
             var qd = def ?? DefaultQuantileDefinition;
-            double q1 = Statistics.QuantileCustom(d, 0.25, qd);
-            double q3 = Statistics.QuantileCustom(d, 0.75, qd);
+            // F-07 (review 2026-09-06)：q1/median/q3 经 QuantileCapped（非有限 → R7 凸组合回退），
+            // 大尺度跨符号数据不再泄漏 +Inf；iqr = q3−q1 均为有限时精确。
+            double q1 = QuantileCapped(d, 0.25, qd);
+            double q3 = QuantileCapped(d, 0.75, qd);
+            double iqr = q3 - q1;
             return new[] { (double)d.Length, Statistics.Mean(d), Math.Sqrt(Variance(d)),
-                Statistics.Minimum(d), q1, Statistics.Median(d), q3,
-                Statistics.Maximum(d), q3 - q1 };
+                Statistics.Minimum(d), q1, Median(d), q3,
+                Statistics.Maximum(d), double.IsInfinity(iqr) ? double.NaN : iqr };
         }
 
         /// <summary>Percentile using configurable quantile definition.
         /// Default <see cref="DefaultQuantileDefinition"/> (R7) matches Python numpy/scipy 'linear'.</summary>
-        internal static double Percentile(double[] d, double p, QuantileDefinition? def = null) =>
-            d.Length == 0 || p < 0 || p > 100 || double.IsNaN(p)
-                ? double.NaN
-                : Statistics.QuantileCustom(d, p / 100.0, def ?? DefaultQuantileDefinition);
+        internal static double Percentile(double[] d, double p, QuantileDefinition? def = null)
+        {
+            if (d.Length == 0 || p < 0 || p > 100 || double.IsNaN(p)) return double.NaN;
+            // F-07：非有限结果 → R7 凸组合安全回退（常规量纲逐位一致）。
+            return QuantileCapped(d, p / 100.0, def ?? DefaultQuantileDefinition);
+        }
 
         /// <summary>Inter-quartile range using configurable quantile definition.
         /// Default <see cref="DefaultQuantileDefinition"/> (R7) matches Python scipy.stats.iqr.</summary>
@@ -184,7 +234,8 @@ namespace ExcelFormulaLabs.Analytics
         {
             if (d.Length == 0) return double.NaN;
             var qd = def ?? DefaultQuantileDefinition;
-            return Statistics.QuantileCustom(d, 0.75, qd) - Statistics.QuantileCustom(d, 0.25, qd);
+            double r = QuantileCapped(d, 0.75, qd) - QuantileCapped(d, 0.25, qd);
+            return double.IsInfinity(r) ? double.NaN : r;
         }
 
         // review 2026-09-05（R22）：MathNet 两遍平方和（Σx²、Σxy）在序列量纲 > 1e154 时

@@ -11,9 +11,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# F-26 (review 2026-09-06)：顶层权限最小化为 read；写权限（contents/packages）收敛到
+# 实际需要的 pack-release job——build-test/verify-docs/cross-val 只需读。
 permissions:
-  contents: write
-  packages: write
+  contents: read
 
 jobs:
   build-test:
@@ -91,6 +92,9 @@ jobs:
     runs-on: windows-latest
     needs: [cross-val, verify-docs]
     timeout-minutes: 30
+    permissions:
+      contents: write
+      packages: write
 
     steps:
       - name: Checkout
@@ -167,8 +171,18 @@ jobs:
       - name: Push to GitHub Packages
         shell: pwsh
         run: |
+          # F-18 (review 2026-09-06)：逐包检查退出码——pwsh 循环步骤的步骤级退出码取
+          # 最后一个 $LASTEXITCODE，中间某个 push 失败（非 409）曾被后续成功掩盖。
+          # --skip-duplicate 已容忍 409（重复发布），其余非零一律计入失败。
+          $ErrorActionPreference = "Stop"
+          $failed = @()
           Get-ChildItem "artifacts/nupkg/*.nupkg" | ForEach-Object {
             dotnet nuget push $_.FullName --source "github" --api-key "${{ secrets.GITHUB_TOKEN }}" --skip-duplicate --no-symbols
+            if ($LASTEXITCODE -ne 0) { $failed += $_.Name }
+          }
+          if ($failed.Count -gt 0) {
+            Write-Error ("nuget push failed for: " + ($failed -join ', '))
+            exit 1
           }
 
       - name: Create GitHub Release

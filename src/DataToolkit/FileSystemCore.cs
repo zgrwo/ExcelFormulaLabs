@@ -139,6 +139,9 @@ namespace ExcelFormulaLabs.DataToolkit
                 // (junctions/symlinks) — Path.GetFullPath does not resolve them,
                 // but System.IO APIs follow them, so a junction could bypass the
                 // string-prefix sandbox check above.
+                // F-31 (review 2026-09-06) 已知残余：NTFS 硬链接不具 ReparsePoint 属性，
+                // 本走查不覆盖——沙箱内硬链接可指向沙箱外同卷文件。威胁模型与 TOCTOU 残余
+                // （上方 :94-99 注释）同级：本地攻击者已可直写文件系统；默认沙箱关闭时无增能。
                 if (normalized.Length > root.Length)
                 {
                     string remaining = normalized.Substring(root.Length).TrimStart(Path.DirectorySeparatorChar);

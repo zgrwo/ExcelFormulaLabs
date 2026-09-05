@@ -393,6 +393,17 @@ namespace ExcelFormulaLabs.Analytics.Tests
         LinalgCore.NormFrobenius(m).Should().BeApproximately(1.4142135623730951e200, 1e185);
     }
 
+    // ── F-09 (review 2026-09-06)：输出侧 Inf 封顶（模块约定，对齐 COND/Solve）──
+    [Fact] public void MatMul_overflow_capped_to_NaN()
+    {
+        var r = LinalgCore.MatMul(new double[,] { { 1e300 } }, new double[,] { { 1e300 } });
+        double.IsNaN(r[0, 0]).Should().BeTrue();
+    }
+    [Fact] public void Determinant_overflow_capped_to_NaN() =>
+        double.IsNaN(LinalgCore.Determinant(new double[,] { { 1e200, 0 }, { 0, 1e200 } })).Should().BeTrue();
+    [Fact] public void Trace_overflow_capped_to_NaN() =>
+        double.IsNaN(LinalgCore.Trace(new double[,] { { 1e308, 0 }, { 0, 1e308 } })).Should().BeTrue();
+
     // ── review-2026-09-05（R05）：EnsureSymmetric 纯相对判据 ──
     [Fact] public void Eigenvalues_small_scale_asymmetric_rejected()
     {

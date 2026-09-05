@@ -1,8 +1,11 @@
 ﻿# ============================================================================
 # test_precommit_check.ps1 — pre-commit-check.ps1 回归守卫
-# 场景：11 个 fixture，逐一验证 6 项检查的检测能力（含修复后的自校验/hasHeaders 检测：
-#       跨行调用、短别名、元组参数、泛型委托——R15/R18 review-2026-09-05）。
-# 用法：powershell -NoProfile -ExecutionPolicy Bypass -File tests/scripts/test_precommit_check.ps1
+# 场景：14 个 fixture，逐一验证 6 项检查的检测能力（含修复后的自校验/hasHeaders 检测：
+#       跨行调用、短别名、元组参数、泛型委托、二层元组/NRT/修饰符链、豁免名单不误报——
+#       R15/R18/F-04 review-2026-09-05/06）。
+# 用法：pwsh 或 powershell 均可 -NoProfile -ExecutionPolicy Bypass -File tests/scripts/test_precommit_check.ps1
+# F-24 (review-2026-09-06)：被测门禁经 $hostCmd 优先 pwsh7 调用（原恒 powershell，
+#       pwsh7 语义差异永不暴露）；与 run-tests.ps1 的宿主策略一致。
 # ============================================================================
 $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)   # 仓库根
@@ -11,6 +14,7 @@ $tmpRoot = Join-Path $env:TEMP ("pcc-test-" + [guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Path $tmpRoot -Force | Out-Null
 
 $passCount = 0; $failCount = 0
+$hostCmd = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell" }
 
 function New-Fixture {
     param([string]$Name, [hashtable]$Files)
@@ -25,7 +29,7 @@ function New-Fixture {
 
 function Run-Check {
     param([string]$Dir, [string]$ExpectCode, [bool]$ExpectFail = $true)
-    $output = & powershell -NoProfile -ExecutionPolicy Bypass -File $checker -RepoRoot $Dir 2>&1
+    $output = & $hostCmd -NoProfile -ExecutionPolicy Bypass -File $checker -RepoRoot $Dir 2>&1
     $exit = $LASTEXITCODE
     $out = ($output | Out-String)
     $ok = $false
@@ -45,7 +49,7 @@ function Run-Check {
 }
 
 # --- 场景 1：干净树 → 全部通过 ---
-Write-Host "[1/11] 干净树应全部通过"
+Write-Host "[1/14] 干净树应全部通过"
 $clean = New-Fixture "clean" @{
     "src\StatsCore.cs" = @"
 internal static class StatsCore {
@@ -62,12 +66,12 @@ internal static class StatsCore {
 Run-Check $clean "" $false
 
 # --- 场景 2：裸 catch ---
-Write-Host "[2/11] 裸 catch 应被检出 (BARE_CATCH)"
+Write-Host "[2/14] 裸 catch 应被检出 (BARE_CATCH)"
 $c2 = New-Fixture "barecatch" @{ "src\bad.cs" = "class Bad { void M() { try { } catch { } } }`n" }
 Run-Check $c2 "BARE_CATCH"
 
 # --- 场景 3：自校验（含嵌套调用/数组参数——修复后的括号平衡解析必须检出）---
-Write-Host "[3/11] 自校验应被检出 (SELF_CHECK)"
+Write-Host "[3/14] 自校验应被检出 (SELF_CHECK)"
 $c3 = New-Fixture "selfcheck" @{
     "scripts\verify-manual.py" = @"
 check("m", stats.mean(x), stats.mean(x))
@@ -77,27 +81,27 @@ check("t", np.array([1, 2]), np.array([1, 2]))
 Run-Check $c3 "SELF_CHECK"
 
 # --- 场景 4：net8.0 IntelliSense 泄漏 ---
-Write-Host "[4/11] IntelliSense 泄漏应被检出 (INTELLISENSE_LEAK)"
+Write-Host "[4/14] IntelliSense 泄漏应被检出 (INTELLISENSE_LEAK)"
 $c4 = New-Fixture "intelli" @{ "src\foo.cs" = "class Foo { void M() { var x = ExcelDna.IntelliSense.Thing; } }`n" }
 Run-Check $c4 "INTELLISENSE_LEAK"
 
 # --- 场景 5：Core 层引用 ExcelDna ---
-Write-Host "[5/11] Core 层 ExcelDna 引用应被检出 (CORE_EXCEL_REF)"
+Write-Host "[5/14] Core 层 ExcelDna 引用应被检出 (CORE_EXCEL_REF)"
 $c5 = New-Fixture "coreref" @{ "src\EvilCore.cs" = "using ExcelDna.Integration;`nclass EvilCore { }`n" }
 Run-Check $c5 "CORE_EXCEL_REF"
 
 # --- 场景 6：除法无 NaN/Inf 守卫 ---
-Write-Host "[6/11] 除法无守卫应被检出 (NAN_INF_GUARD)"
+Write-Host "[6/14] 除法无守卫应被检出 (NAN_INF_GUARD)"
 $c6 = New-Fixture "nanguard" @{ "src\StatsCore.cs" = "internal static class StatsCore { internal static double R(double a, double b) { return a / b; } }`n" }
 Run-Check $c6 "NAN_INF_GUARD"
 
 # --- 场景 7：object[,] 无 hasHeaders ---
-Write-Host "[7/11] object[,] 无 hasHeaders 应被检出 (HAS_HEADERS)"
+Write-Host "[7/14] object[,] 无 hasHeaders 应被检出 (HAS_HEADERS)"
 $c7 = New-Fixture "headers" @{ "src\TableCore.cs" = "internal static class TableCore { internal static object[] Foo(object[,] data) { return null; } }`n" }
 Run-Check $c7 "HAS_HEADERS"
 
 # --- 场景 8：跨行自校验（R15：全文扫描必须检出跨行 check(，单行解析曾绕过）---
-Write-Host "[8/11] 跨行自校验应被检出 (SELF_CHECK)"
+Write-Host "[8/14] 跨行自校验应被检出 (SELF_CHECK)"
 $c8 = New-Fixture "selfcheck-multiline" @{
     "scripts\verify-manual.py" = @"
 check("m",
@@ -108,7 +112,7 @@ check("m",
 Run-Check $c8 "SELF_CHECK"
 
 # --- 场景 9：短别名自校验（R15：移除 Length>3 豁免，check("m", x, x) 必须检出）---
-Write-Host "[9/11] 短别名自校验应被检出 (SELF_CHECK)"
+Write-Host "[9/14] 短别名自校验应被检出 (SELF_CHECK)"
 $c9 = New-Fixture "selfcheck-alias" @{
     "scripts\verify-manual.py" = @"
 x = [1, 2, 3]
@@ -118,14 +122,37 @@ check("m", x, x)
 Run-Check $c9 "SELF_CHECK"
 
 # --- 场景 10：元组参数含 object[,]（R18：一层嵌套括号提取，原 [^)]* 正则漏报）---
-Write-Host "[10/11] 元组参数 object[,] 无 hasHeaders 应被检出 (HAS_HEADERS)"
+Write-Host "[10/14] 元组参数 object[,] 无 hasHeaders 应被检出 (HAS_HEADERS)"
 $c10 = New-Fixture "tuple-headers" @{ "src\TableCore.cs" = "internal static class TableCore { internal static void Join((int,int) key, object[,] data) { } }`n" }
 Run-Check $c10 "HAS_HEADERS"
 
 # --- 场景 11：泛型委托参数 object[,]（R18：Func<object[,],bool> 保持命中）---
-Write-Host "[11/11] 泛型 Func<object[,],bool> 无 hasHeaders 应被检出 (HAS_HEADERS)"
+Write-Host "[11/14] 泛型 Func<object[,],bool> 无 hasHeaders 应被检出 (HAS_HEADERS)"
 $c11 = New-Fixture "generic-headers" @{ "src\TableCore.cs" = "internal static class TableCore { internal static void Map(Func<object[,],bool> f) { } }`n" }
 Run-Check $c11 "HAS_HEADERS"
+
+# --- 场景 12：二层元组参数（F-04：一层嵌套正则曾漏报，fixture 实测 exit=0）---
+Write-Host "[12/14] 二层元组参数 object[,] 无 hasHeaders 应被检出 (HAS_HEADERS)"
+$c12 = New-Fixture "tuple2-headers" @{ "src\TableCore.cs" = "internal static class TableCore { internal static void Join((int,(int,string)) t, object[,] data) { } }`n" }
+Run-Check $c12 "HAS_HEADERS"
+
+# --- 场景 13：NRT 注解 + 修饰符链 + protected（F-04：object?[,-] 与 protected 曾漏报）---
+Write-Host "[13/14] NRT object?[,] + 修饰符链 + protected 应被检出 (HAS_HEADERS)"
+$c13 = New-Fixture "nrt-headers" @{ "src\TableCore.cs" = "internal static class TableCore { protected internal static object[,] Pivot(object?[,] data, (int,(int,string)) t) { return data!; } }`n" }
+Run-Check $c13 "HAS_HEADERS"
+
+# --- 场景 14：豁免名单与 private 不误报（F-04 反向：结构性豁免/private 不产生违例）---
+Write-Host "[14/14] 豁免名单方法与 private helper 不应误报"
+$c14 = New-Fixture "exempt-ok" @{
+    "src\TableCore.cs" = @"
+internal static class TableCore {
+    public static object[,] Transpose(object[,] data) => data;
+    public static object[,] SelectColumns(object[,] data, object idx) => data;
+    private static object[,] Helper(object[,] data) => data;
+}
+"@
+}
+Run-Check $c14 "" $false
 
 # --- 汇总 ---
 Remove-Item -Recurse -Force $tmpRoot

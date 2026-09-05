@@ -166,11 +166,12 @@ foreach ($project in $uniqueProjects) {
     if ($classes.Count -gt 0) {
         $filterExpr = $classes -join '|'
         Write-Host "  dotnet test tests/$project --filter `"FullyQualifiedName~$filterExpr`"" -ForegroundColor DarkGray
-        dotnet test "tests/$project" --filter "FullyQualifiedName~$filterExpr" --no-restore
+        # F-26 (review 2026-09-06)：绝对路径——原相对路径依赖 CWD，从仓库外调用时 Test-Path 过、dotnet 炸。
+        dotnet test "$repoRoot\tests\$project" --filter "FullyQualifiedName~$filterExpr" --no-restore
         if ($LASTEXITCODE -ne 0) { $exitCode = 1 }
     } else {
         Write-Host "  dotnet test tests/$project" -ForegroundColor DarkGray
-        dotnet test "tests/$project" --no-restore
+        dotnet test "$repoRoot\tests\$project" --no-restore
         if ($LASTEXITCODE -ne 0) { $exitCode = 1 }
     }
 }

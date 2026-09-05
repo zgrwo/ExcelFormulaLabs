@@ -33,7 +33,9 @@ namespace ExcelFormulaLabs.Foundation
             if (template == null)
                 return key; // fail-safe: return key name so message is never null
             return args.Length > 0
-                ? string.Format(System.Globalization.CultureInfo.CurrentCulture, template, args)
+                // F-32 (review 2026-09-06)：错误消息格式化与全库 InvariantCulture 纪律一致
+                // （de-DE 下 {0:0.##} 曾渲染 "1,5"）。
+                ? string.Format(System.Globalization.CultureInfo.InvariantCulture, template, args)
                 : template;
         }
     }

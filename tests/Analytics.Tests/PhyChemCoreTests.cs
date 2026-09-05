@@ -31,6 +31,14 @@ namespace ExcelFormulaLabs.Analytics.Tests
         // review 2026-08-29（发行前 max level 复审）：水合物系数原用裸 int 逐位累积，unchecked 下
         // 超 int.MaxValue 静默回绕为负数 → 错误的分子量。现与 ParseCount 对齐显式抛错。
         [Fact] public void MolecularWeight_hydrate_coefficient_overflow_throws() { var act = () => PhyChemCore.MolecularWeight("H2O.10000000000H2O"); act.Should().Throw<ArgumentException>().WithMessage("*coefficient*"); }
+        // F-01 (review 2026-09-05)：ExpandGroup 的 ParseCount×mult 乘法曾 unchecked int 回绕——
+        // "(H2)1073741824"（恰 2^31）静默按 H1 计算返回 1.008。现 long 相乘 + 超限显式抛错。
+        [Fact] public void MolecularWeight_group_product_wraparound_throws() { var act = () => PhyChemCore.MolecularWeight("(H2)1073741824"); act.Should().Throw<ArgumentException>().WithMessage("*product*"); }
+        [Fact] public void MolecularWeight_group_product_boundary_ok() => PhyChemCore.MolecularWeight("(H2)1073741823").Should().BeApproximately(2164663515.168, 1e-3);
+        // F-10 (review 2026-09-06)：Density m/v 溢出 ±Inf → NaN 封顶（N08a 同族收尾）。
+        [Fact] public void Density_overflow_capped_to_NaN() => double.IsNaN(PhyChemCore.Density(1e308, 1e-308)).Should().BeTrue();
+        // F-11 (review 2026-09-06)：IdealGasLaw t 为 K 温标，t≤0 物理无意义（曾算出负压）——对齐 TEMP/GASSTP。
+        [Fact] public void IdealGasLaw_negative_kelvin_NaN() => PhyChemCore.IdealGasLaw(v: 1.0, n: 1.0, t: -300.0).Should().Be(double.NaN);
         [Fact] public void GasToSTP_no_vUnit() => PhyChemCore.GasToSTP(22.4, 0, 1).Should().BeApproximately(22.4, 0.01);
         [Fact] public void GasToSTP_invalid_unit_returns_NaN() => PhyChemCore.GasToSTP(22.4, 0, 1, "XX").Should().Be(double.NaN);
 

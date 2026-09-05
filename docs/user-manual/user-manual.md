@@ -3640,6 +3640,8 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 **语法**：`=RANGE.TOCSV(source_range, [delimiter], [quote_fields], [has_headers])`
 
+> **参数说明**：`has_headers` 为兼容参数，**无实际效果**——CSV 恒导出全部行（含首行），不像 TOHTML/TOJSON/TOMD 那样解释表头。该参数仅为与其他 RANGE.* 导出签名一致而保留。
+
 **示例**：
 ```
 =RANGE.TOCSV(A1:D5, ",", FALSE)

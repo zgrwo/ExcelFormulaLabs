@@ -19,7 +19,7 @@ namespace ExcelFormulaLabs.Analytics
             object terms = null)
             => OutputWrapper.WrapError(() =>
             {
-                var (maxOrder, quadratic) = ParseTerms(terms);
+                var (maxOrder, quadratic) = DoeAnalysisCore.ParseTerms(terms);
                 return DoeAnalysisCore.Analyze(M(design), V(response), maxOrder, quadratic);
             });
 
@@ -34,7 +34,7 @@ namespace ExcelFormulaLabs.Analytics
             object terms = null)
             => OutputWrapper.WrapError(() =>
             {
-                var (maxOrder, quadratic) = ParseTerms(terms);
+                var (maxOrder, quadratic) = DoeAnalysisCore.ParseTerms(terms);
                 return DoeAnalysisCore.Anova(M(design), V(response), maxOrder, quadratic);
             });
 
@@ -49,23 +49,8 @@ namespace ExcelFormulaLabs.Analytics
             object terms = null)
             => OutputWrapper.WrapError(() =>
             {
-                var (maxOrder, quadratic) = ParseTerms(terms);
+                var (maxOrder, quadratic) = DoeAnalysisCore.ParseTerms(terms);
                 return DoeAnalysisCore.Pareto(M(design), V(response), maxOrder, quadratic);
             });
-
-        private static (int maxOrder, bool quadratic) ParseTerms(object terms)
-        {
-            if (terms == null || InputNormalizer.IsExcelMissing(terms))
-                return (2, false); // default: main + 2-way interactions
-            string t = InputNormalizer.ToString(terms).Trim().ToUpperInvariant();
-            return t switch
-            {
-                "MAIN" or "1" => (1, false),
-                "2WAY" or "2" => (2, false),
-                "QUADRATIC" or "Q" or "FULL" => (2, true),
-                _ => throw new System.ArgumentException(
-                    $"Unknown terms '{t}'. Supported: main, 2way, quadratic.")
-            };
-        }
     }
 }

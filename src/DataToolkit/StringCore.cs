@@ -13,10 +13,11 @@ namespace ExcelFormulaLabs.DataToolkit
     /// <summary>String manipulation: encoding, validation, distance, UUID, URL, formatting. Ported from StringUtils.bas.</summary>
     internal static class StringCore
     {
-        private static readonly Regex WhitespaceRx = new(@"\s+", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
-        private static readonly Regex HtmlTagRx = new(@"<[^>]+>", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
+        // F-32 (review 2026-09-06)：补 CultureInvariant——与 RegexCore/SqlCore 约定一致。
+        private static readonly Regex WhitespaceRx = new(@"\s+", RegexOptions.Compiled | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(5));
+        private static readonly Regex HtmlTagRx = new(@"<[^>]+>", RegexOptions.Compiled | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(5));
         private static readonly Regex AlignmentWidthRx = new(
-            @"\{\d+(?:,\s*(\d+))?[^}]*\}", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
+            @"\{\d+(?:,\s*(\d+))?[^}]*\}", RegexOptions.Compiled | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(5));
 
         internal static string ReverseString(string t)
         {

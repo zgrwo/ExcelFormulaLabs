@@ -213,7 +213,11 @@ namespace ExcelFormulaLabs.Foundation
                 return b ? "Boolean:True" : "Boolean:False";
 
             if (value is DateTime dt)
-                return $"Date:{dt:yyyy-MM-dd HH:mm:ss}";
+                // F-14 (review 2026-09-06)：带亚秒的 DateTime 曾与整秒塌缩为同一去重键
+                // （ARR.UNIQUE 静默丢值）——仅在有亚秒时追加小数段，整秒键格式不变。
+                return dt.Ticks % TimeSpan.TicksPerSecond == 0
+                    ? $"Date:{dt:yyyy-MM-dd HH:mm:ss}"
+                    : $"Date:{dt:yyyy-MM-dd HH:mm:ss.fffffff}";
 
             if (value is string s)
                 return $"String:{s}";

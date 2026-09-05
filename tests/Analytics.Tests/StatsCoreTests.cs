@@ -182,6 +182,34 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void Sum_overflow_returns_NaN() { var d = new[] { double.MaxValue, double.MaxValue }; double.IsNaN(StatsCore.Sum(d)).Should().BeTrue(); }
         [Fact] public void Product_overflow_returns_NaN() { var d = new[] { double.MaxValue, 2.0 }; double.IsNaN(StatsCore.Product(d)).Should().BeTrue(); }
 
+        // ── F-07/F-08 (review 2026-09-06)：极端量纲下尺度不变量输出保洁 ──
+        [Fact] public void Percentile_cross_sign_extreme_finite()
+        {
+            // MathNet R7 插值 hi−lo 溢出 → 曾返回 +Inf；凸组合回退真值 0（运行时探针实测复现）。
+            var p = StatsCore.Percentile(new[] { -1e308, 1e308 }, 50);
+            (!double.IsNaN(p) && !double.IsInfinity(p)).Should().BeTrue();
+            p.Should().BeApproximately(0.0, 1e290);
+        }
+        [Fact] public void Summary_extreme_scale_no_Inf_leak()
+        {
+            // SUMMARY median 列曾 +Inf（(lo+hi)/2 溢出）、iqr 列曾 Inf−Inf=NaN。
+            var r = StatsCore.Summary(new[] { 1.5e308, 1.5e308 });
+            (!double.IsNaN(r[5]) && !double.IsInfinity(r[5])).Should().BeTrue();
+            r[5].Should().BeApproximately(1.5e308, 1e292);
+            r[8].Should().Be(0.0);
+        }
+        [Fact] public void VarianceP_constant_extreme_is_zero()
+        {
+            // F-08：常数数组真方差恒 0，与尺度无关（溢出路径曾误报 NaN）。
+            StatsCore.VarianceP(new[] { 1.5e308, 1.5e308 }).Should().Be(0.0);
+            StatsCore.Variance(new[] { 1.5e308, 1.5e308 }).Should().Be(0.0);
+        }
+        [Fact] public void VarianceP_spread_extreme_still_NaN()
+        {
+            // R22 语义保留：真值不可表示的大尺度方差仍封顶 NaN。
+            double.IsNaN(StatsCore.VarianceP(new[] { 1e200, -1e200 })).Should().BeTrue();
+        }
+
         // =====================================================================
         // CROSS-VALIDATION TESTS AGAINST PYTHON (numpy / scipy)
         //
