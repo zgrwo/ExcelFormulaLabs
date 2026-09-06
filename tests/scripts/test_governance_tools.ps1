@@ -4,6 +4,8 @@
 #       scaffold-udf 标识符校验（N-E）/ run-affected 未映射告警（N-G）/ commit-msg
 #       bash 计数与 locale 固定（N-C + R5-P3-37）/ patch-xll 缺失 exit 1（N-D）/
 #       update_excel_arguments 迁移完成语义（R5-P3-25）。
+# R6-F2 (review 2026-09-06)：patch-xll 瞬时文件锁重试（-SimulateTransientLock 负向注入，
+#       需要 Release 构建产物时运行，否则 SKIP）。
 # 用法：pwsh 或 powershell 均可 -NoProfile -ExecutionPolicy Bypass -File tests/scripts/test_governance_tools.ps1
 # ============================================================================
 $ErrorActionPreference = "Stop"
@@ -116,6 +118,27 @@ $out = & $hostCmd -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repo "scr
 $exit = $LASTEXITCODE
 Assert-Scenario "missing xll exits non-zero" ($exit -eq 1) "exit=$exit"
 $ErrorActionPreference = "Stop"
+
+# [4b] R6-F2 (review 2026-09-06)：-SimulateTransientLock 首调 exit 5 → 重试必须收敛到 exit 0。
+# 需要真实 Release 构建的 .xll（含 FileDescription/ProductName 键的 VERSIONINFO）——测试用
+# 临时副本，不触碰 bin/ 原产物；无构建产物时 SKIP（与 [5] 的 SKIP 模式一致）。
+$builtXll = Get-ChildItem -Path (Join-Path $repo "src") -Filter "*-packed.xll" -Recurse -ErrorAction SilentlyContinue |
+    Where-Object { $_.DirectoryName -match "Release" } | Select-Object -First 1
+if ($builtXll) {
+    $testXll = Join-Path $tmpRoot "fixture-packed.xll"
+    Copy-Item $builtXll.FullName $testXll -Force
+    $ErrorActionPreference = "Continue"
+    $out = & $hostCmd -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repo "scripts\patch-xll-version.ps1") `
+        -XllPath $testXll -FileDescription "d" -ProductName "p" -SimulateTransientLock 2>&1
+    $exit = $LASTEXITCODE
+    $outStr = $out | Out-String
+    Assert-Scenario "simulated transient lock retries to success (exit 0)" `
+        (($exit -eq 0) -and ($outStr -match 'retrying')) "exit=$exit"
+    $ErrorActionPreference = "Stop"
+} else {
+    Write-Host "  [SKIP] no Release-built xll found - retry scenario needs a real xll" -ForegroundColor DarkYellow
+    $script:skipCount = [int]$script:skipCount + 1
+}
 
 Write-Host ""
 Write-Host "=== [5] update_excel_arguments.py 迁移完成语义（R5-P3-25）===" -ForegroundColor Cyan

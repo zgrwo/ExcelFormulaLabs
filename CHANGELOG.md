@@ -24,6 +24,7 @@
 - **P3 DT.EASTER Python 对照由算法镜像改独立历表金值**（2000/2024/2025/2038 公开历表日期，含最早/最晚锚点）；cross_check_matrix 的 `max(tol, manifest)` 取松死分支改为 N01 收紧语义；UDF 总数由 api-reference.md 动态解析（3 处硬编码 236 消除）；Percentile 跨符号断言容差 1e-290→1e-10
 
 **工具健壮性（自测缺口补齐 = R5-07，新增 tests/scripts/test_governance_tools.ps1 13 场景）**
+- **P3 patch-xll-version.ps1 瞬时文件锁重试（R6-F2，发行前补丁）**：EndUpdateResourceW 在 Defender 实时扫描刚写出的 .xll 时偶发 "file in use"（exit 5，亚秒级窗口，重试即过）→ ① `WriteVersionResource` 失败路径句柄泄漏修复（UpdateResourceW 失败 / EndUpdateResourceW(false) 失败均以 discard 模式释放 hUpdate，否则同进程重试因泄漏句柄共享冲突连败）；② 脚本层对 exit 5 做 3 次退避重试（500ms/1s/1.5s，幂等安全：失败时更新未提交、文件保持原状）；③ `-SimulateTransientLock` 测试开关 + 治理自测新增 [4b] 场景（首调模拟 exit 5 → 重试收敛 exit 0，需 Release 构建产物否则 SKIP）
 - **P2 scaffold-udf.ps1 在 PS5.1 下必然失败（R5-N1，自测运行时发现）**：三参数 Join-Path（`-AdditionalChildPath`）为 pwsh6+ 专有——4 处全部改嵌套 Join-Path，双宿主兼容
 - **P2 patch-xll-version.ps1 "Nothing patched" 分型**：VERSIONINFO 目标键全缺失（模板改名，发版元数据损坏）→ exit 6 阻断；已补丁幂等重跑仍 exit 0
 - **P2 run-affected-tests.ps1 路由盲区**：src 文件仅认 4 类命名后缀 + 未跟踪新文件不可见 → 模块级兜底路由 + `git ls-files --others` 补入

@@ -35,7 +35,10 @@
 param(
     [Parameter(Mandatory = $true)] [string] $XllPath,
     [Parameter(Mandatory = $true)] [string] $FileDescription,
-    [Parameter(Mandatory = $true)] [string] $ProductName
+    [Parameter(Mandatory = $true)] [string] $ProductName,
+    # R6-F2 (review 2026-09-06)：治理自测用测试开关——首调模拟瞬时文件锁（exit 5），
+    # 验证重试路径能收敛到成功；生产构建不传此开关。
+    [switch] $SimulateTransientLock
 )
 
 $ErrorActionPreference = "Stop"
@@ -402,8 +405,21 @@ public static class VersionInfoPatcher
             // P1-12 (review): write back with the ORIGINAL language — language=0 produced a
             // duplicate resource invisible to standard readers (FileVersionInfo/Explorer).
             if (!UpdateResourceW(hUpdate, RT_VERSION, VS_VERSION_INFO, language,
-                resource, (uint)resource.Length)) return false;
-            return EndUpdateResourceW(hUpdate, false);
+                resource, (uint)resource.Length))
+            {
+                // R6-F2 (review 2026-09-06)：失败路径此前直接 return false，hUpdate 句柄泄漏
+                // （文件锁随句柄存续）——同进程重试的 BeginUpdateResourceW 会因共享冲突连败。
+                // discard 模式显式释放。
+                EndUpdateResourceW(hUpdate, true);
+                return false;
+            }
+            if (!EndUpdateResourceW(hUpdate, false))
+            {
+                // EndUpdateResourceW(false) 失败 = 更新未提交，句柄仍持有——discard 释放。
+                EndUpdateResourceW(hUpdate, true);
+                return false;
+            }
+            return true;
         }
         catch
         {
@@ -428,5 +444,22 @@ public static class VersionInfoPatcher
 
 Add-Type -TypeDefinition $cs -ErrorAction Stop
 Write-Host "Patching VERSIONINFO: $resolvedPath"
-$exitCode = [VersionInfoPatcher]::Patch($resolvedPath, $FileDescription, $ProductName)
+# R6-F2 (review 2026-09-06)：EndUpdateResourceW 在 Defender 实时扫描刚写出的 .xll 时会
+# 瞬时失败（exit 5，亚秒级窗口，重试即过）。重试幂等安全：失败时更新未提交、文件保持原状，
+# 且 WriteVersionResource 失败路径已 discard 释放句柄（否则同进程重试因泄漏句柄连败）。
+# 测试开关 -SimulateTransientLock 首调直接返回 5，驱动重试路径收敛。
+$exitCode = if ($SimulateTransientLock) {
+    Write-Host "ERROR: UpdateResource failed (file in use?)."
+    5
+} else {
+    [VersionInfoPatcher]::Patch($resolvedPath, $FileDescription, $ProductName)
+}
+for ($i = 1; $exitCode -eq 5 -and $i -le 3; $i++) {
+    Start-Sleep -Milliseconds (500 * $i)
+    Write-Host "  UpdateResource failed (file in use?) - retrying ($i/3)..."
+    $exitCode = [VersionInfoPatcher]::Patch($resolvedPath, $FileDescription, $ProductName)
+}
+if ($exitCode -eq 5) {
+    Write-Host "ERROR: VERSIONINFO patch failed after 3 retries - file may be genuinely locked."
+}
 exit $exitCode
