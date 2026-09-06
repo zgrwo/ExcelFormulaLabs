@@ -6,7 +6,7 @@
 
 > 版本一致性：每个 `v*` git tag 必须在本文档有对应条目（`verify-docs.ps1` 强制检查，见规则 [documentation.md](docs/governance/documentation.md)）。
 
-## [Unreleased]
+## [2.2.6] - 2026-09-06
 
 ### Fixed（2026-09-06 第五轮发行前审查：P1×1 + P2×12 + P3 批量处置，报告归档 logs/reports/ 不入库）
 
@@ -352,7 +352,8 @@
 [2.2.4]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.3...v2.2.4
 [2.2.3]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.2...v2.2.3
 [2.2.5]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.4...v2.2.5
-[Unreleased]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.5...HEAD
+[2.2.6]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.5...v2.2.6
+[Unreleased]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.6...HEAD
 [2.2.1]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.1.1...v2.2.0
 [2.1.1]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.1.0...v2.1.1

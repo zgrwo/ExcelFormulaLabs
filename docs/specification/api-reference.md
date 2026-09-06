@@ -1,6 +1,6 @@
 # API 参考
 
-> 版本：v2.2.5
+> 版本：v2.2.6
 > 全部 UDF 函数的完整签名。使用指南见 [README.md](../../README.md)，每函数详细示例见 [用户手册](../user-manual/user-manual.md)。
 
 ---
