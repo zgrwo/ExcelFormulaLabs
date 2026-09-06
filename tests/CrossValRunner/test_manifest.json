@@ -192,7 +192,7 @@
     {"id":"STATS.EXP","module":"STATS","coreClass":"StatsCore","coreMethod":"ExpSafe","args":[[0,1,2,3,4]],"tolerance":1e-10},
     {"id":"STATS.SIGN","module":"STATS","coreClass":"StatsCore","coreMethod":"Sign","args":[[-10,0,30,-0.5,100]],"tolerance":1e-10},
     {"id":"LINALG.DET_HILBERT8","module":"LINALG","coreClass":"LinalgCore","coreMethod":"Determinant","args":[{"ref":"H8"}],"tolerance":1e-10},
-    {"id":"LINALG.SOLVE_HILBERT6","module":"LINALG","coreClass":"LinalgCore","coreMethod":"Solve","args":[{"ref":"H6"},{"ref":"b6"}],"tolerance":1e-06},
+    {"id":"LINALG.SOLVE_HILBERT6","module":"LINALG","coreClass":"LinalgCore","coreMethod":"Solve","args":[{"ref":"H6"},{"ref":"b6"}],"tolerance":1e-10},
     {"id":"LINALG.SVD_VT","module":"LINALG","coreClass":"LinalgCore","coreMethod":"Svd","args":[{"ref":"svd_3x2"}],"tolerance":1e-06},
     {"id":"ARR.SORTNUM","module":"ARR","coreClass":"ArrayCore","coreMethod":"SortNum","args":[[3,-1,2.5,10,0]],"tolerance":1e-10},
     {"id":"PHYCHEM.DENSITY_OK","module":"PHYCHEM","coreClass":"PhyChemCore","coreMethod":"Density","args":[2.5,1.25],"tolerance":1e-10},

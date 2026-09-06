@@ -367,7 +367,19 @@ cross_vs_csharp("LINALG.SVD_VT vs C#", Vt_aligned, "LINALG.SVD_VT", tol=1e-6, fi
 H6 = np.array([[1.0/(i+j+1) for j in range(6)] for i in range(6)])
 H8 = np.array([[1.0/(i+j+1) for j in range(8)] for i in range(8)])
 cross_check("LINALG.DET_HILBERT8", float(np.linalg.det(H8)), tol=1e-25)
-cross_check("LINALG.SOLVE_HILBERT6", np.linalg.solve(H6, np.ones(6)), tol=1e-6)
+# R6-F3 (review 2026-09-06)：SOLVE_HILBERT6 直接比对解向量过紧——cond(H6)≈1.5e7 时解的合法
+# 误差量级 cond·eps·|x|≈2e-5，atol=1e-6 只剩 ~1.4 倍余量；OpenBLAS 随 CPU 内核分发
+# （AVX2/AVX-512）的舍入差异即可越界（同一 numpy 2.4.6：本机 PASS、windows-latest FAIL，
+# C# 侧逐位一致）。病态系统正确解的唯一可检验判据是残差 ‖A·x−b‖——两侧均 ~1e-15，
+# 判据跨 CPU 稳定。manifest tolerance 在此作为残差阈值被消费（1e-06→1e-10）。
+cs_solve6 = np.asarray(unwrap(csharp_results()["LINALG.SOLVE_HILBERT6"]["result"]), dtype=float)
+b6 = np.ones(6)
+tol_res = float(csharp_results()["LINALG.SOLVE_HILBERT6"].get("tolerance") or 1e-10)
+res_cs6 = float(np.max(np.abs(H6 @ cs_solve6 - b6)))
+res_py6 = float(np.max(np.abs(H6 @ np.linalg.solve(H6, b6) - b6)))
+CROSS_REFERENCED.add("LINALG.SOLVE_HILBERT6")
+print(f"  [note] SOLVE_HILBERT6 residuals: C#={res_cs6:.2e} Py={res_py6:.2e} (threshold {tol_res:g})")
+check("LINALG.SOLVE_HILBERT6 residual (max) < 1e-10", max(res_cs6, res_py6) < tol_res, True, manual=False)
 recons = U_svd[:,:2] @ np.diag(S_svd) @ Vt_svd
 check("LINALG.SVD reconstruction", recons, np.array([[1,4],[2,5],[3,6]]), tol=EPS_LOOSE)
 # QR

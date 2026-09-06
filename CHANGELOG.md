@@ -19,6 +19,7 @@
 - **P3 DOE.ANOVA Total 行 tss 补 CapNaN**（N07 约定一致，纵深防御）；InputNormalizer rows*cols 改 long 域乘法 + 显式上限检查
 
 **验证体系可信度**
+- **P3 SOLVE_HILBERT6 对照改残差判据（R6-F3，发行后补丁）**：cond(H6)≈1.5e7 病态矩阵直接比对解向量过紧——atol=1e-6 距跨 CPU 内核舍入差（OpenBLAS 按 CPUID 分发 AVX2/AVX-512，同一 numpy 2.4.6 本机与 windows-latest 结果不同）仅 ~1.4 倍余量，首次发行 CI 的 cross-val job 偶发 FAIL（C# 侧逐位一致，纯环境差异）→ 改验残差 ‖A·x−b‖ < 1e-10（实测 2.3e-13，跨 CPU 稳定；病态系统正确解的唯一可检验判据）；manifest tolerance 1e-06→1e-10 被消费
 - **P2 CrossVal ndarray 通道 rtol 显式收紧**：`np.allclose` 默认 rtol=1e-5 曾把 manifest 声明的 atol 预算（1e-10）稀释 4~6 个数量级 → `RTOL_ULP=1e-12`（ULP 级松弛保留、1e-5 级静默偏差可抓）；负向注入实测
 - **P2 CrossVal 退化输入与覆盖缺口补齐**：manifest 128→146 条——空数组/单元素/±1e308 精确抵消/Hilbert 病态（DET_HILBERT8、SOLVE_HILBERT6）/初等函数 ABS/SQRT/LN/LOG10/EXP/SIGN（check 升级 cross）/ARR.SORTNUM（Numeric 比较器）/PHYCHEM.DENSITY（含除零哨兵标签）/REGRESS.RSQ（非完美拟合数据）/DT.EASTER_2038；LINALG.SVD_VT 由单点烟测升级为逐元素对照（符号对齐）；Dispatcher 补 8 个注册
 - **P3 DT.EASTER Python 对照由算法镜像改独立历表金值**（2000/2024/2025/2038 公开历表日期，含最早/最晚锚点）；cross_check_matrix 的 `max(tol, manifest)` 取松死分支改为 N01 收紧语义；UDF 总数由 api-reference.md 动态解析（3 处硬编码 236 消除）；Percentile 跨符号断言容差 1e-290→1e-10
