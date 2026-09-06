@@ -1,5 +1,6 @@
 # API 参考
 
+> 版本：v2.2.5
 > 全部 UDF 函数的完整签名。使用指南见 [README.md](../../README.md)，每函数详细示例见 [用户手册](../user-manual/user-manual.md)。
 
 ---
@@ -218,9 +219,9 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `DT.EOM` | (serial_number) | `double` | 当月最后一天。对标 Excel EOMONTH |
 | `DT.WOM` | (serial_number, [start_day]) | `long` | 当月第几周（1-5） |
 | `DT.DIM` | (year, month) | `long` | 指定年月的天数 |
-| `DT.AGEYEARS` | (start_date, [end_date]) | `long` | 周岁。end_date 默认今天。对标 Excel DATEDIF |
-| `DT.AGEMONTHS` | (start_date, [end_date]) | `long` | 足月数。end_date 默认今天 |
-| `DT.AGEDAYS` | (start_date, [end_date]) | `long` | 总天数。end_date 默认今天 |
+| `DT.AGEYEARS` | (start_date, [end_date]) | `long` | 周岁。end_date 默认今天；已提供但不可转换（文本/错误值）→ `#VALUE!`。对标 Excel DATEDIF |
+| `DT.AGEMONTHS` | (start_date, [end_date]) | `long` | 足月数。end_date 默认今天；不可转换 → `#VALUE!` |
+| `DT.AGEDAYS` | (start_date, [end_date]) | `long` | 总天数。end_date 默认今天；不可转换 → `#VALUE!` |
 | `DT.ISWE` | (serial_number) | `bool` | 是否为周六或周日 |
 | `DT.ADDWKD` | (start_date, workdays) | `double` | 加 workdays 个工作日（跳过周末）。对标 Excel WORKDAY |
 | `DT.WKDBTWN` | (start_date, end_date) | `long` | 两个日期间的工作日数。对标 Excel NETWORKDAYS |
@@ -230,7 +231,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `DT.SEMESTER` | (serial_number) | `long` | 半年度（1 或 2） |
 | `DT.DOY` | (serial_number) | `long` | 一年中的第几天（1-366） |
 | `DT.ISLEAP` | (year) | `bool` | 是否为闰年 |
-| `DT.UNIXTS` | (serial_number) | `double` | Excel 日期 → Unix 时间戳（秒） |
+| `DT.UNIXTS` | (serial_number) | `double` | Excel 日期 → Unix 时间戳（秒）。按机器本地时区解释日期（Unspecified Kind → 本地 UTC 偏移），跨时区同输入得不同值；`DT.FROMUNIX` 对称取本地时间，单机往返一致 |
 | `DT.FROMUNIX` | (unix_timestamp) | `double` | Unix 时间戳 → Excel 日期 |
 | `DT.DATEDIFF` | (date_unit, start_date, end_date) | `long` | 日期差：`"d"`=天, `"m"`=月, `"y"`=年, `"w"`=周。对标 Excel DATEDIF |
 

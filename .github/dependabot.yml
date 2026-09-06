@@ -24,6 +24,11 @@ updates:
       # 该依赖的 CVE 修复需人工跟进（升级时须同步适配 e_sqlite3.dll 嵌入路径）。
       - dependency-name: "Microsoft.Data.Sqlite"
         update-types: ["version-update:semver-major", "version-update:semver-minor", "version-update:semver-patch"]
+      # R5-06 (review 2026-09-06)：System.Text.Json 与 Sqlite 同为硬钉（csproj 内字面
+      # 8.0.5，net48 兼容 + CVE-2024-43485 修复版锚点），却无 ignore——dependabot 每周
+      # 的 bump PR 一旦合入即静默侵蚀钉版。补全档 ignore（同 Sqlite：安全修复需人工跟进）。
+      - dependency-name: "System.Text.Json"
+        update-types: ["version-update:semver-major", "version-update:semver-minor", "version-update:semver-patch"]
 
   # --- Python 交叉验证依赖（requirements.txt，版本由 dependabot 维护） ---
   - package-ecosystem: "pip"

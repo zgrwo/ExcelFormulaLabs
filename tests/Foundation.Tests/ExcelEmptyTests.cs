@@ -36,9 +36,11 @@ namespace ExcelFormulaLabs.Foundation.Tests
             ExcelEmpty.Value.Equals(new object()).Should().BeFalse();
         }
 
-        [Fact] public void GetHashCode_stable()
+        // R5-P3-09 (review 2026-09-06)：原断言同引用两次取 Hash 恒真（零信息）；契约是
+        // `override int GetHashCode() => 0`（对齐 DBNull.Value 语义），改硬编码期望。
+        [Fact] public void GetHashCode_is_zero_contract()
         {
-            ExcelEmpty.Value.GetHashCode().Should().Be(ExcelEmpty.Value.GetHashCode());
+            ExcelEmpty.Value.GetHashCode().Should().Be(0);
         }
 
         [Fact] public void Distinct_from_null_empty_string_and_DBNull()

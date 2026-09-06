@@ -4,7 +4,7 @@
 verify-manual.py — Verify ALL UDF examples against Python with hardcoded expected values.
 
 Every numerical check compares Python computation against a constant cross-validated
-with C# MathNet. Never use self-checks (actual == same expression as expected). — Verify ALL 236 UDF examples in docs/user-manual/user-manual.md against Python (sync variants; *_ASYNC share Core methods).
+with C# MathNet. Never use self-checks (actual == same expression as expected). — Verify ALL 236 UDF examples (总数由 api-reference.md 动态解析，见 UDF_TOTAL) in docs/user-manual/user-manual.md against Python (sync variants; *_ASYNC share Core methods).
 
 Usage: python scripts/verify-manual.py
 """
@@ -28,6 +28,27 @@ if sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
 EPS = 1e-10; EPS_LOOSE = 1e-6
+# R5-P3-02 (review-2026-09-06)：ndarray 通道的相对项必须显式收紧——np.allclose 默认 rtol=1e-5
+# 会把 manifest 声明的 atol 预算（如 1e-10）稀释 4~6 个数量级（72 量级元素实际放行 ~7e-4）。
+# 取 1e-12 ≈ 4500×ULP：覆盖求和重排/初等函数跨平台 1-ulp 级合法差异，同时不再掩盖 1e-5 级
+# 相对偏差（rtol=0 会对大数值结果产生 ulp 级假 FAIL，故取机器精度量级而非零）。
+RTOL_ULP = 1e-12
+
+def _count_udfs_from_api_reference():
+    """R5-P3-16 (review-2026-09-06)：UDF 总数从 api-reference.md（数字唯一信源）解析，
+    禁硬编码——原 3 处字面量 236 在 UDF 数变更后会静默漂移（检查 16 扫描域不含 .py）。
+    解析失败时兜底 236 并显式告警（仅影响覆盖率打印，不影响判定）。"""
+    p = Path(__file__).resolve().parent.parent / "docs" / "specification" / "api-reference.md"
+    try:
+        n = len(re.findall(r"^\| `[A-Z]+\.[A-Z0-9_]+` \|", p.read_text(encoding="utf-8"), re.M))
+        if n <= 0:
+            raise ValueError("no UDF signature rows parsed")
+        return n
+    except (OSError, ValueError) as e:
+        print(f"  [WARN] api-reference.md UDF count parse failed ({e}); falling back to 236")
+        return 236
+
+UDF_TOTAL = _count_udfs_from_api_reference()
 PASS = 0; FAIL = 0; SKIP = 0  # P1-9 (review): missing C# reference is now a hard-fail signal
 MANUAL_PASS = 0  # P0-3b (review-2026-08-31): check() 纯 Python 自校验通过数
 CROSS_PASS = 0   # P0-3b: cross_check() 与 C# 对照通过数
@@ -52,7 +73,8 @@ def check(name, actual, expected, tol=EPS, manual=True):
             FAIL += 1; print(f"  FAIL {name}: got {actual}, expected {expected} (diff={abs(float(actual)-float(expected)):.2e})")
     elif isinstance(expected, np.ndarray) or isinstance(actual, np.ndarray):
         a = np.asarray(actual, dtype=float); e = np.asarray(expected, dtype=float)
-        ok = a.shape == e.shape and np.allclose(a, e, atol=tol, equal_nan=True)
+        # R5-P3-02：rtol 显式取 RTOL_ULP（默认 1e-5 曾稀释 manifest atol 预算 4~6 个数量级）
+        ok = a.shape == e.shape and np.allclose(a, e, atol=tol, rtol=RTOL_ULP, equal_nan=True)
         if ok: print(f"  OK {name}: shape={a.shape}")
         else: FAIL += 1; print(f"  FAIL {name}: mismatch\ngot={actual}\nexp={expected}")
     elif isinstance(expected, list) and isinstance(actual, list) and len(expected) == len(actual):
@@ -292,12 +314,20 @@ cross_check("STATS.CORRMATRIX", np.corrcoef(X_cm, rowvar=False), tol=1e-10)
 # P0-3a 标签路径回归守卫（review-2026-08-31）：常量列 → 全 NaN 行列——
 # C# 序列化为 {"__nan__":true} 标签，unwrap 后须与 Python NaN 匹配（防标签被改回 null 的回归）。
 cross_check("STATS.CORRMATRIX_CONST", np.array([[np.nan, np.nan], [np.nan, 1.0]]), tol=0)
-check("STATS.ABS", np.abs([-10,20,-30,40,-50]).tolist(), [10,20,30,40,50])
-check("STATS.SQRT", np.sqrt([4,9,16,25,36]).tolist(), [2,3,4,5,6])
-check("STATS.LN", np.log([1,math.e,math.e**2,math.e**3,math.e**4]).tolist(), [0,1,2,3,4])
-check("STATS.LOG10", np.log10([1,10,100,1000,10000]).tolist(), [0,1,2,3,4])
-check("STATS.EXP", np.exp([0,1,2,3,4]).tolist(), [1,math.e,math.e**2,math.e**3,math.e**4])
-check("STATS.SIGN", np.sign([-10,0,30,-0.5,100]).tolist(), [-1,0,1,-1,1])
+# R5-P3-40 (review-2026-09-06)：初等函数由 manual 升级为 cross_check（此前无 C# 活体对照；
+# numpy 即独立实现，manifest 条目经 Dispatcher 新注册的 SqrtSafe/LogSafe/Log10Safe/ExpSafe/Sign/Abs）。
+cross_check("STATS.ABS", np.abs([-10,20,-30,40,-50]).tolist())
+cross_check("STATS.SQRT", np.sqrt([4,9,16,25,36]).tolist())
+cross_check("STATS.LN", np.log([1,math.e,math.e**2,math.e**3,math.e**4]).tolist())
+cross_check("STATS.LOG10", np.log10([1,10,100,1000,10000]).tolist())
+cross_check("STATS.EXP", np.exp([0,1,2,3,4]).tolist())
+cross_check("STATS.SIGN", np.sign([-10,0,30,-0.5,100]).tolist())
+# R5-03 (review-2026-09-06)：退化输入的活体对照（此前 manifest 零退化条目——历史 P0/P1 全部
+# 源于退化输入而 cross 通道未覆盖）。空/单元素/精确抵消路径，NaN 走标签通道。
+cross_check("STATS.MEAN_SINGLE", float(np.mean([7.5])))
+cross_check("STATS.MEAN_EMPTY", float(np.mean(np.array([]))))  # 双方 NaN（哨兵契约）
+cross_check("STATS.VAR_SINGLE", float(np.var([5.0], ddof=1)))  # 单元素 ddof=1 → NaN
+cross_check("STATS.SUM_CANCEL", float(np.sum([1e308, -1e308])))  # ±1e308 精确抵消 → 0.0
 
 # ========================================================================
 # LINALG (19 UDFs)
@@ -324,6 +354,20 @@ for _i in range(2):
     cross_vs_csharp(f"LINALG.SVD_S[{_i}] vs C#", S_svd[_i], "LINALG.SVD", tol=1e-3, field=("S", _i))
 check("LINALG.SVD_U[0,0]", abs(U_svd[0,0]+0.4287)<0.001, True)
 check("LINALG.SVD_VT[0,0]", abs(Vt_svd[0,0]+0.3863)<0.001, True)
+# R5-P3-40 (review-2026-09-06)：SVD Vt 全元素对照（此前仅 [0,0] 单点烟测）。右奇异向量
+# 逐行符号约定两侧可不同——先按 C# 侧对齐每行符号，再整矩阵比对（对齐是规范化，非改值）。
+Vt_cs_full = unwrap(_pick_field(csharp_results()["LINALG.SVD_VT"]["result"], "Vt"))
+Vt_aligned = Vt_svd.copy()
+for _ri in range(Vt_aligned.shape[0]):
+    if float(np.dot(Vt_cs_full[_ri], Vt_aligned[_ri])) < 0:
+        Vt_aligned[_ri] = -Vt_aligned[_ri]
+cross_vs_csharp("LINALG.SVD_VT vs C#", Vt_aligned, "LINALG.SVD_VT", tol=1e-6, field="Vt")
+# R5-03：病态矩阵对照（Hilbert：cond(H6)≈1.5e7 两侧均应精确到 ~1e-9；
+# cond(H8)≈1.5e10 的行列式为 ~1e-33 量级，绝对容差 1e-10 天然覆盖）。
+H6 = np.array([[1.0/(i+j+1) for j in range(6)] for i in range(6)])
+H8 = np.array([[1.0/(i+j+1) for j in range(8)] for i in range(8)])
+cross_check("LINALG.DET_HILBERT8", float(np.linalg.det(H8)), tol=1e-25)
+cross_check("LINALG.SOLVE_HILBERT6", np.linalg.solve(H6, np.ones(6)), tol=1e-6)
 recons = U_svd[:,:2] @ np.diag(S_svd) @ Vt_svd
 check("LINALG.SVD reconstruction", recons, np.array([[1,4],[2,5],[3,6]]), tol=EPS_LOOSE)
 # QR
@@ -405,6 +449,11 @@ cross_vs_csharp("REGRESS.COEF[2] vs C#", lr.coef_[1], "REGRESS.FitOLS", tol=1e-8
 cross_vs_csharp("REGRESS.R² vs C#", lr.score(Xr,yr), "REGRESS.FitOLS", tol=1e-10, field="r_squared")
 cross_vs_csharp("REGRESS.SSE vs C#", 0.0, "REGRESS.FitOLS", tol=1e-10, field="sse")
 check("REGRESS.RSQ", lr.score(Xr,yr), 1.0)
+# R5-P3-40 (review-2026-09-06)：RSQ 全对照——完美拟合数据 r²≡1 对实现错误零区分度，
+# 补非完美拟合数据（r²<1）经 FitOLS r_squared 字段与 sklearn 独立实现对照。
+X_rq=np.array([[1,1],[2,4],[3,3],[4,7],[5,5]],dtype=float); y_rq=np.array([1.1,3.9,3.2,7.4,5.6])
+lr_rq=LR(fit_intercept=True); lr_rq.fit(X_rq,y_rq)
+cross_vs_csharp("REGRESS.RSQ vs C#", lr_rq.score(X_rq,y_rq), "REGRESS.RSQ", tol=1e-10, field="r_squared")
 # WLS with equal weights should match OLS
 w=np.array([1.0,2,3,4,5]); lr_w=LR(fit_intercept=True); lr_w.fit(Xr,yr,sample_weight=w)
 cross_vs_csharp("REGRESS.WLS(R²) vs C#", lr_w.score(Xr,yr,sample_weight=w), "REGRESS.FitWLS", tol=1e-4, field="r_squared")
@@ -443,6 +492,11 @@ check("PHYCHEM.VOL(M3→L 1)", 1*1000, 1000); check("PHYCHEM.VOL(ML→L 500)", 5
 cross_check("PHYCHEM.MASS_KGtoLB_1", 1*2.20462, tol=1e-3)
 check("PHYCHEM.MASS(TON→KG 1)", 1*1000, 1000); check("PHYCHEM.MASS(G→KG 100)", 100/1000, 0.1)
 check("PHYCHEM.MASS(OZ→LB 16)", 16/16.0, 1.0)
+# R5-P3-40 (review-2026-09-06)：DENSITY 补活体对照（正常路径 + 除零哨兵 NaN 标签路径；
+# v==0 → NaN 为 api-reference 文档化契约，独立实现按契约给出哨兵）。
+cross_check("PHYCHEM.DENSITY_OK", 2.5/1.25)
+_m5, _v5 = 5.0, 0.0
+cross_check("PHYCHEM.DENSITY_ZERO_VOL", _m5/_v5 if _v5 != 0 else float("nan"))
 check("PHYCHEM.C_TO_F(0)", 0 * 9/5 + 32, 32); check("PHYCHEM.C_TO_F(100)", 100 * 9/5 + 32, 212)
 check("PHYCHEM.F_TO_C(32)", (32 - 32) * 5/9, 0); check("PHYCHEM.F_TO_C(212)", (212 - 32) * 5/9, 100)
 check("PHYCHEM.KG_TO_LB(10)", 10*2.20462, 22.0462, tol=1e-3)
@@ -639,15 +693,11 @@ def next_workday(d):
 check("DT.NEXTWKD(Fri)", next_workday(date(2024,6,14)), date(2024,6,14))
 check("DT.NEXTWKD(Sat)", next_workday(date(2024,6,15)), date(2024,6,17))
 # EASTER — cross-validated against C# DateTimeCore.Easter via CrossValRunner
-# Python Gauss algorithm output formatted as ISO string to match C# serialization
-def easter_cs_fmt(y):
-    a=y%19; b=y//100; c=y%100; d=b//4; e=b%4; f=(b+8)//25; g=(b-f+1)//3
-    h=(19*a+b-d-g+15)%30; i=c//4; k=c%4; l=(32+2*e+2*i-h-k)%7; m=(a+11*h+22*l)//451
-    mo=(h+l-7*m+114)//31; da=(h+l-7*m+114)%31+1
-    return date(y,mo,da).isoformat() + "T00:00:00.0000000"
-cross_check("DT.EASTER_2024", easter_cs_fmt(2024))
-cross_check("DT.EASTER_2025", easter_cs_fmt(2025))
-cross_check("DT.EASTER_2000", easter_cs_fmt(2000))
+# R5-P3-12 (review-2026-09-06)：原 Python 侧逐变量镜像 Meeus/Jones/Butcher 算法（移植对照，
+# 对「算法理解双侧同错」不可检）→ 改独立来源公开历表金值（含最早/最晚可能复活节锚点 2000/2038）。
+EASTER_GOLDEN = {2024: (3, 31), 2025: (4, 20), 2000: (4, 23), 2038: (4, 25)}
+for _ey, (_emo, _eda) in EASTER_GOLDEN.items():
+    cross_check(f"DT.EASTER_{_ey}", f"{date(_ey, _emo, _eda).isoformat()}T00:00:00.0000000")
 cross_check("DT.ISOWEEK", date(2024,1,1).isocalendar()[1])
 cross_check("DT.ISLEAP_2024", calendar.isleap(2024))
 def _add_workdays(start, n):
@@ -719,6 +769,8 @@ check("ARR.SORT", sorted([5,2,8,1,9]), [1,2,5,8,9])
 check("ARR.SORTASC", sorted([5,2,8,1,9]), [1,2,5,8,9])
 check("ARR.SORTDESC", sorted([5,2,8,1,9],reverse=True), [9,8,5,2,1])
 check("ARR.SORTNUM", sorted(["10","2","1","20"],key=float), ["1","2","10","20"])
+# R5-P3-40：Numeric 比较器路径补活体对照（此前 SORT 仅 cross 了 Auto 模式）
+cross_check("ARR.SORTNUM", sorted([3,-1,2.5,10,0]))
 check("ARR.SORTTEXT", sorted(["Banana","apple","Carrot"],key=str.lower), ["apple","Banana","Carrot"])
 check("ARR.UNIQUE", sorted(set([1,2,2,3,3,3,4,5,5])), [1,2,3,4,5])
 check("ARR.TOSET", sorted(set([1,2,2,3])), [1,2,3])
@@ -1052,9 +1104,11 @@ def cross_check_matrix(name, py_rows, tol=None):
         FAIL += 1; print(f"  FAIL {name}: row count mismatch C#={len(cs)} py={len(py_rows)+1}")
         return
     # F2 (review-2026-09-04): 消费 per-test tolerance；N01：显式 tol 声明优先。
+    # R5-P3-08 (review-2026-09-06)：原 max(tol, _m_tol) 取松并集语义与 N01「显式声明收紧」
+    # 矛盾（注释自称不冲突失实）——当前 3 个调用未传 tol 属死分支，但一旦传 tol 即静默放大
+    # 预算且无 F-34 审计。改为与标量/property 通道一致的 tol ?? manifest ?? 基线 优先级链。
     _m_tol = float(ref.get("tolerance")) if ref.get("tolerance") is not None else None
-    tol_eff = max(tol, _m_tol) if (tol is not None and _m_tol is not None) else (
-        tol if tol is not None else (_m_tol if _m_tol is not None else 1e-6))
+    tol_eff = tol if tol is not None else (_m_tol if _m_tol is not None else 1e-6)
     ok = True; maxdiff = 0.0
     for r in range(1, len(cs)):
         crow, prow = cs[r], py_rows[r-1]
@@ -1154,8 +1208,8 @@ print(f"    └ manual-only (Python self-verify): {MANUAL_PASS}")
 print(f"    └ cross-validated (vs C#):         {CROSS_PASS}")
 # E2/F1 (review-2026-09-04): “UDF coverage” 是手册示例覆盖（含纯 Python 自校验），
 # 必须同时打印真正与 C# 对照的 cross 覆盖数，防止 README/报告宣称口径虚高。
-print(f"  UDF coverage: {udf_count} of 236 UDFs covered (sync variants)")
-print(f"    └ of which cross-validated vs C#: {len(_cross_covered)} of 236 ({len(_cross_covered)/236*100:.1f}%)")
+print(f"  UDF coverage: {udf_count} of {UDF_TOTAL} UDFs covered (sync variants)")
+print(f"    └ of which cross-validated vs C#: {len(_cross_covered)} of {UDF_TOTAL} ({len(_cross_covered)/UDF_TOTAL*100:.1f}%)")
 print(f"{'='*60}")
 if FAIL>0 or SKIP>0:
     print(f"\n  FAILURES DETECTED (failures={FAIL}, skipped={SKIP}). Review discrepancies above.")

@@ -84,7 +84,11 @@ PARAM_DESC = {
     "k":"Percentile value between 0 and 100","x":"Hypothesized population mean for one-sample t-test",
 }
 
+_signatures_seen = 0  # R5-P3-25: 扫描到的 UDF 签名总数（含已现代注解的）
+
+
 def sync_udf_arguments():
+    global _signatures_seen
     """Sync [ExcelArgument] attributes from api-reference.md param lists. Returns count updated."""
     api_md = ROOT / "docs" / "specification" / "api-reference.md"
     func_params = {}
@@ -105,6 +109,7 @@ def sync_udf_arguments():
             # 其内部 ")" 会让上面 [^)]* 捕获截断，split 计数偶合命中后 replace 会产生
             # 双属性注入损坏源码。凡参数段已含注解的签名一律跳过（本工具只服务旧式
             # [ExcelArgument("name")] 位置风格的一次性迁移）。
+            _signatures_seen += 1
             if "[ExcelArgument" in raw_params:
                 continue
             csharp_params = [p.strip() for p in raw_params.split(",") if p.strip()]
@@ -130,11 +135,16 @@ def sync_udf_arguments():
 
 # P2-27 (review-2026-08-31): 原脚本无 main()/无 except/无 sys.exit——正则不匹配时静默 no-op，
 # 调用方无法区分"全部同步成功"与"什么都没匹配"。加改动计数 + 零改动时 exit 1。
+# R5-P3-25 (review 2026-09-06)："迁移已完成"（有 UDF 签名但全部已是现代注解风格）是正常
+# 终态 → exit 0；仅"连签名都没匹配到"（正则与代码库漂移）才 exit 1。原实现一律 exit 1。
 def main():
     total = sync_udf_arguments()
     if total == 0:
-        print("ERROR: no UDF signatures were updated - pattern may have drifted from the codebase.")
-        sys.exit(1)
+        if _signatures_seen == 0:
+            print("ERROR: no UDF signatures matched at all - pattern may have drifted from the codebase.")
+            sys.exit(1)
+        print("OK: migration already complete (all signatures modern); nothing to update.")
+        return 0
     print("OK: {} UDF(s) updated.".format(total))
     return 0
 

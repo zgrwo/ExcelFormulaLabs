@@ -224,7 +224,7 @@ codegraph node -f <文件> --symbols-only   # 文件模式：符号表 + depende
 ### 维度 G：脚本 / CI / PR / Q&S（Scripts & Flows）
 
 - G1 门禁自身正确性：新检查/脚本必须同时做 **正向全绿** 与 **负向注入实测**（注入漂移 → 指名 FAIL、退出码 1），并加入 `tests/scripts/` 自测防回归。**方向性铁律**：任何"声称"检查必须**双向对账**（正向有检查 ≠ 反向安全；检查 10 只查 tag→CHANGELOG，反向幽灵条目漏网）。
-- G2 **门禁扫描盲区**：正则必须覆盖中英双语变体（`(\d+)\s*(?:个)?\s*UDF`）、扫描范围用"排除 bin/obj 的全部文件"而非名字通配、路径相对化先 `-replace '\\','/'` 再 `TrimStart('/')`。**正则解析代码结构**（C# 签名 / `check(` 调用）必须考虑括号平衡、元组类型含 `)`、跨行调用、短别名豁免（pre-commit 检查 2/6 曾漏报），优先括号平衡解析而非单行正则；扫描**排除 git-ignored 构建生成物**（`*.dna`，verify-docs × 构建并发曾抓瞬时产物）；门禁脚本文件读失败 → `continue` 静默跳过（不计 SKIP）是系统性模式，必须计 SKIP 或显式 FAIL。
+- G2 **门禁扫描盲区**：正则必须覆盖中英双语变体（`(\d+)\s*(?:个|项)?\s*UDF`）；R5-P3-21（2026-09-06）：脚本实际词表已含「项」变体与倒装/括号形态（verify-docs 检查 16），此处表述曾滞后、扫描范围用"排除 bin/obj 的全部文件"而非名字通配、路径相对化先 `-replace '\\','/'` 再 `TrimStart('/')`。**正则解析代码结构**（C# 签名 / `check(` 调用）必须考虑括号平衡、元组类型含 `)`、跨行调用、短别名豁免（pre-commit 检查 2/6 曾漏报），优先括号平衡解析而非单行正则；扫描**排除 git-ignored 构建生成物**（`*.dna`，verify-docs × 构建并发曾抓瞬时产物）；门禁脚本文件读失败 → `continue` 静默跳过（不计 SKIP）是系统性模式，必须计 SKIP 或显式 FAIL。
 - G3 环境差异：`Substring(路径前缀长度)` 前必须 `[IO.Path]::GetFullPath`（8.3 短名）；集合成员判断用纯字符串（`-notin @(... | ForEach-Object { $_.Name })`），不依赖对象隐式字符串化；幂等性。**治理脚本自测本身要覆盖 PS5.1 与 pwsh7 双宿主**（run-tests.ps1 曾硬编码 `powershell` 恒跑 PS5.1，pwsh7 语义永不暴露）。
 - G4 发布安全：`.xll` 8 资产断言与 `fail_on_unmatched_files`；NuGet `Get-ChildItem` 管道（通配不展开）；无 `continue-on-error` / `pull_request_target`。
 - G5 dependabot / 版本上限：见 4.4。

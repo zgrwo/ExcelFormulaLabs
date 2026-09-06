@@ -282,7 +282,13 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void B64Enc_empty() => StringUdf.UDF_STR_B64ENC("").Should().Be("");
         [Fact] public void B64Enc_null() => StringUdf.UDF_STR_B64ENC(null!).Should().BeNull();
         [Fact] public void B64Enc_error() => StringUdf.UDF_STR_B64ENC(ExcelError.NA).Should().Be(ExcelError.NA);
-        [Fact] public void B64Enc_long_string() { var s=new string('x',200); StringUdf.UDF_STR_B64ENC(s).Should().NotBeNull(); }
+        // R5-P3-10 (review 2026-09-06)：长输入原仅 NotBeNull（编码正确性零验证）——改 roundtrip。
+        [Fact] public void B64Enc_long_string()
+        {
+            var s = new string('x', 200);
+            var decoded = StringUdf.UDF_STR_B64DEC(StringUdf.UDF_STR_B64ENC(s).ToString()!);
+            decoded.Should().Be(s);
+        }
         [Fact] public void B64Enc_roundtrip() { var decoded=StringUdf.UDF_STR_B64DEC(StringUdf.UDF_STR_B64ENC("hello").ToString()!); decoded.Should().Be("hello"); }
 
         // ══════════════════════════════════════════════════════════════════

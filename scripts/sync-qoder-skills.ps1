@@ -102,7 +102,7 @@ if ($mismatches.Count -gt 0) {
     # 非 CheckOnly 模式：直接重写全部镜像（修复漂移）
     foreach ($name in $skillNames) {
         # P2-30 (review-2026-08-31): 原 "skills$name.md" 反斜杠在 Linux/pwsh 下是字面字符，改用 Join-Path 逐级拼接
-    $src = Join-Path (Join-Path $root "skills") "$name.md"
+        $src = Join-Path (Join-Path $root "skills") "$name.md"
         $dst = Join-Path (Join-Path (Join-Path (Join-Path $root ".qoder") "skills") $name) "SKILL.md"
         $dstDir = Split-Path -Parent $dst
         if (-not (Test-Path $dstDir)) { New-Item -ItemType Directory -Path $dstDir -Force | Out-Null }

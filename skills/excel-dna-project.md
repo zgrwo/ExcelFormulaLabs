@@ -359,4 +359,4 @@ verify-manual(.py) ⇢ 读取 JSON ⇢ 与 Python 独立计算比对
 
 - ❌ **禁止自校验**：`check(name, X, X)` = 永远 PASS
 - ❌ **禁止 `cross_check()` 返回 SKIP**：新 Core 方法必须注册 Dispatcher + Manifest
-- ❌ **禁止修改后跳过全量验证**：5 步任一步失败不可提交
+- ❌ **禁止修改后跳过全量验证**：6 步任一步失败不可提交（R5-09，2026-09-06：原"5 步"与 AGENTS.md/verify-all 漂移）

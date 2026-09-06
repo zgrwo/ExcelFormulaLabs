@@ -9,7 +9,10 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # R5-P3-30 (review 2026-09-06)：tag 触发的发版不可中途取消——连打两个 tag 时
+  # cancel-in-progress 会把前一个 release run 杀在半途（资产/包推送不完整）。
+  # 改为排队串行。
+  cancel-in-progress: false
 
 # F-26 (review 2026-09-06)：顶层权限最小化为 read；写权限（contents/packages）收敛到
 # 实际需要的 pack-release job——build-test/verify-docs/cross-val 只需读。
@@ -175,6 +178,14 @@ jobs:
           # 最后一个 $LASTEXITCODE，中间某个 push 失败（非 409）曾被后续成功掩盖。
           # --skip-duplicate 已容忍 409（重复发布），其余非零一律计入失败。
           $ErrorActionPreference = "Stop"
+          # R5-04 (review 2026-09-06)：空产出对账——pack 成功但 0 包时原循环静默跳过、
+          # 步骤 exit 0，Release 照发而 GitHub Packages 无包（与 xll 侧 H1 断言同族的假绿）。
+          $pkgs = @(Get-ChildItem "artifacts/nupkg/*.nupkg" -ErrorAction Stop)
+          if ($pkgs.Count -lt 1) {
+            Write-Error "[Push] no .nupkg produced by pack step - expected Foundation package. Aborting."
+            exit 1
+          }
+          Write-Host "pushing $($pkgs.Count) package(s)"
           $failed = @()
           Get-ChildItem "artifacts/nupkg/*.nupkg" | ForEach-Object {
             dotnet nuget push $_.FullName --source "github" --api-key "${{ secrets.GITHUB_TOKEN }}" --skip-duplicate --no-symbols
@@ -186,7 +197,8 @@ jobs:
           }
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
+        # R5-P3-32 (review 2026-09-06)：第三方 action 由主版本 tag 改 SHA 钉定（v3 → efb35369，升级须人工核对）
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
           name: "ExcelFormulaLabs ${{ github.ref_name }}"
           body: |

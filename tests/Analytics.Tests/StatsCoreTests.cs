@@ -188,7 +188,15 @@ namespace ExcelFormulaLabs.Analytics.Tests
             // MathNet R7 插值 hi−lo 溢出 → 曾返回 +Inf；凸组合回退真值 0（运行时探针实测复现）。
             var p = StatsCore.Percentile(new[] { -1e308, 1e308 }, 50);
             (!double.IsNaN(p) && !double.IsInfinity(p)).Should().BeTrue();
-            p.Should().BeApproximately(0.0, 1e290);
+            // R5-P3-14 (review 2026-09-06)：真值精确 0（凸组合），收紧到 1e-10（原 1e-290 放行一切有限插值）。
+            p.Should().BeApproximately(0.0, 1e-10);
+        }
+        // R5-P3-02 (review 2026-09-06)：非 R7 定义主路径溢出时封顶 NaN，不再泄漏 ±Inf。
+        [Fact] public void Percentile_non_R7_extreme_caps_to_NaN()
+        {
+            var r4 = StatsCore.Percentile(new[] { -1e308, 1e308 }, 50, MathNet.Numerics.Statistics.QuantileDefinition.R4);
+            double.IsNaN(r4).Should().BeTrue();
+            double.IsInfinity(r4).Should().BeFalse();
         }
         [Fact] public void Summary_extreme_scale_no_Inf_leak()
         {

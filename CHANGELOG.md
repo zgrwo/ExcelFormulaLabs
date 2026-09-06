@@ -6,6 +6,46 @@
 
 > 版本一致性：每个 `v*` git tag 必须在本文档有对应条目（`verify-docs.ps1` 强制检查，见规则 [documentation.md](docs/governance/documentation.md)）。
 
+## [Unreleased]
+
+### Fixed（2026-09-06 第五轮发行前审查：P1×1 + P2×12 + P3 批量处置，报告归档 logs/reports/ 不入库）
+
+**数值正确性 / 安全**
+- **P1 STR.FMT 负对齐宽度绕过容量守卫**：守卫正则捕获组只匹配正宽度，`=STR.FMT(1,"{0,-9999999}{0,-9999999}…")` 多 spec 叠加可分配 ~1.66GB（32 位 Excel 不可捕获 OOM 崩溃）→ 捕获组改 `-?\d+` 且逗号前允许空白、逐 spec 检查绝对宽度、TryParse 失败（超 long 量级）同样拒绝；5 个边界测试（负宽/空格负宽/负宽+格式/正宽回归/超 long）。运行时探针复现记录见审查报告 R5-01
+- **P3 SafeKey 数组键改长度前缀编码**（对齐 PivotCore.MakeCompoundKey）：裸 `|` 连接下字符串元素内嵌 `String:` 字面量可伪造分隔点（`["a","b|String:c"]` 与 `["a|String:b","c"]` 同键）——键空间恢复单射；碰撞回归测试
+- **P3 QuantileCapped 非 R7 定义非有限结果封顶 NaN**（原泄漏 ±Inf，违反 D5 输出保洁；R7 保留凸组合回退）
+- **P3 DT.AGE* 可选参数语义**：`ToDouble(r)>0` 曾把合法序列号 0（1899-12-30）与文本/区域输入都吞成"默认今天"→ 「未提供」只认 null/ExcelMissing/DBNull/ExcelEmpty，已提供但不可转换 → `#VALUE!`（与必选参数同语义）；3 个回归测试
+- **P3 RegressionCore TSS 均值改增量式**：常量 y≈1e308 时 `Sum()/n` 溢出 → 误报 "numerically unstable"，增量均值下正确命中 constant-response 守卫
+- **P3 DOE.ANOVA Total 行 tss 补 CapNaN**（N07 约定一致，纵深防御）；InputNormalizer rows*cols 改 long 域乘法 + 显式上限检查
+
+**验证体系可信度**
+- **P2 CrossVal ndarray 通道 rtol 显式收紧**：`np.allclose` 默认 rtol=1e-5 曾把 manifest 声明的 atol 预算（1e-10）稀释 4~6 个数量级 → `RTOL_ULP=1e-12`（ULP 级松弛保留、1e-5 级静默偏差可抓）；负向注入实测
+- **P2 CrossVal 退化输入与覆盖缺口补齐**：manifest 128→146 条——空数组/单元素/±1e308 精确抵消/Hilbert 病态（DET_HILBERT8、SOLVE_HILBERT6）/初等函数 ABS/SQRT/LN/LOG10/EXP/SIGN（check 升级 cross）/ARR.SORTNUM（Numeric 比较器）/PHYCHEM.DENSITY（含除零哨兵标签）/REGRESS.RSQ（非完美拟合数据）/DT.EASTER_2038；LINALG.SVD_VT 由单点烟测升级为逐元素对照（符号对齐）；Dispatcher 补 8 个注册
+- **P3 DT.EASTER Python 对照由算法镜像改独立历表金值**（2000/2024/2025/2038 公开历表日期，含最早/最晚锚点）；cross_check_matrix 的 `max(tol, manifest)` 取松死分支改为 N01 收紧语义；UDF 总数由 api-reference.md 动态解析（3 处硬编码 236 消除）；Percentile 跨符号断言容差 1e-290→1e-10
+
+**工具健壮性（自测缺口补齐 = R5-07，新增 tests/scripts/test_governance_tools.ps1 13 场景）**
+- **P2 scaffold-udf.ps1 在 PS5.1 下必然失败（R5-N1，自测运行时发现）**：三参数 Join-Path（`-AdditionalChildPath`）为 pwsh6+ 专有——4 处全部改嵌套 Join-Path，双宿主兼容
+- **P2 patch-xll-version.ps1 "Nothing patched" 分型**：VERSIONINFO 目标键全缺失（模板改名，发版元数据损坏）→ exit 6 阻断；已补丁幂等重跑仍 exit 0
+- **P2 run-affected-tests.ps1 路由盲区**：src 文件仅认 4 类命名后缀 + 未跟踪新文件不可见 → 模块级兜底路由 + `git ls-files --others` 补入
+- **P2 update_excel_arguments.py "迁移已完成"（全现代签名）不再误报 drift**（区分 `_signatures_seen==0` 的真漂移）
+- **P2 validate-commit-msg.sh 计数 locale 固定**：`${#subject}` 在 `LC_ALL=C` 下按字节计数（中文标题误报）→ 显式 `LC_ALL=C.UTF-8`
+- **P3 run-tests.ps1 目录扫描 test_*.ps1 + pwsh7/PS5.1 双宿主覆盖**（原硬编码 2 项清单 + 单宿主优选，头注"全部测试脚本"失实）
+- **P3 裸 catch 检查跨行盲区**：`catch // 注释` 换行 `{` 为合法 C#——verify-docs 检查 6 与 pre-commit 检查 1 改全文正则（允许 catch 与 `{` 之间行注释），行号由偏移计算；负向注入实测 FAIL→恢复全绿
+- **P3 pre-commit 其余**：自校验扫描词边界定位（`cross_check(` 不再误提取）+ 跳过 `#` 注释行；IntelliSense 检查改全文件条件编译状态机（超 10 行 NET48 块/#else 分支不再误判）；hasDivision 不再豁免 `/ 0` 字面零除法；检查 6 签名正则支持 `object[,,]`
+- **P3 verify-docs 其余**：bin/obj 排除正则双分隔符化（Linux 正斜杠路径不再失效，12 处）；检查 11 计数扫描 -Recurse 化；AV/FV 支持 4 段版本 + 非 3 段显式 SKIP；检查 19 纳入 api-reference.md 版本头（该文件补 `> 版本：v2.2.5` 头）；检查 9/12/16 扫描域排除 BenchmarkDotNet.Artifacts
+- **P3 update_excel_arguments / run-affected / commit-msg / scaffold / patch-xll 全部纳入治理自测**（修复复查闭环）
+
+**CI / 发版链**
+- **P2 release.yml nupkg push 空产出断言**：pack 产 0 包时原循环静默 exit 0（与 xll 侧 H1 精确计数同族的假绿）→ push 前断言 ≥1 包
+- **P2 dependabot 补 System.Text.Json 全档 ignore**（8.0.5 硬钉与 Sqlite 治理模式对齐，防 bump PR 静默侵蚀）
+- **P3 release.yml `cancel-in-progress: false`**（连打两 tag 时前一个发版 run 不再被中途取消）；`softprops/action-gh-release` 由 `@v3` 改 SHA 钉定（efb35369）
+- **P3 ci.yml push main 直推提交规范检查**（原仅 PR 触发，直推完全绕过；`github.event.before..SHA` 区间逐提交校验）；`test` job 名 "net8.0"→"all TFMs" 名实相符
+
+**文档**
+- **P2 skills 6 步门残留**："5 步任一步失败不可提交"→6 步（a926ad0 同族漏改）；build/README.md 同步 6 步表述
+- **P2 user-manual 补 `*_ASYNC` 家族说明节**（12 个异步变体此前零披露，README 单方面自认口径）
+- **P3 README/README.en 验证安装步骤补 net8 无 IntelliSense 例外提示**；ai-review-prompt §G2 检查 16 词表表述与实际 `(?:个|项)?` 对齐；pre-commit 豁免名单注释按 9 项现状表述
+
 ## [2.2.5] - 2026-09-04
 
 ### Fixed（2026-09-04 reaudit：第二轮深度审查 7 项实证问题全部修复，每项带回归守卫）

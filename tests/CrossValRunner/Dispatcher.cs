@@ -40,6 +40,14 @@ public static class Dispatcher
         Register("StatsCore", "TTestOneSample", (a, _) => StatsCore.TTestOneSample(ToDouble1D(a[0]), ToDouble(a[1])));
         Register("StatsCore", "TTestTwoSample", (a, _) => StatsCore.TTestTwoSample(ToDouble1D(a[0]), ToDouble1D(a[1])));
         Register("StatsCore", "ZScore", (a, _) => StatsCore.ZScore(ToDouble1D(a[0])));
+        // R5-P3-40 (review 2026-09-06)：初等函数此前仅 manual 通道——补注册接通活体对照
+        //（manifest 条目 STATS.ABS/SQRT/LN/LOG10/EXP/SIGN）。
+        Register("StatsCore", "Abs", (a, _) => ToDouble1D(a[0]).Select(Math.Abs).ToArray());
+        Register("StatsCore", "SqrtSafe", (a, _) => ToDouble1D(a[0]).Select(StatsCore.SqrtSafe).ToArray());
+        Register("StatsCore", "LogSafe", (a, _) => ToDouble1D(a[0]).Select(StatsCore.LogSafe).ToArray());
+        Register("StatsCore", "Log10Safe", (a, _) => ToDouble1D(a[0]).Select(StatsCore.Log10Safe).ToArray());
+        Register("StatsCore", "ExpSafe", (a, _) => ToDouble1D(a[0]).Select(StatsCore.ExpSafe).ToArray());
+        Register("StatsCore", "Sign", (a, _) => ToDouble1D(a[0]).Select(StatsCore.Sign).ToArray());
 
         // ═══════════════════ RegressionCore ═══════════════════
         Register("RegressionCore", "FitOLS", (a, k) =>
@@ -74,6 +82,8 @@ public static class Dispatcher
         Register("PhyChemCore", "GasToSTP", (a, k) =>
             PhyChemCore.GasToSTP(ToDouble(a[0]), ToDouble(a[1]), ToDouble(a[2]),
                 Kwarg(k, "tUnit", "C"), Kwarg(k, "pUnit", "atm")));
+        // R5-P3-40 (review 2026-09-06)：Density 补注册（正常 + 除零哨兵标签路径，PHYCHEM.DENSITY_*）。
+        Register("PhyChemCore", "Density", (a, _) => PhyChemCore.Density(ToDouble(a[0]), ToDouble(a[1])));
 
         // ═══════════════════ LinalgCore ═══════════════════
         Register("LinalgCore", "Determinant", (a, _) => LinalgCore.Determinant(ToDouble2D(a[0])));
@@ -160,6 +170,8 @@ public static class Dispatcher
 
         // ═══════════════════ ArrayCore 补注册 ═══════════════════
         Register("ArrayCore", "SortAsc", (a, _) => ArrayCore.Sort(ToObjectArray(a[0]), true, Foundation.ComparerMode.Auto));
+        // R5-P3-40 (review 2026-09-06)：Numeric 比较器路径此前无活体对照（ARR.SORTNUM）。
+        Register("ArrayCore", "SortNum", (a, _) => ArrayCore.Sort(ToObjectArray(a[0]), true, Foundation.ComparerMode.Numeric));
         Register("ArrayCore", "Unique", (a, _) => ArrayCore.Unique(ToObjectArray(a[0])));
         Register("ArrayCore", "IndexOf", (a, _) => ArrayCore.IndexOf(ToObjectArray(a[0]), ToClr(a[1])));
         Register("ArrayCore", "Contains", (a, _) => ArrayCore.Contains(ToObjectArray(a[0]), ToClr(a[1])));

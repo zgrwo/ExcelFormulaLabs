@@ -61,7 +61,7 @@ function Check-Skip {
 # ---------- 1. UDF 数量 ----------
 $docUdfs = (Select-String -Path (Join-Path $RepoRoot "docs/specification/api-reference.md") -Pattern '^\| `[A-Z]+\.[A-Z]' | Measure-Object).Count
 $codeUdfs = (Get-ChildItem -Path (Join-Path $RepoRoot "src") -Recurse -Filter "*.cs" |
-    Where-Object { $_.FullName -notmatch "\\obj\\" -and $_.FullName -notmatch "\\bin\\" } |
+    Where-Object { $_.FullName -notmatch "[/\\](obj|bin)[/\\]" } |
     Select-String -Pattern 'ExcelFunction\(Name\s*=\s*"([^"]*)"' -AllMatches |
     ForEach-Object { $_.Matches } | ForEach-Object { $_.Groups[1].Value } |
     Sort-Object -Unique | Measure-Object).Count
@@ -72,7 +72,7 @@ else { Check "UDF count" "doc=$docUdfs code=$codeUdfs" }
 $apiContent = Read-Utf8 (Join-Path $RepoRoot "docs/specification/api-reference.md")
 $missing = @()
 Get-ChildItem -Path (Join-Path $RepoRoot "src") -Recurse -Filter "*.cs" |
-    Where-Object { $_.FullName -notmatch "\\obj\\" -and $_.FullName -notmatch "\\bin\\" } |
+    Where-Object { $_.FullName -notmatch "[/\\](obj|bin)[/\\]" } |
     Select-String -Pattern 'ExcelFunction\(Name\s*=\s*"([^"]*)"' -AllMatches |
     ForEach-Object { $_.Matches } | ForEach-Object { $_.Groups[1].Value } |
     Sort-Object -Unique | ForEach-Object {
@@ -105,11 +105,19 @@ elseif ($docVer -eq $csprojVer) { Check "MathNet version ($docVer)" "OK" }
 else { Check "MathNet version" "doc=$docVer csproj=$csprojVer" }
 
 # ---------- 6. 无裸 catch ----------
+# R5-P3-39 (review 2026-09-06)：原 Select-String 行级匹配对跨行写法盲（`catch // 注释` 换行
+# `{` 为合法 C# 且注释文本阻断 \s*）——改读全文正则（允许 catch 与 { 之间的行注释），行号由偏移计算。
 $bareCatches = Get-ChildItem -Path (Join-Path $RepoRoot "src") -Recurse -Filter "*.cs" |
-    Where-Object { $_.FullName -notmatch "\\obj\\" -and $_.FullName -notmatch "\\bin\\" } |
-    Select-String -Pattern 'catch\s*\{'
-if ($bareCatches.Count -eq 0) { Check "No bare catch" "OK" }
-else { Check "No bare catch" "$($bareCatches.Count) found" }
+    Where-Object { $_.FullName -notmatch "[/\\](obj|bin)[/\\]" } | ForEach-Object {
+        $t = Read-Utf8 $_.FullName
+        if (-not $t) { return }
+        foreach ($rx in [regex]::Matches($t, 'catch(?:\s*//[^\r\n]*)*\s*\{')) {
+            [PSCustomObject]@{ Path = $_.FullName; LineNumber = ($t.Substring(0, $rx.Index) -split "`n").Count }
+        }
+    }
+$bcArr = @($bareCatches)
+if ($bcArr.Count -eq 0) { Check "No bare catch" "OK" }
+else { Check "No bare catch" "$($bcArr.Count) found: $($bcArr | ForEach-Object { "$($_.Path):$($_.LineNumber)" })" }
 
 # ---------- 7. .dna 模板完整 ----------
 # F-06 (review 2026-09-06)：原硬编码 DataToolkit 两个 tpl 路径——Analytics 的 2 个模板
@@ -132,7 +140,7 @@ else { Check ".dna templates" "$($tplMissing -join '; ')" }
 # the old no-suffix pattern missed stale files from interrupted builds.
 # F-06 (review 2026-09-06)：扫描域由 src/DataToolkit 扩至 src 全模块（Analytics 残留曾不设防）。
 $residual = Get-ChildItem -Path (Join-Path $RepoRoot "src") -Recurse -Filter "*.dna" -File -ErrorAction SilentlyContinue |
-    Where-Object { $_.Name -notlike "*.tpl" -and $_.FullName -notmatch '\\(bin|obj)\\' }
+    Where-Object { $_.Name -notlike "*.tpl" -and $_.FullName -notmatch "[/\\](obj|bin)[/\\]" }
 if (-not $residual) { Check "No residual .dna" "OK" }
 else {
     $rel = $residual | ForEach-Object { $_.FullName.Substring($RepoRoot.Length) -replace '\\', '/' }
@@ -201,15 +209,25 @@ if ($LASTEXITCODE -ne 0) {
 
     # G1 (review-2026-08-29)：AssemblyVersion / FileVersion 必须与 <Version> 一致
     #（X.Y.Z → X.Y.Z.0）。v2.2.1 曾漏改 AV/FV 漂移到 2.2.0.0。
+    # R5-P3-22 (review 2026-09-06)：支持 4 段 Version（AV/FV 须与之一致）；其余形态
+    # （prerelease 等）显式 SKIP 计数——原实现 4 段/非 3 段静默跳过且无 SKIP，检查可能空转。
+    $propsAv = if ($props -match '<AssemblyVersion>([0-9.]+)</AssemblyVersion>') { $Matches[1] } else { "?" }
+    $propsFv = if ($props -match '<FileVersion>([0-9.]+)</FileVersion>') { $Matches[1] } else { "?" }
     if ($propsVer -match '^\d+\.\d+\.\d+$') {
-        $propsAv = if ($props -match '<AssemblyVersion>([0-9.]+)</AssemblyVersion>') { $Matches[1] } else { "?" }
-        $propsFv = if ($props -match '<FileVersion>([0-9.]+)</FileVersion>') { $Matches[1] } else { "?" }
         $expect = "$propsVer.0"
         if ($propsAv -eq $expect -and $propsFv -eq $expect) {
             Check "AssemblyVersion/FileVersion == Version" "OK"
         } else {
             Check "AssemblyVersion/FileVersion == Version" "expect=$expect av=$propsAv fv=$propsFv"
         }
+    } elseif ($propsVer -match '^\d+\.\d+\.\d+\.\d+$') {
+        if ($propsAv -eq $propsVer -and $propsFv -eq $propsVer) {
+            Check "AssemblyVersion/FileVersion == Version" "OK"
+        } else {
+            Check "AssemblyVersion/FileVersion == Version" "expect=$propsVer av=$propsAv fv=$propsFv"
+        }
+    } else {
+        Check-Skip "AssemblyVersion/FileVersion == Version" "Version '$propsVer' not in comparable X.Y.Z[.W] form"
     }
 }
 
@@ -218,7 +236,7 @@ if ($LASTEXITCODE -ne 0) {
 # ② 描述数量锚定 <Description> 标签（防 csproj 前部注释里的"N 个"被首匹配吞掉）；
 # ③ 反向守卫——src/ 下出现含 [ExcelFunction] 而不在名单的模块目录即指名 FAIL（防新模块漏对账）。
 foreach ($module in @("Analytics", "DataToolkit")) {
-    $count = (Select-String -Path (Join-Path $RepoRoot "src/$module/*.cs") -Pattern '\[ExcelFunction' -AllMatches |
+    $count = (Select-String -Path (Get-ChildItem (Join-Path $RepoRoot "src/$module") -Recurse -Filter "*.cs" -File | Where-Object { $_.FullName -notmatch "[/\\](obj|bin)[/\\]" } | ForEach-Object { $_.FullName }) -Pattern '\[ExcelFunction' -AllMatches |
         ForEach-Object { $_.Matches } | Measure-Object).Count
     $csprojText = Read-Utf8 (Join-Path $RepoRoot "src/$module/$module.csproj")
     $descNum = if ($csprojText -match '<Description>[^<]*?(\d+)\s*个') { [int]$Matches[1] } else { -1 }
@@ -229,7 +247,7 @@ $knownModules = @("Analytics", "DataToolkit")
 $unlistedModules = Get-ChildItem -Path (Join-Path $RepoRoot "src") -Directory | Where-Object {
     $knownModules -notcontains $_.Name -and
     (Get-ChildItem $_.FullName -Recurse -Filter "*.cs" -File -ErrorAction SilentlyContinue |
-        Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' } |
+        Where-Object { $_.FullName -notmatch "[/\\](obj|bin)[/\\]" } |
         Select-String -Pattern '\[ExcelFunction' | Measure-Object).Count -gt 0
 }
 if ($unlistedModules.Count -eq 0) { Check "csproj count covers all UDF modules" "OK" }
@@ -239,7 +257,7 @@ else { Check "csproj count covers all UDF modules" "unlisted module(s) with UDFs
 # F-26 (review 2026-09-06)：排除正则原为反斜杠形态——Linux 下 FullName 用 '/' 时排除失效
 # （.git/TestResults/logs 内 .md 会被误扫）。统一归一化为 '/' 后匹配。
 $mdFiles = Get-ChildItem -Path $RepoRoot -Recurse -Filter "*.md" |
-    Where-Object { ($_.FullName -replace '\\', '/') -notmatch '\.git/|/bin/|/obj/|\.qoder/|TestResults/|/logs/' }
+    Where-Object { ($_.FullName -replace '\\', '/') -notmatch '\.git/|/bin/|/obj/|\.qoder/|TestResults/|/logs/|BenchmarkDotNet\.Artifacts/' }
 $broken = @()
 foreach ($f in $mdFiles) {
     $text = Read-Utf8 $f.FullName
@@ -361,7 +379,7 @@ if (-not $agentsBlock -or -not $structBlock) {
 #   2026-09-05：docs/cross-validation.md 已归档至 logs/reports/（审查报告唯一存放处，全仓扫描自动豁免），
 #   其模块级 Total 计数检查随归档移除。
 $proseMdFiles = Get-ChildItem -Path $RepoRoot -Recurse -Filter "*.md" |
-    Where-Object { ($_.FullName -replace '\\', '/') -notmatch '/(\.git|bin|obj|\.qoder|TestResults|logs)/' }
+    Where-Object { ($_.FullName -replace '\\', '/') -notmatch '/(\.git|bin|obj|\.qoder|TestResults|logs)/' -and ($_.FullName -replace '\\', '/') -notmatch 'BenchmarkDotNet\.Artifacts/' }
 # 相对路径统一归一化为正斜杠 + 去掉前导分隔符（Windows 为 \，Linux/macOS 为 /，pwsh 双平台兼容）
 $proseFiles = @("src/Foundation/ElementWiseMapper.cs") +
     @($proseMdFiles | ForEach-Object { ($_.FullName.Substring($RepoRoot.Length) -replace '\\', '/').TrimStart('/') })
@@ -422,7 +440,7 @@ foreach ($row in [regex]::Matches($apiContent, '^\|\s*`([A-Za-z0-9_.]+)`\s*\|\s*
 }
 $srcParams = @{}
 Get-ChildItem -Path (Join-Path $RepoRoot "src") -Recurse -Filter "*.cs" |
-    Where-Object { $_.FullName -notmatch "\\obj\\" -and $_.FullName -notmatch "\\bin\\" } | ForEach-Object {
+    Where-Object { $_.FullName -notmatch "[/\\](obj|bin)[/\\]" } | ForEach-Object {
     $text = Read-Utf8 $_.FullName
     $currentFn = $null
     foreach ($am in [regex]::Matches($text, '\[Excel(Function|Argument)\(Name\s*=\s*"([^"]+)"')) {
@@ -448,7 +466,7 @@ foreach ($e in $structEntries) {
     if (-not $e.IsDir -and $e.Path -like 'src/*') { $declaredSrcFiles += $e.Path }
 }
 $srcFiles = Get-ChildItem -Path (Join-Path $RepoRoot "src") -Recurse -File |
-    Where-Object { $_.FullName -notmatch "\\obj\\" -and $_.FullName -notmatch "\\bin\\" -and $_.Extension -ne ".dna" }
+    Where-Object { $_.FullName -notmatch "[/\\](obj|bin)[/\\]" -and $_.Extension -ne ".dna" -and $_.FullName -notmatch "BenchmarkDotNet\.Artifacts" }
 # review 2026-09-05（N17）：排除 .dna 生成物——构建并发时 GenerateDna 产物可能瞬时落盘
 # （.gitignore:12 已声明 src/**/*.dna 为生成物，不入库），检查 18 会把瞬时 .dna 当未登记
 # 文件假 FAIL（本轮实测复现）。
@@ -468,7 +486,7 @@ else { Check "src files declared in tree" "undeclared: $($undeclaredFiles -join 
 # 2026-09-05：docs/cross-validation.md 已归档至 logs/reports/（审查报告唯一存放处），不再参与版本头校验。
 $propsVersion = [regex]::Match((Read-Utf8 (Join-Path $RepoRoot "src/Directory.Build.props")), '<Version>([^<]+)</Version>').Groups[1].Value
 $verMismatches = @()
-foreach ($vf in @("docs/specification/specification.md", "docs/user-manual/user-manual.md")) {
+foreach ($vf in @("docs/specification/specification.md", "docs/user-manual/user-manual.md", "docs/specification/api-reference.md")) {
     $vt = Read-Utf8 (Join-Path $RepoRoot $vf)
     # R16 (review-2026-09-05)：文件缺失/不可读原为静默 continue——改为 SKIP 计数输出，
     # 对齐 Check-Skip"不计入 pass"语义（防止两文件全丢时检查 19 静默空转成 PASS）。

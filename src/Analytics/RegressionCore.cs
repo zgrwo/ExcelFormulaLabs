@@ -13,6 +13,17 @@ namespace ExcelFormulaLabs.Analytics
     /// </summary>
     internal static class RegressionCore
     {
+        // R5-P3-06 (review 2026-09-06)：TSS 的 yMean 由 Sum()/n 改增量式（mean += (x-mean)/++m，
+        // 与 MathNet ArrayStatistics.Mean / StatsCore.Mean 同式）——常量 y≈1e308 时 Sum 溢出 +Inf，
+        // tss=Σ(y-ȳ)² 含 NaN 项 → 误报 "numerically unstable"；增量均值下常量 y 的 dev 精确为 0，
+        // tss=0 正确命中 constant-response 守卫（诊断准确，数值语义不变）。
+        private static double IncrementalMean(IEnumerable<double> v)
+        {
+            double m = 0; int k = 0;
+            foreach (double x in v) m += (x - m) / ++k;
+            return m;
+        }
+
         /// <summary>
         /// Ordinary Least Squares regression. Minimizes sum of squared residuals.
         /// Used by REGRESS.OLS.
@@ -73,7 +84,7 @@ namespace ExcelFormulaLabs.Analytics
             double sse = residuals.DotProduct(residuals);
             // review 2026-08-29：TSS 改单遍中心化形式 Σ(y−ȳ)²——原两遍公式 y'y−(Σy)²/n 在
             // 大均值 y（量级/散布比 ≥1e12）时灾难性抵消，R² 静默错误（DoeAnalysisCore 已用稳定形式）。
-            double yMean = vecY.Sum() / n;
+            double yMean = IncrementalMean(vecY);
             double tss = 0;
             for (int i = 0; i < n; i++) { double d = vecY[i] - yMean; tss += d * d; }
             if (double.IsNaN(tss) || double.IsInfinity(tss))
@@ -198,7 +209,7 @@ namespace ExcelFormulaLabs.Analytics
             // The SSE/R² returned by FitOLSCore are in the sqrt(w)-transformed scale
             // and are not comparable with the original-scale residuals.
             double sseOrig = 0, tssOrig = 0;
-            double yMean = y.Sum() / n;
+            double yMean = IncrementalMean(y);
             for (int i = 0; i < n; i++)
             {
                 sseOrig += residualsOrig[i] * residualsOrig[i];
@@ -310,7 +321,7 @@ namespace ExcelFormulaLabs.Analytics
             var residuals = vecY - fitted;
             double sse = residuals.DotProduct(residuals);
             // review 2026-08-29：TSS 改单遍中心化形式（同 FitOLSCore，防灾难性抵消）
-            double yMean = vecY.Sum() / n;
+            double yMean = IncrementalMean(vecY);
             double tss = 0;
             for (int i = 0; i < n; i++) { double d = vecY[i] - yMean; tss += d * d; }
             // P1-6: same numerical-stability guard as FitOLSCore (Inf−Inf=NaN silent leak).

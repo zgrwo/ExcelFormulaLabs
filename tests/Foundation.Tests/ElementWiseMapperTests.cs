@@ -87,17 +87,19 @@ public class MapOverTests
         ((object[])result).Length.Should().Be(1);
     }
 
+    // R5-P3-10 (review 2026-09-06)：null 数组按 [null] 定形广播（长度=另一侧），但 null 作为
+    // 单元格值走 L3 透传（mapper 不被调用，每格 null）。断言形状 + 透传语义，替代零信息 NotBeNull。
     [Fact] public void MapOverMulti_first_null_array()
         {
             var valid = new object[] { "a", "b" };
-            var result = ElementWiseMapper.MapOverMulti(null!, valid, (string? a, string? b) => (a ?? "x") + b);
-            result.Should().NotBeNull();
+            var result = (object[])ElementWiseMapper.MapOverMulti(null!, valid, (string? a, string? b) => (a ?? "x") + b)!;
+            result.Should().HaveCount(2).And.OnlyContain(x => x == null);
         }
-        [Fact] public void MapOverMulti_second_null_array()
+    [Fact] public void MapOverMulti_second_null_array()
         {
             var valid = new object[] { "a", "b" };
-            var result = ElementWiseMapper.MapOverMulti(valid, null!, (string? a, string? b) => a + (b ?? "y"));
-            result.Should().NotBeNull();
+            var result = (object[])ElementWiseMapper.MapOverMulti(valid, null!, (string? a, string? b) => a + (b ?? "y"))!;
+            result.Should().HaveCount(2).And.OnlyContain(x => x == null);
         }
         [Fact] public void MapOverMulti_both_null_elements()
     {

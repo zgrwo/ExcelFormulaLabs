@@ -36,6 +36,35 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             act.Should().Throw<ArgumentException>();
         }
 
+        // R5-01 (review 2026-09-06)：负对齐宽度绕过守卫——.NET 对 align 取绝对值填充，
+        // {0,-N} 与 {0,N} 分配同量级；多 spec 叠加可放大到 ~GB（32 位 Excel 不可捕获 OOM）。
+        [Fact] public void FormatValue_negative_alignment_throws()
+        {
+            var act = () => StringCore.FormatValue(1.0, "{0,-1000000}");
+            act.Should().Throw<ArgumentException>();
+        }
+        [Fact] public void FormatValue_space_before_comma_negative_alignment_throws()
+        {
+            var act = () => StringCore.FormatValue(1.0, "{0 ,-1000000}");
+            act.Should().Throw<ArgumentException>();
+        }
+        [Fact] public void FormatValue_negative_alignment_with_format_component_throws()
+        {
+            var act = () => StringCore.FormatValue(1.0, "{0,-1000000:N2}");
+            act.Should().Throw<ArgumentException>();
+        }
+        [Fact] public void FormatValue_positive_alignment_within_limit_ok()
+        {
+            StringCore.FormatValue(1.0, "{0,10}").Should().Be("         1");
+            StringCore.FormatValue(1.0, "{0,-10}").Should().Be("1         ");
+        }
+        [Fact] public void FormatValue_absurd_width_overflowing_long_throws()
+        {
+            // 20 位数字超出 long 量级：TryParse 失败必须同样拒绝，不得静默放行。
+            var act = () => StringCore.FormatValue(1.0, "{0,-99999999999999999999}");
+            act.Should().Throw<ArgumentException>();
+        }
+
         [Fact] public void FormatValue_overlong_format_string_throws()
         {
             var act = () => StringCore.FormatValue(1.0, new string('x', 2001));

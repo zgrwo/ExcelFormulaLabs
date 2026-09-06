@@ -435,7 +435,14 @@ namespace ExcelFormulaLabs.Foundation
             {
                 int rows = arr2D.GetLength(0);
                 int cols = arr2D.GetLength(1);
-                var result = new object[rows * cols];
+                // R5-P3-07 (review 2026-09-06)：rows*cols 必须 long 域相乘——int 回绕为负时
+                // new object[n] 抛 OverflowException（非静默但诊断失真）；显式检查给出可读错误。
+                // 下游 r*cols+c 索引在 total ≤ int.MaxValue 时不可能回绕。
+                long total = (long)rows * cols;
+                if (total > int.MaxValue)
+                    throw new ArgumentException(
+                        $"Input array has {total} elements, exceeding the {int.MaxValue} limit.");
+                var result = new object[total];
 
                 if (order == NormalizeOrder.RowMajor)
                 {

@@ -50,6 +50,10 @@ if (-not $ChangedFiles -or $ChangedFiles.Count -eq 0) {
     if (-not $gitFiles) {
         $gitFiles = git -C $repoRoot diff --name-only 2>$null
     }
+    # R5-P3-26 (review 2026-09-06)：补未跟踪新文件——git diff 不含 untracked，
+    # 新增的 src/*.cs 原先路由不到任何测试（新模块场景恰是路由缺口高发处）。
+    $untracked = git -C $repoRoot ls-files --others --exclude-standard -- 'src/*.cs' 2>$null
+    if ($untracked) { $gitFiles = @($gitFiles) + @($untracked) }
     if (-not $gitFiles) {
         Write-Host "  No changes detected. Nothing to test." -ForegroundColor Yellow
         exit 0
@@ -72,11 +76,11 @@ $affectedFilters = @()
 foreach ($file in $ChangedFiles) {
     $normalized = $file -replace '\\', '/'
 
-    # Match src/<Module>/<Name>Core.cs or <Name>Udf.cs pattern
-    if ($normalized -match '^src/(\w+)/(\w+)(Core|Udf|Helpers|AsyncUdf)\.cs$') {
+    # R5-P3-26 (review 2026-09-06)：① 模块路由放宽为「src/<Module>/任意 .cs」——原先仅认
+    # (Core|Udf|Helpers|AsyncUdf) 四类后缀的顶层文件，其他命名的 src 文件落入 "(no affected
+    # tests)" 静默分支；② 未跟踪新文件补入检测（git diff HEAD 不含 untracked）。
+    if ($normalized -match '^src/([^/]+)/[^/]+\.cs$') {
         $module = $Matches[1]
-        $className = $Matches[2]
-        $suffix = $Matches[3]
 
         $testProject = $moduleMap[$module]
         # N-G (review 2026-09-06)：新模块未进 $moduleMap 时曾静默 continue → "Nothing to run"
@@ -90,18 +94,22 @@ foreach ($file in $ChangedFiles) {
             $affectedProjects[$testProject] = @()
         }
 
-        # Map to test class name
-        $testClass = switch ($suffix) {
-            "Core"      { "${className}CoreTests" }
-            "Udf"       { "${className}UdfTests" }
-            "Helpers"   { "${className}Tests" }
-            "AsyncUdf"  { "${className}Tests" }
-            default     { "${className}Tests" }
+        # 推导测试类名：保留 Core/Udf 等后缀的精确映射（回归守卫粒度），其余文件
+        # 退化为模块级全量测试（宁多跑不漏跑）。
+        if ($normalized -match '^src/[^/]+/(\w+)(Core|Udf|Helpers|AsyncUdf)\.cs$') {
+            $className = $Matches[1]
+            $suffix = $Matches[2]
+            $testClass = switch ($suffix) {
+                "Core"      { "${className}CoreTests" }
+                "Udf"       { "${className}UdfTests" }
+                "Helpers"   { "${className}Tests" }
+                "AsyncUdf"  { "${className}Tests" }
+                default     { "${className}Tests" }
+            }
+            $affectedProjects[$testProject] += $testClass
+            $affectedFilters += $testClass
         }
-
-        $affectedProjects[$testProject] += $testClass
-        $affectedFilters += $testClass
-        Write-Host "  $normalized -> $testProject/$testClass" -ForegroundColor DarkGray
+        Write-Host "  $normalized -> $testProject" -ForegroundColor DarkGray
     }
     # Foundation shared files affect all Foundation tests
     elseif ($normalized -match '^src/Foundation/') {

@@ -42,7 +42,8 @@ Win10/11 自带 .NET Framework 4.8，直接加载 net48 版本的 `.xll`：
 
 ### 验证安装
 
-在任意单元格输入 `=STATS.MEAN(`，Excel 弹出函数自动补全即成功。
+在任意单元格输入 `=STATS.MEAN(`，Excel 弹出函数自动补全即成功（net48 包）。
+> **net8.0 包**：因 Excel-DNA 已知问题无参数提示（见[已知限制](#已知限制)），输入完整公式 `=STATS.MEAN(A1:A10)` 能算出结果即安装成功。
 
 ---
 
@@ -150,7 +151,7 @@ FileSystemCore.Initialize(new SandboxConfig(@"C:\Users\Public\Documents"));
 
 - **双 .NET 版本全量测试**，覆盖正常路径和退化输入（零值/空值/单元素/全等值）
 - **Python 交叉验证**：Stats/Regression 与 numpy/scipy 逐项对照，精度 1e-10；DataToolkit 集成管道测试覆盖跨模块组合
-- **手册验证**：224/236 个 UDF 有硬编码期望值的手册示例，由 Python 独立复算逐项对照（防自校验）；`verify-manual.py` 按双通道分报：manual-only 223 / cross-validated 141（合计 364 项检查，含 3 条矩阵通道对照；F-02 修复后矩阵通道计入 cross 小计），其中真正与 C# 实现对照的 UDF 为 106/236（44.9%）（其余 12 个无独立示例的 *_ASYNC/共享 Core 变体由 UDF 层测试覆盖）
+- **手册验证**：224/236 个 UDF 有硬编码期望值的手册示例，由 Python 独立复算逐项对照（防自校验）；`verify-manual.py` 按双通道分报：manual-only 217 / cross-validated 159（合计 376 项检查，含 3 条矩阵通道对照；F-02 修复后矩阵通道计入 cross 小计；2026-09-06 第五轮补 18 条退化/初等函数/病态矩阵活体对照），其中真正与 C# 实现对照的 UDF 为 115/236（48.7%）（其余 12 个无独立示例的 *_ASYNC/共享 Core 变体由 UDF 层测试覆盖）
 
 ---
 

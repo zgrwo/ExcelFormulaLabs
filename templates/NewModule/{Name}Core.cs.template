@@ -53,7 +53,7 @@ namespace ExcelFormulaLabs.{Module}
         /// </summary>
         internal static string Process(string input)
         {
-            // L1: null/空 → 返回空字符串
+            // L3: null/空 → 哨兵（空字符串）——L1=类型转换前 NaN/Inf 守卫，L2=类型零值哨兵
             if (string.IsNullOrEmpty(input))
                 return string.Empty;
 

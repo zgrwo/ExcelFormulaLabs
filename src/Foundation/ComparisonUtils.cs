@@ -253,7 +253,7 @@ namespace ExcelFormulaLabs.Foundation
             for (int i = 0; i < len; i++)
             {
                 if (i > 0) sb.Append('|');
-                sb.Append(SafeKey(arr[i], depth));
+                AppendKeySegment(sb, SafeKey(arr[i], depth));
             }
             return sb.ToString();
         }
@@ -273,11 +273,19 @@ namespace ExcelFormulaLabs.Foundation
                 for (int c = 0; c < cols; c++)
                 {
                     if (!first) sb.Append('|');
-                    sb.Append(SafeKey(arr[r, c], depth));
+                    AppendKeySegment(sb, SafeKey(arr[r, c], depth));
                     first = false;
                 }
             }
             return sb.ToString();
+        }
+
+        // R5-P3-01 (review 2026-09-06)：数组段改长度前缀编码（对齐 PivotCore.MakeCompoundKey）。
+        // 裸 `|` 连接下，字符串元素内嵌 "String:" 字面量可伪造分隔点（如 ["a","b|String:c"] 与
+        // ["a|String:b","c"] 同键）——键空间非单射。长度前缀使元素边界无歧义。
+        private static void AppendKeySegment(StringBuilder sb, string key)
+        {
+            sb.Append(key.Length).Append(':').Append(key);
         }
 
         /// <summary>Safe string conversion — handles errors, null, empty gracefully.</summary>

@@ -82,7 +82,7 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 
 ### 4.1 测试体系
 
-- 2,551 个 [Fact]（xUnit + FluentAssertions；[Theory]=0，review-2026-08-31 修正——原"2,444 单元测试（[Fact]/[Theory]）"的措辞与数字均过期；2026-09-06 修复轮实测回填，+11 为 F-01/F-07–F-12 数值修复的边界回归测试）
+- 2,562 个 [Fact]（xUnit + FluentAssertions；[Theory]=0，review-2026-08-31 修正——原"2,444 单元测试（[Fact]/[Theory]）"的措辞与数字均过期；2026-09-06 第五轮审查修复轮实测回填，+11 为 R5-01 守卫边界/R5-P3-01 键碰撞/R5-P3-02/R5-P3-04/R5-P3-06 的回归测试）
 - Python 交叉验证（scipy/numpy 独立计算，容差 1e-10）
 - 手册示例验证（verify-manual.py 全 UDF 覆盖）
 - XLL 加载/卸载自动化测试
@@ -104,7 +104,7 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 
 | 阶段 | 时间 |  commits | 关键事件 |
 |------|------|----------|----------|
-| 初始版本 | 06-22 | 1 | 236 UDF + 2,551 测试（现计数） |
+| 初始版本 | 06-22 | 1 | 236 UDF + 2,562 测试（现计数） |
 | 审查修复期 | 06-22 ~ 07-05 | ~60 | 多轮深度审查，NaN守卫/安全加固/文档体系 |
 | 功能扩展期 | 07-05 ~ 07-15 | ~30 | CORRMATRIX/交叉验证/IntelliSense |
 | 稳定发行期 | 07-15 ~ 07-23 | ~47 | v1.0.4→v1.0.7，审查修复+性能优化 |

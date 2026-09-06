@@ -1,4 +1,4 @@
-# scaffold-udf.ps1 - UDF scaffold generator
+﻿# scaffold-udf.ps1 - UDF scaffold generator
 # Usage: .\scripts\scaffold-udf.ps1 -Module Analytics -Name Weather -Prefix WEATHER
 # Generates 4 files from templates/NewModule/ into the correct project directories.
 
@@ -17,7 +17,7 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot  # project root
 
 # Validate module exists
-$modulePath = Join-Path $root "src" $Module
+$modulePath = Join-Path (Join-Path $root "src") $Module
 if (-not (Test-Path $modulePath)) {
     Write-Host "[FAIL] Module directory not found: $modulePath"
     Write-Host "       Available modules:"
@@ -25,6 +25,8 @@ if (-not (Test-Path $modulePath)) {
     exit 1
 }
 
+# R5-N1 (review 2026-09-06 修复轮发现)：三参数 Join-Path（-AdditionalChildPath）为 pwsh6+ 专有——本脚本自 v2.0.0 起在 Windows PowerShell 5.1 下必然绑定失败（此前零自测未暴露），
+# 已全部改为嵌套 Join-Path 双宿主兼容。
 # N-E (review 2026-09-06)：$Name/$Prefix 进入文件路径与生成代码——无格式校验时
 # 可路径穿越（..\..\x）或产生非法 C# 标识符。仅允许字母开头的字母数字组合。
 if ($Name -notmatch '^[A-Za-z][A-Za-z0-9]*$') {
@@ -37,7 +39,7 @@ if ($Prefix -notmatch '^[A-Za-z][A-Za-z0-9]*$') {
 }
 
 # Template directory
-$tplDir = Join-Path $root "templates" "NewModule"
+$tplDir = Join-Path (Join-Path $root "templates") "NewModule"
 if (-not (Test-Path $tplDir)) {
     Write-Host "[FAIL] Template directory not found: $tplDir"
     exit 1
@@ -83,13 +85,13 @@ Expand-Template (Join-Path $tplDir '{Name}Core.cs.template') `
 Expand-Template (Join-Path $tplDir '{Name}Udf.cs.template') `
                 (Join-Path $modulePath "$Name`Udf.cs")
 
-$testProject = Join-Path $root "tests" "$Module.Tests"
+$testProject = Join-Path (Join-Path $root "tests") "$Module.Tests"
 Expand-Template (Join-Path $tplDir '{Name}Core.Tests.cs.template') `
                 (Join-Path $testProject "$Name`CoreTests.cs")
 
 # CrossVal template -> output as reference file in scripts/
 Expand-Template (Join-Path $tplDir '{Name}CrossVal.py.template') `
-                (Join-Path $root "scripts" "$Name`CrossVal.py")
+                (Join-Path (Join-Path $root "scripts") "$Name`CrossVal.py")
 
 Write-Host ""
 Write-Host "=== Done. Next steps: ==="

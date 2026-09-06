@@ -16,8 +16,10 @@ namespace ExcelFormulaLabs.DataToolkit
         // F-32 (review 2026-09-06)：补 CultureInvariant——与 RegexCore/SqlCore 约定一致。
         private static readonly Regex WhitespaceRx = new(@"\s+", RegexOptions.Compiled | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(5));
         private static readonly Regex HtmlTagRx = new(@"<[^>]+>", RegexOptions.Compiled | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(5));
+        // R5-01 (review 2026-09-06)：捕获组必须含负号（-?\d+），且逗号前允许空白（{0 ,-8} 为
+        // .NET 合法写法）——否则负对齐宽度经 [^}]* 吞掉、守卫放行，多 spec 叠加可放大到 ~GB 分配。
         private static readonly Regex AlignmentWidthRx = new(
-            @"\{\d+(?:,\s*(\d+))?[^}]*\}", RegexOptions.Compiled | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(5));
+            @"\{\d+\s*(?:,\s*(-?\d+))?[^}]*\}", RegexOptions.Compiled | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(5));
 
         internal static string ReverseString(string t)
         {
@@ -134,13 +136,15 @@ namespace ExcelFormulaLabs.DataToolkit
             // crash. Reject overlong format strings and huge alignment widths up front.
             if (fmt.Length > 1000)
                 throw new ArgumentException("Format string too long (max 1000 chars).");
-            var huge = AlignmentWidthRx.Matches(fmt).Cast<System.Text.RegularExpressions.Match>()
-                .Select(m => m.Groups[1])
-                .Where(g => g.Success && long.TryParse(g.Value, out long width) && width > 100_000)
-                .Select(g => long.Parse(g.Value))
-                .FirstOrDefault();
-            if (huge > 100_000)
-                throw new ArgumentException($"Alignment width {huge} exceeds the 100,000 limit.");
+            // R5-01 (review 2026-09-06)：逐 spec 检查对齐宽度（.NET 对 align 取绝对值填充，
+            // 负宽度 -N 与 N 分配同量级；TryParse 失败 = 宽度超出 long 量级，同样拒绝）。
+            foreach (var m in AlignmentWidthRx.Matches(fmt).Cast<System.Text.RegularExpressions.Match>())
+            {
+                var g = m.Groups[1];
+                if (!g.Success) continue;
+                if (!long.TryParse(g.Value, out var width) || width > 100_000 || width < -100_000)
+                    throw new ArgumentException($"Alignment width {g.Value} exceeds the 100,000 limit.");
+            }
             string fs = fmt.Contains('{') ? fmt : $"{{0:{fmt}}}";
             try
             {

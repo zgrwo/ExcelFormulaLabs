@@ -167,6 +167,7 @@ ExcelFormulaLabs/
 │   │   └── generate_python_refs.py
 │   └── scripts/                    #   治理脚本自测（P0-5 回归守卫）
 │       ├── run-tests.ps1
+│       ├── test_governance_tools.ps1
 │       ├── test_precommit_check.ps1
 │       └── test_verify_docs.ps1
 │

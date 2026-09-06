@@ -44,7 +44,8 @@ Windows 10/11 ship with .NET Framework 4.8, so you can load the net48 `.xll` dir
 
 ### Verifying the Installation
 
-Type `=STATS.MEAN(` in any cell; if Excel pops up the function auto-completion, the installation succeeded.
+Type `=STATS.MEAN(` in any cell; if Excel pops up the function auto-completion, the installation succeeded (net48 package).
+> **net8.0 package**: no parameter hints due to a known Excel-DNA issue (see [Known Limitations](#known-limitations)) — type a complete formula such as `=STATS.MEAN(A1:A10)`; if it computes a result, the installation succeeded.
 
 ---
 

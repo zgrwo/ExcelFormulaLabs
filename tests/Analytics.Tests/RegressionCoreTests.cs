@@ -73,7 +73,8 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void CrossVal_WLS_Py_coef() { var c=(double[])RegressionCore.FitWLS(Xwls,ywls_cv,wwls_cv)["coefficients"]; c[0].Should().BeApproximately(0.340754716981135,1e-8); c[1].Should().BeApproximately(1.703773584905660,1e-8); }
         [Fact] public void CrossVal_WLS_Py_sse() => ((double)RegressionCore.FitWLS(Xwls,ywls_cv,wwls_cv)["sse"]).Should().BeApproximately(0.074041295834818,1e-10);
         [Fact] public void CrossVal_WLS_Py_r2() => ((double)RegressionCore.FitWLS(Xwls,ywls_cv,wwls_cv)["r_squared"]).Should().BeApproximately(0.997413675568156,1e-10);
-        // sklearn.linear_model.Ridge(alpha=1.0): coef=[-0.04742, 1.85676]
+        // sklearn.linear_model.Ridge(alpha=1.0) 参考实现下逐位吻合的闭式解金值（下方断言值）；
+        // 旧注释 [-0.04742, 1.85676] 为历史运行残留，R5-P3-11 (2026-09-06) 修正。
         private static readonly double[,] Xridge = {{1},{2},{3},{4},{5},{6},{7},{8},{9},{10}};
         private static readonly double[] yridge = {2.1,3.8,5.2,7.1,8.9,10.8,13.1,14.9,16.8,18.9};
         [Fact] public void CrossVal_Ridge_sklearn_coef() { var c=(double[])RegressionCore.FitRidge(Xridge,yridge,1.0)["coefficients"]; c[0].Should().BeApproximately(-0.069341317365270,1e-8); c[1].Should().BeApproximately(1.859880239520958,1e-8); }
@@ -138,6 +139,15 @@ namespace ExcelFormulaLabs.Analytics.Tests
             // tss=0 → constant response → R² undefined (P0 guard)
             var constY = new double[] { 5, 5, 5 };
             var act = () => RegressionCore.FitOLS(X, constY);
+            act.Should().Throw<ArgumentException>().WithMessage("*constant*");
+        }
+        // R5-P3-06 (review 2026-09-06)：常量 y≈1e308 时 Sum()/n 溢出 +Inf → tss 含 NaN →
+        // 误报 "unstable"；增量均值下 dev 精确为 0 → 正确报 "constant"。
+        [Fact] public void FitOLS_constant_huge_y_reports_constant_not_unstable()
+        {
+            var hugeX = new double[3, 1] { { 1.0 }, { 2.0 }, { 3.0 } };
+            var hugeConstY = new double[] { 1e308, 1e308, 1e308 };
+            var act = () => RegressionCore.FitOLS(hugeX, hugeConstY);
             act.Should().Throw<ArgumentException>().WithMessage("*constant*");
         }
 

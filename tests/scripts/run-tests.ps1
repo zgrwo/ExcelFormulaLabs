@@ -5,21 +5,26 @@
 # ============================================================================
 $ErrorActionPreference = "Stop"
 $dir = Split-Path -Parent $PSScriptRoot   # tests/
-$scripts = @(
-    "test_precommit_check.ps1",
-    "test_verify_docs.ps1"
-)
+# R5-P3-38 (review 2026-09-06)：① 测试清单改目录扫描（原硬编码 2 项与头注"全部测试脚本"
+# 矛盾，新增 test_*.ps1 会被静默漏跑）；② 双宿主覆盖——pwsh7 与 PS5.1 语义差异是本项目
+# 已知陷阱域（C2），"pwsh 优先回退"实为单宿主优选，两个宿主都要跑。
+$scripts = @(Get-ChildItem -Path $PSScriptRoot -Filter "test_*.ps1" -File |
+    Sort-Object Name | ForEach-Object { $_.Name })
+if ($scripts.Count -eq 0) {
+    Write-Host "[FAIL] no test_*.ps1 found in $PSScriptRoot" -ForegroundColor Red
+    exit 1
+}
+$hostList = @()
+if (Get-Command pwsh -ErrorAction SilentlyContinue) { $hostList += "pwsh" }
+if (Get-Command powershell -ErrorAction SilentlyContinue) { $hostList += "powershell" }
 $failures = @()
 foreach ($s in $scripts) {
-    Write-Host ""
-    Write-Host "===== 运行 $s =====" -ForegroundColor Cyan
-    # P2-6 (review-2026-08-31): 优先 pwsh 7（与 release.yml 一致，暴露 pwsh7 语义差异），回退 powershell 5.1
-    # R14 (review-2026-09-05)：原 L17-18 畸形拼接——$hostCmd 计算后未使用，L18 实为双重
-    # -File 拼接（$hostCmd 连同第二组参数被当脚本位置参数吞进 $args），pwsh 优先策略从未
-    # 生效、恒以 powershell 运行。改为单一 & $hostCmd 调用。
-    $hostCmd = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell" }
-    & $hostCmd -NoProfile -ExecutionPolicy Bypass -File (Join-Path $dir "scripts\$s")
-    if ($LASTEXITCODE -ne 0) { $failures += $s }
+    foreach ($h in $hostList) {
+        Write-Host ""
+        Write-Host "===== [$h] $s =====" -ForegroundColor Cyan
+        & $h -NoProfile -ExecutionPolicy Bypass -File (Join-Path $dir "scripts\$s")
+        if ($LASTEXITCODE -ne 0) { $failures += "[$h] $s" }
+    }
 }
 Write-Host ""
 if ($failures.Count -eq 0) {

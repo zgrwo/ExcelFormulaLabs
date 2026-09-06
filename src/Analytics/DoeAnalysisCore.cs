@@ -109,11 +109,13 @@ namespace ExcelFormulaLabs.Analytics
 
             // Total SS = Σ(y - ȳ)² (the true total sum of squares; Type-III effect SS
             // are not additive, so this is computed directly rather than summed).
+            // R5-P3-03 (review 2026-09-06)：tss 与同函数上方 ssJ/fJ 同族，补 CapNaN 封顶
+            // （N07 约定一致；公开路径上游 FitOLSCore 先行抛错，此处为纵深防御）。
             double mean = y.Average();
             double tss = 0;
             for (int i = 0; i < y.Length; i++) { double d = y[i] - mean; tss += d * d; }
             result[nTerms + 2, 0] = "Total";
-            result[nTerms + 2, 1] = tss;
+            result[nTerms + 2, 1] = CapNaN(tss);
             result[nTerms + 2, 2] = dfError + nTerms; // n - 1
             return result;
         }

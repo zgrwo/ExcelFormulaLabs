@@ -122,6 +122,23 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void AgeYears_same_year() => ((long)DateTimeUdf.UDF_DT_AGEY(OA(2024, 1, 1), OA(2024, 12, 31))).Should().Be(0);
         [Fact] public void AgeYears_null_birth() => DateTimeUdf.UDF_DT_AGEY(null!, OA(2024, 1, 1)).Should().Be(ExcelError.Value);
         [Fact] public void AgeYears_null_ref() { var r=DateTimeUdf.UDF_DT_AGEY(OA(2000,1,1), null!); r.Should().BeOfType<long>().Which.Should().BeGreaterThanOrEqualTo(0); }
+        // R5-P3-04 (review 2026-09-06)：序列号 0（1899-12-30）是合法日期，不再是「未提供→今天」；
+        // 文本输入与必选参数同语义 → #VALUE!（原先静默按今天计算）。
+        [Fact] public void AgeDays_serial_zero_end_is_valid_date()
+        {
+            // birth = 1900-01-04 (serial 5), end = 1899-12-30 (serial 0) → -5 days
+            ((long)DateTimeUdf.UDF_DT_AGED(5.0, 0.0)).Should().Be(-5);
+        }
+        [Fact] public void AgeDays_text_ref_returns_value_error()
+        {
+            DateTimeUdf.UDF_DT_AGED(5.0, "not a date").Should().Be(ExcelError.Value);
+        }
+        [Fact] public void AgeYears_empty_cell_ref_defaults_to_today()
+        {
+            // 空单元格（ExcelEmpty）语义 = 未提供 → 今天（行为不变）
+            var r = DateTimeUdf.UDF_DT_AGEY(OA(2000, 1, 1), ExcelEmpty.Value);
+            r.Should().BeOfType<long>().Which.Should().BeGreaterThanOrEqualTo(0);
+        }
 
         // ══════════════════════════════════════════════════════════════════
         //  DT.AGEMONTHS  (manual — long)

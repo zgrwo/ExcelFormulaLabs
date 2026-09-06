@@ -41,6 +41,11 @@
 
 ---
 
+## `*_ASYNC` 异步变体说明
+
+全部 236 个 UDF 中有 12 个 `*_ASYNC`（LINALG 9 个 + REGRESS 3 个）异步变体，本章各节不单列示例：
+与对应同步版**共享同一 Core 实现与数值语义**，仅计算方式改为后台线程 + Excel 异步队列（重算期间 Excel 界面不阻塞），签名与结果完全一致。示例请直接参照同步版（如 `LINALG.SVD` ↔ `LINALG.SVD_ASYNC`）；其中 `LinalgAsyncUdf` / `RegressionAsyncUdf` 的 M/V 参数转换在调用线程完成，lambda 内为纯计算。
+
 ## 1. STATS — 描述统计
 
 > 对标 Python scipy，精度 1e-10。元素级函数（ABS/SQRT/LN/LOG10/EXP/SIGN）支持数组公式。

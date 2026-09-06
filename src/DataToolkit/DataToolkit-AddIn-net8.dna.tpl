@@ -3,7 +3,8 @@
   <Reference Path="Foundation.dll" Pack="true" />
   <Reference Path="Microsoft.Data.Sqlite.dll" Pack="true" />
 
-  <!-- DataToolkit.xll — String, Regex, JSON, XML, DateTime, FileSystem, Pivot, Range Export, SQL.
-       Install: drag DataToolkit-packed.xll into Excel (see GitHub Release assets). Category prefixes:
+  <!-- DataToolkit — String, Regex, JSON, XML, DateTime, FileSystem, Pivot, Range Export, SQL.
+       Install: drag DataToolkit-AddIn-net8.0-packed.xll into Excel (asset name as in GitHub Release;
+       64-bit variant: DataToolkit-AddIn-net8.0-64-packed.xll). Category prefixes:
        STR.*, REGEX.*, JSON.*, XML.*, DT.*, FS.*, PIVOT.*, RANGE.*, SQL.* -->
 </DnaLibrary>

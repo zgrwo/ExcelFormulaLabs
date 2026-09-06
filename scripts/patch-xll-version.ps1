@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Patch VERSIONINFO resource in an .xll (PE) file using the Windows
     BeginUpdateResource / UpdateResource / EndUpdateResource API.
@@ -205,7 +205,18 @@ public static class VersionInfoPatcher
 
         if (patched == 0)
         {
-            Console.WriteLine("Nothing patched (entries not found; already patched?)");
+            // R5-P3-08 → R5-08 (review 2026-09-06)：原"Nothing patched"一律 exit 0——
+            // "资源存在但 FileDescription/ProductName 键缺失"（模板改名/精简，发版元数据损坏）
+            // 与"已补丁幂等重跑"（delta==0 合法）不可区分，前者会静默放行 8 个发版 .xll。
+            // 改为：目标键一个都没出现在 VERSIONINFO 表里 = 键缺失 → exit 1 阻断。
+            bool anyTargetKeyFound = entries.Exists(e => updates.ContainsKey(e.Key));
+            if (!anyTargetKeyFound)
+            {
+                Console.Error.WriteLine("ERROR: VERSIONINFO tree contains none of the target keys (" +
+                    string.Join(", ", updates.Keys) + ") - template/resource layout may have changed. Aborting.");
+                return 6;
+            }
+            Console.WriteLine("Nothing patched (already patched, deltas are 0)");
             return 0;
         }
 

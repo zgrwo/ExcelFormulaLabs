@@ -23,7 +23,7 @@ $verifier = Join-Path $repo "scripts\verify-docs.ps1"
 $tmpRoot = Join-Path $env:TEMP ("vd-test-" + [guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Path $tmpRoot -Force | Out-Null
 
-$passCount = 0; $failCount = 0
+$passCount = 0; $failCount = 0; $skipCount = 0
 $hostCmd = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell" }
 
 $script:fixtureSeq = 0
@@ -89,7 +89,9 @@ if (Test-Path (Join-Path $repo ".qoder\skills")) {
     Run-VerifyDocs $fixture3 "mirror" $true
 } else {
     Write-Host "[D] .qoder 本地镜像不存在，场景跳过（CI 环境）"
-    $script:passCount++
+    # R5-P3-28 (review 2026-09-06)：SKIP 计入 passCount 与 verify-docs 自身 P2-29
+    # "SKIP 不计入 pass" 语义相悖——分账记录，不计入 pass。
+    $script:skipCount++
 }
 
 # --- 场景 E：api-reference UDF 计数漂移（检查 1）---
@@ -188,5 +190,5 @@ Run-VerifyDocs $fixtureJ "unparseable" $true
 # --- 汇总 ---
 Remove-Item -Recurse -Force $tmpRoot
 Write-Host ""
-Write-Host "=== Pass: $passCount  Fail: $failCount ==="
+Write-Host "=== Pass: $passCount  Fail: $failCount  Skip: $skipCount ==="
 if ($failCount -gt 0) { exit 1 } else { exit 0 }

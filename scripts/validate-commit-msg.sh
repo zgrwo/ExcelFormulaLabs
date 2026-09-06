@@ -45,6 +45,9 @@ esac
 if printf '%s' "$subject" | grep -Eq '^(feat|fix|docs|style|refactor|test|chore|build|ci|perf|revert|release)(\([^) ]+\))?(!)?: .+$'; then
     # P2-28 (review-2026-08-31): wc -m 在 C locale 下按字节计数，中文标题会在 <72 字符处误报过长
     # 用 ${#subject} 按字符计数（bash 内建，UTF-8 安全）。
+    # R5-P3-37 (review 2026-09-06)：${#subject} 的字符计数本身依赖 UTF-8 locale——LC_ALL=C
+    # 下 bash 内建按字节计数（实测同标题 89 vs 33）。显式固定 locale，消除调用环境依赖。
+    export LC_ALL=C.UTF-8 2>/dev/null || export LC_ALL=en_US.UTF-8 2>/dev/null || true
     len=${#subject}
     if [ "$len" -gt 72 ]; then
         echo "❌ 提交标题过长：${len} 字符，上限 72）：${subject}" >&2

@@ -71,15 +71,22 @@ function Split-TopLevelArgs {
 Write-Host ""
 Write-Host "[1/6] Checking bare catch {} ..."
 
+# R5-P3-39 (review 2026-09-06)：原 Select-String 行级匹配对跨行写法盲（`catch // 注释` 换行 `{`
+# 为合法 C#）——改读全文用单行模式正则（\s* 跨行匹配 {），行号由全文偏移计算。
 $bareCatch = Get-ChildItem -Path "$RepoRoot/src" -Recurse -Filter "*.cs" -ErrorAction SilentlyContinue |
-    Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' } |
-    Select-String -Pattern "catch\s*\{" -AllMatches
+    Where-Object { $_.FullName -notmatch "[/\\](obj|bin)[/\\]" } | ForEach-Object {
+        $text = Read-Utf8Text $_.FullName
+        if (-not $text) { return }
+        foreach ($rx in [regex]::Matches($text, "catch(?:\s*//[^\r\n]*)*\s*{")) {
+            [PSCustomObject]@{ Path = $_.FullName; LineNumber = ($text.Substring(0, $rx.Index) -split "`n").Count }
+        }
+    }
 
 if ($bareCatch) {
     foreach ($m in $bareCatch) {
         $violations += "BARE_CATCH: $($m.Path):$($m.LineNumber)"
     }
-    Write-Host "  [FAIL] Found $($bareCatch.Count) bare catch" -ForegroundColor Red
+    Write-Host "  [FAIL] Found $(@($bareCatch).Count) bare catch" -ForegroundColor Red
 } else {
     Write-Host "  [OK] No bare catch" -ForegroundColor Green
 }
@@ -97,8 +104,19 @@ if (Test-Path $verifyScript) {
     # arg2==arg3 即自校验（期望值硬编码铁律下，同源对照无论长短都是假阴性）。
     $verifyText = [System.IO.File]::ReadAllText($verifyScript, [System.Text.Encoding]::UTF8)
     $selfHits = @()
+    # R5-P3-20 (review 2026-09-06)：词边界定位（cross_check( 等尾缀不再被误提取）；
+    # 行首 # 注释跳过（注释里的 check(name, X, X) 示例不再假阳）。
+    $lineStarts = @()  # 每行起始偏移，用于定位 idx 所在行
+    $pos = 0
+    foreach ($ln in ($verifyText -split "`n")) { $lineStarts += $pos; $pos += $ln.Length + 1 }
     $idx = $verifyText.IndexOf("check(")
     while ($idx -ge 0) {
+        $lineIdx = 0
+        while ($lineIdx + 1 -lt $lineStarts.Count -and $lineStarts[$lineIdx + 1] -le $idx) { $lineIdx++ }
+        $lineText = ($verifyText -split "`n")[$lineIdx]
+        if ($lineText -match '^\s*#') { $idx = $verifyText.IndexOf("check(", $idx + 1); continue }
+        $before = if ($idx -gt 0) { $verifyText[$idx - 1] } else { ' ' }
+        if ($before -match '[A-Za-z0-9_]') { $idx = $verifyText.IndexOf("check(", $idx + 1); continue }
         $args = Split-TopLevelArgs $verifyText ($idx + 6)
         # check(name, X, X)：第 2、3 个顶层参数完全相同（跨行空白由 Trim 收敛）
         if ($args.Count -ge 3) {
@@ -126,18 +144,32 @@ Write-Host ""
 Write-Host "[3/6] Checking IntelliSense isolation ..."
 
 $allCs = Get-ChildItem -Path "$RepoRoot/src" -Recurse -Filter "*.cs" -ErrorAction SilentlyContinue |
-    Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' }
+    Where-Object { $_.FullName -notmatch "[/\\](obj|bin)[/\\]" }
 $intelliHits = $allCs | Select-String -Pattern "ExcelDna\.IntelliSense"
 $leaked = @()
 
+# R5-P3-18 (review 2026-09-06)：原回看 10 行 + 不处理 #else——NET48 块超 10 行误报、
+    # `#if NET48 ... #else ... IntelliSense ... #endif` 漏报。改全文件条件编译状态机：
+    # 栈式跟踪 #if/#elif/#else/#endif，条件含 NET48 即视为 net48 启用区。
 foreach ($hit in $intelliHits) {
     $content = @(Get-Content $hit.Path)
-    $lineIdx = $hit.LineNumber - 1
+    $stack = New-Object System.Collections.Generic.Stack[bool]
     $inNet48 = $false
-    $start = [Math]::Max(0, $lineIdx - 10)
-    for ($i = $start; $i -le $lineIdx; $i++) {
-        if ($content[$i] -match "#if\s+NET48") { $inNet48 = $true }
-        if ($content[$i] -match "#endif") { $inNet48 = $false }
+    for ($i = 0; $i -lt $content.Count; $i++) {
+        $ln = $content[$i]
+        if ($ln -match "^\s*#if\s+(.*)$") {
+            $stack.Push(($Matches[1] -match "NET48"))
+        } elseif ($ln -match "^\s*#elif\s+(.*)$" -and $stack.Count -gt 0) {
+            $stack.Pop(); $stack.Push(($Matches[1] -match "NET48"))
+        } elseif ($ln -match "^\s*#else" -and $stack.Count -gt 0) {
+            $stack.Push(-not $stack.Pop())
+        } elseif ($ln -match "^\s*#endif" -and $stack.Count -gt 0) {
+            $stack.Pop()
+        }
+        if ($i -eq $hit.LineNumber - 1) {
+            $inNet48 = ($stack.Count -gt 0) -and (-not $stack.Contains($false))
+            break
+        }
     }
     if (-not $inNet48) {
         $leaked += $hit
@@ -160,7 +192,7 @@ Write-Host "[4/6] Checking Core layer isolation ..."
 # F-19 (review 2026-09-06)：补 bin/obj 排除（与检查 5 口径一致）。名字通配 *Core.cs 的
 # 局限（Core 逻辑放非 *Core.cs 文件会漏网）为已知边界，审查提示见 ai-review-prompt §G2。
 $coreFiles = Get-ChildItem -Path "$RepoRoot/src" -Recurse -Filter "*Core.cs" -ErrorAction SilentlyContinue |
-    Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' }
+    Where-Object { $_.FullName -notmatch "[/\\](obj|bin)[/\\]" }
 $coreHits = $coreFiles | Select-String -Pattern "ExcelDna"
 
 if ($coreHits) {
@@ -179,7 +211,7 @@ Write-Host "[5/6] Checking NaN/Inf guards in Core files ..."
 # review-2026-08-29 P2-6：原硬编码 $coreModules 名单缺 DoeCore/DoeAnalysisCore（DOE 新增后未扩展）
 # → 改为动态发现全部 *Core.cs，名单漂移自愈。
 $coreFiles = Get-ChildItem -Path "$RepoRoot/src" -Recurse -Filter "*Core.cs" -ErrorAction SilentlyContinue |
-    Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' }
+    Where-Object { $_.FullName -notmatch "[/\\](obj|bin)[/\\]" }
 # P2-1 (review-2026-08-31)：显式 int-除法豁免清单（替代已被移除的"任一 ArgumentException"过宽豁免）——
 # 下列文件经人工核实：除法均为整数除法（常量除数，不可能产生 NaN/Inf）。
 # DateTimeCore：（Month+2)/3、(Month+5)/6、Easter 的 b/100 等；DoeCore：(r / div)、cc /= 3（数组索引）。
@@ -199,7 +231,10 @@ foreach ($f in $coreFiles) {
     $code = [regex]::Replace($code, '"[^"]*"', '""')
     # F-20 (review 2026-09-06)：补 '/=' 复合赋值——原正则 '/' 后必须跟标识符，
     # 仅用 x /= y 的 Core 文件曾可绕过 NaN/Inf 守卫检查（当前全库 0 现症，防患）。
-    $hasDivision = ($code -match '/\s*(?!0\b)\w+') -or ($code -match '/=')
+    # R5-P3-19 (review 2026-09-06)：原 (?!0\b) 负向先行豁免 `/ 0` 与 `/ 0.5`——除以
+    # 常量零/小常量恰恰必产或放大 Inf/NaN，更需守卫。当前全库无该形态（已 grep 实测），
+    # 移除豁免属防患（引入 `/ 0.5` 类除法的 Core 文件现在会正确要求守卫）。
+    $hasDivision = ($code -match '/\s*\w+') -or ($code -match '/=')
     # P2-1：int 除法豁免（显式名单，非"任一 ArgumentException"）
     if ($intDivOnlyFiles -contains $f.Name) { continue }
     if ($hasDivision) {
@@ -231,12 +266,12 @@ Write-Host "[6/6] Checking hasHeaders contract ..."
 # ToDoubleMatrix(object[,])）等 Helper 漏网。改为排除 bin/obj 的全部 .cs——Udf 层方法接收
 # object 单参（非 object[,] 直接参数），不会误匹配。
 $allCoreCs = Get-ChildItem -Path "$RepoRoot/src" -Recurse -Filter "*.cs" -ErrorAction SilentlyContinue |
-    Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' }
+    Where-Object { $_.FullName -notmatch "[/\\](obj|bin)[/\\]" }
 $hasHeaderViolations = @()
 # Structural transformation exemptions (don't interpret header semantics)
-# review-2026-08-29 P2-7：原 11 项中的 Frequency/Dict/JsonToTable/XmlToTable/RegexCaptureGroups
-# 参数均为 object[]/string（非 object[,]），check 正则不匹配，属冗余项 → 收缩为与
-# AGENTS.md §4 表头行契约一致的 6 项（Transpose/SelectColumns/SelectRows/CrossJoin/Flatten2D/Count）。
+# review-2026-08-29 P2-7：原 11 项冗余成员收缩至 AGENTS.md §4 契约核心；后续三次补充
+#（2026-08-29 Keys/Values、2026-08-31 ToDoubleMatrix）形成当前 9 项（与 ai-review-prompt §3.4 一致）。
+# R5-P3-35 (2026-09-06)：原注释「收缩为…6 项」与下方 9 项数组读感矛盾，改按现状表述。
 # 2026-08-29 发行前审查补充：DictSetCore.Keys/Values 为列提取（与 SelectColumns 同类结构变换）→ 豁免。
 # P1-18 (review-2026-08-31)：AnalyticsHelpers.ToDoubleMatrix 是纯类型转换（无表头语义），登记豁免。
 $structuralExempt = @('Transpose','SelectColumns','SelectRows','CrossJoin','Flatten2D','Count','Keys','Values','ToDoubleMatrix')
@@ -253,7 +288,7 @@ foreach ($f in $allCoreCs) {
     # F-04 (review 2026-09-06，fixture 实测)：一层嵌套仍漏二层元组 `((int,(int,string)) t, object[,] d)`
     # ——嵌套扩为两层（内层同构递归一层）；并补：修饰符链（override/virtual/sealed/async/extern）、
     # protected、NRT `object?[,]`。
-    $paramMatches = [regex]::Matches($content, '(private|protected internal|protected|internal|public)\s+(?:(?:static|override|virtual|sealed|async|extern|new)\s+)*(?:[\w<>.,\[\]?]+\s+)?(\w+)\s*\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*object\s*\??\s*\[,\s*\][^)]*\)')
+    $paramMatches = [regex]::Matches($content, '(private|protected internal|protected|internal|public)\s+(?:(?:static|override|virtual|sealed|async|extern|new)\s+)*(?:[\w<>.,\[\]?]+\s+)?(\w+)\s*\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*object\s*\??\s*\[,+\s*\][^)]*\)')
     foreach ($pm in $paramMatches) {
         $sig = $pm.Value
         $accessMod = $pm.Groups[1].Value

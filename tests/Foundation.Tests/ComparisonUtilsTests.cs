@@ -78,8 +78,15 @@ public class SafeKeyTests
     [Fact] public void Numeric_key() => ComparisonUtils.SafeKey(1.0).Should().StartWith("Numeric:");
     [Fact] public void String_key() => ComparisonUtils.SafeKey("hello").Should().Be("String:hello");
     [Fact] public void Date_key() => ComparisonUtils.SafeKey(new System.DateTime(2025, 6, 15, 10, 30, 0)).Should().Be("Date:2025-06-15 10:30:00");
-    [Fact] public void SafeKey_null_element_in_1D_array() => ComparisonUtils.SafeKey(new object?[] { "a", null, "c" }).Should().Be("Array(3):String:a|Null:##NULL##|String:c");
+    [Fact] public void SafeKey_null_element_in_1D_array() => ComparisonUtils.SafeKey(new object?[] { "a", null, "c" }).Should().Be("Array(3):8:String:a|13:Null:##NULL##|8:String:c");
     [Fact] public void SafeKey_empty_1D_array() => ComparisonUtils.SafeKey(System.Array.Empty<object>()).Should().Be("Array(0):##EMPTY##");
+    // R5-P3-01 (review 2026-09-06)：长度前缀编码下，元素内嵌 "String:" 的分隔点伪造不再同键。
+    [Fact] public void SafeKey_array_segment_injection_not_colliding()
+    {
+        var a = ComparisonUtils.SafeKey(new object?[] { "a", "b|String:c" });
+        var b = ComparisonUtils.SafeKey(new object?[] { "a|String:b", "c" });
+        a.Should().NotBe(b);
+    }
     [Fact] public void SafeKey_2D_array()
     {
         var input = new object[,] { { "a", 1 }, { "b", 2 } };

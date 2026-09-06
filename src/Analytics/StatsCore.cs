@@ -88,8 +88,11 @@ namespace ExcelFormulaLabs.Analytics
         private static double QuantileCapped(double[] d, double tau, QuantileDefinition qd)
         {
             var r = Statistics.QuantileCustom(d, tau, qd);
-            return !double.IsNaN(r) && !double.IsInfinity(r) ? r
-                : qd == QuantileDefinition.R7 ? QuantileSafe(d, tau) : r;
+            if (!double.IsNaN(r) && !double.IsInfinity(r)) return r;
+            // R5-P3-02 (review 2026-09-06)：非 R7 定义无可移植凸组合等价式（各定义 h 公式不同，
+            // 不凭记忆重实现），主路径非有限时按输出保洁约定（D5：结果无 Inf）封顶 NaN，
+            // 不再泄漏 ±Inf；R7 保留 QuantileSafe 凸组合回退（有限输入必得有限真值）。
+            return qd == QuantileDefinition.R7 ? QuantileSafe(d, tau) : double.NaN;
         }
 
         internal static double StdevP(double[] d) =>

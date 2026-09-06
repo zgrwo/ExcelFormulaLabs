@@ -6,7 +6,7 @@
 ## 当前状态
 
 - 构建流程（restore / build / test / pack / xll 收集）全部在 `.github/workflows/ci.yml` 与 `release.yml` 中定义
-- 本地一键验证：`scripts/verify-all.ps1`（5 步门：构建 → 测试 → CrossVal → 红线 → Release 构建）
+- 本地一键验证：`scripts/verify-all.ps1`（6 步门：verify-docs → 构建 → 测试 → CrossVal → 红线 → Release 构建；R5-P3-33，2026-09-06 同步）
 
 ## 约定
 
