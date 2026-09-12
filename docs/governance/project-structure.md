@@ -53,14 +53,18 @@ ExcelFormulaLabs/
 │   │   └── api-reference.md        #     UDF 签名唯一信源（数字基准）
 │   ├── user-manual/                #   用户手册
 │   │   └── user-manual.md          #     每函数详细示例 + 结果解读
-│   └── adr/                        #   架构决策记录（ADR）
-│       ├── adr-template.md
-│       ├── 0001-dual-tfm.md
-│       ├── 0002-core-zero-excel-dependency.md
-│       ├── 0003-mapover-abstraction.md
-│       ├── 0004-sentinel-contract-over-exceptions.md
-│       ├── 0005-sandboxconfig-immutable.md
-│       └── 0006-doe-cross-validation-source.md
+│   ├── adr/                        #   架构决策记录（ADR）
+│   │   ├── adr-template.md
+│   │   ├── 0001-dual-tfm.md
+│   │   ├── 0002-core-zero-excel-dependency.md
+│   │   ├── 0003-mapover-abstraction.md
+│   │   ├── 0004-sentinel-contract-over-exceptions.md
+│   │   ├── 0005-sandboxconfig-immutable.md
+│   │   ├── 0006-doe-cross-validation-source.md
+│   │   ├── 0007-solve-module-and-bounded-search.md
+│   │   └── 0008-solve-rate-model-and-time-extrapolation.md
+│   └── plans/                      #   实施计划（迁移/重构方案）
+│       └── 2026-09-12-solve-inverse-migration-plan.md
 │
 ├── scripts/                        # 构建/验证脚本
 │   ├── verify-docs.ps1             #   文档一致性验证（19 项检查，唯一实现）
@@ -115,6 +119,7 @@ ExcelFormulaLabs/
 │   │   ├── StatsCore.cs / StatsUdf.cs          # STATS.*
 │   │   ├── LinalgCore.cs / LinalgUdf.cs        # LINALG.*（含 DecompCache）
 │   │   ├── RegressionCore.cs / RegressionUdf.cs # REGRESS.*
+│   │   ├── SolveCore.cs / SolveUdf.cs          # SOLVE.*（ADR-0007：有界多起点反解）
 │   │   ├── PhyChemCore.cs / PhyChemUdf.cs      # PHYCHEM.*
 │   │   ├── DoeCore.cs / DoeUdf.cs              # DOE.*（设计生成）
 │   │   ├── DoeAnalysisCore.cs / DoeAnalysisUdf.cs # DOE.*（效应/ANOVA/Pareto 分析）
@@ -153,7 +158,7 @@ ExcelFormulaLabs/
 │
 ├── tests/                          # 测试
 │   ├── Foundation.Tests/           #   Foundation 层单元测试（含 csproj 与 14 个测试文件）
-│   ├── Analytics.Tests/            #   Analytics 层单元测试（含 csproj 与 17 个测试文件）
+│   ├── Analytics.Tests/            #   Analytics 层单元测试（含 csproj 与 20 个 .cs 文件）
 │   ├── DataToolkit.Tests/          #   DataToolkit 层单元测试（含 csproj 与 20 个测试文件）
 │   ├── CrossValRunner/             #   C# 交叉验证调度器
 │   │   ├── CrossValRunner.csproj

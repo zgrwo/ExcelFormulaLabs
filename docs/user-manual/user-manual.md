@@ -10,19 +10,20 @@
 1. [STATS — 描述统计](#1-stats--描述统计)
 2. [LINALG — 线性代数](#2-linalg--线性代数)
 3. [REGRESS — 回归分析](#3-regress--回归分析)
-4. [PHYCHEM — 物理化学](#4-phychem--物理化学)
-5. [DOE — 实验设计](#5-doe--实验设计)
-6. [STR — 字符串处理](#6-str--字符串处理)
-7. [DT — 日期时间](#7-dt--日期时间)
-8. [REGEX — 正则表达式](#8-regex--正则表达式)
-9. [ARR — 数组操作](#9-arr--数组操作)
-10. [DICT — 字典集合](#10-dict--字典集合)
-11. [JSON / XML](#11-json--xml--数据处理)
-12. [PIVOT — 数据透视](#12-pivot--数据透视)
-13. [SQL — SQL 查询](#13-sql--sql-查询)
-14. [FS — 文件系统](#14-fs--文件系统)
-15. [RANGE — 范围导出](#15-range--范围导出)
-16. [错误参考](#16-错误参考)
+4. [SOLVE — 工艺参数反解](#4-solve--工艺参数反解)
+5. [PHYCHEM — 物理化学](#5-phychem--物理化学)
+6. [DOE — 实验设计](#6-doe--实验设计)
+7. [STR — 字符串处理](#7-str--字符串处理)
+8. [DT — 日期时间](#8-dt--日期时间)
+9. [REGEX — 正则表达式](#9-regex--正则表达式)
+10. [ARR — 数组操作](#10-arr--数组操作)
+11. [DICT — 字典集合](#11-dict--字典集合)
+12. [JSON / XML](#12-json--xml--数据处理)
+13. [PIVOT — 数据透视](#13-pivot--数据透视)
+14. [SQL — SQL 查询](#14-sql--sql-查询)
+15. [FS — 文件系统](#15-fs--文件系统)
+16. [RANGE — 范围导出](#16-range--范围导出)
+17. [错误参考](#17-错误参考)
 
 ---
 
@@ -43,7 +44,7 @@
 
 ## `*_ASYNC` 异步变体说明
 
-全部 236 个 UDF 中有 12 个 `*_ASYNC`（LINALG 9 个 + REGRESS 3 个）异步变体，本章各节不单列示例：
+全部 240 个 UDF 中有 12 个 `*_ASYNC`（LINALG 9 个 + REGRESS 3 个）异步变体，本章各节不单列示例：
 与对应同步版**共享同一 Core 实现与数值语义**，仅计算方式改为后台线程 + Excel 异步队列（重算期间 Excel 界面不阻塞），签名与结果完全一致。示例请直接参照同步版（如 `LINALG.SVD` ↔ `LINALG.SVD_ASYNC`）；其中 `LinalgAsyncUdf` / `RegressionAsyncUdf` 的 M/V 参数转换在调用线程完成，lambda 内为纯计算。
 
 ## 1. STATS — 描述统计
@@ -1279,7 +1280,174 @@ L2 正则化（防过拟合）。λ 默认 1.0。不返回标准误/t值/p值（
 
 ---
 
-## 4. PHYCHEM — 物理化学
+## 4. SOLVE — 工艺参数反解
+
+> 给定输出目标反推可调工艺参数（工艺调机场景："要把不良率压到 4.0，模具温度该设多少？"）。支持多目标、多可调参数、边界约束、可达性判定与确定性复现。
+>
+> **列角色由表头前缀自动识别**（不区分大小写；未识别列如批次号/日期自动忽略）：
+> `Incoming*`/`来料*` = 已知条件（请求行必填）；`Variable*`/`可调*`/`变量*` = 待求解参数（请求行留空）；`Fixed*`/`固定*` = 固定参数（留空取历史中位数）；`Output*`/`输出*` = 输出（请求行填目标值）。
+>
+> **函数索引**：[INVERSE](#solve-inverse) · [PREDICT](#solve-predict) · [QUALITY](#solve-quality) · [EQUATION](#solve-equation) · [rate 速率模型](#solve-rate)
+
+### 示例数据集（可直接粘贴到 A1:C8）
+
+|   | A (IncomingA) | B (VariableU1) | C (OutputY1) |
+|---|---|---|---|
+| **1** | IncomingA | VariableU1 | OutputY1 |
+| **2** | 1 | 5 | 10 |
+| **3** | 2 | 8 | 15 |
+| **4** | 3 | 11 | 20 |
+| **5** | 4 | 4 | 10 |
+| **6** | 5 | 7 | 15 |
+| **7** | 6 | 10 | 20 |
+| **8** | 10 | *（留空）* | 13 *（目标）* |
+
+第 2–7 行是历史行（满足 `OutputY1 = 2 + 0.5·IncomingA + 1.5·VariableU1`）；
+第 8 行是请求行：`IncomingA` 已知为 10，`VariableU1` 留空表示待求解，`OutputY1=13` 是目标值。
+
+---
+
+<a id="solve-inverse"></a>
+
+### SOLVE.INVERSE — 工艺参数反解
+
+**语法**：`=SOLVE.INVERSE(data, [request], [bounds], [model], [seed], [max_starts])`
+
+**示例**：
+```
+=SOLVE.INVERSE(A1:C8)
+```
+返回（Excel 365 自动溢出；旧版 Excel 先选好足够大的区域再按 Ctrl+Shift+Enter）：
+
+| 请求行 | VariableU1 | OutputY1预测 | 最大偏差σ | 状态 |
+|--------|-----------|--------------|-----------|------|
+| 数据第8行 | 4.000 | 13.000 | 0.00 | 可达 |
+
+**结果解读**：
+- `VariableU1 = 4` 时预测输出恰为目标 13（手算：`u=(13−2−0.5×10)/1.5=4`）。
+- `最大偏差σ = max|预测−目标| / 历史输出标准差`：≈0 = 精确命中；明显大于 0.1 时先用 `SOLVE.QUALITY` 复核模型可信度。
+- `状态`：`可达` = 目标落在参数边界内的可达区间；`不可达` = 取到边界也无法达到，推荐值为边界上"最接近"的解。
+- **请求表分开写**：`=SOLVE.INVERSE(A1:C7, F1:H2)`（`request` 提供后 `data` 视为纯历史，请求表需同表头）。
+- **自定义边界**：`=SOLVE.INVERSE(A1:C8,,{"VariableU1",4,4.5})` 将 `VariableU1` 限制在 [4, 4.5]；两列形式 `{4,4.5}` 按变量列顺序。
+- 请求行可调列**填数字 = 该值作为寻优初值**（不会报错，也不会被静默丢弃）。
+- 固定参数留空 → 历史中位数；来料留空 → `#VALUE!`（来料是已知条件，必须提供）。
+
+---
+
+<a id="solve-predict"></a>
+
+### SOLVE.PREDICT — 正向预测
+
+**语法**：`=SOLVE.PREDICT(data, values, [model])`
+
+**示例**（试算"来料 10、可调 4"）：
+```
+=SOLVE.PREDICT(A1:C8, {10,4})
+```
+返回 `13`（1×1 矩阵）。`values` 按"非输出列"顺序给出（来料 + 可调 + 固定）。
+
+---
+
+<a id="solve-quality"></a>
+
+### SOLVE.QUALITY — 模型质量
+
+**语法**：`=SOLVE.QUALITY(data, [model], [seed])`
+
+**示例**：
+```
+=SOLVE.QUALITY(A1:C8)
+```
+返回：
+
+| 输出 | 候选 | CV方案 | CV_R2 | CV_MAE | 选用 |
+|------|------|--------|-------|--------|------|
+| OutputY1 | linear | LOO | 1.0000 | 0.0000 | 是 |
+| OutputY1 | poly | 跳过 | — | — | 否 |
+
+**结果解读**：
+- `auto`（默认）在 linear / poly 候选中按交叉验证 R² 选优；样本不足或 poly 展开超 100 项时显示 `跳过`。
+- `CV方案`：n ≥ 20 用 `5折`，n < 20 用 `LOO`（留一法）。
+- R² 越接近 1、MAE 越小，反解结果越可信；R² < 0.8 时建议增加历史数据或显式改用 `model="poly"`。
+
+---
+
+<a id="solve-equation"></a>
+
+### SOLVE.EQUATION — 方程输出
+
+**语法**：`=SOLVE.EQUATION(data, [model])`
+
+**示例**：
+```
+=SOLVE.EQUATION(A1:C8)
+```
+返回：
+
+| 输出 | 类型 | 表达式 |
+|------|------|--------|
+| OutputY1 | 前向方程 | `OutputY1 = 2 + 0.5*IncomingA + 1.5*VariableU1` |
+| OutputY1 | 反解公式 | `VariableU1 = (OutputY1 - 2 - 0.5*IncomingA) / 1.5` |
+
+**结果解读**：前向方程可直接手算核对（系数 6 位有效数字）；单变量线性模型额外给出解析反解公式，多变量/高次仅给前向方程。
+
+---
+
+<a id="solve-rate"></a>
+
+### SOLVE 速率模型（rate）— 时间外推
+
+当工艺是「输出 = 来料 − 时间 × 去除速率」的速率过程时，用 `model="rate"`：
+
+```
+OutputZx(t) = IncomingZx − t · g(Bow, 可调, 固定, 其他来料)
+```
+
+- **配对**：`OutputZ1` 自动找 `IncomingZ1`（去掉角色前缀后同后缀，`输出收率`↔`来料收率`）；配对缺失时显式 rate 返回 `#VALUE!`。
+- **时间列**：唯一以 `Time`/`时间` 结尾的列（`FixedTime` 可用）；t 必须有限且 >0。
+- **时间可调**：列名写成 `VariableTime`（或 `可调时间`）并在请求行留空 → 求解器把时间也当作可调参数（用 bounds 放宽范围，如 `{"VariableTime",60,120}`）；`FixedTime` 则按给定值/历史中位数。
+- **额外输出**：rate 生效时 `SOLVE.INVERSE` 增加每输出一列 `<输出名>速率`（单位：输出单位/时间单位）；`SOLVE.EQUATION` 增加 `速率方程` 行。
+
+**示例**（粘贴到 A1:D8；速率律 `r = 0.01 + 0.005·VariableU1`，t ∈ {30, 60}s）：
+
+|   | A (IncomingZ1) | B (VariableU1) | C (FixedTime) | D (OutputZ1) |
+|---|---|---|---|---|
+| **1** | IncomingZ1 | VariableU1 | FixedTime | OutputZ1 |
+| **2** | 10.1 | 2 | 30 | 9.5 |
+| **3** | 10.2 | 3 | 60 | 8.7 |
+| **4** | 10.3 | 4 | 30 | 9.4 |
+| **5** | 10.4 | 5 | 60 | 8.3 |
+| **6** | 10.5 | 6 | 30 | 9.3 |
+| **7** | 10.6 | 7 | 60 | 7.9 |
+| **8** | 10 | *（留空）* | 90 *（外推时间）* | 7.3 *（目标）* |
+
+```
+=SOLVE.INVERSE(A1:D8)                 // auto 自动选中 rate（线性无法解释 t 交互）
+```
+
+| 请求行 | VariableU1 | OutputZ1预测 | OutputZ1速率 | 最大偏差σ | 状态 |
+|--------|-----------|--------------|--------------|-----------|------|
+| 数据第8行 | 4.000 | 7.300 | 0.0300 | 0.00 | 可达 |
+
+- 手算核对：`r = 0.01+0.005×4 = 0.03`，`Output(90) = 10 − 90×0.03 = 7.3`。
+- 试算其它时间：`=SOLVE.PREDICT(A1:D8, {10,4,120})` → `6.4`。
+- 方程：`=SOLVE.EQUATION(A1:D8)` → `OutputZ1(FixedTime) = IncomingZ1 - FixedTime*(0.01 + 0.005*VariableU1)` 与 `OutputZ1速率 = 0.01 + 0.005*VariableU1`。
+- 若要让求解器**自己选时间**：把 C 列表头改为 `VariableTime`，请求行 C 留空，`=SOLVE.INVERSE(A1:D8,,{"VariableTime",60,120})`。
+
+---
+
+<a id="solve-notes"></a>
+
+### SOLVE 使用注意
+
+- **模型范围**：`linear` / `poly`（二次含两两交互）/ `rate`（线性速率 + 时间外推）；强非线性（阶跃/强交互）数据请先看 `SOLVE.QUALITY`。
+- **poly 外推**：边界默认历史最小/最大；推荐值触界时需实验确认。
+- **确定性**：同 `seed`（默认 42）两次调用结果完全一致；`max_starts` 默认 10（上限 50）。
+- **规模上限**（超限返回 `#VALUE!`）：历史 5000 行 / 请求 200 行 / 特征列 50 / 可调参数 20 / 输出 20 / poly 展开 100 项。
+
+---
+
+## 5. PHYCHEM — 物理化学
 
 > 分子量计算、单位换算、理想气体状态方程。
 
@@ -1491,7 +1659,7 @@ PV = nRT。将待求量填 `"*"`。R = 0.082057 L·atm/(mol·K)。
 
 ---
 
-## 5. DOE — 实验设计
+## 6. DOE — 实验设计
 
 > 生成 DOE（实验设计）矩阵。支持全因子（method=`"full"`）、田口正交表（method=`"taguchi"`）、2水平部分因子（method=`"fractional"`）、响应面（method=`"rsm"` CCD / `"bb"` Box-Behnken）。因子水平编码为 -1/0/+1（coded 单位）。
 
@@ -1582,7 +1750,7 @@ PV = nRT。将待求量填 `"*"`。R = 0.082057 L·atm/(mol·K)。
 
 ---
 
-## 6. STR — 字符串处理
+## 7. STR — 字符串处理
 
 > 除 TEXTJOIN/UUID/RND* 外均支持数组公式（逐元素处理）。
 >
@@ -2036,7 +2204,7 @@ instance_num: 1=第1次（默认），-1=最后一次。
 
 ---
 
-## 7. DT — 日期时间
+## 8. DT — 日期时间
 
 > 日期参数接受 Excel 日期序列号。start_day: 0=Sun, 1=Mon, ...（默认 1=Mon）。
 >
@@ -2387,7 +2555,7 @@ end_date 默认今天。
 
 ---
 
-## 8. REGEX — 正则表达式
+## 9. REGEX — 正则表达式
 
 > .NET 正则引擎。支持数组公式（逐元素），超时 5 秒自动取消。
 >
@@ -2558,7 +2726,7 @@ end_date 默认今天。
 
 ---
 
-## 9. ARR — 数组操作
+## 10. ARR — 数组操作
 
 > 一维数组操作函数集。
 >
@@ -2809,7 +2977,7 @@ Fisher-Yates 算法。
 
 ---
 
-## 10. DICT — 字典/集合
+## 11. DICT — 字典/集合
 
 > 频率统计、集合运算、字典构建。
 >
@@ -2945,7 +3113,7 @@ Fisher-Yates 算法。
 
 ---
 
-## 11. JSON / XML — 数据处理
+## 12. JSON / XML — 数据处理
 
 > **函数索引**：[JSON.PARSE](#json-parse) · [JSON.QUERY](#json-query) · [JSON.VALIDATE](#json-validate) · [JSON.PRETTIFY](#json-prettify) · [JSON.TOTABLE](#json-totable) · [XML.XPATH](#xml-xpath) · [XML.VALIDATE](#xml-validate) · [XML.TOTABLE](#xml-totable)
 
@@ -3105,7 +3273,7 @@ row_xpath 定义行节点。
 
 ---
 
-## 12. PIVOT — 数据透视
+## 13. PIVOT — 数据透视
 
 ### 示例数据
 
@@ -3195,7 +3363,7 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-## 13. SQL — SQL 查询
+## 14. SQL — SQL 查询
 
 > 参数化 INSERT，列名经字母数字消毒。表名固定：单表 = `data`，双表 = `data` + `extra`，三表 = `data` + `b` + `c`。第一行自动识别为表头。请在可信输入上使用。
 >
@@ -3284,7 +3452,7 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-## 14. FS — 文件系统
+## 15. FS — 文件系统
 
 > 需宏安全设置允许。除 LS/LSDIR/DRIVES/PWD/TEMP 外均支持数组公式。
 >
@@ -3566,7 +3734,7 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-## 15. RANGE — 范围导出
+## 16. RANGE — 范围导出
 
 ### 示例数据
 
@@ -3735,7 +3903,7 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 
 ---
 
-## 16. 错误参考
+## 17. 错误参考
 
 > 完整错误条件与影响范围见 [API 参考 → 错误参考](../specification/api-reference.md#错误参考)。`#VALUE!` = 输入/执行错误，`#NUM!` = 计算结果无定义。
 

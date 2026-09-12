@@ -161,7 +161,7 @@
 ## [2.2.0] - 2026-08-26
 
 ### Added
-- **DOE.* 实验设计与分析模块**（4 个函数，UDF 总数 232→236）：
+- **DOE.* 实验设计与分析模块**（4 个函数，UDF 总数由 232 增至 236）：
   - `DOE.PLAN`：生成实验设计矩阵，支持全因子（`full`）、田口正交表（`taguchi`，L4/L8/L9/L12/L16/L18/L27/L32）、2水平 ½ 部分因子（`fractional`）、响应面 CCD（`rsm`，可旋转 α=2^(k/4)）、Box-Behnken（`bb`）
   - `DOE.ANALYZE` / `DOE.ANOVA` / `DOE.PARETO`：效应估计、多因素 ANOVA、Pareto 排序（复用 `RegressionCore.FitOLS`，F=t²、SS=MSE×t²）
   - 与 pyDOE2（fullfact/fracfact/ccdesign/bbdesign）及 scipy 独立实现交叉验证；因子编码 -1/0/+1，自实现 `XorShift64` PRNG 保证双 TFM 随机化序列一致

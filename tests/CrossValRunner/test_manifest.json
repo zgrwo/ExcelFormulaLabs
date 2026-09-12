@@ -43,7 +43,24 @@
            [0.25,0.2,0.16666666666666666,0.14285714285714285,0.125,0.1111111111111111],
            [0.2,0.16666666666666666,0.14285714285714285,0.125,0.1111111111111111,0.1],
            [0.16666666666666666,0.14285714285714285,0.125,0.1111111111111111,0.1,0.09090909090909091]],
-    "b6": [1,1,1,1,1,1]
+    "b6": [1,1,1,1,1,1],
+    "solve_X_a": [[1,5],[2,8],[3,11],[4,4],[5,7],[6,10],[7,3],[8,6],[9,9],[10,2]],
+    "solve_y_a": [10,15,20,10,15,20,10,15,20,10],
+    "solve_vars_a": [1],
+    "solve_request_a": [[10,3.99]],
+    "solve_target_a": [[13]],
+    "solve_bounds_a": [[2,20]],
+    "solve_values_a": [10,4],
+    "solve_X_poly": [[-3],[-2],[-1],[0],[1],[2],[3]],
+    "solve_y_poly": [2.5,1,0.5,1,2.5,5,8.5],
+    "solve_X_micro": [[0],[0.25],[0.5],[0.75],[1]],
+    "solve_y_micro": [1e-12,1.5e-12,2e-12,2.5e-12,3e-12],
+    "solve_vars_micro": [0],
+    "solve_request_micro": [[0]],
+    "solve_target_micro": [[4.5e-12]],
+    "solve_bounds_micro": [[0,1]],
+    "solve_X_rate": [[10.1,2,1.0,30],[10.2,3,1.2,60],[10.3,4,1.4,30],[10.4,5,1.6,60],[10.5,6,1.8,30],[10.6,7,2.0,60],[10.7,2,2.2,30],[10.8,3,2.4,60],[10.9,4,2.6,30],[11.0,5,2.8,60],[11.1,6,3.0,30],[11.2,7,3.2,60]],
+    "solve_y_rate": [9.5,8.7,9.4,8.3,9.3,7.9,10.1,9.3,10.0,8.9,9.9,8.5]
   },
   "tests": [
     {"id":"STATS.MEAN","module":"STATS","coreClass":"StatsCore","coreMethod":"Mean","args":[{"ref":"data_flat_20"}],"tolerance":1e-10},
@@ -198,6 +215,17 @@
     {"id":"PHYCHEM.DENSITY_OK","module":"PHYCHEM","coreClass":"PhyChemCore","coreMethod":"Density","args":[2.5,1.25],"tolerance":1e-10},
     {"id":"PHYCHEM.DENSITY_ZERO_VOL","module":"PHYCHEM","coreClass":"PhyChemCore","coreMethod":"Density","args":[5,0],"tolerance":1e-10},
     {"id":"REGRESS.RSQ","module":"REGRESS","coreClass":"RegressionCore","coreMethod":"FitOLS","args":[[[1,1],[2,4],[3,3],[4,7],[5,5]],[1.1,3.9,3.2,7.4,5.6]],"tolerance":1e-10},
-    {"id":"DT.EASTER_2038","module":"DT","coreClass":"DateTimeCore","coreMethod":"Easter","args":[2038],"tolerance":0}
+    {"id":"DT.EASTER_2038","module":"DT","coreClass":"DateTimeCore","coreMethod":"Easter","args":[2038],"tolerance":0},
+
+    {"id":"SOLVE.FitModelLinear","module":"SOLVE","coreClass":"SolveCore","coreMethod":"FitModel","args":[{"ref":"solve_X_a"},{"ref":"solve_y_a"},"linear"],"tolerance":1e-9},
+    {"id":"SOLVE.FitModelPoly","module":"SOLVE","coreClass":"SolveCore","coreMethod":"FitModel","args":[{"ref":"solve_X_poly"},{"ref":"solve_y_poly"},"poly"],"tolerance":1e-6},
+    {"id":"SOLVE.CrossValidate","module":"SOLVE","coreClass":"SolveCore","coreMethod":"CrossValidate","args":[{"ref":"solve_X_a"},{"ref":"solve_y_a"},"linear"],"kwargs":{"seed":42},"tolerance":1e-6},
+    {"id":"SOLVE.SolveInverse","module":"SOLVE","coreClass":"SolveCore","coreMethod":"SolveInverse","args":[{"ref":"solve_X_a"},[[10],[15],[20],[10],[15],[20],[10],[15],[20],[10]],{"ref":"solve_vars_a"},{"ref":"solve_request_a"},{"ref":"solve_target_a"},{"ref":"solve_bounds_a"},"linear",10],"kwargs":{"seed":42},"tolerance":1e-4},
+    {"id":"SOLVE.SolveInverseMicro","module":"SOLVE","coreClass":"SolveCore","coreMethod":"SolveInverse","args":[{"ref":"solve_X_micro"},[[1e-12],[1.5e-12],[2e-12],[2.5e-12],[3e-12]],{"ref":"solve_vars_micro"},{"ref":"solve_request_micro"},{"ref":"solve_target_micro"},{"ref":"solve_bounds_micro"},"linear",10],"kwargs":{"seed":42},"tolerance":1e-6},
+    {"id":"SOLVE.Predict","module":"SOLVE","coreClass":"SolveCore","coreMethod":"PredictFit","args":[{"ref":"solve_X_a"},{"ref":"solve_y_a"},"linear",{"ref":"solve_values_a"}],"tolerance":1e-9},
+    {"id":"SOLVE.FitRate","module":"SOLVE","coreClass":"SolveCore","coreMethod":"FitRate","args":[{"ref":"solve_X_rate"},{"ref":"solve_y_rate"},0,3],"tolerance":1e-9},
+    {"id":"SOLVE.CrossValidateRate","module":"SOLVE","coreClass":"SolveCore","coreMethod":"CrossValidateRate","args":[{"ref":"solve_X_rate"},{"ref":"solve_y_rate"},0,3],"kwargs":{"seed":42},"tolerance":1e-6},
+    {"id":"SOLVE.PredictRate","module":"SOLVE","coreClass":"SolveCore","coreMethod":"PredictRate","args":[{"ref":"solve_X_rate"},{"ref":"solve_y_rate"},0,3,[10,4,1,90]],"tolerance":1e-9},
+    {"id":"SOLVE.SolveInverseRate","module":"SOLVE","coreClass":"SolveCore","coreMethod":"SolveInverseRate","args":[{"ref":"solve_X_rate"},[[9.5],[8.7],[9.4],[8.3],[9.3],[7.9],[10.1],[9.3],[10.0],[8.9],[9.9],[8.5]],[1],[[10,3.99,1,90]],[[7.3]],[[2,7]],10,0,3],"kwargs":{"seed":42},"tolerance":1e-4}
   ]
 }

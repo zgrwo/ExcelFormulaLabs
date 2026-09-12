@@ -8,7 +8,7 @@
 **Foundation** — 零依赖基础层。提供 InputNormalizer、ElementWiseMapper、OutputWrapper、ExcelEmpty/ExcelError 哨兵，以及 FilterUtils、ArrayOperations、ComparisonUtils、DictOperations 等共享工具。被 Analytics 和 DataToolkit 引用。
 _Avoid_: 基础层、工具层、Utils
 
-**Analytics** — 统计/回归/线性代数/物理化学。依赖 MathNet.Numerics 5.0.0 + Foundation。产出 Analytics-AddIn-{tfm}-packed.xll（tfm = net48/net8.0，含 -64 变体）。
+**Analytics** — 统计/回归/线性代数/工艺参数反解/物理化学/实验设计。依赖 MathNet.Numerics 5.0.0 + Foundation。产出 Analytics-AddIn-{tfm}-packed.xll（tfm = net48/net8.0，含 -64 变体）。
 _Avoid_: 统计模块、分析层
 
 **DataToolkit** — 字符串/日期/正则/JSON/XML/SQL/文件/数组/字典/透视/范围导出。依赖 Foundation（net48 额外依赖 System.Data.SQLite.Core + System.Text.Json）。产出 DataToolkit-AddIn-{tfm}-packed.xll（tfm = net48/net8.0，含 -64 变体）。
@@ -57,6 +57,30 @@ _Avoid_: 映射器、包装器（太泛）
 
 **广播（Broadcast）** — MapOverMulti 的标量→数组自动扩展行为。标量参数广播到数组尺寸，等长数组逐元素配对。
 
+**反解（Inverse Solve）** — SOLVE.* 的核心能力：给定输出目标，在可调参数边界内寻找使前向模型预测≈目标的可调参数组合。`SOLVE.INVERSE` 返回推荐表；目标不可达时返回边界上最接近解并标 `不可达`（见 [ADR-0007](../adr/0007-solve-module-and-bounded-search.md)）。
+_Avoid_: 逆运算、逆向拟合
+
+**请求行（Request Row）** — SOLVE 数据表中可调列（`Variable*`）留空或非数值、至少一个输出目标有值的行。可内嵌 `data`，也可用独立 request 表（同表头）。历史行相反：可调列与输出列全为数值。
+_Avoid_: 待求解行、预测行
+
+**可达性（Reachability）** — SOLVE 在参数边界内均匀采样 2000 点，用历史拟合模型计算输出区间；目标落入区间（相对容差 1e-9×量级）或优化器已达成（最大偏差 σ≤1e-6）即为 `可达`，否则 `不可达`。Core 数值接口：0=可达、1=不可达。
+_Avoid_: 可行性、可解性
+
+**最大偏差σ（Max Deviation σ）** — SOLVE.INVERSE 每请求行的目标达成度：`maxⱼ |预测ⱼ−目标ⱼ| / 历史输出标准差ⱼ`（标准差为 0 取 1；仅统计有目标的输出）。≈0 = 精确命中。
+_Avoid_: 误差、残差（易与回归残差混淆）
+
+**表头前缀角色（Header Prefix Role）** — SOLVE 数据表的列角色约定：`Incoming*`/`来料*`（已知条件）、`Variable*`/`可调*`/`变量*`（可调参数）、`Fixed*`/`固定*`（固定参数，留空取历史中位数）、`Output*`/`输出*`（输出/目标）。前缀不区分大小写，未识别列忽略。
+_Avoid_: 列名配置、角色参数
+
+**速率模型（rate）** — SOLVE 的时间外推模型（ADR-0008）：`OutputZx(t) = IncomingZx − t·g(可调/来料/固定)`，g 为线性模型；配对来料与时间列受约束（系数 1 与 −t），可对 t≠历史值预测/反解。由 `model="rate"` 显式启用；`auto` 将其作为候选之一。
+_Avoid_: 时间模型、衰减模型
+
+**输出-来料配对（Output-Incoming Pairing）** — rate 模型按去掉角色前缀后的后缀匹配（OrdinalIgnoreCase）：`OutputZ1`↔`IncomingZ1`、`输出收率`↔`来料收率`。配对缺失时显式 rate 报错。
+_Avoid_: 关联列、映射列
+
+**时间列（Time Column）** — rate 模型中唯一表头以 `Time`（忽略大小写）或 `时间` 结尾的特征列。列角色决定是否可调：`VariableTime`/`可调时间` 请求空白时参与寻优（bounds 可放宽），`FixedTime` 为条件（留空取历史中位数）。
+_Avoid_: 时长列、周期列
+
 ## 构建术语
 
 **TFM** — Target Framework Moniker，即 `net8.0` / `net8.0-windows` / `net48`。
@@ -68,7 +92,7 @@ _Avoid_: 目标框架、框架版本
 
 ## 测试术语
 
-**交叉验证（Cross-Validation）** — Python（numpy/scipy/sklearn）与 C# 实现逐项对照，精度 1e-10。覆盖 STATS/REGRESS/LINALG/PHYCHEM。
+**交叉验证（Cross-Validation）** — Python（numpy/scipy/sklearn）与 C# 实现逐项对照，精度 1e-10。覆盖 STATS/REGRESS/LINALG/PHYCHEM/DOE/SOLVE。
 **CrossVal** — `dotnet test --filter "CrossVal"` 运行的交叉验证测试子集。
 **verify-manual.py** — Python 脚本，验证 user-manual.md 中全部 UDF 示例与源码行为一致。
 **verify-docs.sh** — verify-docs.ps1 的 POSIX 包装器（19 项文档一致性检查，唯一实现为 PowerShell 版本）。

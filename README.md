@@ -23,10 +23,10 @@ Win10/11 自带 .NET Framework 4.8，直接加载 net48 版本的 `.xll`：
 
 | 文件 | 包含模块 |
 |------|---------|
-| `Analytics-AddIn-net48-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM · DOE（需 .NET Framework 4.8，32 位） |
-| `Analytics-AddIn-net48-64-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM · DOE（需 .NET Framework 4.8，64 位） |
-| `Analytics-AddIn-net8.0-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM · DOE（需 .NET 8 运行时，32 位） |
-| `Analytics-AddIn-net8.0-64-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM · DOE（需 .NET 8 运行时，64 位） |
+| `Analytics-AddIn-net48-packed.xll` | STATS · LINALG · REGRESS · SOLVE · PHYCHEM · DOE（需 .NET Framework 4.8，32 位） |
+| `Analytics-AddIn-net48-64-packed.xll` | STATS · LINALG · REGRESS · SOLVE · PHYCHEM · DOE（需 .NET Framework 4.8，64 位） |
+| `Analytics-AddIn-net8.0-packed.xll` | STATS · LINALG · REGRESS · SOLVE · PHYCHEM · DOE（需 .NET 8 运行时，32 位） |
+| `Analytics-AddIn-net8.0-64-packed.xll` | STATS · LINALG · REGRESS · SOLVE · PHYCHEM · DOE（需 .NET 8 运行时，64 位） |
 | `DataToolkit-AddIn-net48-packed.xll` | STR · DT · REGEX · ARR · DICT · JSON/XML · PIVOT · SQL · FS · RANGE（需 .NET Framework 4.8，32 位） |
 | `DataToolkit-AddIn-net48-64-packed.xll` | STR · DT · REGEX · ARR · DICT · JSON/XML · PIVOT · SQL · FS · RANGE（需 .NET Framework 4.8，64 位） |
 | `DataToolkit-AddIn-net8.0-packed.xll` | STR · DT · REGEX · ARR · DICT · JSON/XML · PIVOT · SQL · FS · RANGE（需 .NET 8 运行时，32 位） |
@@ -62,6 +62,7 @@ Win10/11 自带 .NET Framework 4.8，直接加载 net48 版本的 `.xll`：
 | `DICT.*` | 频率统计/交集/并集/键值查找 | `=DICT.FREQUENCY(A1:A100)` |
 | `LINALG.*` | 行列式/求逆/特征值/SVD/QR/LU… | `=LINALG.SOLVE(A1:C3, D1:D3)` |
 | `REGRESS.*` | OLS/WLS/岭回归/ANOVA/因子重要性 | `=REGRESS.OLS(A1:A100, B1:C100)` |
+| `SOLVE.*` | 工艺参数反解：给定输出目标反推可调参数（多目标/边界/可达性/速率模型时间外推） | `=SOLVE.INVERSE(A1:C11)` |
 | `PHYCHEM.*` | 分子量/温度/压力/体积/质量换算 | `=PHYCHEM.C_TO_F(100)` |
 | `DOE.*` | 实验设计矩阵（全因子设计，对齐 Minitab/JMP） | `=DOE.PLAN(2,2,0,2,"full",FALSE)` |
 | `SQL.*` | 对 Excel 区域写 SQL 查询 | `=SQL.QUERY(A1:D100, "SELECT Col1, AVG(Col3) FROM data GROUP BY Col1")` |
@@ -151,7 +152,7 @@ FileSystemCore.Initialize(new SandboxConfig(@"C:\Users\Public\Documents"));
 
 - **双 .NET 版本全量测试**，覆盖正常路径和退化输入（零值/空值/单元素/全等值）
 - **Python 交叉验证**：Stats/Regression 与 numpy/scipy 逐项对照，精度 1e-10；DataToolkit 集成管道测试覆盖跨模块组合
-- **手册验证**：224/236 个 UDF 有硬编码期望值的手册示例，由 Python 独立复算逐项对照（防自校验）；`verify-manual.py` 按双通道分报：manual-only 217 / cross-validated 159（合计 376 项检查，含 3 条矩阵通道对照；F-02 修复后矩阵通道计入 cross 小计；2026-09-06 第五轮补 18 条退化/初等函数/病态矩阵活体对照），其中真正与 C# 实现对照的 UDF 为 115/236（48.7%）（其余 12 个无独立示例的 *_ASYNC/共享 Core 变体由 UDF 层测试覆盖）
+- **手册验证**：228/240 个 UDF 有硬编码期望值的手册示例，由 Python 独立复算逐项对照（防自校验）；`verify-manual.py` 按双通道分报：manual-only 225 / cross-validated 172（合计 397 项检查，含 3 条矩阵通道对照；F-02 修复后矩阵通道计入 cross 小计；2026-09-06 第五轮补 18 条退化/初等函数/病态矩阵活体对照，SOLVE 模块补 4 组闭式/KFold 对照），其中真正与 C# 实现对照的 UDF 为 119/240（49.6%）（其余 12 个无独立示例的 *_ASYNC/共享 Core 变体由 UDF 层测试覆盖）
 
 ---
 

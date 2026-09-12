@@ -25,10 +25,10 @@ Windows 10/11 ship with .NET Framework 4.8, so you can load the net48 `.xll` dir
 
 | File | Modules included |
 |------|---------|
-| `Analytics-AddIn-net48-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM · DOE (requires .NET Framework 4.8, 32-bit) |
-| `Analytics-AddIn-net48-64-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM · DOE (requires .NET Framework 4.8, 64-bit) |
-| `Analytics-AddIn-net8.0-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM · DOE (requires .NET 8 runtime, 32-bit) |
-| `Analytics-AddIn-net8.0-64-packed.xll` | STATS · LINALG · REGRESS · PHYCHEM · DOE (requires .NET 8 runtime, 64-bit) |
+| `Analytics-AddIn-net48-packed.xll` | STATS · LINALG · REGRESS · SOLVE · PHYCHEM · DOE (requires .NET Framework 4.8, 32-bit) |
+| `Analytics-AddIn-net48-64-packed.xll` | STATS · LINALG · REGRESS · SOLVE · PHYCHEM · DOE (requires .NET Framework 4.8, 64-bit) |
+| `Analytics-AddIn-net8.0-packed.xll` | STATS · LINALG · REGRESS · SOLVE · PHYCHEM · DOE (requires .NET 8 runtime, 32-bit) |
+| `Analytics-AddIn-net8.0-64-packed.xll` | STATS · LINALG · REGRESS · SOLVE · PHYCHEM · DOE (requires .NET 8 runtime, 64-bit) |
 | `DataToolkit-AddIn-net48-packed.xll` | STR · DT · REGEX · ARR · DICT · JSON/XML · PIVOT · SQL · FS · RANGE (requires .NET Framework 4.8, 32-bit) |
 | `DataToolkit-AddIn-net48-64-packed.xll` | STR · DT · REGEX · ARR · DICT · JSON/XML · PIVOT · SQL · FS · RANGE (requires .NET Framework 4.8, 64-bit) |
 | `DataToolkit-AddIn-net8.0-packed.xll` | STR · DT · REGEX · ARR · DICT · JSON/XML · PIVOT · SQL · FS · RANGE (requires .NET 8 runtime, 32-bit) |
@@ -64,6 +64,7 @@ Type `=STATS.MEAN(` in any cell; if Excel pops up the function auto-completion, 
 | `DICT.*` | Frequency counts/intersection/union/key-value lookup | `=DICT.FREQUENCY(A1:A100)` |
 | `LINALG.*` | Determinant/inverse/eigenvalues/SVD/QR/LU… | `=LINALG.SOLVE(A1:C3, D1:D3)` |
 | `REGRESS.*` | OLS/WLS/ridge regression/ANOVA/feature importance | `=REGRESS.OLS(A1:A100, B1:C100)` |
+| `SOLVE.*` | Process-parameter inversion: hit output targets by solving adjustable settings (multi-target/bounds/reachability/time-extrapolating rate model) | `=SOLVE.INVERSE(A1:C11)` |
 | `PHYCHEM.*` | Molecular weight/temperature/pressure/volume/mass conversion | `=PHYCHEM.C_TO_F(100)` |
 | `DOE.*` | Design-of-experiments matrix (full factorial, Minitab/JMP-aligned) | `=DOE.PLAN(2,2,0,2,"full",FALSE)` |
 | `SQL.*` | Write SQL queries against Excel ranges | `=SQL.QUERY(A1:D100, "SELECT Col1, AVG(Col3) FROM data GROUP BY Col1")` |
@@ -153,7 +154,7 @@ All `REGEX.*` functions have a built-in 5-second timeout to prevent ReDoS attack
 
 - **Full test suites on both .NET versions**, covering happy paths and degenerate inputs (zeros/empty/single-element/all-equal)
 - **Python cross-validation**: Stats/Regression checked item by item against numpy/scipy to a precision of 1e-10; DataToolkit integration pipeline tests cover cross-module combinations
-- **Manual verification**: Python independently recomputes the hardcoded expected values of 224 manual examples across the 236 UDFs (no self-checks). Examples actually cross-checked against C# and pure Python self-checks are reported in separate channels (manual-only vs cross-validated) by verify-manual.py at runtime — coverage is no longer labelled "cross-validation" as a whole (the remaining 12 *_ASYNC / shared-Core variants without standalone examples are covered by UDF-layer tests)
+- **Manual verification**: Python independently recomputes the hardcoded expected values of 228 manual examples across the 240 UDFs (no self-checks). Examples actually cross-checked against C# and pure Python self-checks are reported in separate channels (manual-only vs cross-validated) by verify-manual.py at runtime — coverage is no longer labelled "cross-validation" as a whole (the remaining 12 *_ASYNC / shared-Core variants without standalone examples are covered by UDF-layer tests)
 
 ---
 

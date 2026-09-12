@@ -64,6 +64,60 @@ public static class Dispatcher
         Register("RegressionCore", "FactorImportance", (a, _) =>
             RegressionCore.FactorImportance(ToDouble2D(a[0]), ToDouble1D(a[1])));
 
+        // ═══════════════════ SolveCore（ADR-0007：有界多起点反解）═══════════════════
+        Register("SolveCore", "FitModel", (a, _) =>
+        {
+            var model = SolveCore.FitModel(ToDoubleJagged(a[0]), ToDouble1D(a[1]), ToString(a[2]));
+            return new Dictionary<string, object>
+            {
+                ["kind"] = model.Kind,
+                ["coef"] = model.Coef,
+                ["intercept"] = model.Intercept,
+                ["term_count"] = (long)model.Coef.Length,
+            };
+        });
+        Register("SolveCore", "CrossValidate", (a, k) =>
+            SolveCore.CrossValidate(ToDoubleJagged(a[0]), ToDouble1D(a[1]), ToString(a[2]),
+                Kwarg(k, "seed", 42L)));
+        Register("SolveCore", "SolveInverse", (a, k) =>
+            SolveCore.SolveInverse(ToDoubleJagged(a[0]), ToDoubleJagged(a[1]), ToIntArray(a[2]),
+                ToDoubleJagged(a[3]), ToDoubleJagged(a[4]), ToDoubleJagged(a[5]),
+                ToString(a[6]), Kwarg(k, "seed", 42L), (int)ToLong(a[7])));
+        Register("SolveCore", "PredictFit", (a, _) =>
+        {
+            var model = SolveCore.FitModel(ToDoubleJagged(a[0]), ToDouble1D(a[1]), ToString(a[2]));
+            return SolveCore.Predict(model, ToDouble1D(a[3]));
+        });
+        // rate 模型（ADR-0008）：显式传入配对来料/时间特征位置
+        Register("SolveCore", "FitRate", (a, _) =>
+        {
+            var model = SolveCore.FitModel(ToDoubleJagged(a[0]), ToDouble1D(a[1]), "rate",
+                (int)ToLong(a[2]), (int)ToLong(a[3]));
+            return new Dictionary<string, object>
+            {
+                ["kind"] = model.Kind,
+                ["coef"] = model.Coef,
+                ["intercept"] = model.Intercept,
+                ["term_count"] = (long)model.Coef.Length,
+                ["rate_incoming"] = (long)model.RateIncomingIndex,
+                ["rate_time"] = (long)model.RateTimeIndex,
+            };
+        });
+        Register("SolveCore", "CrossValidateRate", (a, k) =>
+            SolveCore.CrossValidate(ToDoubleJagged(a[0]), ToDouble1D(a[1]), "rate",
+                Kwarg(k, "seed", 42L), (int)ToLong(a[2]), (int)ToLong(a[3])));
+        Register("SolveCore", "PredictRate", (a, _) =>
+        {
+            var model = SolveCore.FitModel(ToDoubleJagged(a[0]), ToDouble1D(a[1]), "rate",
+                (int)ToLong(a[2]), (int)ToLong(a[3]));
+            return SolveCore.Predict(model, ToDouble1D(a[4]));
+        });
+        Register("SolveCore", "SolveInverseRate", (a, k) =>
+            SolveCore.SolveInverseFull(ToDoubleJagged(a[0]), ToDoubleJagged(a[1]), ToIntArray(a[2]),
+                ToDoubleJagged(a[3]), ToDoubleJagged(a[4]), ToDoubleJagged(a[5]),
+                "rate", Kwarg(k, "seed", 42L), (int)ToLong(a[6]),
+                new[] { new[] { (int)ToLong(a[7]), (int)ToLong(a[8]) } }, out _));
+
         // ═══════════════════ PhyChemCore ═══════════════════
         Register("PhyChemCore", "MolecularWeight", (a, _) =>
             PhyChemCore.MolecularWeight(ToString(a[0])));

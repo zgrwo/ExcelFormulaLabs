@@ -18,6 +18,7 @@ import numpy as np
 from scipy import stats
 from scipy import linalg as la
 from sklearn.linear_model import LinearRegression as LR, Ridge as RidgeLR
+from sklearn.preprocessing import PolynomialFeatures
 try:
     from pyDOE2 import fullfact, fracfact, ccdesign, bbdesign
     HAS_PYDOE2 = True
@@ -1160,6 +1161,149 @@ order_doe = np.argsort(-np.abs(2*beta_doe[1:]))
 cross_check_matrix("DOE.PARETO", (2*beta_doe[1:])[order_doe].reshape(-1, 1))
 
 # ========================================================================
+# SOLVE (4 UDFs) — 工艺参数反解（ADR-0007）
+# ========================================================================
+section("SOLVE — Process Parameter Inversion", 4)
+
+# 夹具与 tests/CrossValRunner/test_manifest.json、SolveCoreTests 同源（硬编码）。
+solve_X_a = np.array([[1,5],[2,8],[3,11],[4,4],[5,7],[6,10],[7,3],[8,6],[9,9],[10,2]], dtype=float)
+solve_y_a = np.array([10,15,20,10,15,20,10,15,20,10], dtype=float)
+solve_X_poly = np.array([[-3],[-2],[-1],[0],[1],[2],[3]], dtype=float)
+solve_y_poly = np.array([2.5,1,0.5,1,2.5,5,8.5], dtype=float)
+solve_X_micro = np.array([[0],[0.25],[0.5],[0.75],[1]], dtype=float)
+solve_y_micro = np.array([1e-12,1.5e-12,2e-12,2.5e-12,3e-12], dtype=float)
+
+
+def py_solve_fit(X, y, model):
+    """独立前向拟合：展项顺序与 C# BuildPowers 对齐（线性→平方→交叉），
+    样本标准差（ddof=1）标准化，linear=sklearn OLS，poly=sklearn Ridge(alpha=1e-5)，
+    再把系数反标准化回原始单位。"""
+    X = np.asarray(X, dtype=float); y = np.asarray(y, dtype=float)
+    base = X.shape[1]
+    if model == "linear":
+        Z = X.copy()
+    else:
+        pf = PolynomialFeatures(degree=2, include_bias=False)
+        Z = pf.fit_transform(X)
+        py_powers = [tuple(int(v) for v in row) for row in pf.powers_]
+        csharp = []
+        for j in range(base):
+            csharp.append(tuple(1 if k == j else 0 for k in range(base)))
+        for j in range(base):
+            csharp.append(tuple(2 if k == j else 0 for k in range(base)))
+        for a in range(base):
+            for b in range(a + 1, base):
+                csharp.append(tuple(1 if k in (a, b) else 0 for k in range(base)))
+        Z = Z[:, [py_powers.index(p) for p in csharp]]
+    mu = Z.mean(axis=0)
+    sd0 = Z.std(axis=0, ddof=1)
+    sd = np.where(sd0 > 0, sd0, 1.0)
+    Zs = (Z - mu) / sd
+    if model == "linear":
+        lr = LR(fit_intercept=True).fit(Zs, y)
+    else:
+        lr = RidgeLR(alpha=1e-5, fit_intercept=True).fit(Zs, y)
+    return lr.intercept_ - np.sum(lr.coef_ * mu / sd), lr.coef_ / sd
+
+
+def py_solve_inverse(X, y, var_idx, request, target, bounds):
+    """独立反解：OLS 闭式切面（不迭代 C# 的坐标搜索）+ 稠密采样可达性。"""
+    X = np.asarray(X, dtype=float); y = np.asarray(y, dtype=float)
+    request = np.asarray(request, dtype=float)
+    tgt = float(np.asarray(target, dtype=float)[0])
+    bounds = np.asarray(bounds, dtype=float)
+    lr = LR(fit_intercept=True).fit(X, y)
+    j = int(var_idx[0])
+    rest = lr.intercept_ + sum(lr.coef_[k] * request[k] for k in range(X.shape[1]) if k != j)
+    u = min(max((tgt - rest) / lr.coef_[j], bounds[0][0]), bounds[0][1])
+    x_full = request.copy(); x_full[j] = u
+    pred = float(lr.predict(x_full.reshape(1, -1))[0])
+    # 可达性：边界内稠密采样（与 C# 同精神；相对容差 1e-9·量级）
+    grid = np.linspace(bounds[0][0], bounds[0][1], 2001)
+    cols = [np.full(grid.size, request[k]) if k != j else grid for k in range(X.shape[1])]
+    preds = lr.predict(np.column_stack(cols))
+    lo, hi = float(preds.min()), float(preds.max())
+    tol = 1e-9 * max(abs(lo), abs(hi), hi - lo, 1e-300)
+    status = 0.0 if (lo - tol) <= tgt <= (hi + tol) else 1.0
+    return u, pred, status
+
+
+# ── SOLVE.EQUATION：线性系数/截距（sklearn 独立拟合；硬编码手算期望 0.5/1.5/2）──
+inter_py, coef_py = py_solve_fit(solve_X_a, solve_y_a, "linear")
+check("SOLVE.EQUATION_COEF_U", coef_py[1], 1.5, tol=1e-9)
+check("SOLVE.EQUATION_INTERCEPT", inter_py, 2.0, tol=1e-9)
+cross_vs_csharp("SOLVE.EQUATION", coef_py[0], "SOLVE.FitModelLinear", tol=1e-9, field=["coef", 0])
+cross_vs_csharp("SOLVE.EQUATION_COEF1", coef_py[1], "SOLVE.FitModelLinear", tol=1e-9, field=["coef", 1])
+cross_vs_csharp("SOLVE.EQUATION_INTER", inter_py, "SOLVE.FitModelLinear", tol=1e-9, field="intercept")
+# poly：ridge λ=1e-5 收缩下与 sklearn Ridge 独立实现逐项对照
+inter_poly_py, coef_poly_py = py_solve_fit(solve_X_poly, solve_y_poly, "poly")
+cross_vs_csharp("SOLVE.EQUATION_POLY_C1", coef_poly_py[0], "SOLVE.FitModelPoly", tol=1e-9, field=["coef", 0])
+cross_vs_csharp("SOLVE.EQUATION_POLY_C2", coef_poly_py[1], "SOLVE.FitModelPoly", tol=1e-9, field=["coef", 1])
+cross_vs_csharp("SOLVE.EQUATION_POLY_INTER", inter_poly_py, "SOLVE.FitModelPoly", tol=1e-9, field="intercept")
+
+# ── SOLVE.QUALITY：LOO R²/MAE（sklearn LOO 独立实现；精确数据 R²=1）──
+loo_pred = np.empty(solve_y_a.size)
+for _i in range(solve_y_a.size):
+    _mask = np.arange(solve_y_a.size) != _i
+    _lr = LR(fit_intercept=True).fit(solve_X_a[_mask], solve_y_a[_mask])
+    loo_pred[_i] = _lr.predict(solve_X_a[~_mask])[0]
+_r2_py = 1.0 - np.sum((loo_pred - solve_y_a) ** 2) / np.sum((solve_y_a - solve_y_a.mean()) ** 2)
+_mae_py = float(np.mean(np.abs(loo_pred - solve_y_a)))
+check("SOLVE.QUALITY_R2", _r2_py, 1.0, tol=1e-9)
+cross_vs_csharp("SOLVE.QUALITY", _r2_py, "SOLVE.CrossValidate", tol=1e-9, field="Item2")
+cross_vs_csharp("SOLVE.QUALITY_MAE", _mae_py, "SOLVE.CrossValidate", tol=1e-12, field="Item3")
+
+# ── SOLVE.INVERSE：闭式反解推荐值/预测/状态（硬编码 4.0 / 13.0 / 可达）──
+_u_py, _pred_py, _status_py = py_solve_inverse(
+    solve_X_a, solve_y_a, [1], [10.0, np.nan], [13.0], [[2.0, 20.0]])
+check("SOLVE.INVERSE_U", _u_py, 4.0, tol=1e-9)
+check("SOLVE.INVERSE_PRED", _pred_py, 13.0, tol=1e-9)
+check("SOLVE.INVERSE_STATUS", _status_py, 0.0, tol=1e-12)
+cross_vs_csharp("SOLVE.INVERSE", _u_py, "SOLVE.SolveInverse", tol=1e-4, field=[0, 0])
+cross_vs_csharp("SOLVE.INVERSE_PRED_CS", _pred_py, "SOLVE.SolveInverse", tol=1e-6, field=[0, 1])
+cross_vs_csharp("SOLVE.INVERSE_STATUS_CS", _status_py, "SOLVE.SolveInverse", tol=1e-12, field=[0, 3])
+# 微尺度可达性（R-2 回归）：目标 4.5e-12 超采样上限 3e-12 的 50% → 不可达
+_u_micro, _pred_micro, _status_micro = py_solve_inverse(
+    solve_X_micro, solve_y_micro, [0], [0.0], [4.5e-12], [[0.0, 1.0]])
+check("SOLVE.INVERSE_MICRO_STATUS", _status_micro, 1.0, tol=1e-12)
+cross_vs_csharp("SOLVE.INVERSE_MICRO", _status_micro, "SOLVE.SolveInverseMicro", tol=1e-12, field=[0, 3])
+
+# ── SOLVE.PREDICT：正向预测 13.0（sklearn 独立实现）──
+_lr_predict = LR(fit_intercept=True).fit(solve_X_a, solve_y_a)
+_pred13_py = float(_lr_predict.predict(np.array([[10.0, 4.0]]))[0])
+check("SOLVE.PREDICT", _pred13_py, 13.0, tol=1e-9)
+cross_vs_csharp("SOLVE.PREDICT_CS", _pred13_py, "SOLVE.Predict", tol=1e-9)
+
+# ── SOLVE rate 模型（ADR-0008）：Output = Incoming − t·g，t 参与外推 ──
+# 夹具与 manifest/SolveCoreTests 同源：r = 0.01 + 0.005·U1（每秒，t ∈ {30,60}）。
+solve_X_rate = np.array([[10.1,2,1.0,30],[10.2,3,1.2,60],[10.3,4,1.4,30],[10.4,5,1.6,60],
+                         [10.5,6,1.8,30],[10.6,7,2.0,60],[10.7,2,2.2,30],[10.8,3,2.4,60],
+                         [10.9,4,2.6,30],[11.0,5,2.8,60],[11.1,6,3.0,30],[11.2,7,3.2,60]], dtype=float)
+solve_y_rate = np.array([9.5,8.7,9.4,8.3,9.3,7.9,10.1,9.3,10.0,8.9,9.9,8.5], dtype=float)
+_rate_target = (solve_X_rate[:, 0] - solve_y_rate) / solve_X_rate[:, 3]
+_lr_rate = LR(fit_intercept=True).fit(solve_X_rate[:, [1]], _rate_target)  # g 只看 U1（配对来料/时间被约束）
+check("SOLVE.EQUATION_RATE_INTER", _lr_rate.intercept_, 0.01, tol=1e-9)
+check("SOLVE.EQUATION_RATE_COEF", _lr_rate.coef_[0], 0.005, tol=1e-9)
+cross_vs_csharp("SOLVE.EQUATION_RATE_CS", _lr_rate.coef_[0], "SOLVE.FitRate", tol=1e-9, field=["coef", 1])
+cross_vs_csharp("SOLVE.EQUATION_RATE_INTER_CS", _lr_rate.intercept_, "SOLVE.FitRate", tol=1e-9, field="intercept")
+# t≠60 外推：t=90、U1=4 → 10 − 90×0.03 = 7.3
+_pred_rate_py = 10.0 - 90.0 * (_lr_rate.intercept_ + _lr_rate.coef_[0] * 4.0)
+check("SOLVE.PREDICT_RATE", _pred_rate_py, 7.3, tol=1e-9)
+cross_vs_csharp("SOLVE.PREDICT_RATE_CS", _pred_rate_py, "SOLVE.PredictRate", tol=1e-9)
+# 反解：目标 7.3 @ t=90 → 所需速率 0.03 → U1=(0.03−0.01)/0.005=4
+_required_rate = (10.0 - 7.3) / 90.0
+_u_rate_py = (_required_rate - _lr_rate.intercept_) / _lr_rate.coef_[0]
+check("SOLVE.INVERSE_RATE_U", _u_rate_py, 4.0, tol=1e-9)
+cross_vs_csharp("SOLVE.INVERSE_RATE", _u_rate_py, "SOLVE.SolveInverseRate", tol=1e-4, field=[0, 0])
+cross_vs_csharp("SOLVE.INVERSE_RATE_PRED_CS", _pred_rate_py, "SOLVE.SolveInverseRate", tol=1e-6, field=[0, 1])
+_rate_lo = _lr_rate.intercept_ + _lr_rate.coef_[0] * 2.0
+_rate_hi = _lr_rate.intercept_ + _lr_rate.coef_[0] * 7.0
+_status_rate_py = 0.0 if _rate_lo <= _required_rate <= _rate_hi else 1.0
+cross_vs_csharp("SOLVE.INVERSE_RATE_STATUS_CS", _status_rate_py, "SOLVE.SolveInverseRate", tol=1e-12, field=[0, 3])
+# CV：精确速率夹具 → R²=1（C# 与 sklearn 独立实现同口径）
+cross_vs_csharp("SOLVE.QUALITY_RATE", 1.0, "SOLVE.CrossValidateRate", tol=1e-6, field="Item2")
+
+# ========================================================================
 # FINAL
 # ========================================================================
 # Count unique UDFs verified:
@@ -1190,6 +1334,12 @@ _ID2UDF = {
     "DT.EASTER_2024": "DT.EASTER", "DT.EASTER_2025": "DT.EASTER",
     "STATS.PERCENTILE_25": "STATS.PERCENTILE", "STATS.PERCENTILE_50": "STATS.PERCENTILE", "STATS.PERCENTILE_75": "STATS.PERCENTILE",
     "LINALG.LU+": "LINALG.LU_L", "LINALG.LU_L+P+U": "LINALG.LU_L",
+    "SOLVE.FitModelLinear": "SOLVE.EQUATION", "SOLVE.FitModelPoly": "SOLVE.EQUATION",
+    "SOLVE.CrossValidate": "SOLVE.QUALITY",
+    "SOLVE.SolveInverse": "SOLVE.INVERSE", "SOLVE.SolveInverseMicro": "SOLVE.INVERSE",
+    "SOLVE.Predict": "SOLVE.PREDICT",
+    "SOLVE.FitRate": "SOLVE.EQUATION", "SOLVE.CrossValidateRate": "SOLVE.QUALITY",
+    "SOLVE.PredictRate": "SOLVE.PREDICT", "SOLVE.SolveInverseRate": "SOLVE.INVERSE",
 }
 def _norm_ref(_name):
     """规范化引用名为可匹配形式：先按空格截断（'RANGE.TOHTML table tag' → 'RANGE.TOHTML'），

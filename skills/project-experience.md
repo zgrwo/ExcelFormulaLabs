@@ -120,7 +120,7 @@ description: 项目经验库 — 从 v2.0.0 至今全部 commit/审查/CI 事故
 
 ## 五、文档 SSOT 与计数
 
-- **数字唯一信源**：`docs/specification/api-reference.md`（236 UDF），一切计数从此推导。
+- **数字唯一信源**：`docs/specification/api-reference.md`（240 UDF），一切计数从此推导。
 - **散文计数**：verify-docs 检查 16 全仓扫描 `*.md` 的 `N UDF`（仅豁免 CHANGELOG 历史表述）——曾 232 陈旧漂移全绿通过；cross-validation 模块级豁免及 Total 检查已随 docs/cross-validation.md 归档 logs/reports/ 移除（2026-09-05）。
 - **CHANGELOG 声称必须反映现实**（防幻觉铁律）：3 次发现「声称未兑现」（.editorconfig 对齐、脚本参数化、门禁 17/18）——写完条目对照 diff 逐条核实。
 - **版本头同步**：specification / user-manual（含日期行）；docs/cross-validation.md 归档后不再参与版本头校验。
