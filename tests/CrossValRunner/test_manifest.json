@@ -64,7 +64,9 @@
     "solve_y_ratepoly": [9.38,8.16,8.92,6.8,8.22,4.96,9.98,8.76,9.52,7.4,8.82,5.56],
     "solve_X_ratepoly": [[10.1,2,30],[10.2,3,60],[10.3,4,30],[10.4,5,60],[10.5,6,30],[10.6,7,60],[10.7,2,30],[10.8,3,60],[10.9,4,30],[11.0,5,60],[11.1,6,30],[11.2,7,60]],
     "solve_X_shared": [[10.1,12.1,2,30],[10.2,12.2,3,60],[10.3,12.3,4,30],[10.4,12.4,5,60],[10.5,12.5,6,30],[10.6,12.6,7,60],[10.7,12.7,2,30],[10.8,12.8,3,60],[10.9,12.9,4,30],[11.0,13.0,5,60],[11.1,13.1,6,30],[11.2,13.2,7,60]],
-    "solve_Y_shared": [[9.5,11.5],[8.7,10.7],[9.4,11.4],[8.3,10.3],[9.3,11.3],[7.9,9.9],[10.1,12.1],[9.3,11.3],[10.0,12.0],[8.9,10.9],[9.9,11.9],[8.5,10.5]]
+    "solve_Y_shared": [[9.5,11.5],[8.7,10.7],[9.4,11.4],[8.3,10.3],[9.3,11.3],[7.9,9.9],[10.1,12.1],[9.3,11.3],[10.0,12.0],[8.9,10.9],[9.9,11.9],[8.5,10.5]],
+    "solve_X_shared_noisy": [[10.1,12.1,2,30],[10.2,12.2,3,60],[10.3,12.3,4,30],[10.4,12.4,5,60],[10.5,12.5,6,30],[10.6,12.6,7,60],[10.7,12.7,2,30],[10.8,12.8,3,60],[10.9,12.9,4,30],[11.0,13.0,5,60],[11.1,13.1,6,30],[11.2,13.2,7,60]],
+    "solve_Y_shared_noisy": [[9.496,11.504],[8.7,10.7],[9.404,11.396],[8.298,10.302000000000001],[9.302000000000001,11.298],[7.896,9.903999999999998],[10.1,12.1],[9.304,11.296000000000001],[9.998,12.002],[8.902000000000001,10.898],[9.896,11.904],[8.5,10.5]]
   },
   "tests": [
     {"id":"STATS.MEAN","module":"STATS","coreClass":"StatsCore","coreMethod":"Mean","args":[{"ref":"data_flat_20"}],"tolerance":1e-10},
@@ -232,6 +234,7 @@
     {"id":"SOLVE.PredictRate","module":"SOLVE","coreClass":"SolveCore","coreMethod":"PredictRate","args":[{"ref":"solve_X_rate"},{"ref":"solve_y_rate"},0,3,[10,4,1,90]],"tolerance":1e-9},
     {"id":"SOLVE.SolveInverseRate","module":"SOLVE","coreClass":"SolveCore","coreMethod":"SolveInverseRate","args":[{"ref":"solve_X_rate"},[[9.5],[8.7],[9.4],[8.3],[9.3],[7.9],[10.1],[9.3],[10.0],[8.9],[9.9],[8.5]],[1],[[10,3.99,1,90]],[[7.3]],[[2,7]],10,0,3],"kwargs":{"seed":42},"tolerance":1e-4},
     {"id":"SOLVE.PredictRatePoly","module":"SOLVE","coreClass":"SolveCore","coreMethod":"FitRatePolyPredict","args":[{"ref":"solve_X_ratepoly"},{"ref":"solve_y_ratepoly"},0,2,[10,4,90]],"tolerance":1e-3},
-    {"id":"SOLVE.FitSharedRate","module":"SOLVE","coreClass":"SolveCore","coreMethod":"FitSharedRate","args":[{"ref":"solve_X_shared"},{"ref":"solve_Y_shared"},[0,1],[[0,3],[1,3]],"rate"],"tolerance":1e-9}
+    {"id":"SOLVE.FitSharedRate","module":"SOLVE","coreClass":"SolveCore","coreMethod":"FitSharedRate","args":[{"ref":"solve_X_shared"},{"ref":"solve_Y_shared"},[0,1],[[0,3],[1,3]],"rate"],"tolerance":1e-9},
+    {"id":"SOLVE.CrossValidateShared","module":"SOLVE","coreClass":"SolveCore","coreMethod":"CrossValidateShared","args":[{"ref":"solve_X_shared_noisy"},{"ref":"solve_Y_shared_noisy"},[0,1],[[0,3],[1,3]],"rate"],"kwargs":{"seed":42},"tolerance":1e-9}
   ]
 }

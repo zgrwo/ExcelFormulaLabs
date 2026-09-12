@@ -1335,6 +1335,63 @@ check("SOLVE.SHARED_RATE_INTER", _lr_shared.intercept_, 0.01, tol=1e-9)
 cross_vs_csharp("SOLVE.SHARED_RATE_COEF_CS", _lr_shared.coef_[0], "SOLVE.FitSharedRate", tol=1e-9, field=["coef", 2])
 cross_vs_csharp("SOLVE.SHARED_RATE_INTER_CS", _lr_shared.intercept_, "SOLVE.FitSharedRate", tol=1e-9, field="intercept")
 
+# ── SOLVE.QUALITY 共享池化 CV（审查 2.5 CrossVal 锁）：XorShift64 同折 + 独立 OLS ──
+# 噪声夹具与 SolveCoreTests.SharedCvArrays(noisy: true) 同源（硬编码；期望值经独立复算）。
+solve_X_shared_noisy = np.array([[10.1,12.1,2,30],[10.2,12.2,3,60],[10.3,12.3,4,30],[10.4,12.4,5,60],
+                                 [10.5,12.5,6,30],[10.6,12.6,7,60],[10.7,12.7,2,30],[10.8,12.8,3,60],
+                                 [10.9,12.9,4,30],[11.0,13.0,5,60],[11.1,13.1,6,30],[11.2,13.2,7,60]], dtype=float)
+solve_Y_shared_noisy = np.array([[9.496,11.504],[8.7,10.7],[9.404,11.396],[8.298,10.302000000000001],
+                                 [9.302000000000001,11.298],[7.896,9.903999999999998],[10.1,12.1],
+                                 [9.304,11.296000000000001],[9.998,12.002],[8.902000000000001,10.898],
+                                 [9.896,11.904],[8.5,10.5]], dtype=float)
+
+
+def py_solve_shared_cv(X, Y, members, pairs, seed=42):
+    """独立复算 ADR-0009 池化 CV：复刻 XorShift64 折划分（同折对照的前提），
+    每折训练集用 numpy lstsq 独立解 g，留出折在原 Output 尺度上汇总 R²/MAE。"""
+    X = np.asarray(X, dtype=float); Y = np.asarray(Y, dtype=float)
+    n = X.shape[0]; total = n * len(members)
+    order = list(range(total))
+    state = seed if seed != 0 else 0x9E3779B97F4A7C15
+    for s in range(total - 1, 0, -1):
+        x = state
+        x ^= x >> 12
+        x ^= (x << 25) & ((1 << 64) - 1)
+        x ^= x >> 27
+        state = x & ((1 << 64) - 1)
+        j = ((state * 0x2545F4914F6CDD1D) & ((1 << 64) - 1)) % (s + 1)
+        order[s], order[j] = order[j], order[s]
+    five = total >= 20
+    folds = 5 if five else total
+    y_pool = np.array([Y[s % n][members[s // n]] for s in range(total)])
+    tss = float(((y_pool - y_pool.mean()) ** 2).sum())
+    excluded = {pairs[m][0] for m in members} | {pairs[m][1] for m in members}
+    feat = [c for c in range(X.shape[1]) if c not in excluded]
+    sse = 0.0; mae = 0.0
+    for f in range(folds):
+        tr, te = [], []
+        for t in range(total):
+            s = order[t]
+            (te if (t % 5 == f if five else t == f) else tr).append(s)
+        A = np.column_stack([np.ones(len(tr))] + [np.array([X[s % n][c] for s in tr]) for c in feat])
+        y_tr = np.array([(X[s % n][pairs[members[s // n]][0]] - Y[s % n][members[s // n]])
+                         / X[s % n][pairs[members[s // n]][1]] for s in tr])
+        coef, *_ = np.linalg.lstsq(A, y_tr, rcond=None)
+        for s in te:
+            m = members[s // n]; row = s % n
+            g = coef[0] + sum(coef[1 + i] * X[row][feat[i]] for i in range(len(feat)))
+            e = (X[row][pairs[m][0]] - X[row][pairs[m][1]] * g) - Y[row][m]
+            sse += e * e; mae += abs(e)
+    return (1.0 - sse / tss, mae / total)
+
+
+_r2_sharedcv, _mae_sharedcv = py_solve_shared_cv(
+    solve_X_shared_noisy, solve_Y_shared_noisy, [0, 1], [[0, 3], [1, 3]])
+check("SOLVE.SHAREDCV_R2", _r2_sharedcv, 0.999994043219849, tol=1e-9)
+check("SOLVE.SHAREDCV_MAE", _mae_sharedcv, 0.0025083679315728, tol=1e-12)
+cross_vs_csharp("SOLVE.SHAREDCV", _r2_sharedcv, "SOLVE.CrossValidateShared", tol=1e-9, field="Item2")
+cross_vs_csharp("SOLVE.SHAREDCV_MAE", _mae_sharedcv, "SOLVE.CrossValidateShared", tol=1e-12, field="Item3")
+
 # ========================================================================
 # FINAL
 # ========================================================================
@@ -1373,6 +1430,7 @@ _ID2UDF = {
     "SOLVE.FitRate": "SOLVE.EQUATION", "SOLVE.CrossValidateRate": "SOLVE.QUALITY",
     "SOLVE.PredictRate": "SOLVE.PREDICT", "SOLVE.SolveInverseRate": "SOLVE.INVERSE",
     "SOLVE.PredictRatePoly": "SOLVE.PREDICT", "SOLVE.FitSharedRate": "SOLVE.INVERSE",
+    "SOLVE.CrossValidateShared": "SOLVE.QUALITY",
 }
 def _norm_ref(_name):
     """规范化引用名为可匹配形式：先按空格截断（'RANGE.TOHTML table tag' → 'RANGE.TOHTML'），

@@ -139,6 +139,11 @@ public static class Dispatcher
                 ["term_count"] = (long)model.Coef.Length,
             };
         });
+        // 审查 2.5（max-level 2026-09-13）：共享池化 CV 数值锁（QUALITY 共享组候选）
+        Register("SolveCore", "CrossValidateShared", (a, k) =>
+            SolveCore.CrossValidateShared(ToDoubleJagged(a[0]), ToDoubleJagged(a[1]), ToIntArray(a[2]),
+                ToDoubleJagged(a[3]).Select(r => r.Select(v => (int)v).ToArray()).ToArray(),
+                ToString(a[4]), Kwarg(k, "seed", 42L)));
 
         // ═══════════════════ PhyChemCore ═══════════════════
         Register("PhyChemCore", "MolecularWeight", (a, _) =>
