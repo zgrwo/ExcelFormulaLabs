@@ -1,7 +1,7 @@
 ﻿# verify-docs.ps1 - 文档一致性验证（唯一实现；verify-docs.sh 为包装器）
 # ============================================================================
 # 用法：.\scripts\verify-docs.ps1 [-RepoRoot <path>]
-# 19 项检查（R08 review 2026-09-05：检查 19 于 2026-08-31 加入后头注计数漏更）：
+# 20 项检查（部分检查含多条断言，运行时逐条输出；R08 review 2026-09-05：检查 19 于 2026-08-31 加入后头注计数漏更）：
 #   1.  UDF 数量：api-reference.md 为准，与源码 [ExcelFunction] 一致
 #   2.  UDF 全覆盖：每个源码 UDF 在 api-reference.md 有条目
 #   3.  skill.md 含 RangeExport（数据工具模块技能覆盖）
@@ -21,6 +21,7 @@
 #  17.  [ExcelArgument] 名称 ↔ api-reference 参数列（自动比对，剥离可选标记）
 #  18.  src/ 实际文件必须被目录树声明（反向检查：存在→声明）
 #  19.  文档版本头 == Directory.Build.props <Version>（specification / user-manual）
+#  20.  [Fact] 计数声明（specification 等 md）== tests/**/*.cs 实测计数（review-2026-09-13）
 #
 # 注意：文件一律用显式 UTF-8 读取（本脚本兼容 Windows PowerShell 5.1 与 pwsh 7）。
 # ============================================================================
@@ -518,6 +519,33 @@ foreach ($vf in @("docs/specification/specification.md", "docs/user-manual/user-
 }
 if ($verMismatches.Count -eq 0) { Check "Doc version headers == $propsVersion" "OK" }
 else { Check "Doc version headers" ($verMismatches -join ' | ') }
+
+# ---------- 20. [Fact] 计数声明一致性（md 声明 ↔ tests/**/*.cs 实测）----------
+# 审查 2026-09-13（max-level）：spec 声称 2,562 个 [Fact] 而源码实测 2,642——F1 ②
+# "一切计数必须纳入门禁"未覆盖测试断言数（历史同类：2,466 vs 2,485 漂移全绿）。
+$factFiles = @(Get-ChildItem -Path (Join-Path $RepoRoot "tests") -Recurse -Filter "*.cs" -ErrorAction SilentlyContinue |
+    Where-Object { ($_.FullName -replace '\\', '/') -notmatch '/(bin|obj)/' })
+if ($factFiles.Count -gt 0) {
+    $codeFacts = 0
+    foreach ($ff in $factFiles) {
+        $ft = Read-Utf8 $ff.FullName
+        if ($ft) { $codeFacts += ([regex]::Matches($ft, '\[Fact\]')).Count }
+    }
+    $factMismatches = @()
+    foreach ($rel in $proseFiles) {
+        if ($rel -notmatch '\.md$') { continue }
+        $text = Read-Utf8 (Join-Path $RepoRoot $rel)
+        if (-not $text) { continue }
+        foreach ($m in [regex]::Matches($text, '([\d,]+)\s*个\s*\[Fact\]')) {
+            $claim = [int]($m.Groups[1].Value -replace ',', '')
+            if ($claim -ne $codeFacts) { $factMismatches += "${rel}: '$($m.Value)' ($claim != $codeFacts)" }
+        }
+    }
+    if ($factMismatches.Count -eq 0) { Check "Fact count claims ($codeFacts)" "OK" }
+    else { Check "Fact count claims" ($factMismatches -join ' | ') }
+} else {
+    Check-Skip "Fact count claims" "no test sources found"
+}
 
 # ---------- 汇总 ----------
 Write-Host ""

@@ -83,7 +83,7 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 
 ### 4.1 测试体系
 
-- 2,562 个 [Fact]（xUnit + FluentAssertions；[Theory]=0，review-2026-08-31 修正——原"2,444 单元测试（[Fact]/[Theory]）"的措辞与数字均过期；2026-09-06 第五轮审查修复轮实测回填，+11 为 R5-01 守卫边界/R5-P3-01 键碰撞/R5-P3-02/R5-P3-04/R5-P3-06 的回归测试）
+- 2,649 个 [Fact]（xUnit + FluentAssertions；[Theory]=0；2026-09-13 max-level 全量审查实测回填：Foundation 359 + Analytics 847 + DataToolkit 1,443；含 SOLVE 模块两轮新增 28 个及其他功能/审查回归增量。verify-docs 检查 20 强制该声明 == tests/**/*.cs 实测计数）
 - Python 交叉验证（scipy/numpy 独立计算，容差 1e-10）
 - 手册示例验证（verify-manual.py 全 UDF 覆盖）
 - XLL 加载/卸载自动化测试

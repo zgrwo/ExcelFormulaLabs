@@ -1065,5 +1065,126 @@ namespace ExcelFormulaLabs.Analytics.Tests
             t[4, 1].Should().Be("速率方程");
             ((string)t[4, 2]).Should().Be("SharedOutputB速率 = 0.01 + 0.005*VariableU1");
         }
+
+        // ──────────────────────── Max-Level 审查修复回归（2.1/2.3/2.4/2.5）────────────────────────
+
+        // 共享池化 CV 数组夹具：单时间列，成员 A/B 共享 g；noisy=true 时注入确定性扰动。
+        private static (double[][] X, double[][] Y, int[][] Pairs) SharedCvArrays(bool noisy)
+        {
+            int n = 12;
+            var X = new double[n][]; var Y = new double[n][];
+            for (int i = 0; i < n; i++)
+            {
+                double incA = 10 + 0.1 * (i + 1), incB = 12 + 0.1 * (i + 1), u = 2 + (i % 6);
+                double tm = i % 2 == 0 ? 30.0 : 60.0, g = 0.01 + 0.005 * u;
+                double noise = noisy ? 0.002 * (((i * 7) % 5) - 2) : 0.0;
+                X[i] = new[] { incA, incB, u, tm };
+                Y[i] = new[] { incA - tm * g + noise, incB - tm * g - noise };
+            }
+            return (X, Y, new[] { new[] { 0, 3 }, new[] { 1, 3 } });
+        }
+
+        [Fact]
+        public void CrossValidateShared_ExactFixture_R2One()
+        {
+            var (X, Y, pairs) = SharedCvArrays(noisy: false);
+            var cv = SolveCore.CrossValidateShared(X, Y, new[] { 0, 1 }, pairs, "rate", 42L);
+            cv.Scheme.Should().Be("5折");
+            cv.R2.Should().BeApproximately(1.0, 1e-9);
+            cv.Mae.Should().BeLessThan(1e-10);
+        }
+
+        [Fact]
+        public void CrossValidateShared_NoisyFixture_MatchesHardcodedReference()
+        {
+            // 期望值经独立 Python 复刻（同 XorShift64 折划分 + 朴素 OLS）复核：
+            // R²=0.999994043219849、MAE=0.0025083679315728（相对差 ~1.5e-16）。
+            var (X, Y, pairs) = SharedCvArrays(noisy: true);
+            var cv = SolveCore.CrossValidateShared(X, Y, new[] { 0, 1 }, pairs, "rate", 42L);
+            cv.Scheme.Should().Be("5折");
+            cv.R2.Should().BeApproximately(0.999994043219849, 1e-9);
+            cv.Mae.Should().BeApproximately(0.0025083679315728, 1e-12);
+        }
+
+        [Fact]
+        public void CrossValidateShared_NegativeHistoryTime_throws()
+        {
+            // 审查 2.1：池化 CV 与 FitSharedRate 必须同语义拒绝 t≤0（防 QUALITY/INVERSE 行为分裂）。
+            var (X, _, pairs) = SharedCvArrays(noisy: false);
+            for (int i = 0; i < X.Length; i++) X[i][3] = -X[i][3];
+            var Y = new double[X.Length][];
+            for (int i = 0; i < X.Length; i++)
+            {
+                double incA = X[i][0], incB = X[i][1], u = X[i][2], tm = X[i][3];
+                Y[i] = new[] { incA - tm * (0.01 + 0.005 * u), incB - tm * (0.01 + 0.005 * u) };
+            }
+            var act = () => SolveCore.CrossValidateShared(X, Y, new[] { 0, 1 }, pairs, "rate", 42L);
+            act.Should().Throw<ArgumentException>().WithMessage("*positive finite time*");
+            var act2 = () => SolveCore.FitSharedRate(X, Y, new[] { 0, 1 }, pairs, "rate", null);
+            act2.Should().Throw<ArgumentException>().WithMessage("*positive finite time*");
+        }
+
+        [Fact]
+        public void CrossValidateShared_RaggedOrNonFiniteMatrix_throws()
+        {
+            // 审查 2.4：共享入口与 CrossValidate 同款矩阵防御。
+            var ragged = new[] { new[] { 1.0, 2.0, 3.0, 4.0 }, new[] { 1.0, 2.0 } };
+            var Y = new[] { new[] { 1.0, 2.0 }, new[] { 1.0, 2.0 } };
+            int[][] pairs = { new[] { 0, 1 } };
+            var act = () => SolveCore.CrossValidateShared(ragged, Y, new[] { 0 }, pairs, "rate", 42L);
+            act.Should().Throw<ArgumentException>().WithMessage("*length differs*");
+            var act2 = () => SolveCore.FitSharedRate(ragged, Y, new[] { 0 }, pairs, "rate", null);
+            act2.Should().Throw<ArgumentException>().WithMessage("*length differs*");
+
+            var nonFinite = new[] { new[] { 1.0, 2.0, 3.0, 4.0 }, new[] { 1.0, double.NaN, 3.0, 4.0 }, new[] { 1.0, 2.0, 3.0, 4.0 } };
+            var Y3 = new[] { new[] { 1.0, 2.0 }, new[] { 1.0, 2.0 }, new[] { 1.0, 2.0 } };
+            var act3 = () => SolveCore.CrossValidateShared(nonFinite, Y3, new[] { 0 }, pairs, "rate", 42L);
+            act3.Should().Throw<ArgumentException>().WithMessage("*non-finite*");
+        }
+
+        [Fact]
+        public void FitAuto_RankDeficientLinear_SkipsToRate()
+        {
+            // 审查 2.3：inc2 = 2×inc1（精确共线）→ linear 秩亏跳过；poly 展开超样本跳过；rate 可用。
+            var X = new double[12][];
+            var y = new double[12];
+            for (int i = 0; i < 12; i++)
+            {
+                double inc1 = 10 + 0.1 * (i + 1), inc2 = 2 * inc1, u = 2 + (i % 6);
+                double t1 = i % 2 == 0 ? 30.0 : 60.0, t2 = i % 2 == 0 ? 15.0 : 30.0;
+                X[i] = new[] { inc1, inc2, u, t1, t2 };
+                y[i] = inc1 - t1 * (0.01 + 0.005 * u);
+            }
+            var r = SolveCore.FitAuto(X, y, 42L, 0, 3);
+            r.Chosen.Should().Be("rate");
+            r.RateSkipped.Should().BeFalse();
+            r.PolySkipped.Should().BeTrue();
+        }
+
+        [Fact]
+        public void Quality_RankDeficientLinear_SkipsToRate()
+        {
+            var t = (object[,])SolveUdf.UDF_SOLVE_QUALITY(MultiTimeTable());
+            t.GetLength(0).Should().Be(7);
+            t[1, 0].Should().Be("OutputZ1");
+            t[1, 1].Should().Be("linear");
+            t[1, 2].Should().Be("跳过"); // 秩亏 → 跳过而非整体 #VALUE!
+            t[3, 1].Should().Be("rate");
+            t[3, 5].Should().Be("是");
+            t[4, 0].Should().Be("OutputZ2");
+            t[6, 1].Should().Be("rate");
+            t[6, 5].Should().Be("是");
+        }
+
+        [Fact]
+        public void Inverse_RankDeficientLinear_AutoSelectsRate()
+        {
+            var r = (object[,])SolveUdf.UDF_SOLVE_INVERSE(MultiTimeTable(), null!, null!, "auto");
+            r.GetLength(1).Should().Be(8);
+            ((double)r[1, 1]).Should().BeApproximately(4.0, 1e-4);
+            ((double)r[1, 2]).Should().BeApproximately(7.3, 1e-6);
+            ((double)r[1, 3]).Should().BeApproximately(18.74, 1e-6);
+            r[1, 7].Should().Be("可达");
+        }
     }
 }

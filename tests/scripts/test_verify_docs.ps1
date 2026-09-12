@@ -1,5 +1,5 @@
 ﻿# ============================================================================
-# test_verify_docs.ps1 — verify-docs.ps1 回归守卫（12 场景 A–K；G 含 3 个中文变体子用例，K 含 2 个子用例）
+# test_verify_docs.ps1 — verify-docs.ps1 回归守卫（13 场景 A–L；G 含 3 个中文变体子用例，K 含 2 个子用例）
 # 场景 A：真实仓库副本 → 全部检查通过（基线，防门禁自身回归）
 # 场景 B：README 硬编码徽章 → 检查 9 FAIL
 # 场景 C：README 断链 → 检查 12 FAIL
@@ -198,6 +198,12 @@ Write-Host "[K2] CHANGELOG 区间链不连续应 FAIL（检查 16 模式 2；终
 $fixtureK2 = Copy-RepoFixture
 [System.IO.File]::AppendAllText((Join-Path $fixtureK2 "CHANGELOG.md"), "`n- 注入：UDF 总数 237→240`n", (New-Object System.Text.UTF8Encoding($false)))
 Run-VerifyDocs $fixtureK2 "Prose UDF counts" $true
+
+# --- 场景 L：[Fact] 计数声明漂移（审查 2026-09-13 2.2；检查 20）---
+Write-Host "[L] [Fact] 计数声明漂移应 FAIL（检查 20）"
+$fixtureL = Copy-RepoFixture
+[System.IO.File]::AppendAllText((Join-Path $fixtureL "AGENTS.md"), "`n- 999 个 [Fact]（注入）`n", (New-Object System.Text.UTF8Encoding($false)))
+Run-VerifyDocs $fixtureL "Fact count claims" $true
 
 # --- 汇总 ---
 Remove-Item -Recurse -Force $tmpRoot

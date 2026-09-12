@@ -323,6 +323,43 @@ namespace ExcelFormulaLabs.Analytics
             }
         }
 
+        /// <summary>Rectangular + finite guard for a jagged matrix without a companion vector.</summary>
+        private static void ValidateJagged(double[][] m, string paramName, string what)
+        {
+            if (m == null || m.Length == 0)
+                throw new ArgumentException($"{paramName}: {what} must contain at least one row.");
+            int width = m[0]?.Length ?? 0;
+            if (width == 0)
+                throw new ArgumentException($"{paramName}: {what} must contain at least one column.");
+            for (int i = 0; i < m.Length; i++)
+            {
+                if (m[i] == null || m[i].Length != width)
+                    throw new ArgumentException($"{paramName}: {what} row {i} length differs from {width}.");
+                for (int j = 0; j < width; j++)
+                    if (double.IsNaN(m[i][j]) || double.IsInfinity(m[i][j]))
+                        throw new ArgumentException($"{paramName}: {what} contains a non-finite value at [{i},{j}].");
+            }
+        }
+
+        /// <summary>Shared-group positional guard: members in range, each pair = [incoming, time] in range.</summary>
+        private static void ValidateSharedBinding(int outCount, int k, int[] members, int[]?[] pairs, string paramName)
+        {
+            if (members == null || members.Length == 0)
+                throw new ArgumentException($"{paramName}: at least one shared member is required.");
+            if (pairs == null)
+                throw new ArgumentException($"{paramName}: rate pairs are required for shared members.");
+            foreach (int m in members)
+            {
+                if (m < 0 || m >= outCount)
+                    throw new ArgumentException($"{paramName}: member index {m} is out of range [0,{outCount - 1}].");
+                int[]? spec = pairs[m];
+                if (spec == null || spec.Length != 2)
+                    throw new ArgumentException($"{paramName}: member {m} must have a rate pair [incoming, time].");
+                if (spec[0] < 0 || spec[0] >= k || spec[1] < 0 || spec[1] >= k)
+                    throw new ArgumentException($"{paramName}: member {m} rate pair is out of range [0,{k - 1}].");
+            }
+        }
+
         /// <summary>ADR-0007 规模上限（超限 #VALUE!）；所有 object[,] 入口共用，分配/拟合前检查。</summary>
         private static void ValidateLimits(SolveSchema schema)
         {
@@ -679,36 +716,49 @@ namespace ExcelFormulaLabs.Analytics
         /// <summary>
         /// Cross-validate linear / poly / rate, pick the highest R² (ties below 1e-9 keep the earlier
         /// candidate: linear &gt; poly &gt; rate), then refit the chosen model on the full history set.
+        /// A candidate whose cross-validation throws (e.g. rank-deficient linear design) is skipped
+        /// like a structurally unavailable one; when no candidate survives, the first error is rethrown.
         /// </summary>
         internal static (SolveModel Model, string Chosen, string Scheme, double R2, double Mae, bool PolySkipped, bool RateSkipped) FitAuto(
             double[][] X, double[] y, long seed, int rateIncoming = -1, int rateTime = -1, int[]? rateTimeColumns = null)
         {
             ValidateMatrix(X, y, "FitAuto");
-            var linearCv = CrossValidate(X, y, ModelLinear, seed);
+            ArgumentException? firstError = null;
+            (string Scheme, double R2, double Mae) linearCv = default;
+            bool linearSkipped = false;
+            try { linearCv = CrossValidate(X, y, ModelLinear, seed); }
+            catch (ArgumentException ex) { linearSkipped = true; firstError = ex; }
             bool polySkipped = PolyExcludedBySample(X.Length, X[0].Length);
             (string Scheme, double R2, double Mae) polyCv = (string.Empty, 0.0, 0.0);
             if (!polySkipped)
             {
                 try { polyCv = CrossValidate(X, y, ModelPoly, seed); }
-                catch (ArgumentException) { polySkipped = true; }
+                catch (ArgumentException ex) { polySkipped = true; firstError ??= ex; }
             }
             bool rateSkipped = RateExcludedBySample(X.Length, X[0].Length, rateIncoming, rateTime);
             (string Scheme, double R2, double Mae) rateCv = (string.Empty, 0.0, 0.0);
             if (!rateSkipped)
             {
                 try { rateCv = CrossValidate(X, y, ModelRate, seed, rateIncoming, rateTime, rateTimeColumns); }
-                catch (ArgumentException) { rateSkipped = true; }
+                catch (ArgumentException ex) { rateSkipped = true; firstError ??= ex; }
             }
-            string chosen = ModelLinear;
-            double bestR2 = linearCv.R2, bestMae = linearCv.Mae;
-            string bestScheme = linearCv.Scheme;
+            // 审查 2.3：linear 的秩亏（精确共线设计）与 poly/rate 同等按"跳过"处理；
+            // 全部候选不可用才抛首个错误（保留 n<5/非有限/常量响应等原始语义）。
+            if (linearSkipped && polySkipped && rateSkipped)
+                throw firstError ?? new ArgumentException("No model candidate could be cross-validated.");
+            string chosen;
+            double bestR2, bestMae;
+            string bestScheme;
+            if (!linearSkipped) { chosen = ModelLinear; bestR2 = linearCv.R2; bestMae = linearCv.Mae; bestScheme = linearCv.Scheme ?? string.Empty; }
+            else if (!polySkipped) { chosen = ModelPoly; bestR2 = polyCv.R2; bestMae = polyCv.Mae; bestScheme = polyCv.Scheme ?? string.Empty; }
+            else { chosen = ModelRate; bestR2 = rateCv.R2; bestMae = rateCv.Mae; bestScheme = rateCv.Scheme ?? string.Empty; }
             if (!polySkipped && polyCv.R2 > bestR2 + R2TieTolerance)
             {
-                chosen = ModelPoly; bestR2 = polyCv.R2; bestMae = polyCv.Mae; bestScheme = polyCv.Scheme;
+                chosen = ModelPoly; bestR2 = polyCv.R2; bestMae = polyCv.Mae; bestScheme = polyCv.Scheme ?? string.Empty;
             }
             if (!rateSkipped && rateCv.R2 > bestR2 + R2TieTolerance)
             {
-                chosen = ModelRate; bestR2 = rateCv.R2; bestMae = rateCv.Mae; bestScheme = rateCv.Scheme;
+                chosen = ModelRate; bestR2 = rateCv.R2; bestMae = rateCv.Mae; bestScheme = rateCv.Scheme ?? string.Empty;
             }
             var model = FitModel(X, y, chosen, rateIncoming, rateTime, rateTimeColumns);
             return (model, chosen, bestScheme, bestR2, bestMae, polySkipped, rateSkipped);
@@ -775,6 +825,11 @@ namespace ExcelFormulaLabs.Analytics
         internal static SolveModel FitSharedRate(double[][] X, double[][] Y, int[] members, int[]?[] pairs,
             string kind, int[]? rateTimes)
         {
+            ValidateJagged(X, "FitSharedRate", "X");
+            ValidateJagged(Y, "FitSharedRate", "Y");
+            if (Y.Length != X.Length)
+                throw new ArgumentException($"FitSharedRate: Y row count ({Y.Length}) must equal X row count ({X.Length}).");
+            ValidateSharedBinding(Y[0].Length, X[0].Length, members, pairs, "FitSharedRate");
             var (xs, ys) = StackSharedRateTargets(X, Y, members, pairs);
             return FitRateFromTargets(xs, ys, kind, SharedExcluded(members, pairs, rateTimes), -1, -1);
         }
@@ -783,19 +838,21 @@ namespace ExcelFormulaLabs.Analytics
         private static SolveModel FitSharedRateAuto(double[][] X, double[][] Y, int[] members, int[]?[] pairs,
             long seed, int[]? rateTimes)
         {
-            var linear = CrossValidateShared(X, Y, members, pairs, ModelRate, seed, rateTimes);
-            double bestR2 = linear.R2;
-            string chosen = ModelRate;
-            try
-            {
-                var poly = CrossValidateShared(X, Y, members, pairs, ModelRatePoly, seed, rateTimes);
-                if (poly.R2 > bestR2 + R2TieTolerance)
-                {
-                    chosen = ModelRatePoly;
-                    bestR2 = poly.R2;
-                }
-            }
-            catch (ArgumentException) { /* rate_poly 结构不可用（项数/样本）→ 保持线性 g */ }
+            ArgumentException? firstError = null;
+            (string Scheme, double R2, double Mae) linear = default;
+            bool linearSkipped = false;
+            try { linear = CrossValidateShared(X, Y, members, pairs, ModelRate, seed, rateTimes); }
+            catch (ArgumentException ex) { linearSkipped = true; firstError = ex; }
+            (string Scheme, double R2, double Mae) poly = default;
+            bool polySkipped = false;
+            try { poly = CrossValidateShared(X, Y, members, pairs, ModelRatePoly, seed, rateTimes); }
+            catch (ArgumentException ex) { polySkipped = true; firstError ??= ex; }
+            if (linearSkipped && polySkipped)
+                throw firstError ?? new ArgumentException("No shared rate candidate could be cross-validated.");
+            string chosen = linearSkipped ? ModelRatePoly : ModelRate;
+            double bestR2 = linearSkipped ? poly.R2 : linear.R2;
+            if (!linearSkipped && !polySkipped && poly.R2 > bestR2 + R2TieTolerance)
+                chosen = ModelRatePoly;
             return FitSharedRate(X, Y, members, pairs, chosen, rateTimes);
         }
 
@@ -810,10 +867,26 @@ namespace ExcelFormulaLabs.Analytics
             string kind = RequireFitModel(model);
             if (kind != ModelRate && kind != ModelRatePoly)
                 throw new ArgumentException("Shared cross-validation requires model \"rate\" or \"rate_poly\".");
+            ValidateJagged(X, "CrossValidateShared", "X");
+            ValidateJagged(Y, "CrossValidateShared", "Y");
+            if (Y.Length != X.Length)
+                throw new ArgumentException(
+                    $"CrossValidateShared: Y row count ({Y.Length}) must equal X row count ({X.Length}).");
+            ValidateSharedBinding(Y[0].Length, X[0].Length, members, pairs, "CrossValidateShared");
             int n = X.Length;
             int total = n * members.Length;
             if (total < 5)
                 throw new ArgumentException($"Cross-validation needs at least 5 history rows (got {total}).");
+            // 审查 2.1：时间正性在共享 CV 入口统一校验（与 StackSharedRateTargets 同语义），
+            // 防止 QUALITY 的池化 CV 静默接受 t≤0 而 INVERSE 对同表报错的行为分裂。
+            for (int s = 0; s < total; s++)
+            {
+                int member = members[s / n], row = s % n;
+                double tv = X[row][pairs[member]![1]];
+                if (double.IsNaN(tv) || double.IsInfinity(tv) || tv <= 0)
+                    throw new ArgumentException(
+                        $"Model 'rate' requires a positive finite time at history row {row} (got {tv}).");
+            }
             var excluded = SharedExcluded(members, pairs, rateTimes);
 
             var order = new int[total];
@@ -1889,10 +1962,14 @@ namespace ExcelFormulaLabs.Analytics
                     sharedUsable = true;
                     if (mdl == ModelAuto)
                     {
+                        ArgumentException? sharedFirstError = null;
                         try { sharedRate = CrossValidateShared(X, Y, sharedMembers.ToArray(), pairs, ModelRate, seed, ratePlan.TimeFeaturePositions); sharedRateSkipped = false; }
-                        catch (ArgumentException) { sharedRateSkipped = true; }
+                        catch (ArgumentException ex) { sharedRateSkipped = true; sharedFirstError = ex; }
                         try { sharedPoly = CrossValidateShared(X, Y, sharedMembers.ToArray(), pairs, ModelRatePoly, seed, ratePlan.TimeFeaturePositions); sharedPolySkipped = false; }
-                        catch (ArgumentException) { sharedPolySkipped = true; }
+                        catch (ArgumentException ex) { sharedPolySkipped = true; sharedFirstError ??= ex; }
+                        // 全候选不可用 → 抛首个错误，与非共享 QUALITY 的 n<5/常量响应语义一致。
+                        if (sharedRateSkipped && sharedPolySkipped)
+                            throw sharedFirstError ?? new ArgumentException("No shared rate candidate could be cross-validated.");
                     }
                     else if (mdl == ModelRate)
                     {
@@ -1946,26 +2023,36 @@ namespace ExcelFormulaLabs.Analytics
 
                 if (mdl == ModelAuto)
                 {
-                    var lin = CrossValidate(X, yj, ModelLinear, seed);
+                    ArgumentException? firstError = null;
+                    (string Scheme, double R2, double Mae) lin = default;
+                    bool linSkipped = false;
+                    try { lin = CrossValidate(X, yj, ModelLinear, seed); }
+                    catch (ArgumentException ex) { linSkipped = true; firstError = ex; }
                     bool polySkipped = PolyExcludedBySample(X.Length, k);
                     (string Scheme, double R2, double Mae) poly = default;
                     if (!polySkipped)
                     {
                         try { poly = CrossValidate(X, yj, ModelPoly, seed); }
-                        catch (ArgumentException) { polySkipped = true; }
+                        catch (ArgumentException ex) { polySkipped = true; firstError ??= ex; }
                     }
                     bool rateSkipped = RateExcludedBySample(X.Length, k, rateIncoming, rateTime);
                     (string Scheme, double R2, double Mae) rate = default;
                     if (!rateSkipped)
                     {
                         try { rate = CrossValidate(X, yj, ModelRate, seed, rateIncoming, rateTime, ratePlan?.TimeFeaturePositions); }
-                        catch (ArgumentException) { rateSkipped = true; }
+                        catch (ArgumentException ex) { rateSkipped = true; firstError ??= ex; }
                     }
-                    string best = ModelLinear;
-                    double bestR2 = lin.R2;
+                    // 审查 2.3：linear 秩亏与 poly/rate 同等跳过；全部候选不可用才抛首个错误。
+                    if (linSkipped && polySkipped && rateSkipped)
+                        throw firstError ?? new ArgumentException("No model candidate could be cross-validated.");
+                    string best = linSkipped ? (polySkipped ? ModelRate : ModelPoly) : ModelLinear;
+                    double bestR2 = linSkipped ? (polySkipped ? rate.R2 : poly.R2) : lin.R2;
                     if (!polySkipped && poly.R2 > bestR2 + R2TieTolerance) { best = ModelPoly; bestR2 = poly.R2; }
                     if (!rateSkipped && rate.R2 > bestR2 + R2TieTolerance) { best = ModelRate; bestR2 = rate.R2; }
-                    rows.Add(new object[] { outputName, ModelLinear, lin.Scheme, lin.R2, lin.Mae, best == ModelLinear ? "是" : "否" });
+                    if (linSkipped)
+                        rows.Add(new object[] { outputName, ModelLinear, SchemeSkipped, null!, null!, "否" });
+                    else
+                        rows.Add(new object[] { outputName, ModelLinear, lin.Scheme ?? string.Empty, lin.R2, lin.Mae, best == ModelLinear ? "是" : "否" });
                     if (polySkipped)
                         rows.Add(new object[] { outputName, ModelPoly, SchemeSkipped, null!, null!, "否" });
                     else

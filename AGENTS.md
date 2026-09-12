@@ -157,7 +157,7 @@ ExcelFormulaLabs/
 | 日常构建 | `dotnet restore && dotnet build && dotnet test` |
 | 分发构建 | `dotnet build -c Release` |
 | 全量测试（6 步，同 verify-all.ps1） | ① verify-docs ② Build ③ dotnet test ④ CrossVal（verify-manual.py）⑤ Pre-commit Checks ⑥ Release build |
-| 文档一致性（19 项） | `powershell -File scripts/verify-docs.ps1` |
+| 文档一致性（20 项） | `powershell -File scripts/verify-docs.ps1` |
 | 提交前红线（6 项） | `powershell -File scripts/pre-commit-check.ps1` |
 | 治理脚本自测 | `powershell -File tests/scripts/run-tests.ps1` |
 | 本地 Qoder 技能镜像 | `powershell -File scripts/sync-qoder-skills.ps1`（可选，本地工具用，不入库） |

@@ -2,7 +2,7 @@
 
 > 本文档是**一份可直接投喂给任意 AI 审查代理的 Prompt 模板**，用于对本项目的任何变更（PR / 提交 / 发版前全量）做一次"先想后写、实证优先、杜绝假阳性"的深度审查。
 > 配套治理规则见 [documentation.md](documentation.md)；审查产出报告一律归档 `logs/reports/`，**不入库**。
-> **事实基准**：文中门禁编号、步骤数、阈值已于 2026-09-05 对照 v2.2.5 逐条实测校准（verify-docs 19 项 / pre-commit 6 项 / verify-all 6 步 / CI 7 job / 覆盖率 75/50/42）。版本前进后，引用任何编号前先重数（见 6.5）。
+> **事实基准**：文中门禁编号、步骤数、阈值已于 2026-09-05 对照 v2.2.5 逐条实测校准（verify-docs 20 项 / pre-commit 6 项 / verify-all 6 步 / CI 7 job / 覆盖率 75/50/42）。版本前进后，引用任何编号前先重数（见 6.5）。
 
 ---
 
@@ -82,7 +82,7 @@ Foundation (共享工具)                    ← InputNormalizer / ElementWiseMa
 ### 3.5 验证体系（6 步门，同 verify-all.ps1 + 交叉验证）
 
 ```
-① verify-docs（scripts/verify-docs.ps1，文档一致性 19 项）
+① verify-docs（scripts/verify-docs.ps1，文档一致性 20 项）
 ② dotnet build（双 TFM）
 ③ dotnet test（全 TFM：net8.0 / net8.0-windows / net48，xUnit + FluentAssertions）
 ④ CrossVal：verify-manual.py 一站式——定位 CrossValRunner.exe（bin/Debug|Release/net8.0-windows），

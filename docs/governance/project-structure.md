@@ -68,7 +68,7 @@ ExcelFormulaLabs/
 │       └── 2026-09-12-solve-inverse-migration-plan.md
 │
 ├── scripts/                        # 构建/验证脚本
-│   ├── verify-docs.ps1             #   文档一致性验证（19 项检查，唯一实现）
+│   ├── verify-docs.ps1             #   文档一致性验证（20 项检查，唯一实现）
 │   ├── verify-docs.sh              #   verify-docs.ps1 的 POSIX 包装器
 │   ├── verify-manual.py            #   全 UDF 手册示例验证（Python↔C#）
 │   ├── verify-all.ps1              #   一键 6 步验证门（verify-docs/Build/test/CrossVal/pre-commit/Release build）
