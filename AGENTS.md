@@ -82,7 +82,7 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 ExcelFormulaLabs/
 ├── src/                          # 源码（Foundation / Analytics / DataToolkit）
 ├── tests/                        # 测试 + CrossVal + 脚本自测（tests/scripts）
-├── docs/                         # 项目文档（governance / specification / user-manual / adr 四分类）
+├── docs/                         # 项目文档（governance / specification / user-manual / adr / plans 五分类）
 ├── skills/                       # Skill 定义（单一信源；.qoder 本地镜像不入库）
 ├── scripts/                      # 构建/验证/治理脚本
 ├── templates/                    # 模块脚手架（NewModule）
@@ -279,6 +279,6 @@ ExcelFormulaLabs/
 | [user-manual.md](docs/user-manual/user-manual.md) | 学习教程 | 每函数详细示例 + 结果解读 |
 | [project-structure.md](docs/governance/project-structure.md) | 结构地图 | 文件职责与层级关系 |
 | [documentation.md](docs/governance/documentation.md) | 文档职责 | 各文档分工与维护规则 |
-| [adr/](docs/adr/adr-template.md) | 决策记录 | 架构决策 ADR 0001-0008 |
+| [adr/](docs/adr/adr-template.md) | 决策记录 | 架构决策 ADR 0001-0009 |
 | [CHANGELOG.md](CHANGELOG.md) | 变更记录 | 版本变更历史（与 tag 强制一致） |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 贡献指南 | 开发/PR/发版流程 |

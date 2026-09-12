@@ -117,6 +117,28 @@ public static class Dispatcher
                 ToDoubleJagged(a[3]), ToDoubleJagged(a[4]), ToDoubleJagged(a[5]),
                 "rate", Kwarg(k, "seed", 42L), (int)ToLong(a[6]),
                 new[] { new[] { (int)ToLong(a[7]), (int)ToLong(a[8]) } }, out _));
+        Register("SolveCore", "FitRatePolyPredict", (a, _) =>
+        {
+            var model = SolveCore.FitModel(ToDoubleJagged(a[0]), ToDouble1D(a[1]), "rate_poly",
+                (int)ToLong(a[2]), (int)ToLong(a[3]));
+            return SolveCore.Predict(model, ToDouble1D(a[4]));
+        });
+        // ADR-0009：SharedOutput 池化 g（成员共享同一速率函数）
+        Register("SolveCore", "FitSharedRate", (a, _) =>
+        {
+            var members = ToIntArray(a[2]);
+            int[][] pairs = ToDoubleJagged(a[3])
+                .Select(r => r.Select(v => (int)v).ToArray()).ToArray();
+            var model = SolveCore.FitSharedRate(ToDoubleJagged(a[0]), ToDoubleJagged(a[1]),
+                members, pairs, ToString(a[4]), null);
+            return new Dictionary<string, object>
+            {
+                ["kind"] = model.Kind,
+                ["coef"] = model.Coef,
+                ["intercept"] = model.Intercept,
+                ["term_count"] = (long)model.Coef.Length,
+            };
+        });
 
         // ═══════════════════ PhyChemCore ═══════════════════
         Register("PhyChemCore", "MolecularWeight", (a, _) =>

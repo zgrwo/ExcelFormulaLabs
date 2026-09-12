@@ -395,7 +395,7 @@ foreach ($rel in $proseFiles) {
     # R13 (review-2026-09-05)：词表化扩三个变体——量词扩 个|项（`236 项 UDF`）、倒装形式
     # （`UDF 数量 236` / `UDF 总数 236` / `UDF 共 236` / `UDF: 236`）、`236 个函数（UDF）`。
     # 三个变体均经负向注入实测（test_verify_docs 场景 G2/G3/G4）。倒装模式仅对非历史文件
-    # 生效：CHANGELOG 的「UDF 总数 232→236」由下方模式 2 单独断言终值。
+    # 生效：CHANGELOG 的「UDF 总数 X→Y」由下方模式 2 单独按区间链校验。
     if (-not $isHistorical) {
         # 模式 1a：`N UDF` / `N 个 UDF` / `N 项 UDF`
         foreach ($m in [regex]::Matches($text, '(\d+)\s*(?:个|项)?\s*UDF')) {
@@ -417,9 +417,25 @@ foreach ($rel in $proseFiles) {
             if ($num -gt $codeUdfs) { $proseMismatches += "${rel}: 分子 '$($m.Value)' ($num > $codeUdfs)" }
         }
     }
-    # 模式 2：`UDF 总数 X→Y`（CHANGELOG 历史记录，断言终值）
-    foreach ($m in [regex]::Matches($text, 'UDF\s*总数\s*\d+\s*→\s*(\d+)')) {
-        if ([int]$m.Groups[1].Value -ne $codeUdfs) { $proseMismatches += "${rel}: '$($m.Value)'" }
+    # 模式 2：`UDF 总数 X→Y`（CHANGELOG 历史区间）——链式校验，不强制终值 == 当前计数。
+    # R7 (review-2026-09-12, F8)：旧规则要求每个历史区间终点 == 当前 UDF 数；新增模块后
+    # （如 SOLVE：236→240）旧的 `232→236` 必然变红，倒逼改写历史记录（本次变更曾把
+    # 「UDF 总数 232→236」改写成「由 232 增至 236」以规避——门禁设计缺陷）。
+    # 新规则：① 每个区间 0 < X < Y；② 终点 ≤ 当前计数（不得声称超出源码现实）；
+    # ③ 相邻区间首尾相接（防中间区间改动后链断裂/漏记）。当前计数的强制一致由
+    # 非历史文件的模式 1a/1b/1c/分数形式承担；发版时 CHANGELOG 必须新增递增区间
+    # （由检查 10 的 tag↔CHANGELOG 与版本一致性间接保障）。
+    $ranges = @()
+    foreach ($m in [regex]::Matches($text, 'UDF\s*总数\s*(\d+)\s*→\s*(\d+)')) {
+        $x = [int]$m.Groups[1].Value; $y = [int]$m.Groups[2].Value
+        if ($x -le 0 -or $x -ge $y) { $proseMismatches += "${rel}: '$($m.Value)'（区间须 0<X<Y）" }
+        elseif ($y -gt $codeUdfs) { $proseMismatches += "${rel}: '$($m.Value)'（终点 $y > 当前 $codeUdfs）" }
+        $ranges += ,@($x, $y)
+    }
+    for ($ri = 1; $ri -lt $ranges.Count; $ri++) {
+        if ($ranges[$ri][0] -ne $ranges[$ri - 1][1]) {
+            $proseMismatches += "${rel}: 区间链断裂 '$($ranges[$ri-1][0])→$($ranges[$ri-1][1])' vs '$($ranges[$ri][0])→$($ranges[$ri][1])'"
+        }
     }
 }
 if ($proseMismatches.Count -eq 0) { Check "Prose UDF counts ($codeUdfs)" "OK" }

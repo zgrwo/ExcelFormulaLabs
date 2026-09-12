@@ -1285,9 +1285,9 @@ L2 正则化（防过拟合）。λ 默认 1.0。不返回标准误/t值/p值（
 > 给定输出目标反推可调工艺参数（工艺调机场景："要把不良率压到 4.0，模具温度该设多少？"）。支持多目标、多可调参数、边界约束、可达性判定与确定性复现。
 >
 > **列角色由表头前缀自动识别**（不区分大小写；未识别列如批次号/日期自动忽略）：
-> `Incoming*`/`来料*` = 已知条件（请求行必填）；`Variable*`/`可调*`/`变量*` = 待求解参数（请求行留空）；`Fixed*`/`固定*` = 固定参数（留空取历史中位数）；`Output*`/`输出*` = 输出（请求行填目标值）。
+> `Incoming*`/`来料*` = 已知条件（请求行必填）；`Variable*`/`可调*`/`变量*` = 待求解参数（请求行留空）；`Fixed*`/`固定*` = 固定参数（留空取历史中位数）；`Output*`/`输出*` = 输出（请求行填目标值）；`SharedOutput*`/`共享输出*` = 同组共享一条速率的输出（见 [rate 速率模型](#solve-rate)）。
 >
-> **函数索引**：[INVERSE](#solve-inverse) · [PREDICT](#solve-predict) · [QUALITY](#solve-quality) · [EQUATION](#solve-equation) · [rate 速率模型](#solve-rate)
+> **函数索引**：[INVERSE](#solve-inverse) · [PREDICT](#solve-predict) · [QUALITY](#solve-quality) · [EQUATION](#solve-equation) · [rate/rate_poly 速率模型](#solve-rate)
 
 ### 示例数据集（可直接粘贴到 A1:C8）
 
@@ -1364,9 +1364,10 @@ L2 正则化（防过拟合）。λ 默认 1.0。不返回标准误/t值/p值（
 |------|------|--------|-------|--------|------|
 | OutputY1 | linear | LOO | 1.0000 | 0.0000 | 是 |
 | OutputY1 | poly | 跳过 | — | — | 否 |
+| OutputY1 | rate | 跳过 | — | — | 否 |
 
 **结果解读**：
-- `auto`（默认）在 linear / poly 候选中按交叉验证 R² 选优；样本不足或 poly 展开超 100 项时显示 `跳过`。
+- `auto`（默认）在 linear / poly / rate 候选中按交叉验证 R² 选优（差值 <1e-9 时优先 linear → poly → rate）；候选结构不可用或样本不足时显示 `跳过`（poly 展开超 100 项、无时间列/配对、或 n<5 的交叉验证下限）。
 - `CV方案`：n ≥ 20 用 `5折`，n < 20 用 `LOO`（留一法）。
 - R² 越接近 1、MAE 越小，反解结果越可信；R² < 0.8 时建议增加历史数据或显式改用 `model="poly"`。
 
@@ -1395,18 +1396,19 @@ L2 正则化（防过拟合）。λ 默认 1.0。不返回标准误/t值/p值（
 
 <a id="solve-rate"></a>
 
-### SOLVE 速率模型（rate）— 时间外推
+### SOLVE 速率模型（rate / rate_poly）— 时间外推
 
-当工艺是「输出 = 来料 − 时间 × 去除速率」的速率过程时，用 `model="rate"`：
+当工艺是「输出 = 来料 − 时间 × 去除速率」的速率过程时，用 `model="rate"`（g 线性）或 `model="rate_poly"`（g 二次，拟合曲率）：
 
 ```
 OutputZx(t) = IncomingZx − t · g(Bow, 可调, 固定, 其他来料)
 ```
 
-- **配对**：`OutputZ1` 自动找 `IncomingZ1`（去掉角色前缀后同后缀，`输出收率`↔`来料收率`）；配对缺失时显式 rate 返回 `#VALUE!`。
-- **时间列**：唯一以 `Time`/`时间` 结尾的列（`FixedTime` 可用）；t 必须有限且 >0。
+- **配对**：`OutputZ1` 自动找 `IncomingZ1`（去掉角色前缀后同后缀，`输出收率`↔`来料收率`）；配对缺失时显式速率模型返回 `#VALUE!`。
+- **时间列（可多个，ADR-0009）**：去掉角色前缀后名称含 `Time`/`时间` 的列。多输出各用各的时间列时按后缀配对（`FixedTimeZ1` ↔ `OutputZ1`）；只有一个时间列时对所有输出全局生效（旧表用法不变）；多个时间列但某输出对不上 → 显式速率模型 `#VALUE!`。所有时间列都不进入 g；t 必须有限且 >0。
 - **时间可调**：列名写成 `VariableTime`（或 `可调时间`）并在请求行留空 → 求解器把时间也当作可调参数（用 bounds 放宽范围，如 `{"VariableTime",60,120}`）；`FixedTime` 则按给定值/历史中位数。
-- **额外输出**：rate 生效时 `SOLVE.INVERSE` 增加每输出一列 `<输出名>速率`（单位：输出单位/时间单位）；`SOLVE.EQUATION` 增加 `速率方程` 行。
+- **共享速率（`SharedOutput*`/`共享输出*`，ADR-0009）**：多个共享输出列共用一条 g（池化拟合），适合"同机理、多响应"的数据；组内成员须全部配对来料/时间，auto 在共享组内比较 `rate` 与 `rate_poly`。
+- **额外输出**：速率生效时 `SOLVE.INVERSE` 增加每输出一列 `<输出名>速率`（单位：输出单位/时间单位，同组数值相同）；`SOLVE.EQUATION` 增加 `速率方程` 行（rate_poly 含平方/交互项）。
 
 **示例**（粘贴到 A1:D8；速率律 `r = 0.01 + 0.005·VariableU1`，t ∈ {30, 60}s）：
 
@@ -1433,6 +1435,9 @@ OutputZx(t) = IncomingZx − t · g(Bow, 可调, 固定, 其他来料)
 - 试算其它时间：`=SOLVE.PREDICT(A1:D8, {10,4,120})` → `6.4`。
 - 方程：`=SOLVE.EQUATION(A1:D8)` → `OutputZ1(FixedTime) = IncomingZ1 - FixedTime*(0.01 + 0.005*VariableU1)` 与 `OutputZ1速率 = 0.01 + 0.005*VariableU1`。
 - 若要让求解器**自己选时间**：把 C 列表头改为 `VariableTime`，请求行 C 留空，`=SOLVE.INVERSE(A1:D8,,{"VariableTime",60,120})`。
+- **二次速率**：`=SOLVE.INVERSE(A1:D8,,,"rate_poly")`（g 含平方/交互项，适合速率随参数弯曲的数据；样本需 ≥ 展开项数+1）。
+- **多时间列**：为不同输出各配一个时间列（如 `FixedTimeZ1`、`FixedTimeZ2`），求解器按后缀自动配对、各自外推。
+- **共享速率**：把输出列命名为 `SharedOutputZ1`、`SharedOutputZ2`（各配 `IncomingZ1`/`IncomingZ2`），两列共享一条 g（适合多种响应同一去除机理），`SOLVE.INVERSE` 的速率列给出相同速率值。
 
 ---
 
@@ -1440,7 +1445,9 @@ OutputZx(t) = IncomingZx − t · g(Bow, 可调, 固定, 其他来料)
 
 ### SOLVE 使用注意
 
-- **模型范围**：`linear` / `poly`（二次含两两交互）/ `rate`（线性速率 + 时间外推）；强非线性（阶跃/强交互）数据请先看 `SOLVE.QUALITY`。
+- **模型范围**：`linear` / `poly`（二次含两两交互）/ `rate`（线性速率 + 时间外推）/ `rate_poly`（二次速率 + 时间外推）；强非线性（阶跃/强交互）数据请先看 `SOLVE.QUALITY`。
+- **速率分组**：`SharedOutput*` 列必须全部配对来料/时间；共享组仅比较 `rate`/`rate_poly`（池化 CV）。若成员机理不同，池化会平均掉差异——分组前先用 `SOLVE.QUALITY` 确认。
+- **样本下限**：`auto` 选型与 `SOLVE.QUALITY` 依赖交叉验证，历史行须 ≥5，否则返回 `#VALUE!`；显式 `model="linear"` 仅需 行数 ≥ 展开项数+1（单变量线性最少 2 行），小样本可显式指定模型。
 - **poly 外推**：边界默认历史最小/最大；推荐值触界时需实验确认。
 - **确定性**：同 `seed`（默认 42）两次调用结果完全一致；`max_starts` 默认 10（上限 50）。
 - **规模上限**（超限返回 `#VALUE!`）：历史 5000 行 / 请求 200 行 / 特征列 50 / 可调参数 20 / 输出 20 / poly 展开 100 项。

@@ -6,7 +6,7 @@
 
 ## 上下文
 
-用户真实批次数据（`tests/TestData/Data.xlsx` / `examples.xlsx`）只有一个时间点（t=60s），但工艺语义是**速率过程**：输出 = 来料 − 时间 × 去除速率，去除速率受 IncomingBow/可调参数影响；且需要在 t≠60（如 30s/90s/120s）下预测与反解。ADR-0007 的 v1 模型（linear/poly）把 t 当普通特征，只能拟合 60s 截面，无法外推，也无法输出"去除速率"这一物理量。
+用户真实批次数据（`logs/probes/Data.xlsx` / `logs/probes/examples.xlsx`，随 logs/ 永久不入库）只有一个时间点（t=60s），但工艺语义是**速率过程**：输出 = 来料 − 时间 × 去除速率，去除速率受 IncomingBow/可调参数影响；且需要在 t≠60（如 30s/90s/120s）下预测与反解。ADR-0007 的 v1 模型（linear/poly）把 t 当普通特征，只能拟合 60s 截面，无法外推，也无法输出"去除速率"这一物理量。
 
 无代码实验（Python/sklearn，读真实数据）结论：
 - 把 `(IncomingZx−OutputZx)/t` 作为目标、共享特征建模，在 CV 上是可拟合的结构；Bow 与速率相关（corr 0.37~0.65，Z2/Z3/Z4 明显）。

@@ -8,7 +8,7 @@ using ExcelFormulaLabs.Foundation;
 namespace ExcelFormulaLabs.Analytics
 {
     /// <summary>Column role in a SOLVE data table, decided by the header prefix.</summary>
-    internal enum SolveRole { Incoming, Variable, Fixed, Output }
+    internal enum SolveRole { Incoming, Variable, Fixed, Output, SharedOutput }
 
     /// <summary>
     /// Parsed SOLVE table layout: column roles (by header prefix) and row classification.
@@ -20,7 +20,10 @@ namespace ExcelFormulaLabs.Analytics
         public int[] Incoming = Array.Empty<int>();
         public int[] Variable = Array.Empty<int>();
         public int[] Fixed = Array.Empty<int>();
+        /// <summary>All output columns (Output* + SharedOutput*), in table order.</summary>
         public int[] Output = Array.Empty<int>();
+        /// <summary>Subset of Output columns carrying the SharedOutput* role (one shared rate group, ADR-0009).</summary>
+        public int[] SharedOutput = Array.Empty<int>();
         /// <summary>Feature columns in table order: incoming + variable + fixed.</summary>
         public int[] Features = Array.Empty<int>();
         public List<int> HistoryRows = new List<int>();
@@ -45,11 +48,14 @@ namespace ExcelFormulaLabs.Analytics
         public int RateIncomingIndex = -1;
         /// <summary>Feature position of the time column (rate kind only; -1 otherwise).</summary>
         public int RateTimeIndex = -1;
+        /// <summary>True for rate laws (linear or polynomial g); shared models keep both indices -1.</summary>
+        public bool IsRate => Kind == SolveCore.ModelRate || Kind == SolveCore.ModelRatePoly;
     }
 
     /// <summary>
-    /// SOLVE.* core: table parsing, forward models (linear / poly 2nd-order), cross-validation
-    /// gating, bounded multi-start pattern search inversion and reachability sampling.
+    /// SOLVE.* core: table parsing, forward models (linear / poly / rate / rate_poly),
+    /// cross-validation gating, bounded multi-start pattern search inversion and reachability
+    /// sampling; shared-rate groups pool several outputs into one g (ADR-0009).
     /// Pure logic — zero Excel dependency (see ADR-0007).
     /// </summary>
     internal static class SolveCore
@@ -69,6 +75,7 @@ namespace ExcelFormulaLabs.Analytics
         internal const string ModelLinear = "linear";
         internal const string ModelPoly = "poly";
         internal const string ModelRate = "rate";
+        internal const string ModelRatePoly = "rate_poly";
         internal const string SchemeFiveFold = "5折";
         internal const string SchemeLoo = "LOO";
         internal const string SchemeSkipped = "跳过";
@@ -111,6 +118,8 @@ namespace ExcelFormulaLabs.Analytics
                 return SolveRole.Variable;
             if (header.StartsWith("Fixed", StringComparison.OrdinalIgnoreCase) || header.StartsWith("固定", StringComparison.Ordinal))
                 return SolveRole.Fixed;
+            if (header.StartsWith("SharedOutput", StringComparison.OrdinalIgnoreCase) || header.StartsWith("共享输出", StringComparison.Ordinal))
+                return SolveRole.SharedOutput;
             if (header.StartsWith("Output", StringComparison.OrdinalIgnoreCase) || header.StartsWith("输出", StringComparison.Ordinal))
                 return SolveRole.Output;
             return null;
@@ -138,6 +147,7 @@ namespace ExcelFormulaLabs.Analytics
             var variable = new List<int>();
             var fixedCols = new List<int>();
             var output = new List<int>();
+            var sharedOutput = new List<int>();
             for (int c = 0; c < cols; c++)
             {
                 string header = InputNormalizer.ToString(data[0, c]).Trim();
@@ -148,6 +158,7 @@ namespace ExcelFormulaLabs.Analytics
                     case SolveRole.Variable: variable.Add(c); break;
                     case SolveRole.Fixed: fixedCols.Add(c); break;
                     case SolveRole.Output: output.Add(c); break;
+                    case SolveRole.SharedOutput: output.Add(c); sharedOutput.Add(c); break;
                 }
             }
             if (variable.Count == 0)
@@ -155,11 +166,12 @@ namespace ExcelFormulaLabs.Analytics
                     "No Variable column found. Name adjustable columns with a 'Variable*' (or '可调*'/'变量*') prefix.");
             if (output.Count == 0)
                 throw new ArgumentException(
-                    "No Output column found. Name result columns with an 'Output*' (or '输出*') prefix.");
+                    "No Output column found. Name result columns with an 'Output*'/'SharedOutput*' (or '输出*'/'共享输出*') prefix.");
             schema.Incoming = incoming.ToArray();
             schema.Variable = variable.ToArray();
             schema.Fixed = fixedCols.ToArray();
             schema.Output = output.ToArray();
+            schema.SharedOutput = sharedOutput.ToArray();
             schema.Features = incoming.Concat(variable).Concat(fixedCols).ToArray();
 
             for (int i = 1; i < rows; i++)
@@ -210,9 +222,10 @@ namespace ExcelFormulaLabs.Analytics
                 case ModelLinear: return ModelLinear;
                 case ModelPoly: return ModelPoly;
                 case ModelRate: return ModelRate;
+                case ModelRatePoly: return ModelRatePoly;
                 default:
                     throw new ArgumentException(
-                        $"Unknown model '{model}'. Use \"auto\", \"linear\", \"poly\" or \"rate\".");
+                        $"Unknown model '{model}'. Use \"auto\", \"linear\", \"poly\", \"rate\" or \"rate_poly\".");
             }
         }
 
@@ -220,18 +233,20 @@ namespace ExcelFormulaLabs.Analytics
         {
             string m = NormalizeModel(model);
             if (m == ModelAuto)
-                throw new ArgumentException("FitModel requires an explicit model: \"linear\", \"poly\" or \"rate\".");
+                throw new ArgumentException("FitModel requires an explicit model: \"linear\", \"poly\", \"rate\" or \"rate_poly\".");
             return m;
         }
 
-        /// <summary>Number of expanded design terms: linear = k; rate = k (linear g, two columns constrained); poly = k + k(k+1)/2.</summary>
+        private static bool IsRateModelName(string m) => m == ModelRate || m == ModelRatePoly;
+
+        /// <summary>Number of expanded design terms: linear = k; rate/rate_poly = k / poly expansion of k; poly = k + k(k+1)/2.</summary>
         internal static int ExpandedTermCount(int baseCount, string model)
         {
             if (baseCount < 0) throw new ArgumentException("baseCount must be non-negative.");
             string m = model?.Trim().ToLowerInvariant() ?? "";
             if (m == ModelLinear || m == ModelRate) return baseCount;
-            if (m == ModelPoly) return baseCount + baseCount * (baseCount + 1) / 2;
-            throw new ArgumentException($"Unknown model '{model}'. Use \"linear\", \"poly\" or \"rate\".");
+            if (m == ModelPoly || m == ModelRatePoly) return baseCount + baseCount * (baseCount + 1) / 2;
+            throw new ArgumentException($"Unknown model '{model}'. Use \"linear\", \"poly\", \"rate\" or \"rate_poly\".");
         }
 
         private static int[][] BuildPowers(int baseCount, string model)
@@ -308,39 +323,56 @@ namespace ExcelFormulaLabs.Analytics
             }
         }
 
+        /// <summary>ADR-0007 规模上限（超限 #VALUE!）；所有 object[,] 入口共用，分配/拟合前检查。</summary>
+        private static void ValidateLimits(SolveSchema schema)
+        {
+            if (schema.HistoryRows.Count > MaxHistoryRows)
+                throw new ArgumentException($"Too many history rows: {schema.HistoryRows.Count} (limit {MaxHistoryRows}).");
+            if (schema.Features.Length > MaxFeatureColumns)
+                throw new ArgumentException($"Too many feature columns: {schema.Features.Length} (limit {MaxFeatureColumns}).");
+            if (schema.Output.Length > MaxOutputs)
+                throw new ArgumentException($"Too many output columns: {schema.Output.Length} (limit {MaxOutputs}).");
+        }
+
+        /// <summary>ValidateLimits + 历史行非空（INVERSE 另有更具体的空历史消息，单独保留）。</summary>
+        private static void ValidateScale(SolveSchema schema)
+        {
+            if (schema.HistoryRows.Count == 0)
+                throw new ArgumentException("Data table contains no history rows.");
+            ValidateLimits(schema);
+        }
+
         /// <summary>
-        /// Fit a forward model on history data. Terms are standardized (mean/sample-sd, sd=0 → dropped)
-        /// before fitting — OLS (QR) for linear/rate, Ridge (augmented QR, λ=1e-5) for poly — then
-        /// de-standardized back to original units. The rate model (ADR-0008) fits
+        /// Fit a forward model on history data. Terms are standardized (sample mean/sd; when the raw
+        /// squared deviations overflow, moments are recomputed on max-normalized columns), sd=0 →
+        /// dropped, before fitting — OLS (QR) for linear/rate, Ridge (augmented QR, λ=1e-5) for poly —
+        /// then de-standardized back to original units. The rate model (ADR-0008) fits
         /// g = (IncomingZx − Output)/t with the paired incoming and time columns excluded.
         /// </summary>
         internal static SolveModel FitModel(double[][] X, double[] y, string model,
-            int rateIncoming = -1, int rateTime = -1)
+            int rateIncoming = -1, int rateTime = -1, int[]? rateTimes = null)
         {
             string m = RequireFitModel(model);
             ValidateMatrix(X, y, "FitModel");
             int n = X.Length, k = X[0].Length;
-            if (m == ModelRate)
+            if (m == ModelRate || m == ModelRatePoly)
             {
                 if (rateIncoming < 0 || rateIncoming >= k || rateTime < 0 || rateTime >= k || rateIncoming == rateTime)
                     throw new ArgumentException(
-                        "Model 'rate' requires valid paired incoming and time feature positions.");
-                if (n < k + 1)
-                    throw new ArgumentException(
-                        $"Not enough history rows for rate model: {n} rows for {k} feature columns (need at least {k + 1}).");
+                        $"Model '{m}' requires valid paired incoming and time feature positions.");
                 var yRate = new double[n];
                 for (int i = 0; i < n; i++)
                 {
                     double tValue = X[i][rateTime];
                     if (double.IsNaN(tValue) || double.IsInfinity(tValue) || tValue <= 0)
                         throw new ArgumentException(
-                            $"Model 'rate' requires a positive finite time at history row {i} (got {tValue}).");
+                            $"Model '{m}' requires a positive finite time at history row {i} (got {tValue}).");
                     yRate[i] = (X[i][rateIncoming] - y[i]) / tValue;
                     if (double.IsNaN(yRate[i]) || double.IsInfinity(yRate[i]))
-                        throw new ArgumentException("Model 'rate': removal rate is numerically unstable.");
+                        throw new ArgumentException($"Model '{m}': removal rate is numerically unstable.");
                 }
-                return FitExpanded(X, yRate, ModelRate, BuildPowers(k, ModelRate), ridged: false,
-                    new[] { rateIncoming, rateTime }, rateIncoming, rateTime);
+                int[] excluded = MergeExcluded(rateIncoming, rateTimes ?? new[] { rateTime });
+                return FitRateFromTargets(X, yRate, m, excluded, rateIncoming, rateTime);
             }
             int terms = ExpandedTermCount(k, m);
             if (m == ModelPoly && terms > PolyTermLimit)
@@ -352,6 +384,36 @@ namespace ExcelFormulaLabs.Analytics
                     $"Not enough history rows for {m} model: {n} rows for {terms} terms (need at least {terms + 1}).");
             return FitExpanded(X, y, m, BuildPowers(k, m), ridged: m == ModelPoly,
                 Array.Empty<int>(), -1, -1);
+        }
+
+        /// <summary>
+        /// Fit a rate model g from precomputed removal-rate targets (shared groups stack members),
+        /// with <paramref name="excluded"/> feature positions constrained out of g (paired incoming
+        /// columns + all time columns, ADR-0009).
+        /// </summary>
+        private static SolveModel FitRateFromTargets(double[][] X, double[] yRate, string kind, int[] excluded,
+            int storeIncoming, int storeTime)
+        {
+            int n = X.Length, k = X[0].Length;
+            var powers = BuildPowers(k, kind);
+            int terms = powers.Length;
+            if (kind == ModelRatePoly && terms > PolyTermLimit)
+                throw new ArgumentException(
+                    $"Poly expansion has {terms} terms, which exceeds the limit of {PolyTermLimit}. " +
+                    "Reduce the number of feature columns or use model=\"rate\".");
+            if (n < terms + 1)
+                throw new ArgumentException(
+                    $"Not enough history rows for {kind} model: {n} rows for {terms} terms (need at least {terms + 1}).");
+            return FitExpanded(X, yRate, kind, powers, ridged: kind == ModelRatePoly,
+                excluded, storeIncoming, storeTime);
+        }
+
+        private static int[] MergeExcluded(int incoming, int[] times)
+        {
+            var set = new List<int>(times.Length + 1) { incoming };
+            foreach (int t in times)
+                if (t != incoming && !set.Contains(t)) set.Add(t);
+            return set.ToArray();
         }
 
         private static SolveModel FitExpanded(double[][] X, double[] y, string kind, int[][] powers,
@@ -366,13 +428,42 @@ namespace ExcelFormulaLabs.Analytics
             {
                 if (excluded.Contains(t)) continue; // rate：配对来料/时间列受约束，系数保持 0
                 var col = new double[n];
+                double maxAbs = 0;
+                for (int i = 0; i < n; i++)
+                {
+                    col[i] = PowerProduct(X[i], powers[t]);
+                    if (double.IsNaN(col[i]) || double.IsInfinity(col[i]))
+                        throw new ArgumentException(
+                            $"Model term {t} is not representable in double precision; " +
+                            "scale feature columns down or use model=\"linear\".");
+                    double a = Math.Abs(col[i]);
+                    if (a > maxAbs) maxAbs = a;
+                }
+                // 常规路径保持原始矩（既有数值行为不变）；仅当原始偏差平方溢出/为 NaN 时，
+                // 回退到按列 max 归一化的矩估计——旧实现此时把有效列静默当常量剔除（审查 F1）。
                 double sum = 0;
-                for (int i = 0; i < n; i++) { col[i] = PowerProduct(X[i], powers[t]); sum += col[i]; }
+                for (int i = 0; i < n; i++) sum += col[i];
                 double mu = sum / n;
                 double ss = 0;
                 for (int i = 0; i < n; i++) { double d = col[i] - mu; ss += d * d; }
-                double sd = n > 1 ? Math.Sqrt(ss / (n - 1)) : 0.0;
-                if (double.IsNaN(sd) || double.IsInfinity(sd)) sd = 0.0;
+                double sd;
+                if (double.IsNaN(ss) || double.IsInfinity(ss))
+                {
+                    double muNorm = 0;
+                    if (maxAbs > 0)
+                        for (int i = 0; i < n; i++) muNorm += (col[i] / maxAbs - muNorm) / (i + 1);
+                    double ssNorm = 0;
+                    for (int i = 0; i < n; i++) { double d = col[i] / maxAbs - muNorm; ssNorm += d * d; }
+                    mu = muNorm * maxAbs;
+                    sd = n > 1 ? Math.Sqrt(ssNorm / (n - 1)) * maxAbs : 0.0;
+                }
+                else
+                {
+                    sd = n > 1 ? Math.Sqrt(ss / (n - 1)) : 0.0;
+                }
+                if (double.IsNaN(sd) || double.IsInfinity(sd))
+                    throw new ArgumentException(
+                        "Feature variation is not representable in double precision; scale feature data down.");
                 mean[t] = mu;
                 scale[t] = sd > 0 ? sd : 1.0;
                 raw[t] = col;
@@ -443,9 +534,16 @@ namespace ExcelFormulaLabs.Analytics
                 throw new ArgumentException(
                     $"Prediction input has {x?.Length ?? 0} values but the model expects {model.BaseNames.Length}.");
             double g = EvaluateG(model, x);
-            if (model.Kind == ModelRate)
+            if (model.IsRate)
                 return x[model.RateIncomingIndex] - x[model.RateTimeIndex] * g;
             return g;
+        }
+
+        /// <summary>Rate-law prediction bound to explicit incoming/time feature positions (shared groups).</summary>
+        private static double PredictBound(SolveModel model, double[] x, int incomingIndex, int timeIndex)
+        {
+            double g = EvaluateG(model, x);
+            return x[incomingIndex] - x[timeIndex] * g;
         }
 
         /// <summary>Evaluate the fitted expression g (rate models) / y (others) in original units.</summary>
@@ -460,7 +558,7 @@ namespace ExcelFormulaLabs.Analytics
         /// <summary>Removal rate at the given feature row (rate-kind models only).</summary>
         internal static double PredictRate(SolveModel model, double[] x)
         {
-            if (model == null || model.Kind != ModelRate)
+            if (model == null || !model.IsRate)
                 throw new ArgumentException("PredictRate requires a rate-kind model.");
             return EvaluateG(model, x);
         }
@@ -501,7 +599,7 @@ namespace ExcelFormulaLabs.Analytics
         /// otherwise "LOO" (requires n ≥ 5). R²/MAE are computed on out-of-fold predictions.
         /// </summary>
         internal static (string Scheme, double R2, double Mae) CrossValidate(double[][] X, double[] y, string model,
-            long seed, int rateIncoming = -1, int rateTime = -1)
+            long seed, int rateIncoming = -1, int rateTime = -1, int[]? rateTimeColumns = null)
         {
             string m = RequireFitModel(model);
             ValidateMatrix(X, y, "CrossValidate");
@@ -532,7 +630,7 @@ namespace ExcelFormulaLabs.Analytics
                 }
                 var (xt, yt) = Subset(X, y, train);
                 var (xv, _) = Subset(X, y, test);
-                var modelF = FitModel(xt, yt, m, rateIncoming, rateTime);
+                var modelF = FitModel(xt, yt, m, rateIncoming, rateTime, rateTimeColumns);
                 for (int t = 0; t < test.Count; t++)
                 {
                     pred[test[t]] = Predict(modelF, xv[t]);
@@ -583,7 +681,7 @@ namespace ExcelFormulaLabs.Analytics
         /// candidate: linear &gt; poly &gt; rate), then refit the chosen model on the full history set.
         /// </summary>
         internal static (SolveModel Model, string Chosen, string Scheme, double R2, double Mae, bool PolySkipped, bool RateSkipped) FitAuto(
-            double[][] X, double[] y, long seed, int rateIncoming = -1, int rateTime = -1)
+            double[][] X, double[] y, long seed, int rateIncoming = -1, int rateTime = -1, int[]? rateTimeColumns = null)
         {
             ValidateMatrix(X, y, "FitAuto");
             var linearCv = CrossValidate(X, y, ModelLinear, seed);
@@ -598,7 +696,7 @@ namespace ExcelFormulaLabs.Analytics
             (string Scheme, double R2, double Mae) rateCv = (string.Empty, 0.0, 0.0);
             if (!rateSkipped)
             {
-                try { rateCv = CrossValidate(X, y, ModelRate, seed, rateIncoming, rateTime); }
+                try { rateCv = CrossValidate(X, y, ModelRate, seed, rateIncoming, rateTime, rateTimeColumns); }
                 catch (ArgumentException) { rateSkipped = true; }
             }
             string chosen = ModelLinear;
@@ -612,8 +710,171 @@ namespace ExcelFormulaLabs.Analytics
             {
                 chosen = ModelRate; bestR2 = rateCv.R2; bestMae = rateCv.Mae; bestScheme = rateCv.Scheme;
             }
-            var model = FitModel(X, y, chosen, rateIncoming, rateTime);
+            var model = FitModel(X, y, chosen, rateIncoming, rateTime, rateTimeColumns);
             return (model, chosen, bestScheme, bestR2, bestMae, polySkipped, rateSkipped);
+        }
+
+        /// <summary>
+        /// auto 下的回退拟合：rate 结构在请求处不可用时（时间非正/时间下界非正），
+        /// 在 linear/poly 候选中重选（rate 位置传 -1 显式排除，见 ADR-0008）。
+        /// </summary>
+        private static SolveModel RefitWithoutRate(double[][] X, double[][] Y, int output, long seed)
+        {
+            var yj = new double[X.Length];
+            for (int i = 0; i < X.Length; i++) yj[i] = Y[i][output];
+            return FitAuto(X, yj, seed, -1, -1).Model;
+        }
+
+        // ──────────────────────────── SharedOutput 共享速率（ADR-0009）────────────────────────────
+
+        /// <summary>Feature positions excluded from a shared g: every paired incoming + all time columns.</summary>
+        private static int[] SharedExcluded(int[] members, int[]?[] pairs, int[]? rateTimes)
+        {
+            var set = new List<int>();
+            foreach (int j in members)
+            {
+                int[] spec = pairs[j]!;
+                if (!set.Contains(spec[0])) set.Add(spec[0]);
+                if (!set.Contains(spec[1])) set.Add(spec[1]);
+            }
+            if (rateTimes != null)
+                foreach (int t in rateTimes)
+                    if (!set.Contains(t)) set.Add(t);
+            return set.ToArray();
+        }
+
+        /// <summary>Stack the removal-rate targets of every shared member: (Incoming_j − Output_j)/t_j.</summary>
+        private static (double[][] X, double[] y) StackSharedRateTargets(double[][] X, double[][] Y,
+            int[] members, int[]?[] pairs)
+        {
+            int n = X.Length, total = n * members.Length;
+            var xs = new double[total][];
+            var ys = new double[total];
+            int t = 0;
+            foreach (int j in members)
+            {
+                int inc = pairs[j]![0], time = pairs[j]![1];
+                for (int i = 0; i < n; i++)
+                {
+                    double tv = X[i][time];
+                    if (double.IsNaN(tv) || double.IsInfinity(tv) || tv <= 0)
+                        throw new ArgumentException(
+                            $"Model 'rate' requires a positive finite time at history row {i} (got {tv}).");
+                    double rate = (X[i][inc] - Y[i][j]) / tv;
+                    if (double.IsNaN(rate) || double.IsInfinity(rate))
+                        throw new ArgumentException("Shared rate: removal rate is numerically unstable.");
+                    xs[t] = X[i];
+                    ys[t] = rate;
+                    t++;
+                }
+            }
+            return (xs, ys);
+        }
+
+        /// <summary>Pooled explicit fit of the shared group's g (kind = rate | rate_poly).</summary>
+        internal static SolveModel FitSharedRate(double[][] X, double[][] Y, int[] members, int[]?[] pairs,
+            string kind, int[]? rateTimes)
+        {
+            var (xs, ys) = StackSharedRateTargets(X, Y, members, pairs);
+            return FitRateFromTargets(xs, ys, kind, SharedExcluded(members, pairs, rateTimes), -1, -1);
+        }
+
+        /// <summary>Pooled auto selection for a shared group: rate (linear g) vs rate_poly, by out-of-fold R².</summary>
+        private static SolveModel FitSharedRateAuto(double[][] X, double[][] Y, int[] members, int[]?[] pairs,
+            long seed, int[]? rateTimes)
+        {
+            var linear = CrossValidateShared(X, Y, members, pairs, ModelRate, seed, rateTimes);
+            double bestR2 = linear.R2;
+            string chosen = ModelRate;
+            try
+            {
+                var poly = CrossValidateShared(X, Y, members, pairs, ModelRatePoly, seed, rateTimes);
+                if (poly.R2 > bestR2 + R2TieTolerance)
+                {
+                    chosen = ModelRatePoly;
+                    bestR2 = poly.R2;
+                }
+            }
+            catch (ArgumentException) { /* rate_poly 结构不可用（项数/样本）→ 保持线性 g */ }
+            return FitSharedRate(X, Y, members, pairs, chosen, rateTimes);
+        }
+
+        /// <summary>
+        /// Pooled out-of-fold CV for a shared group. Predictions are compared with the member Outputs
+        /// on the original Output scale (ADR-0008 decision 6); folds use the same XorShift64 shuffle.
+        /// </summary>
+        internal static (string Scheme, double R2, double Mae) CrossValidateShared(
+            double[][] X, double[][] Y, int[] members, int[]?[] pairs, string model, long seed,
+            int[]? rateTimes = null)
+        {
+            string kind = RequireFitModel(model);
+            if (kind != ModelRate && kind != ModelRatePoly)
+                throw new ArgumentException("Shared cross-validation requires model \"rate\" or \"rate_poly\".");
+            int n = X.Length;
+            int total = n * members.Length;
+            if (total < 5)
+                throw new ArgumentException($"Cross-validation needs at least 5 history rows (got {total}).");
+            var excluded = SharedExcluded(members, pairs, rateTimes);
+
+            var order = new int[total];
+            for (int s = 0; s < total; s++) order[s] = s;
+            var rng = new XorShift64((ulong)seed);
+            for (int s = total - 1; s > 0; s--)
+            {
+                int j = (int)rng.NextLong(s + 1);
+                int tmp = order[s]; order[s] = order[j]; order[j] = tmp;
+            }
+            bool fiveFold = total >= 20;
+            int folds = fiveFold ? 5 : total;
+
+            var sse = 0.0; var mae = 0.0;
+            var yMean = 0.0;
+            for (int s = 0; s < total; s++)
+            {
+                int member = members[s / n], row = s % n;
+                yMean += (Y[row][member] - yMean) / (s + 1);
+            }
+            var tss = 0.0;
+            for (int s = 0; s < total; s++)
+            {
+                int member = members[s / n], row = s % n;
+                double d = Y[row][member] - yMean;
+                tss += d * d;
+            }
+            if (tss == 0)
+                throw new ArgumentException("Cannot cross-validate: constant response variable y.");
+
+            for (int f = 0; f < folds; f++)
+            {
+                var trainX = new List<double[]>();
+                var trainY = new List<double>();
+                var testIdx = new List<int>();
+                for (int t = 0; t < total; t++)
+                {
+                    bool inFold = fiveFold ? t % 5 == f : t == f;
+                    int s = order[t];
+                    int member = members[s / n], row = s % n;
+                    if (inFold) { testIdx.Add(s); continue; }
+                    double tv = X[row][pairs[member]![1]];
+                    trainX.Add(X[row]);
+                    trainY.Add((X[row][pairs[member]![0]] - Y[row][member]) / tv);
+                    if (double.IsNaN(trainY[trainY.Count - 1]) || double.IsInfinity(trainY[trainY.Count - 1]))
+                        throw new ArgumentException("Shared cross-validation targets are numerically unstable.");
+                }
+                var fit = FitRateFromTargets(trainX.ToArray(), trainY.ToArray(), kind, excluded, -1, -1);
+                foreach (int s in testIdx)
+                {
+                    int member = members[s / n], row = s % n;
+                    double g = EvaluateG(fit, X[row]);
+                    double pred = X[row][pairs[member]![0]] - X[row][pairs[member]![1]] * g;
+                    if (double.IsNaN(pred) || double.IsInfinity(pred))
+                        throw new ArgumentException("Shared cross-validation produced a non-finite prediction; model is numerically unstable.");
+                    double e = pred - Y[row][member];
+                    sse += e * e;
+                    mae += Math.Abs(e);
+                }
+            }
+            return (fiveFold ? SchemeFiveFold : SchemeLoo, 1.0 - sse / tss, mae / total);
         }
 
         private static double NextUniform(ref XorShift64 rng) => (rng.Next() >> 11) * (1.0 / 9007199254740992.0);
@@ -636,11 +897,15 @@ namespace ExcelFormulaLabs.Analytics
 
         /// <summary>
         /// Full variant used by the table wrapper: ratePairs[j] = [paired incoming position, time position]
-        /// selects the rate model (ADR-0008); rates returns r×m removal rates (NaN for non-rate outputs).
+        /// selects the rate model (ADR-0008; null entry = output unpaired). rateTimeColumns lists every
+        /// time column excluded from g (ADR-0009). sharedOutputs[j]=true marks pooled SharedOutput members.
+        /// rates returns r×m removal rates (NaN for non-rate outputs). Explicit rate/rate_poly throws on an
+        /// invalid request time/bound; "auto" refits the output without rate (ADR-0008).
         /// </summary>
         internal static double[,] SolveInverseFull(
             double[][] X, double[][] Y, int[] variableCols, double[][] requests, double[][] targets,
-            double[][] bounds, string model, long seed, int maxStarts, int[][]? ratePairs, out double[,]? rates)
+            double[][] bounds, string model, long seed, int maxStarts, int[]?[]? ratePairs, out double[,]? rates,
+            int[]? rateTimeColumns = null, bool[]? sharedOutputs = null)
         {
             string m = NormalizeModel(model);
             if (X == null || X.Length == 0) throw new ArgumentException("X must contain at least one history row.");
@@ -701,11 +966,23 @@ namespace ExcelFormulaLabs.Analytics
                 if (ratePairs.Length != outCount)
                     throw new ArgumentException($"ratePairs must have {outCount} rows (one per output).");
                 for (int j = 0; j < outCount; j++)
-                    if (ratePairs[j] != null && ratePairs[j].Length != 2)
+                    if (ratePairs[j] is { } p && p.Length != 2)
                         throw new ArgumentException($"ratePairs row {j} must have 2 entries [incoming, time].");
             }
 
-            // One model + deviation scale per output.
+            // SharedOutput group (ADR-0009): pool the members into one g when every member is paired.
+            // Non-rate explicit models keep per-output fits (the shared role only constrains the rate law).
+            var sharedMembers = new List<int>();
+            if (sharedOutputs != null)
+                for (int j = 0; j < outCount; j++)
+                    if (sharedOutputs[j]) sharedMembers.Add(j);
+            bool poolShared = sharedMembers.Count > 0 && ratePairs != null
+                && (m == ModelAuto || IsRateModelName(m));
+            if (poolShared)
+                foreach (int j in sharedMembers)
+                    if (ratePairs![j] == null) { poolShared = false; break; }
+
+            // One model + deviation scale per output. Poolable shared members are fitted once below.
             var models = new SolveModel[outCount];
             var scales = new double[outCount];
             var medians = new double[k];
@@ -719,43 +996,80 @@ namespace ExcelFormulaLabs.Analytics
             {
                 var yj = new double[n];
                 for (int i = 0; i < n; i++) yj[i] = Y[i][j];
+                double sd = SampleStdDev(yj);
+                scales[j] = sd > 0 ? sd : 1.0;
+                if (poolShared && sharedOutputs![j]) continue; // 池化分支统一拟合
                 int[]? spec = ratePairs?[j];
                 int rateIncoming = spec != null && spec.Length == 2 ? spec[0] : -1;
                 int rateTime = spec != null && spec.Length == 2 ? spec[1] : -1;
                 models[j] = m == ModelAuto
-                    ? FitAuto(X, yj, seed, rateIncoming, rateTime).Model
-                    : FitModel(X, yj, m, rateIncoming, rateTime);
-                double sd = SampleStdDev(yj);
-                scales[j] = sd > 0 ? sd : 1.0;
+                    ? FitAuto(X, yj, seed, rateIncoming, rateTime, rateTimeColumns).Model
+                    : FitModel(X, yj, m, rateIncoming, rateTime, rateTimeColumns);
+            }
+
+            if (sharedMembers.Count > 0 && ratePairs != null && (m == ModelAuto || IsRateModelName(m)))
+            {
+                if (poolShared)
+                {
+                    SolveModel sharedModel = m == ModelAuto
+                        ? FitSharedRateAuto(X, Y, sharedMembers.ToArray(), ratePairs, seed, rateTimeColumns)
+                        : FitSharedRate(X, Y, sharedMembers.ToArray(), ratePairs, m, rateTimeColumns);
+                    foreach (int j in sharedMembers) models[j] = sharedModel;
+                }
+                else if (IsRateModelName(m))
+                    throw new ArgumentException(
+                        "SharedOutput columns require a rate binding: pair each one with an Incoming column and a time column.");
             }
 
             // rate 时间有效性：可调时间必须边界为正；条件时间必须逐请求有限且 >0（ADR-0008）。
+            // auto 下任一时间无效 → 该输出退回 linear/poly（"auto 跳过 rate 并保持其余候选可用"）；
+            // 显式 model="rate"/"rate_poly" 仍按契约报错。
             for (int j = 0; j < outCount; j++)
             {
-                if (models[j].Kind != ModelRate) continue;
-                int timePos = models[j].RateTimeIndex;
-                bool timeIsVariable = false;
+                if (!models[j].IsRate) continue;
+                int timePos = ratePairs?[j] is { Length: 2 } spec ? spec[1] : models[j].RateTimeIndex;
+                int timeVariable = -1;
                 for (int c = 0; c < v; c++)
-                    if (variableCols[c] == timePos)
+                    if (variableCols[c] == timePos) { timeVariable = c; break; }
+                if (timeVariable >= 0)
+                {
+                    if (bounds[timeVariable][0] <= 0)
                     {
-                        timeIsVariable = true;
-                        if (bounds[c][0] <= 0)
+                        if (m != ModelAuto)
                             throw new ArgumentException(
-                                $"Model 'rate' requires a positive time bound (lower bound is {bounds[c][0]}).");
+                                $"Model 'rate' requires a positive time bound (lower bound is {bounds[timeVariable][0]}).");
+                        models[j] = RefitWithoutRate(X, Y, j, seed);
                     }
-                if (timeIsVariable) continue;
+                    continue;
+                }
+                int badRow = -1;
+                double badTime = double.NaN;
                 for (int q = 0; q < r; q++)
                 {
                     double tv = requests[q][timePos];
-                    if (double.IsNaN(tv) || double.IsInfinity(tv) || tv <= 0)
+                    if (double.IsNaN(tv) || double.IsInfinity(tv) || tv <= 0) { badRow = q; badTime = tv; break; }
+                }
+                if (badRow >= 0)
+                {
+                    if (m != ModelAuto)
                         throw new ArgumentException(
-                            $"Model 'rate' requires a positive finite time in request row {q + 1} (got {tv}).");
+                            $"Model 'rate' requires a positive finite time in request row {badRow + 1} (got {badTime}).");
+                    models[j] = RefitWithoutRate(X, Y, j, seed);
                 }
             }
 
             rates = null;
             for (int j = 0; j < outCount; j++)
-                if (models[j].Kind == ModelRate) { rates = new double[r, outCount]; break; }
+                if (models[j].IsRate) { rates = new double[r, outCount]; break; }
+
+            // Predict output j: rate laws bind to pair j (shared models keep -1 indices).
+            double PredictJ(int j, double[] x)
+            {
+                if (models[j].IsRate && ratePairs?[j] is { Length: 2 } spec)
+                    return PredictBound(models[j], x, spec[0], spec[1]);
+                return Predict(models[j], x);
+            }
+
 
             var result = new double[r, v + outCount + 2];
             var rng = new XorShift64((ulong)seed);
@@ -781,7 +1095,7 @@ namespace ExcelFormulaLabs.Analytics
                     for (int c = 0; c < v; c++) feature[variableCols[c]] = sampleU[c];
                     for (int j = 0; j < outCount; j++)
                     {
-                        double p = Predict(models[j], feature);
+                        double p = PredictJ(j, feature);
                         if (double.IsNaN(p) || double.IsInfinity(p)) continue;
                         if (p < minOut[j]) minOut[j] = p;
                         if (p > maxOut[j]) maxOut[j] = p;
@@ -800,7 +1114,7 @@ namespace ExcelFormulaLabs.Analytics
                     for (int j = 0; j < outCount; j++)
                     {
                         if (double.IsNaN(target[j])) continue;
-                        double p = Predict(models[j], feature);
+                        double p = PredictJ(j, feature);
                         if (double.IsNaN(p) || double.IsInfinity(p)) return double.PositiveInfinity;
                         double d = (p - target[j]) / scales[j];
                         fTarget += d * d;
@@ -848,7 +1162,7 @@ namespace ExcelFormulaLabs.Analytics
                 bool allReachable = true;
                 for (int j = 0; j < outCount; j++)
                 {
-                    double p = Predict(models[j], feature);
+                    double p = PredictJ(j, feature);
                     if (double.IsNaN(p) || double.IsInfinity(p))
                         throw new ArgumentException("Optimization produced a non-finite prediction; model is numerically unstable.");
                     if (double.IsNaN(target[j])) continue;
@@ -861,12 +1175,12 @@ namespace ExcelFormulaLabs.Analytics
                     if (!inRange && !achieved) allReachable = false;
                 }
                 for (int c = 0; c < v; c++) result[q, c] = bestU[c];
-                for (int j = 0; j < outCount; j++) result[q, v + j] = Predict(models[j], feature);
+                for (int j = 0; j < outCount; j++) result[q, v + j] = PredictJ(j, feature);
                 result[q, v + outCount] = maxDeviation;
                 result[q, v + outCount + 1] = allReachable ? 0.0 : 1.0;
                 if (rates != null)
                     for (int j = 0; j < outCount; j++)
-                        rates[q, j] = models[j].Kind == ModelRate ? PredictRate(models[j], feature) : double.NaN;
+                        rates[q, j] = models[j].IsRate ? PredictRate(models[j], feature) : double.NaN;
             }
             return result;
         }
@@ -1064,12 +1378,16 @@ namespace ExcelFormulaLabs.Analytics
             return map;
         }
 
-        // ──────────────────────────── rate 配对与时间列（ADR-0008）────────────────────────────
+        // ──────────────────────────── rate 配对与时间列（ADR-0008 / ADR-0009）────────────────────────────
 
         private sealed class SolveRatePlan
         {
-            public int TimePosition;
+            /// <summary>Per output: feature position of the paired time column (-1 = unpaired).</summary>
+            public int[] TimePositions = Array.Empty<int>();
+            /// <summary>Per output: feature position of the paired incoming column (-1 = unpaired).</summary>
             public int[] IncomingPositions = Array.Empty<int>();
+            /// <summary>All time columns: feature positions (excluded from every g, ADR-0009).</summary>
+            public int[] TimeFeaturePositions = Array.Empty<int>();
         }
 
         private static string StripRolePrefix(string header, params string[] prefixes)
@@ -1080,34 +1398,27 @@ namespace ExcelFormulaLabs.Analytics
             return header.Trim();
         }
 
-        /// <summary>Unique feature column whose header ends with "Time"/"时间" (-1 when absent; throws when required and ambiguous/missing).</summary>
-        private static int TryFindTimeColumn(SolveSchema schema, bool required)
+        /// <summary>
+        /// All feature positions acting as time columns: stripped role name contains "Time"/"时间"
+        /// (ADR-0009 also allows suffix-paired names such as FixedTimeZ1 / VariableTimeZ2).
+        /// </summary>
+        private static int[] FindTimeColumns(SolveSchema schema)
         {
-            int found = -1;
-            foreach (int c in schema.Features)
+            var list = new List<int>();
+            for (int p = 0; p < schema.Features.Length; p++)
             {
-                string h = schema.Headers[c];
-                if (!h.EndsWith("Time", StringComparison.OrdinalIgnoreCase) && !h.EndsWith("时间", StringComparison.Ordinal))
-                    continue;
-                if (found >= 0)
-                {
-                    if (required)
-                        throw new ArgumentException(
-                            $"Multiple time columns found ('{schema.Headers[found]}', '{h}'). " +
-                            "The rate model needs exactly one feature header ending with 'Time' or '时间'.");
-                    return -1;
-                }
-                found = c;
+                string name = StripRolePrefix(schema.Headers[schema.Features[p]],
+                    "Incoming", "来料", "Variable", "可调", "变量", "Fixed", "固定");
+                if (name.IndexOf("Time", StringComparison.OrdinalIgnoreCase) >= 0
+                    || name.IndexOf("时间", StringComparison.Ordinal) >= 0)
+                    list.Add(p);
             }
-            if (found < 0 && required)
-                throw new ArgumentException(
-                    "The rate model requires a time column: exactly one feature header ending with 'Time' or '时间'.");
-            return found;
+            return list.ToArray();
         }
 
         private static int FindPairedIncoming(SolveSchema schema, int outputCol)
         {
-            string suffix = StripRolePrefix(schema.Headers[outputCol], "Output", "输出");
+            string suffix = StripRolePrefix(schema.Headers[outputCol], "SharedOutput", "共享输出", "Output", "输出");
             foreach (int c in schema.Incoming)
                 if (string.Equals(StripRolePrefix(schema.Headers[c], "Incoming", "来料"), suffix, StringComparison.OrdinalIgnoreCase))
                     return c;
@@ -1115,36 +1426,87 @@ namespace ExcelFormulaLabs.Analytics
         }
 
         /// <summary>
-        /// Build the per-output rate binding (time position + paired incoming positions).
-        /// required=true (explicit model=rate) throws on missing/ambiguous binding; otherwise returns null.
+        /// Bind one time column to an output (ADR-0009): among the time columns, pick the one whose
+        /// stripped name ends with "Time&lt;suffix&gt;"/"时间&lt;suffix&gt;" (e.g. FixedTimeZ1 ↔ OutputZ1).
+        /// When no suffix match exists, a single global time column still applies (backward compatible).
+        /// Returns the feature position, -1 (none) or -2 (ambiguous).
+        /// </summary>
+        private static int FindPairedTime(SolveSchema schema, int outputCol, int[] timePositions)
+        {
+            string suffix = StripRolePrefix(schema.Headers[outputCol], "SharedOutput", "共享输出", "Output", "输出");
+            if (suffix.Length > 0)
+            {
+                int match = -1;
+                foreach (int tp in timePositions)
+                {
+                    string tName = StripRolePrefix(schema.Headers[schema.Features[tp]],
+                        "Incoming", "来料", "Variable", "可调", "变量", "Fixed", "固定");
+                    bool paired = tName.EndsWith("Time" + suffix, StringComparison.OrdinalIgnoreCase)
+                        || tName.EndsWith("时间" + suffix, StringComparison.Ordinal);
+                    if (!paired) continue;
+                    if (match >= 0) return -2;
+                    match = tp;
+                }
+                if (match >= 0) return match;
+            }
+            return timePositions.Length == 1 ? timePositions[0] : -1;
+        }
+
+        /// <summary>
+        /// Build the per-output rate binding (paired incoming + time positions, plus every time column
+        /// for g exclusion). required=true (explicit rate/rate_poly) throws on missing/ambiguous
+        /// binding; auto keeps the plan and skips unpaired outputs.
         /// </summary>
         private static SolveRatePlan? BuildRatePlan(SolveSchema schema, bool required)
         {
-            int timeCol = TryFindTimeColumn(schema, required);
-            if (timeCol < 0) return null;
-            int timePos = Array.IndexOf(schema.Features, timeCol);
-            var inc = new int[schema.Output.Length];
-            for (int j = 0; j < schema.Output.Length; j++)
+            var timePositions = FindTimeColumns(schema);
+            if (timePositions.Length == 0)
             {
-                int col = FindPairedIncoming(schema, schema.Output[j]);
-                if (col < 0)
-                {
-                    if (required)
-                        throw new ArgumentException(
-                            $"The rate model requires a matching Incoming column for '{schema.Headers[schema.Output[j]]}' " +
-                            "(same suffix after the role prefix, e.g. IncomingZ1 ↔ OutputZ1).");
-                    return null;
-                }
-                inc[j] = Array.IndexOf(schema.Features, col);
+                if (required)
+                    throw new ArgumentException(
+                        "The rate model requires a time column: at least one feature header ending with 'Time' or '时间'.");
+                return null;
             }
-            return new SolveRatePlan { TimePosition = timePos, IncomingPositions = inc };
+            int outCount = schema.Output.Length;
+            var plan = new SolveRatePlan
+            {
+                TimePositions = new int[outCount],
+                IncomingPositions = new int[outCount],
+                TimeFeaturePositions = timePositions,
+            };
+            for (int j = 0; j < outCount; j++)
+            {
+                int incCol = FindPairedIncoming(schema, schema.Output[j]);
+                int incPos = incCol >= 0 ? Array.IndexOf(schema.Features, incCol) : -1;
+                int timePos = FindPairedTime(schema, schema.Output[j], timePositions);
+                plan.IncomingPositions[j] = incPos;
+                plan.TimePositions[j] = timePos;
+                if (!required || (incPos >= 0 && timePos >= 0)) continue;
+                if (incPos < 0)
+                    throw new ArgumentException(
+                        $"The rate model requires a matching Incoming column for '{schema.Headers[schema.Output[j]]}' " +
+                        "(same suffix after the role prefix, e.g. IncomingZ1 ↔ OutputZ1).");
+                if (timePos == -2)
+                    throw new ArgumentException(
+                        $"The rate model cannot pick one time column for '{schema.Headers[schema.Output[j]]}': " +
+                        "several feature headers ending with 'Time'/'时间' match its suffix. " +
+                        "Rename them (e.g. FixedTimeZ1 / VariableTimeZ2) or keep exactly one time column.");
+                throw new ArgumentException(
+                    $"The rate model cannot bind a time column to '{schema.Headers[schema.Output[j]]}': " +
+                    $"{timePositions.Length} time columns found. Add a suffix match (e.g. 'FixedTime<suffix>') " +
+                    "or keep exactly one time column.");
+            }
+            return plan;
         }
 
-        private static int[][]? BuildRatePairs(SolveRatePlan? plan, int outCount)
+        private static int[]?[]? BuildRatePairs(SolveRatePlan? plan, int outCount)
         {
             if (plan == null) return null;
-            var pairs = new int[outCount][];
-            for (int j = 0; j < outCount; j++) pairs[j] = new[] { plan.IncomingPositions[j], plan.TimePosition };
+            var pairs = new int[]?[outCount];
+            for (int j = 0; j < outCount; j++)
+                pairs[j] = plan.TimePositions[j] >= 0 && plan.IncomingPositions[j] >= 0
+                    ? new[] { plan.IncomingPositions[j], plan.TimePositions[j] }
+                    : null;
             return pairs;
         }
 
@@ -1158,15 +1520,10 @@ namespace ExcelFormulaLabs.Analytics
             var schema = ParseSchema(data, hasHeaders);
             if (schema.HistoryRows.Count == 0)
                 throw new ArgumentException("Data table contains no history rows (every row has a blank adjustable column).");
-            if (schema.HistoryRows.Count > MaxHistoryRows)
-                throw new ArgumentException($"Too many history rows: {schema.HistoryRows.Count} (limit {MaxHistoryRows}).");
+            ValidateLimits(schema);
             int k = schema.Features.Length;
-            if (k > MaxFeatureColumns)
-                throw new ArgumentException($"Too many feature columns: {k} (limit {MaxFeatureColumns}).");
-            if (schema.Output.Length > MaxOutputs)
-                throw new ArgumentException($"Too many output columns: {schema.Output.Length} (limit {MaxOutputs}).");
             string mdl = NormalizeModel(model);
-            bool rateMode = mdl == ModelRate;
+            bool rateMode = IsRateModelName(mdl);
             var ratePlan = rateMode || mdl == ModelAuto ? BuildRatePlan(schema, rateMode) : null;
 
             var (X, Y) = BuildHistory(schema, data);
@@ -1251,8 +1608,10 @@ namespace ExcelFormulaLabs.Analytics
                 variablePositions[c] = Array.IndexOf(schema.Features, schema.Variable[c]);
             var boundsArr = BuildBounds(schema, X, bounds);
             var ratePairs = BuildRatePairs(ratePlan, outCount);
+            var sharedMask = new bool[outCount];
+            for (int j = 0; j < outCount; j++) sharedMask[j] = schema.SharedOutput.Contains(schema.Output[j]);
             var core = SolveInverseFull(X, Y, variablePositions, requests.ToArray(), targets.ToArray(),
-                boundsArr, mdl, seed, maxStarts, ratePairs, out var rates);
+                boundsArr, mdl, seed, maxStarts, ratePairs, out var rates, ratePlan?.TimeFeaturePositions, sharedMask);
 
             // 速率块：显式 rate，或 auto 下至少一个输出选中 rate（否则布局与 v1 完全一致）。
             bool rateBlock = false;
@@ -1382,30 +1741,73 @@ namespace ExcelFormulaLabs.Analytics
         internal static double[,] PredictTable(object[,] data, object[,] values, string model, bool hasHeaders = true)
         {
             var schema = ParseSchema(data, hasHeaders);
-            if (schema.HistoryRows.Count == 0)
-                throw new ArgumentException("Data table contains no history rows.");
+            ValidateScale(schema);
             var (X, Y) = BuildHistory(schema, data);
             var medians = BuildHistoryMedians(schema, X);
             string mdl = NormalizeModel(model);
-            bool rateMode = mdl == ModelRate;
+            bool rateMode = IsRateModelName(mdl);
             var ratePlan = rateMode || mdl == ModelAuto ? BuildRatePlan(schema, rateMode) : null;
-            int outCount = schema.Output.Length;
-            var models = new SolveModel[outCount];
-            for (int j = 0; j < outCount; j++)
-            {
-                var yj = new double[X.Length];
-                for (int i = 0; i < X.Length; i++) yj[i] = Y[i][j];
-                int rateIncoming = ratePlan?.IncomingPositions[j] ?? -1;
-                int rateTime = ratePlan?.TimePosition ?? -1;
-                models[j] = mdl == ModelAuto
-                    ? FitAuto(X, yj, 42L, rateIncoming, rateTime).Model
-                    : FitModel(X, yj, mdl, rateIncoming, rateTime);
-            }
             int k = schema.Features.Length;
             int rows = values.GetLength(0);
             if (values.GetLength(1) != k)
                 throw new ArgumentException(
                     $"Values table must have {k} columns (Incoming + Variable + Fixed, in data order); got {values.GetLength(1)}.");
+            int outCount = schema.Output.Length;
+            var pairs = BuildRatePairs(ratePlan, outCount);
+            // auto：某输出在 values 中的时间非法（或非正）→ 该输出的 rate 结构不可用（ADR-0008）；
+            // 显式 rate/rate_poly 在下方逐行校验并报错。
+            if (mdl == ModelAuto && pairs != null)
+            {
+                for (int j = 0; j < outCount; j++)
+                {
+                    if (pairs[j] == null) continue;
+                    int timePos = pairs[j]![1];
+                    for (int i = 0; i < rows; i++)
+                    {
+                        object cell = values[i, timePos];
+                        if (IsBlank(cell)) continue; // 固定时间列留空 → 历史中位数（历史 t 已保证 >0）
+                        double tv = InputNormalizer.ToDouble(cell);
+                        if (double.IsNaN(tv) || double.IsInfinity(tv) || tv <= 0) { pairs[j] = null; break; }
+                    }
+                }
+            }
+            // SharedOutput：组成员全部配对时池化拟合一个 g（ADR-0009），池化成员跳过逐输出拟合。
+            var sharedMemberIdx = new List<int>();
+            for (int j = 0; j < outCount; j++)
+                if (schema.SharedOutput.Contains(schema.Output[j])) sharedMemberIdx.Add(j);
+            bool poolShared = sharedMemberIdx.Count > 0 && ratePlan != null && pairs != null
+                && (mdl == ModelAuto || IsRateModelName(mdl));
+            if (poolShared)
+                foreach (int j in sharedMemberIdx)
+                    if (pairs![j] == null) { poolShared = false; break; }
+
+            var models = new SolveModel[outCount];
+            for (int j = 0; j < outCount; j++)
+            {
+                if (poolShared && sharedMemberIdx.Contains(j)) continue;
+                var yj = new double[X.Length];
+                for (int i = 0; i < X.Length; i++) yj[i] = Y[i][j];
+                int[]? spec = pairs?[j];
+                int rateIncoming = spec?.Length == 2 ? spec[0] : -1;
+                int rateTime = spec?.Length == 2 ? spec[1] : -1;
+                models[j] = mdl == ModelAuto
+                    ? FitAuto(X, yj, 42L, rateIncoming, rateTime, ratePlan?.TimeFeaturePositions).Model
+                    : FitModel(X, yj, mdl, rateIncoming, rateTime, ratePlan?.TimeFeaturePositions);
+            }
+            if (sharedMemberIdx.Count > 0 && ratePlan != null && pairs != null && (mdl == ModelAuto || IsRateModelName(mdl)))
+            {
+                if (poolShared)
+                {
+                    var mArr = sharedMemberIdx.ToArray();
+                    SolveModel sharedModel = mdl == ModelAuto
+                        ? FitSharedRateAuto(X, Y, mArr, pairs, 42L, ratePlan.TimeFeaturePositions)
+                        : FitSharedRate(X, Y, mArr, pairs, mdl, ratePlan.TimeFeaturePositions);
+                    foreach (int j in mArr) models[j] = sharedModel;
+                }
+                else if (IsRateModelName(mdl))
+                    throw new ArgumentException(
+                        "SharedOutput columns require a rate binding: pair each one with an Incoming column and a time column.");
+            }
             var result = new double[rows, outCount];
             var feature = new double[k];
             for (int i = 0; i < rows; i++)
@@ -1428,7 +1830,17 @@ namespace ExcelFormulaLabs.Analytics
                 }
                 for (int j = 0; j < outCount; j++)
                 {
-                    double p = Predict(models[j], feature);
+                    int[]? spec = pairs?[j];
+                    if (models[j].IsRate && spec != null)
+                    {
+                        double tv = feature[spec[1]];
+                        if (double.IsNaN(tv) || double.IsInfinity(tv) || tv <= 0)
+                            throw new ArgumentException(
+                                $"Model 'rate' requires a positive finite time in values row {i + 1} (got {tv}).");
+                    }
+                    double p = models[j].IsRate && spec != null
+                        ? PredictBound(models[j], feature, spec[0], spec[1])
+                        : Predict(models[j], feature);
                     if (double.IsNaN(p) || double.IsInfinity(p))
                         throw new ArgumentException("Prediction produced a non-finite value; model is numerically unstable.");
                     result[i, j] = p;
@@ -1444,22 +1856,94 @@ namespace ExcelFormulaLabs.Analytics
         internal static object[,] Quality(object[,] data, string model, long seed, bool hasHeaders = true)
         {
             var schema = ParseSchema(data, hasHeaders);
-            if (schema.HistoryRows.Count == 0)
-                throw new ArgumentException("Data table contains no history rows.");
+            ValidateScale(schema);
             var (X, Y) = BuildHistory(schema, data);
             string mdl = NormalizeModel(model);
-            bool rateMode = mdl == ModelRate;
+            bool rateMode = IsRateModelName(mdl);
             var ratePlan = rateMode || mdl == ModelAuto ? BuildRatePlan(schema, rateMode) : null;
             int k = schema.Features.Length;
             int outCount = schema.Output.Length;
+            var pairs = BuildRatePairs(ratePlan, outCount);
+            var sharedMask = new bool[outCount];
+            var sharedMembers = new List<int>();
+            for (int j = 0; j < outCount; j++)
+            {
+                sharedMask[j] = schema.SharedOutput.Contains(schema.Output[j]);
+                if (sharedMask[j]) sharedMembers.Add(j);
+            }
+
+            // SharedOutput 池化候选（ADR-0009）：组成员全部配对时共用 g；auto → rate / rate_poly。
+            (string Scheme, double R2, double Mae) sharedRate = default;
+            (string Scheme, double R2, double Mae) sharedPoly = default;
+            bool sharedUsable = false, sharedRateSkipped = true, sharedPolySkipped = true;
+            if (ratePlan != null && pairs != null && sharedMembers.Count > 0 && (mdl == ModelAuto || rateMode))
+            {
+                if (!sharedMembers.TrueForAll(j => pairs[j] != null))
+                {
+                    if (rateMode)
+                        throw new ArgumentException(
+                            "SharedOutput columns require a rate binding: pair each one with an Incoming column and a time column.");
+                }
+                else
+                {
+                    sharedUsable = true;
+                    if (mdl == ModelAuto)
+                    {
+                        try { sharedRate = CrossValidateShared(X, Y, sharedMembers.ToArray(), pairs, ModelRate, seed, ratePlan.TimeFeaturePositions); sharedRateSkipped = false; }
+                        catch (ArgumentException) { sharedRateSkipped = true; }
+                        try { sharedPoly = CrossValidateShared(X, Y, sharedMembers.ToArray(), pairs, ModelRatePoly, seed, ratePlan.TimeFeaturePositions); sharedPolySkipped = false; }
+                        catch (ArgumentException) { sharedPolySkipped = true; }
+                    }
+                    else if (mdl == ModelRate)
+                    {
+                        sharedRate = CrossValidateShared(X, Y, sharedMembers.ToArray(), pairs, ModelRate, seed, ratePlan.TimeFeaturePositions);
+                        sharedRateSkipped = false;
+                    }
+                    else
+                    {
+                        sharedPoly = CrossValidateShared(X, Y, sharedMembers.ToArray(), pairs, ModelRatePoly, seed, ratePlan.TimeFeaturePositions);
+                        sharedPolySkipped = false;
+                    }
+                }
+            }
+
             var rows = new List<object[]>();
             for (int j = 0; j < outCount; j++)
             {
                 var yj = new double[X.Length];
                 for (int i = 0; i < X.Length; i++) yj[i] = Y[i][j];
                 string outputName = schema.Headers[schema.Output[j]];
-                int rateIncoming = ratePlan?.IncomingPositions[j] ?? -1;
-                int rateTime = ratePlan?.TimePosition ?? -1;
+                int[]? spec = pairs?[j];
+                int rateIncoming = spec?.Length == 2 ? spec[0] : -1;
+                int rateTime = spec?.Length == 2 ? spec[1] : -1;
+
+                if (sharedUsable && sharedMask[j])
+                {
+                    if (mdl == ModelRate)
+                    {
+                        rows.Add(new object[] { outputName, ModelRate, sharedRate.Scheme ?? string.Empty, sharedRate.R2, sharedRate.Mae, "是" });
+                    }
+                    else if (mdl == ModelRatePoly)
+                    {
+                        rows.Add(new object[] { outputName, ModelRatePoly, sharedPoly.Scheme ?? string.Empty, sharedPoly.R2, sharedPoly.Mae, "是" });
+                    }
+                    else
+                    {
+                        string best = sharedRateSkipped ? ModelRatePoly : ModelRate;
+                        double bestR2 = sharedRateSkipped ? double.NegativeInfinity : sharedRate.R2;
+                        if (!sharedPolySkipped && sharedPoly.R2 > bestR2 + R2TieTolerance) best = ModelRatePoly;
+                        if (sharedRateSkipped)
+                            rows.Add(new object[] { outputName, ModelRate, SchemeSkipped, null!, null!, "否" });
+                        else
+                            rows.Add(new object[] { outputName, ModelRate, sharedRate.Scheme ?? string.Empty, sharedRate.R2, sharedRate.Mae, best == ModelRate ? "是" : "否" });
+                        if (sharedPolySkipped)
+                            rows.Add(new object[] { outputName, ModelRatePoly, SchemeSkipped, null!, null!, "否" });
+                        else
+                            rows.Add(new object[] { outputName, ModelRatePoly, sharedPoly.Scheme ?? string.Empty, sharedPoly.R2, sharedPoly.Mae, best == ModelRatePoly ? "是" : "否" });
+                    }
+                    continue;
+                }
+
                 if (mdl == ModelAuto)
                 {
                     var lin = CrossValidate(X, yj, ModelLinear, seed);
@@ -1474,7 +1958,7 @@ namespace ExcelFormulaLabs.Analytics
                     (string Scheme, double R2, double Mae) rate = default;
                     if (!rateSkipped)
                     {
-                        try { rate = CrossValidate(X, yj, ModelRate, seed, rateIncoming, rateTime); }
+                        try { rate = CrossValidate(X, yj, ModelRate, seed, rateIncoming, rateTime, ratePlan?.TimeFeaturePositions); }
                         catch (ArgumentException) { rateSkipped = true; }
                     }
                     string best = ModelLinear;
@@ -1493,7 +1977,7 @@ namespace ExcelFormulaLabs.Analytics
                 }
                 else
                 {
-                    var cv = CrossValidate(X, yj, mdl, seed, rateIncoming, rateTime);
+                    var cv = CrossValidate(X, yj, mdl, seed, rateIncoming, rateTime, ratePlan?.TimeFeaturePositions);
                     rows.Add(new object[] { outputName, mdl, cv.Scheme, cv.R2, cv.Mae, "是" });
                 }
             }
@@ -1516,29 +2000,59 @@ namespace ExcelFormulaLabs.Analytics
         internal static object[,] Equation(object[,] data, string model, bool hasHeaders = true)
         {
             var schema = ParseSchema(data, hasHeaders);
-            if (schema.HistoryRows.Count == 0)
-                throw new ArgumentException("Data table contains no history rows.");
+            ValidateScale(schema);
             var (X, Y) = BuildHistory(schema, data);
             string mdl = NormalizeModel(model);
-            bool rateMode = mdl == ModelRate;
+            bool rateMode = IsRateModelName(mdl);
             var ratePlan = rateMode || mdl == ModelAuto ? BuildRatePlan(schema, rateMode) : null;
             int outCount = schema.Output.Length;
+            var pairs = BuildRatePairs(ratePlan, outCount);
+            var sharedMask = new bool[outCount];
+            var sharedMembers = new List<int>();
+            for (int j = 0; j < outCount; j++)
+            {
+                sharedMask[j] = schema.SharedOutput.Contains(schema.Output[j]);
+                if (sharedMask[j]) sharedMembers.Add(j);
+            }
+            // SharedOutput 池化 g（ADR-0009）：auto → rate/rate_poly 池化选优；显式 rate/rate_poly → 池化拟合。
+            SolveModel? sharedModel = null;
+            if (ratePlan != null && pairs != null && sharedMembers.Count > 0 && (mdl == ModelAuto || rateMode))
+            {
+                if (!sharedMembers.TrueForAll(j => pairs[j] != null))
+                {
+                    if (rateMode)
+                        throw new ArgumentException(
+                            "SharedOutput columns require a rate binding: pair each one with an Incoming column and a time column.");
+                }
+                else
+                {
+                    sharedModel = mdl == ModelAuto
+                        ? FitSharedRateAuto(X, Y, sharedMembers.ToArray(), pairs, 42L, ratePlan.TimeFeaturePositions)
+                        : FitSharedRate(X, Y, sharedMembers.ToArray(), pairs, mdl, ratePlan.TimeFeaturePositions);
+                }
+            }
+
             var rows = new List<object[]>();
             var names = schema.Features.Select(c => schema.Headers[c]).ToArray();
             for (int j = 0; j < outCount; j++)
             {
                 var yj = new double[X.Length];
                 for (int i = 0; i < X.Length; i++) yj[i] = Y[i][j];
-                int rateIncoming = ratePlan?.IncomingPositions[j] ?? -1;
-                int rateTime = ratePlan?.TimePosition ?? -1;
-                var modelJ = mdl == ModelAuto
-                    ? FitAuto(X, yj, 42L, rateIncoming, rateTime).Model
-                    : FitModel(X, yj, mdl, rateIncoming, rateTime);
+                int[]? spec = pairs?[j];
+                int rateIncoming = spec?.Length == 2 ? spec[0] : -1;
+                int rateTime = spec?.Length == 2 ? spec[1] : -1;
                 string outputName = schema.Headers[schema.Output[j]];
-                if (modelJ.Kind == ModelRate)
+                var modelJ = sharedMask[j] && sharedModel != null
+                    ? sharedModel
+                    : (mdl == ModelAuto
+                        ? FitAuto(X, yj, 42L, rateIncoming, rateTime, ratePlan?.TimeFeaturePositions).Model
+                        : FitModel(X, yj, mdl, rateIncoming, rateTime, ratePlan?.TimeFeaturePositions));
+                if (modelJ.IsRate)
                 {
-                    string incomingName = names[modelJ.RateIncomingIndex];
-                    string timeName = names[modelJ.RateTimeIndex];
+                    int incIdx = spec?.Length == 2 ? spec[0] : modelJ.RateIncomingIndex;
+                    int timeIdx = spec?.Length == 2 ? spec[1] : modelJ.RateTimeIndex;
+                    string incomingName = names[incIdx];
+                    string timeName = names[timeIdx];
                     rows.Add(new object[] { outputName, TypeForward, ForwardRateEquation(modelJ, names, outputName, incomingName, timeName) });
                     rows.Add(new object[] { outputName, TypeRate, outputName + RateColumnSuffix + " = " + Expression(modelJ, names) });
                 }

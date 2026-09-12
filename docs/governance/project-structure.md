@@ -62,7 +62,8 @@ ExcelFormulaLabs/
 │   │   ├── 0005-sandboxconfig-immutable.md
 │   │   ├── 0006-doe-cross-validation-source.md
 │   │   ├── 0007-solve-module-and-bounded-search.md
-│   │   └── 0008-solve-rate-model-and-time-extrapolation.md
+│   │   ├── 0008-solve-rate-model-and-time-extrapolation.md
+│   │   └── 0009-solve-rate-evolution.md
 │   └── plans/                      #   实施计划（迁移/重构方案）
 │       └── 2026-09-12-solve-inverse-migration-plan.md
 │

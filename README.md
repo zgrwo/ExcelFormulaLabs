@@ -152,7 +152,7 @@ FileSystemCore.Initialize(new SandboxConfig(@"C:\Users\Public\Documents"));
 
 - **双 .NET 版本全量测试**，覆盖正常路径和退化输入（零值/空值/单元素/全等值）
 - **Python 交叉验证**：Stats/Regression 与 numpy/scipy 逐项对照，精度 1e-10；DataToolkit 集成管道测试覆盖跨模块组合
-- **手册验证**：228/240 个 UDF 有硬编码期望值的手册示例，由 Python 独立复算逐项对照（防自校验）；`verify-manual.py` 按双通道分报：manual-only 225 / cross-validated 172（合计 397 项检查，含 3 条矩阵通道对照；F-02 修复后矩阵通道计入 cross 小计；2026-09-06 第五轮补 18 条退化/初等函数/病态矩阵活体对照，SOLVE 模块补 4 组闭式/KFold 对照），其中真正与 C# 实现对照的 UDF 为 119/240（49.6%）（其余 12 个无独立示例的 *_ASYNC/共享 Core 变体由 UDF 层测试覆盖）
+- **手册验证**：228/240 个 UDF 有硬编码期望值的手册示例，由 Python 独立复算逐项对照（防自校验）；`verify-manual.py` 按双通道分报：manual-only 232 / cross-validated 182（合计 414 项检查，含 3 条矩阵通道对照；F-02 修复后矩阵通道计入 cross 小计；2026-09-06 第五轮补 18 条退化/初等函数/病态矩阵活体对照，SOLVE 模块补 38 条（15 条闭式期望 + 23 条 C# 交叉）），其中真正与 C# 实现对照的 UDF 为 119/240（49.6%）（其余 12 个无独立示例的 *_ASYNC/共享 Core 变体由 UDF 层测试覆盖）
 
 ---
 

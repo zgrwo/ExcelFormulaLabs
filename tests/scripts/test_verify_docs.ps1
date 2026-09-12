@@ -1,6 +1,6 @@
 ﻿# ============================================================================
-# test_verify_docs.ps1 — verify-docs.ps1 回归守卫（10 场景 A–J；G 含 3 个中文变体子用例）
-# 场景 A：真实仓库副本 → 19 项检查全过（基线，防门禁自身回归）
+# test_verify_docs.ps1 — verify-docs.ps1 回归守卫（12 场景 A–K；G 含 3 个中文变体子用例，K 含 2 个子用例）
+# 场景 A：真实仓库副本 → 全部检查通过（基线，防门禁自身回归）
 # 场景 B：README 硬编码徽章 → 检查 9 FAIL
 # 场景 C：README 断链 → 检查 12 FAIL
 # 场景 D：.qoder 镜像漂移 → 检查 13 FAIL
@@ -63,7 +63,7 @@ function Run-VerifyDocs {
 }
 
 # --- 场景 A：基线（真实仓库副本全绿）---
-Write-Host "[A] 基线：仓库副本 19 项检查全过"
+Write-Host "[A] 基线：仓库副本全部检查通过"
 $fixture = Copy-RepoFixture
 Run-VerifyDocs $fixture "全部通过" $false
 
@@ -111,12 +111,12 @@ $content = $content -replace '144 个数据处理函数', '143 个数据处理�
 Run-VerifyDocs $fixtureF "DataToolkit csproj description count" $true
 
 # --- 场景 G：散文式 UDF 计数漂移（检查 16）---
+# F12（review-2026-09-12）：原实现 `-replace '236 UDF','999 UDF'` 在计数升至 240 后
+# 替换目标不存在 → 注入变 no-op → 场景恒 PASS（回归守卫失效）。改为追加注入，
+# 与 G2/G3/G4 一致，不再绑定当前计数。
 Write-Host "[G] 散文式 UDF 计数漂移应 FAIL（检查 16）"
 $fixtureG = Copy-RepoFixture
-$agentsG = Join-Path $fixtureG "AGENTS.md"
-$contentG = [System.IO.File]::ReadAllText($agentsG, (New-Object System.Text.UTF8Encoding($false)))
-$contentG = $contentG -replace '236 UDF', '999 UDF'
-[System.IO.File]::WriteAllText($agentsG, $contentG, (New-Object System.Text.UTF8Encoding($false)))
+[System.IO.File]::AppendAllText((Join-Path $fixtureG "AGENTS.md"), "`n999 UDF`n", (New-Object System.Text.UTF8Encoding($false)))
 Run-VerifyDocs $fixtureG "Prose UDF counts" $true
 
 # --- 场景 G2/G3/G4：中文变体负向注入（R13 词表化，review-2026-09-05）---
@@ -186,6 +186,18 @@ $contentJ = [System.IO.File]::ReadAllText($ctxJ, (New-Object System.Text.UTF8Enc
 $contentJ = $contentJ -replace 'MathNet\.Numerics\s+[0-9.]+', 'MathNet.Numerics vX'
 [System.IO.File]::WriteAllText($ctxJ, $contentJ, (New-Object System.Text.UTF8Encoding($false)))
 Run-VerifyDocs $fixtureJ "unparseable" $true
+
+# --- 场景 K：CHANGELOG「UDF 总数 X→Y」区间链（审查 F8；检查 16 模式 2）---
+# 新语义：区间终点 ≤ 当前计数且相邻区间首尾相接；不再要求历史区间终点 == 当前计数。
+Write-Host "[K1] CHANGELOG 区间终点超过当前 UDF 数应 FAIL（检查 16 模式 2）"
+$fixtureK1 = Copy-RepoFixture
+[System.IO.File]::AppendAllText((Join-Path $fixtureK1 "CHANGELOG.md"), "`n- 注入：UDF 总数 236→999`n", (New-Object System.Text.UTF8Encoding($false)))
+Run-VerifyDocs $fixtureK1 "Prose UDF counts" $true
+
+Write-Host "[K2] CHANGELOG 区间链不连续应 FAIL（检查 16 模式 2；终点合法但与前段不接续）"
+$fixtureK2 = Copy-RepoFixture
+[System.IO.File]::AppendAllText((Join-Path $fixtureK2 "CHANGELOG.md"), "`n- 注入：UDF 总数 237→240`n", (New-Object System.Text.UTF8Encoding($false)))
+Run-VerifyDocs $fixtureK2 "Prose UDF counts" $true
 
 # --- 汇总 ---
 Remove-Item -Recurse -Force $tmpRoot

@@ -4,7 +4,7 @@
 verify-manual.py — Verify ALL UDF examples against Python with hardcoded expected values.
 
 Every numerical check compares Python computation against a constant cross-validated
-with C# MathNet. Never use self-checks (actual == same expression as expected). — Verify ALL 236 UDF examples (总数由 api-reference.md 动态解析，见 UDF_TOTAL) in docs/user-manual/user-manual.md against Python (sync variants; *_ASYNC share Core methods).
+with C# MathNet. Never use self-checks (actual == same expression as expected). — Verify ALL UDF examples (总数由 api-reference.md 动态解析，见 UDF_TOTAL) in docs/user-manual/user-manual.md against Python (sync variants; *_ASYNC share Core methods).
 
 Usage: python scripts/verify-manual.py
 """
@@ -1303,6 +1303,38 @@ cross_vs_csharp("SOLVE.INVERSE_RATE_STATUS_CS", _status_rate_py, "SOLVE.SolveInv
 # CV：精确速率夹具 → R²=1（C# 与 sklearn 独立实现同口径）
 cross_vs_csharp("SOLVE.QUALITY_RATE", 1.0, "SOLVE.CrossValidateRate", tol=1e-6, field="Item2")
 
+# ── ADR-0009：多项式速率 rate_poly（g 为二次）与 SharedOutput 共享速率 ──
+# rate_poly 夹具与 manifest 同源：[inc, U1, t]，g = 0.01 + 0.005·U1 + 0.001·U1²。
+solve_X_ratepoly = np.array([[10.1,2,30],[10.2,3,60],[10.3,4,30],[10.4,5,60],[10.5,6,30],[10.6,7,60],
+                             [10.7,2,30],[10.8,3,60],[10.9,4,30],[11.0,5,60],[11.1,6,30],[11.2,7,60]], dtype=float)
+solve_y_ratepoly = np.array([9.38,8.16,8.92,6.8,8.22,4.96,9.98,8.76,9.52,7.4,8.82,5.56])
+_rate_target_poly = (solve_X_ratepoly[:, 0] - solve_y_ratepoly) / solve_X_ratepoly[:, 2]
+# C# 的 g 在非排除特征 [U1] 上二次展开 + ridge λ=1e-5（配对来料/时间列被约束）。
+_pf_poly = PolynomialFeatures(degree=2, include_bias=False)
+_Zp_raw = _pf_poly.fit_transform(solve_X_ratepoly[:, [1]])
+_mu_p = _Zp_raw.mean(axis=0); _sd_p = _Zp_raw.std(axis=0, ddof=1)
+_rp_poly = RidgeLR(alpha=1e-5).fit((_Zp_raw - _mu_p) / _sd_p, _rate_target_poly)
+_x_poly = _pf_poly.transform(np.array([[4.0]]))
+_g_poly = float(_rp_poly.predict((_x_poly - _mu_p) / _sd_p)[0])
+_predict_ratepoly_py = 10.0 - 90.0 * _g_poly  # t=90 外推
+check("SOLVE.PREDICT_RATE_POLY", _predict_ratepoly_py, 5.86, tol=1e-3)
+cross_vs_csharp("SOLVE.PREDICT_RATE_POLY_CS", _predict_ratepoly_py, "SOLVE.PredictRatePoly", tol=1e-3)
+
+# SharedOutput：两个输出共享 g = 0.01 + 0.005·U1（池化速率目标）
+solve_X_shared = np.array([[10.1,12.1,2,30],[10.2,12.2,3,60],[10.3,12.3,4,30],[10.4,12.4,5,60],
+                           [10.5,12.5,6,30],[10.6,12.6,7,60],[10.7,12.7,2,30],[10.8,12.8,3,60],
+                           [10.9,12.9,4,30],[11.0,13.0,5,60],[11.1,13.1,6,30],[11.2,13.2,7,60]], dtype=float)
+solve_Y_shared = np.array([[9.5,11.5],[8.7,10.7],[9.4,11.4],[8.3,10.3],[9.3,11.3],[7.9,9.9],
+                           [10.1,12.1],[9.3,11.3],[10.0,12.0],[8.9,10.9],[9.9,11.9],[8.5,10.5]], dtype=float)
+_shared_targets = np.concatenate([(solve_X_shared[:, 0] - solve_Y_shared[:, 0]) / solve_X_shared[:, 3],
+                                  (solve_X_shared[:, 1] - solve_Y_shared[:, 1]) / solve_X_shared[:, 3]])
+_shared_u = np.concatenate([solve_X_shared[:, 2], solve_X_shared[:, 2]])
+_lr_shared = LR(fit_intercept=True).fit(_shared_u.reshape(-1, 1), _shared_targets)
+check("SOLVE.SHARED_RATE_COEF", _lr_shared.coef_[0], 0.005, tol=1e-9)
+check("SOLVE.SHARED_RATE_INTER", _lr_shared.intercept_, 0.01, tol=1e-9)
+cross_vs_csharp("SOLVE.SHARED_RATE_COEF_CS", _lr_shared.coef_[0], "SOLVE.FitSharedRate", tol=1e-9, field=["coef", 2])
+cross_vs_csharp("SOLVE.SHARED_RATE_INTER_CS", _lr_shared.intercept_, "SOLVE.FitSharedRate", tol=1e-9, field="intercept")
+
 # ========================================================================
 # FINAL
 # ========================================================================
@@ -1340,6 +1372,7 @@ _ID2UDF = {
     "SOLVE.Predict": "SOLVE.PREDICT",
     "SOLVE.FitRate": "SOLVE.EQUATION", "SOLVE.CrossValidateRate": "SOLVE.QUALITY",
     "SOLVE.PredictRate": "SOLVE.PREDICT", "SOLVE.SolveInverseRate": "SOLVE.INVERSE",
+    "SOLVE.PredictRatePoly": "SOLVE.PREDICT", "SOLVE.FitSharedRate": "SOLVE.INVERSE",
 }
 def _norm_ref(_name):
     """规范化引用名为可匹配形式：先按空格截断（'RANGE.TOHTML table tag' → 'RANGE.TOHTML'），

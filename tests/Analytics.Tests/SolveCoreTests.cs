@@ -390,6 +390,21 @@ namespace ExcelFormulaLabs.Analytics.Tests
             return t;
         }
 
+        // rate 变体：时间列角色为 VariableTime，请求行 t 留空（由 bounds 约束参与寻优）。
+        private static object[,] VariableTimeTable()
+        {
+            var t = new object[14, 4];
+            t[0, 0] = "IncomingZ1"; t[0, 1] = "VariableU1"; t[0, 2] = "VariableTime"; t[0, 3] = "OutputZ1";
+            for (int i = 0; i < 12; i++)
+            {
+                double inc = 10 + 0.1 * (i + 1), u1 = 2 + (i % 6), time = i % 2 == 0 ? 30.0 : 60.0;
+                t[i + 1, 0] = inc; t[i + 1, 1] = u1; t[i + 1, 2] = time;
+                t[i + 1, 3] = inc - time * (0.01 + 0.005 * u1);
+            }
+            t[13, 0] = 10.0; t[13, 1] = null!; t[13, 2] = null!; t[13, 3] = 6.4;
+            return t;
+        }
+
         [Fact]
         public void FitModel_Rate_ExactAndExtrapolates()
         {
@@ -431,7 +446,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact]
         public void Inverse_Rate_ExtrapolatesToArbitraryTime()
         {
-            var result = (object[,])SolveUdf.UDF_SOLVE_INVERSE(RateTable(), null, null, "rate", 42.0, 10.0);
+            var result = (object[,])SolveUdf.UDF_SOLVE_INVERSE(RateTable(), null!, null!, "rate", 42.0, 10.0);
             result.GetLength(1).Should().Be(6); // 请求行, U1, 预测, 速率, σ, 状态
             result[0, 2].Should().Be("OutputZ1预测");
             result[0, 3].Should().Be("OutputZ1速率");
@@ -451,7 +466,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
                 {10.0, 6.0, 30.0, 8.4},
                 {10.0, 8.0, 60.0, 8.2},
                 {10.0, 2.0, 60.0, 9.4},
-                {10.0, null, 90.0, 7.3},
+                {10.0, null!, 90.0, 7.3},
             };
             var act = () => SolveCore.Inverse(data, null, null, "rate", 42L, 10);
             act.Should().Throw<ArgumentException>().WithMessage("*matching Incoming*");
@@ -466,7 +481,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
                 {10.0, 4.0, 8.8},
                 {10.0, 6.0, 8.2},
                 {10.0, 2.0, 9.6},
-                {10.0, null, 7.3},
+                {10.0, null!, 7.3},
             };
             var act = () => SolveCore.Inverse(data, null, null, "rate", 42L, 10);
             act.Should().Throw<ArgumentException>().WithMessage("*time column*");
@@ -493,7 +508,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
             }
             data[13, 0] = 10.0; data[13, 1] = null!; data[13, 2] = null!; data[13, 3] = 6.4;
             object[,] bounds = { { "VariableTime", 60.0, 120.0 } };
-            var r = (object[,])SolveUdf.UDF_SOLVE_INVERSE(data, null, bounds, "rate");
+            var r = (object[,])SolveUdf.UDF_SOLVE_INVERSE(data, null!, bounds, "rate");
             int statusCol = r.GetLength(1) - 1;
             // 列序：请求行 | VariableU1 | VariableTime | OutputZ1预测 | OutputZ1速率 | σ | 状态
             ((double)r[1, 2]).Should().BeInRange(60.0, 120.0);
@@ -706,6 +721,349 @@ namespace ExcelFormulaLabs.Analytics.Tests
             t.GetLength(0).Should().Be(2); // header + forward only (11 variables → no closed-form inverse)
             t[1, 1].Should().Be("前向方程");
             ((string)t[1, 2]).Should().Contain("OutputY1 = ");
+        }
+
+        // ──────────────────────────── 审查修复回归（F1/F2/F5/F11）────────────────────────────
+
+        [Fact]
+        public void FitModel_HugeScaleFeature_IsNotSilentlyDropped()
+        {
+            // F1 回归：x~1e200 时原始偏差平方溢出，旧实现把有效列静默当常量剔除（逐行预测全错）。
+            var v = new[] { 3.0, 6, 2, 7, 1, 5, 8, 4 };
+            var X = Enumerable.Range(0, 8).Select(i => new[] { 1e200 * v[i], (double)(i + 1) }).ToArray();
+            var y = Enumerable.Range(0, 8).Select(i => 1.0 + 1e-200 * X[i][0]).ToArray();
+            var m = SolveCore.FitModel(X, y, "linear");
+            m.Coef[0].Should().BeApproximately(1e-200, 1e-212);
+            m.Intercept.Should().BeApproximately(1.0, 1e-9);
+            for (int i = 0; i < X.Length; i++)
+                SolveCore.Predict(m, X[i]).Should().BeApproximately(y[i], 1e-9);
+        }
+
+        [Fact]
+        public void FitModel_Poly_LargeButRepresentableFeature_Works()
+        {
+            // F1 回归：x~1e100 → x²=1e200 可表示，但旧实现偏差平方溢出导致平方项被静默剔除。
+            var X = Enumerable.Range(1, 8).Select(i => new[] { i * 1e100 }).ToArray();
+            var y = X.Select(r => 1.0 + r[0] / 1e100 + 0.5 * (r[0] / 1e100) * (r[0] / 1e100)).ToArray();
+            var m = SolveCore.FitModel(X, y, "poly");
+            m.Kind.Should().Be("poly");
+            for (int i = 0; i < X.Length; i++)
+                SolveCore.Predict(m, X[i]).Should().BeApproximately(y[i], 1e-3);
+        }
+
+        [Fact]
+        public void FitModel_Poly_NonRepresentableTerm_throws()
+        {
+            // F1：项值超出 double（x² 溢出）必须显式报错，禁止静默丢列。
+            var X = Enumerable.Range(1, 8).Select(i => new[] { i * 1e160 }).ToArray();
+            var y = X.Select(r => r[0] / 1e160).ToArray();
+            var act = () => SolveCore.FitModel(X, y, "poly");
+            act.Should().Throw<ArgumentException>().WithMessage("*not representable*");
+        }
+
+        [Fact]
+        public void Inverse_AutoRate_InvalidVariableTimeBound_FallsBackToNonRate()
+        {
+            // F2 回归（ADR-0008）：auto 下时间下界 ≤0 → rate 候选应跳过并保持 linear/poly 可用。
+            object[,] bounds = { { "VariableTime", 0.0, 120.0 } };
+            var r = (object[,])SolveUdf.UDF_SOLVE_INVERSE(VariableTimeTable(), null!, bounds, "auto");
+            r.GetLength(1).Should().Be(6); // 请求行 | U1 | Time | 预测 | σ | 状态（无速率列）
+            for (int c = 0; c < r.GetLength(1); c++)
+                (r[0, c]?.ToString() ?? string.Empty).Should().NotContain("速率");
+        }
+
+        [Fact]
+        public void Inverse_Rate_NonPositiveVariableTimeBound_throws()
+        {
+            // F2 回归：显式 rate 下时间下界 ≤0 仍按契约报错（auto 才回退）。
+            object[,] bounds = { { "VariableTime", 0.0, 120.0 } };
+            var act = () => SolveCore.Inverse(VariableTimeTable(), null, bounds, "rate", 42L, 10);
+            act.Should().Throw<ArgumentException>().WithMessage("*positive time bound*");
+        }
+
+        [Fact]
+        public void Inverse_AutoRate_NonPositiveRequestTime_FallsBackToNonRate()
+        {
+            // F2 回归：FixedTime 请求行 t=0 → auto 退回 linear/poly（显式 rate 仍报错，见上）。
+            var r = (object[,])SolveUdf.UDF_SOLVE_INVERSE(RateTable(requestTime: 0), null!, null!, "auto");
+            for (int c = 0; c < r.GetLength(1); c++)
+                (r[0, c]?.ToString() ?? string.Empty).Should().NotContain("速率");
+        }
+
+        [Fact]
+        public void PredictTable_Rate_NonPositiveTime_throws()
+        {
+            // F2：PREDICT 显式 rate 时逐行校验 t>0（旧实现静默按 t≤0 外推）。
+            object[,] values = { { 10.0, 4.0, 0.0 } };
+            var act = () => SolveCore.PredictTable(RateTable(), values, "rate");
+            act.Should().Throw<ArgumentException>().WithMessage("*positive finite time*");
+        }
+
+        [Fact]
+        public void PredictTable_AutoRate_ExtrapolatesManualFixture()
+        {
+            // F11：user-manual 速率示例的 PREDICT 断言（auto 自动选 rate，t=120 → 6.4）。
+            object[,] values = { { 10.0, 4.0, 120.0 } };
+            var r = (double[,])SolveUdf.UDF_SOLVE_PREDICT(RateTable(), values);
+            r[0, 0].Should().BeApproximately(6.4, 1e-6);
+        }
+
+        [Fact]
+        public void Inverse_MultiOutput_TargetsSubset_SigmaOnlyTargeted()
+        {
+            // F11：两输出仅 Y1 有目标 → σ 只统计 Y1，Y2 仍给预测。
+            var t = MultiOutputTable(out2Target: null);
+            var r = (object[,])SolveUdf.UDF_SOLVE_INVERSE(t);
+            r.GetLength(1).Should().Be(6); // 请求行 | U1 | Y1预测 | Y2预测 | σ | 状态
+            ((double)r[1, 1]).Should().BeApproximately(4.0, 1e-4);
+            ((double)r[1, 2]).Should().BeApproximately(13.0, 1e-6);
+            ((double)r[1, 3]).Should().BeApproximately(-6.0, 1e-6); // Y2 = 3 − 10 + 0.25·4
+            ((double)r[1, 4]).Should().BeLessThan(1e-6);
+            r[1, 5].Should().Be("可达");
+        }
+
+        [Fact]
+        public void Inverse_MultiOutput_OneUnreachable_StatusUnreachable()
+        {
+            // F11：Y2 目标 −8 在边界 [2,20] 内不可达 → 状态不可达，推荐为折中解。
+            var t = MultiOutputTable(out2Target: -8.0);
+            var r = (object[,])SolveUdf.UDF_SOLVE_INVERSE(t);
+            r[1, 5].Should().Be("不可达");
+            ((double)r[1, 4]).Should().BeGreaterThan(0.01);
+        }
+
+        [Fact]
+        public void Quality_MultiOutput_RowsPerOutput()
+        {
+            // F11：auto 下每输出 3 候选行（linear/poly/rate），共 1 + 3×2 行。
+            var t = (object[,])SolveUdf.UDF_SOLVE_QUALITY(MultiOutputTable(out2Target: null));
+            t.GetLength(0).Should().Be(7);
+            t[0, 0].Should().Be("输出");
+            t[1, 0].Should().Be("OutputY1");
+            t[4, 0].Should().Be("OutputY2");
+            t[1, 1].Should().Be("linear");
+            t[2, 1].Should().Be("poly");
+            t[3, 1].Should().Be("rate");
+        }
+
+        [Fact]
+        public void PredictTable_TooManyFeatureColumns_throws()
+        {
+            var data = WideLinearTable();
+            object[,] values = new object[1, 51];
+            for (int c = 0; c < 51; c++) values[0, c] = 1.0;
+            var act = () => SolveCore.PredictTable(data, values, "linear");
+            act.Should().Throw<ArgumentException>().WithMessage("*Too many feature columns*");
+        }
+
+        [Fact]
+        public void Quality_TooManyFeatureColumns_throws()
+        {
+            var act = () => SolveCore.Quality(WideLinearTable(), "linear", 42L);
+            act.Should().Throw<ArgumentException>().WithMessage("*Too many feature columns*");
+        }
+
+        [Fact]
+        public void Equation_TooManyFeatureColumns_throws()
+        {
+            var act = () => SolveCore.Equation(WideLinearTable(), "linear");
+            act.Should().Throw<ArgumentException>().WithMessage("*Too many feature columns*");
+        }
+
+        // F5 守卫夹具：Incoming + 50 个 Variable + Output = 51 个特征列（上限 50）。
+        private static object[,] WideLinearTable()
+        {
+            var t = new object[7, 52];
+            t[0, 0] = "IncomingA";
+            for (int j = 0; j < 50; j++) t[0, j + 1] = "VariableU" + (j + 1);
+            t[0, 51] = "OutputY1";
+            for (int i = 0; i < 6; i++)
+            {
+                t[i + 1, 0] = i + 1;
+                double sum = 0;
+                for (int j = 0; j < 50; j++) { double v = ((i + 1) * (j + 1)) % 7 + 1; t[i + 1, j + 1] = v; sum += v; }
+                t[i + 1, 51] = 1 + sum;
+            }
+            return t;
+        }
+
+        // F11 夹具：Y1 = 2 + 0.5a + 1.5u；Y2 = 3 − a + 0.25u；请求行 a=10、u 留空。
+        private static object[,] MultiOutputTable(double? out2Target)
+        {
+            var t = new object[12, 4];
+            t[0, 0] = "IncomingA"; t[0, 1] = "VariableU1"; t[0, 2] = "OutputY1"; t[0, 3] = "OutputY2";
+            for (int i = 0; i < 10; i++)
+            {
+                double a = i + 1, u = ((a * 3) % 10) + 2.0;
+                t[i + 1, 0] = a; t[i + 1, 1] = u;
+                t[i + 1, 2] = 2.0 + 0.5 * a + 1.5 * u;
+                t[i + 1, 3] = 3.0 - a + 0.25 * u;
+            }
+            t[11, 0] = 10.0; t[11, 1] = null!; t[11, 2] = 13.0;
+            t[11, 3] = out2Target.HasValue ? (object)out2Target.Value : null!;
+            return t;
+        }
+
+        // ──────────────────────── ADR-0009：rate_poly / 多时间列 / SharedOutput ────────────────────────
+
+        // rate_poly 夹具：g = 0.01 + 0.005·U1 + 0.001·U1²，t ∈ {30,60}；请求 t=90、目标 5.86。
+        private static object[,] RatePolyTable()
+        {
+            var t = new object[14, 4];
+            t[0, 0] = "IncomingZ1"; t[0, 1] = "VariableU1"; t[0, 2] = "FixedTime"; t[0, 3] = "OutputZ1";
+            for (int i = 0; i < 12; i++)
+            {
+                double inc = 10 + 0.1 * (i + 1), u = 2 + (i % 6), time = i % 2 == 0 ? 30.0 : 60.0;
+                double rate = 0.01 + 0.005 * u + 0.001 * u * u;
+                t[i + 1, 0] = inc; t[i + 1, 1] = u; t[i + 1, 2] = time; t[i + 1, 3] = inc - time * rate;
+            }
+            t[13, 0] = 10.0; t[13, 1] = null!; t[13, 2] = 90.0; t[13, 3] = 5.86;
+            return t;
+        }
+
+        // 多时间列夹具：OutputZ1 ↔ FixedTimeZ1、OutputZ2 ↔ FixedTimeZ2（后缀配对）；
+        // g1 = 0.01+0.005u、g2 = 0.02+0.002u；请求 t1=90/t2=45、目标 7.3/18.74（u=4）。
+        private static object[,] MultiTimeTable()
+        {
+            var t = new object[14, 7];
+            t[0, 0] = "IncomingZ1"; t[0, 1] = "IncomingZ2"; t[0, 2] = "VariableU1";
+            t[0, 3] = "FixedTimeZ1"; t[0, 4] = "FixedTimeZ2"; t[0, 5] = "OutputZ1"; t[0, 6] = "OutputZ2";
+            for (int i = 0; i < 12; i++)
+            {
+                double inc1 = 10 + 0.1 * (i + 1), inc2 = 20 + 0.2 * (i + 1), u = 2 + (i % 6);
+                double t1 = i % 2 == 0 ? 30.0 : 60.0, t2 = i % 2 == 0 ? 15.0 : 30.0;
+                t[i + 1, 0] = inc1; t[i + 1, 1] = inc2; t[i + 1, 2] = u;
+                t[i + 1, 3] = t1; t[i + 1, 4] = t2;
+                t[i + 1, 5] = inc1 - t1 * (0.01 + 0.005 * u);
+                t[i + 1, 6] = inc2 - t2 * (0.02 + 0.002 * u);
+            }
+            t[13, 0] = 10.0; t[13, 1] = 20.0; t[13, 2] = null!;
+            t[13, 3] = 90.0; t[13, 4] = 45.0; t[13, 5] = 7.3; t[13, 6] = 18.74;
+            return t;
+        }
+
+        // SharedOutput 夹具：A/B 两输出共享 g = 0.01+0.005u；单一 FixedTime；请求 t=90、目标 7.3/9.3。
+        private static object[,] SharedRateTable()
+        {
+            var t = new object[14, 6];
+            t[0, 0] = "IncomingA"; t[0, 1] = "IncomingB"; t[0, 2] = "VariableU1";
+            t[0, 3] = "FixedTime"; t[0, 4] = "SharedOutputA"; t[0, 5] = "SharedOutputB";
+            for (int i = 0; i < 12; i++)
+            {
+                double incA = 10 + 0.1 * (i + 1), incB = 12 + 0.1 * (i + 1), u = 2 + (i % 6);
+                double time = i % 2 == 0 ? 30.0 : 60.0, g = 0.01 + 0.005 * u;
+                t[i + 1, 0] = incA; t[i + 1, 1] = incB; t[i + 1, 2] = u; t[i + 1, 3] = time;
+                t[i + 1, 4] = incA - time * g;
+                t[i + 1, 5] = incB - time * g;
+            }
+            t[13, 0] = 10.0; t[13, 1] = 12.0; t[13, 2] = null!; t[13, 3] = 90.0;
+            t[13, 4] = 7.3; t[13, 5] = 9.3;
+            return t;
+        }
+
+        [Fact]
+        public void FitModel_RatePoly_ExactQuadraticRate()
+        {
+            // 3 特征 [inc, u, t] → 排除 inc/t 后 g 的候选项 = 2（线性 + 平方），n=12 ≥ 3。
+            var X = new double[12][];
+            var y = new double[12];
+            for (int i = 0; i < 12; i++)
+            {
+                double inc = 10 + 0.1 * (i + 1), u = 2 + (i % 6), t = i % 2 == 0 ? 30.0 : 60.0;
+                X[i] = new[] { inc, u, t };
+                y[i] = inc - t * (0.01 + 0.005 * u + 0.001 * u * u);
+            }
+            var m = SolveCore.FitModel(X, y, "rate_poly", 0, 2);
+            m.Kind.Should().Be("rate_poly");
+            m.IsRate.Should().BeTrue();
+            SolveCore.Predict(m, new[] { 10.0, 4.0, 90.0 }).Should().BeApproximately(5.86, 1e-3);
+            SolveCore.PredictRate(m, new[] { 10.0, 4.0, 90.0 }).Should().BeApproximately(0.046, 1e-5);
+        }
+
+        [Fact]
+        public void Inverse_RatePoly_Extrapolates()
+        {
+            var r = (object[,])SolveUdf.UDF_SOLVE_INVERSE(RatePolyTable(), null!, null!, "rate_poly");
+            r.GetLength(1).Should().Be(6); // 请求行 | U1 | 预测 | 速率 | σ | 状态
+            ((double)r[1, 1]).Should().BeApproximately(4.0, 1e-3);
+            ((double)r[1, 2]).Should().BeApproximately(5.86, 1e-3);
+            ((double)r[1, 3]).Should().BeApproximately(0.046, 1e-4);
+            r[1, 5].Should().Be("可达");
+        }
+
+        [Fact]
+        public void Inverse_MultipleTimeColumns_SuffixPairing()
+        {
+            var r = (object[,])SolveUdf.UDF_SOLVE_INVERSE(MultiTimeTable(), null!, null!, "rate");
+            // 请求行 | U1 | OutputZ1预测 | OutputZ2预测 | Z1速率 | Z2速率 | σ | 状态
+            r.GetLength(1).Should().Be(8);
+            ((double)r[1, 1]).Should().BeApproximately(4.0, 1e-4);
+            ((double)r[1, 2]).Should().BeApproximately(7.3, 1e-6);
+            ((double)r[1, 3]).Should().BeApproximately(18.74, 1e-6);
+            ((double)r[1, 4]).Should().BeApproximately(0.03, 1e-9);
+            ((double)r[1, 5]).Should().BeApproximately(0.028, 1e-9);
+            r[1, 7].Should().Be("可达");
+        }
+
+        [Fact]
+        public void Inverse_MultipleTimeColumns_UnmatchedOutput_throws()
+        {
+            object[,] data = {
+                {"IncomingY1","VariableU1","FixedTimeZ1","FixedTimeZ2","OutputY1"},
+                {10.0, 2.0, 30.0, 15.0, 9.4},
+                {10.0, 3.0, 60.0, 30.0, 8.8},
+                {10.0, 4.0, 30.0, 15.0, 9.2},
+                {10.0, 5.0, 60.0, 30.0, 8.6},
+                {10.0, null!, 90.0, 45.0, 7.3},
+            };
+            var act = () => SolveCore.Inverse(data, null, null, "rate", 42L, 10);
+            act.Should().Throw<ArgumentException>().WithMessage("*cannot bind a time column*");
+        }
+
+        [Fact]
+        public void Inverse_SharedOutput_PoolsRate()
+        {
+            var r = (object[,])SolveUdf.UDF_SOLVE_INVERSE(SharedRateTable(), null!, null!, "rate");
+            // 请求行 | U1 | A预测 | B预测 | A速率 | B速率 | σ | 状态
+            r.GetLength(1).Should().Be(8);
+            ((double)r[1, 1]).Should().BeApproximately(4.0, 1e-4);
+            ((double)r[1, 2]).Should().BeApproximately(7.3, 1e-6);
+            ((double)r[1, 3]).Should().BeApproximately(9.3, 1e-6);
+            ((double)r[1, 4]).Should().BeApproximately(0.03, 1e-9); // 同组共享同一 g
+            ((double)r[1, 5]).Should().BeApproximately(0.03, 1e-9);
+            r[1, 7].Should().Be("可达");
+
+            // auto：共享组在 rate/rate_poly 池化候选中选优，语义与显式 rate 一致。
+            var auto = (object[,])SolveUdf.UDF_SOLVE_INVERSE(SharedRateTable(), null!, null!, "auto");
+            auto.GetLength(1).Should().Be(8);
+            ((double)auto[1, 1]).Should().BeApproximately(4.0, 1e-3);
+            ((double)auto[1, 4]).Should().BeApproximately(0.03, 1e-9);
+            auto[1, 7].Should().Be("可达");
+        }
+
+        [Fact]
+        public void Quality_SharedOutput_PooledCandidates()
+        {
+            var t = (object[,])SolveUdf.UDF_SOLVE_QUALITY(SharedRateTable());
+            t.GetLength(0).Should().Be(5); // header + 2 个共享输出 × (rate, rate_poly)
+            t[0, 0].Should().Be("输出");
+            t[1, 0].Should().Be("SharedOutputA");
+            t[1, 1].Should().Be("rate");
+            t[2, 1].Should().Be("rate_poly");
+            t[3, 0].Should().Be("SharedOutputB");
+            t[1, 5].Should().Be("是");
+        }
+
+        [Fact]
+        public void Equation_SharedOutput_SharedRateEquation()
+        {
+            var t = (object[,])SolveUdf.UDF_SOLVE_EQUATION(SharedRateTable(), "rate");
+            t.GetLength(0).Should().Be(5); // header + 2 输出 × (前向方程 + 速率方程)
+            t[1, 0].Should().Be("SharedOutputA");
+            t[2, 1].Should().Be("速率方程");
+            ((string)t[2, 2]).Should().Be("SharedOutputA速率 = 0.01 + 0.005*VariableU1");
+            t[4, 1].Should().Be("速率方程");
+            ((string)t[4, 2]).Should().Be("SharedOutputB速率 = 0.01 + 0.005*VariableU1");
         }
     }
 }

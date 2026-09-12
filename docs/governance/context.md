@@ -69,17 +69,20 @@ _Avoid_: 可行性、可解性
 **最大偏差σ（Max Deviation σ）** — SOLVE.INVERSE 每请求行的目标达成度：`maxⱼ |预测ⱼ−目标ⱼ| / 历史输出标准差ⱼ`（标准差为 0 取 1；仅统计有目标的输出）。≈0 = 精确命中。
 _Avoid_: 误差、残差（易与回归残差混淆）
 
-**表头前缀角色（Header Prefix Role）** — SOLVE 数据表的列角色约定：`Incoming*`/`来料*`（已知条件）、`Variable*`/`可调*`/`变量*`（可调参数）、`Fixed*`/`固定*`（固定参数，留空取历史中位数）、`Output*`/`输出*`（输出/目标）。前缀不区分大小写，未识别列忽略。
+**表头前缀角色（Header Prefix Role）** — SOLVE 数据表的列角色约定：`Incoming*`/`来料*`（已知条件）、`Variable*`/`可调*`/`变量*`（可调参数）、`Fixed*`/`固定*`（固定参数，留空取历史中位数）、`Output*`/`输出*`（输出/目标）、`SharedOutput*`/`共享输出*`（输出，且同组共享一条速率 g）。前缀不区分大小写，未识别列忽略。
 _Avoid_: 列名配置、角色参数
 
-**速率模型（rate）** — SOLVE 的时间外推模型（ADR-0008）：`OutputZx(t) = IncomingZx − t·g(可调/来料/固定)`，g 为线性模型；配对来料与时间列受约束（系数 1 与 −t），可对 t≠历史值预测/反解。由 `model="rate"` 显式启用；`auto` 将其作为候选之一。
+**速率模型（rate / rate_poly）** — SOLVE 的时间外推模型（ADR-0008/0009）：`OutputZx(t) = IncomingZx − t·g(可调/来料/固定)`；`rate` 的 g 为线性、`rate_poly` 的 g 为二次（含平方/交互）。配对来料与全部时间列受约束（不进入 g），可对 t≠历史值预测/反解。由 `model="rate"`/`"rate_poly"` 显式启用；`auto` 将线性 rate 作为普通输出的候选之一，共享组的 auto 在 rate/rate_poly 间选优。
 _Avoid_: 时间模型、衰减模型
 
 **输出-来料配对（Output-Incoming Pairing）** — rate 模型按去掉角色前缀后的后缀匹配（OrdinalIgnoreCase）：`OutputZ1`↔`IncomingZ1`、`输出收率`↔`来料收率`。配对缺失时显式 rate 报错。
 _Avoid_: 关联列、映射列
 
-**时间列（Time Column）** — rate 模型中唯一表头以 `Time`（忽略大小写）或 `时间` 结尾的特征列。列角色决定是否可调：`VariableTime`/`可调时间` 请求空白时参与寻优（bounds 可放宽），`FixedTime` 为条件（留空取历史中位数）。
+**时间列（Time Column）** — rate 模型中去掉角色前缀后名称含 `Time`/`时间` 的特征列，可多个（ADR-0009）。多输出按后缀配对时间列（`FixedTimeZ1`↔`OutputZ1`）；无后缀匹配且仅一个时间列时全局生效；多个时间列且无法配对时显式 rate 报错、auto 跳过。列角色决定是否可调：`VariableTime`/`可调时间` 请求空白时参与寻优（bounds 可放宽），`FixedTime` 为条件（留空取历史中位数）。
 _Avoid_: 时长列、周期列
+
+**共享速率（Shared Rate）** — `SharedOutput*`/`共享输出*` 列构成一个共享速率组，组内成员共用同一 g（池化拟合 `(Incomingⱼ−Outputⱼ)/tⱼ`，排除组内全部配对来料列与全部时间列，ADR-0009）。`SOLVE.QUALITY` 对共享输出给 `rate`/`rate_poly` 两行候选（池化 CV）。
+_Avoid_: 公共系数、联合拟合
 
 ## 构建术语
 
