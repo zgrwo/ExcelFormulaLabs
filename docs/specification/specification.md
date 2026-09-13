@@ -1,6 +1,6 @@
 # ExcelFormulaLabs — 项目规格文档
 
-> 版本：v2.2.6 | 最后更新：2026-09-06 | 状态：稳定发行中
+> 版本：v2.3.0 | 最后更新：2026-09-13 | 状态：稳定发行中
 
 ## 1. 项目概述
 
@@ -83,7 +83,7 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 
 ### 4.1 测试体系
 
-- 2,649 个 [Fact]（xUnit + FluentAssertions；[Theory]=0；2026-09-13 max-level 全量审查实测回填：Foundation 359 + Analytics 847 + DataToolkit 1,443；含 SOLVE 模块两轮新增 28 个及其他功能/审查回归增量。verify-docs 检查 20 强制该声明 == tests/**/*.cs 实测计数）
+- 2,649 个 [Fact] 与 0 个 [Theory]（xUnit + FluentAssertions；2026-09-13 max-level 全量审查实测回填：Foundation 359 + Analytics 847 + DataToolkit 1,443；含 SOLVE 模块两轮新增 28 个及其他功能/审查回归增量。verify-docs 检查 20 强制这些声明 == tests/**/*.cs 实测计数）
 - Python 交叉验证（scipy/numpy 独立计算，容差 1e-10）
 - 手册示例验证（verify-manual.py 全 UDF 覆盖）
 - XLL 加载/卸载自动化测试

@@ -197,7 +197,17 @@ jobs:
         run: dotnet restore
 
       - name: Build (Release)
-        run: dotnet build -c Release --no-restore
+        shell: pwsh
+        run: |
+          # R7-3 (review-2026-09-13)：ExcelDnaPack 偶发瞬时文件锁（Win32Exception 110，
+          # Defender 扫描刚写出的 .xll）→ 重试 1 次；真实构建错误重试后仍失败。
+          for ($attempt = 1; $attempt -le 2; $attempt++) {
+            dotnet build -c Release --no-restore
+            if ($LASTEXITCODE -eq 0) { break }
+            if ($attempt -eq 2) { exit $LASTEXITCODE }
+            Write-Host "Build failed (attempt $attempt) - retrying after transient ExcelDnaPack lock..."
+            Start-Sleep -Seconds 5
+          }
 
       - name: Test (Release, net8.0)
         run: dotnet test -c Release --no-build --verbosity normal

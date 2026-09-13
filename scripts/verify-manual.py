@@ -1400,7 +1400,7 @@ cross_vs_csharp("SOLVE.SHAREDCV_MAE", _mae_sharedcv, "SOLVE.CrossValidateShared"
 # README 声称 224——三个数字同时存在，删半个 section 照样打印 224）。改为从 section() 声明累加派生。
 # P1-16 完善（review-2026-08-31，全量审查第 2 项）：覆盖数从**实际引用**推导——
 # ① 收集 check/cross_check 引用的名字；② 经 _ID2UDF 映射（cross_check 的 manifest id 非 UDF 名，
-# 如 DOE.FULL_2x2 → DOE.PLAN）；③ 与 api-reference 的 236 UDF 名集合前缀匹配。
+# 如 DOE.FULL_2x2 → DOE.PLAN）；③ 与 api-reference 的 UDF 名集合前缀匹配（集合由该文件动态解析）。
 # section() 声明保留用于分段展示，不再作为覆盖数信源（声明曾因手写错误导致 221 vs README 224 漂移）。
 _API_UDFS = set()
 for _m in re.finditer(r'\| `([A-Z]+\.[A-Z0-9_]+)`', (Path(__file__).parent.parent / "docs" / "specification" / "api-reference.md").read_text(encoding="utf-8")):

@@ -1,5 +1,5 @@
 ﻿# ============================================================================
-# test_verify_docs.ps1 — verify-docs.ps1 回归守卫（13 场景 A–L；G 含 3 个中文变体子用例，K 含 2 个子用例）
+# test_verify_docs.ps1 — verify-docs.ps1 回归守卫（15 场景 A–L；G 含 3 个中文变体子用例，K 含 3 个，L 含 2 个子用例）
 # 场景 A：真实仓库副本 → 全部检查通过（基线，防门禁自身回归）
 # 场景 B：README 硬编码徽章 → 检查 9 FAIL
 # 场景 C：README 断链 → 检查 12 FAIL
@@ -188,7 +188,7 @@ $contentJ = $contentJ -replace 'MathNet\.Numerics\s+[0-9.]+', 'MathNet.Numerics 
 Run-VerifyDocs $fixtureJ "unparseable" $true
 
 # --- 场景 K：CHANGELOG「UDF 总数 X→Y」区间链（审查 F8；检查 16 模式 2）---
-# 新语义：区间终点 ≤ 当前计数且相邻区间首尾相接；不再要求历史区间终点 == 当前计数。
+# 新语义：区间终点 ≤ 当前计数且相邻区间首尾相接（按起点升序排序后校验，R7-1）；不再要求历史区间终点 == 当前计数。
 Write-Host "[K1] CHANGELOG 区间终点超过当前 UDF 数应 FAIL（检查 16 模式 2）"
 $fixtureK1 = Copy-RepoFixture
 [System.IO.File]::AppendAllText((Join-Path $fixtureK1 "CHANGELOG.md"), "`n- 注入：UDF 总数 236→999`n", (New-Object System.Text.UTF8Encoding($false)))
@@ -199,11 +199,28 @@ $fixtureK2 = Copy-RepoFixture
 [System.IO.File]::AppendAllText((Join-Path $fixtureK2 "CHANGELOG.md"), "`n- 注入：UDF 总数 237→240`n", (New-Object System.Text.UTF8Encoding($false)))
 Run-VerifyDocs $fixtureK2 "Prose UDF counts" $true
 
-# --- 场景 L：[Fact] 计数声明漂移（审查 2026-09-13 2.2；检查 20）---
+# K3 (R7-1 review-2026-09-13)：新版本区间天然位于 CHANGELOG 顶部（新→旧文档顺序）。
+# 旧实现按文档顺序比较相邻区间，对合法的新版本条目必然误报（实测注入 `236→240` 假 FAIL）。
+# 回归守卫：移除现有区间后，注入逆序（高区间在前）的连续链 220→240 / 200→220，修复后应全绿。
+Write-Host "[K3] CHANGELOG 顶部新版本区间（新→旧顺序）应 PASS（R7-1 方向修复）"
+$fixtureK3 = Copy-RepoFixture
+$clK3 = Join-Path $fixtureK3 "CHANGELOG.md"
+$k3Text = [System.IO.File]::ReadAllText($clK3, (New-Object System.Text.UTF8Encoding($false)))
+$k3Text = [regex]::Replace($k3Text, 'UDF\s*总数\s*\d+\s*→\s*\d+', 'UDF 总数（K3 移除）')
+[System.IO.File]::WriteAllText($clK3, ($k3Text + "`n- K3：UDF 总数 220→240`n- K3：UDF 总数 200→220`n"), (New-Object System.Text.UTF8Encoding($false)))
+Run-VerifyDocs $fixtureK3 "全部通过" $false
+
+# --- 场景 L：[Fact]/[Theory] 计数声明漂移（审查 2026-09-13 2.2 / R7-2；检查 20）---
 Write-Host "[L] [Fact] 计数声明漂移应 FAIL（检查 20）"
 $fixtureL = Copy-RepoFixture
 [System.IO.File]::AppendAllText((Join-Path $fixtureL "AGENTS.md"), "`n- 999 个 [Fact]（注入）`n", (New-Object System.Text.UTF8Encoding($false)))
 Run-VerifyDocs $fixtureL "Fact count claims" $true
+
+# L2 (R7-2 review-2026-09-13)：旧检查只统计 [Fact]，[Theory] 声明即使错误也无门禁。
+Write-Host "[L2] [Theory] 计数声明漂移应 FAIL（检查 20 分型统计）"
+$fixtureL2 = Copy-RepoFixture
+[System.IO.File]::AppendAllText((Join-Path $fixtureL2 "AGENTS.md"), "`n- 999 个 [Theory]（注入）`n", (New-Object System.Text.UTF8Encoding($false)))
+Run-VerifyDocs $fixtureL2 "Fact count claims" $true
 
 # --- 汇总 ---
 Remove-Item -Recurse -Force $tmpRoot

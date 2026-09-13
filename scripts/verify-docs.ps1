@@ -426,6 +426,10 @@ foreach ($rel in $proseFiles) {
     # ③ 相邻区间首尾相接（防中间区间改动后链断裂/漏记）。当前计数的强制一致由
     # 非历史文件的模式 1a/1b/1c/分数形式承担；发版时 CHANGELOG 必须新增递增区间
     # （由检查 10 的 tag↔CHANGELOG 与版本一致性间接保障）。
+    # R7-1 (review-2026-09-13, max-level 发行前审查)：区间链必须**按起点升序排序后**校验。
+    # Keep a Changelog 为新→旧排序，新版本区间在文档顶部（如 `236→240` 在 `232→236` 之前）；
+    # 旧实现按文档顺序比较 `[$ri][0] == [$ri-1][1]`，对正确的新版本条目必然误报
+    # （注入实测 `区间链断裂 '236→240' vs '232→236'`，K3 场景为回归守卫）。
     $ranges = @()
     foreach ($m in [regex]::Matches($text, 'UDF\s*总数\s*(\d+)\s*→\s*(\d+)')) {
         $x = [int]$m.Groups[1].Value; $y = [int]$m.Groups[2].Value
@@ -433,9 +437,10 @@ foreach ($rel in $proseFiles) {
         elseif ($y -gt $codeUdfs) { $proseMismatches += "${rel}: '$($m.Value)'（终点 $y > 当前 $codeUdfs）" }
         $ranges += ,@($x, $y)
     }
-    for ($ri = 1; $ri -lt $ranges.Count; $ri++) {
-        if ($ranges[$ri][0] -ne $ranges[$ri - 1][1]) {
-            $proseMismatches += "${rel}: 区间链断裂 '$($ranges[$ri-1][0])→$($ranges[$ri-1][1])' vs '$($ranges[$ri][0])→$($ranges[$ri][1])'"
+    $sortedRanges = @($ranges | Sort-Object { $_[0] })
+    for ($ri = 1; $ri -lt $sortedRanges.Count; $ri++) {
+        if ($sortedRanges[$ri][0] -ne $sortedRanges[$ri - 1][1]) {
+            $proseMismatches += "${rel}: 区间链断裂 '$($sortedRanges[$ri-1][0])→$($sortedRanges[$ri-1][1])' vs '$($sortedRanges[$ri][0])→$($sortedRanges[$ri][1])'"
         }
     }
 }
@@ -523,25 +528,32 @@ else { Check "Doc version headers" ($verMismatches -join ' | ') }
 # ---------- 20. [Fact] 计数声明一致性（md 声明 ↔ tests/**/*.cs 实测）----------
 # 审查 2026-09-13（max-level）：spec 声称 2,562 个 [Fact] 而源码实测 2,642——F1 ②
 # "一切计数必须纳入门禁"未覆盖测试断言数（历史同类：2,466 vs 2,485 漂移全绿）。
+# R7-2 (review-2026-09-13 发行前审查)：旧实现仅统计 [Fact] 且量词"个"必填——新增
+# [Theory] 用例或英文计数写法会静默漏过。改为 [Fact]/[Theory] 分型统计、量词可选。
 $factFiles = @(Get-ChildItem -Path (Join-Path $RepoRoot "tests") -Recurse -Filter "*.cs" -ErrorAction SilentlyContinue |
     Where-Object { ($_.FullName -replace '\\', '/') -notmatch '/(bin|obj)/' })
 if ($factFiles.Count -gt 0) {
-    $codeFacts = 0
+    $codeFacts = 0; $codeTheories = 0
     foreach ($ff in $factFiles) {
         $ft = Read-Utf8 $ff.FullName
-        if ($ft) { $codeFacts += ([regex]::Matches($ft, '\[Fact\]')).Count }
+        if ($ft) {
+            $codeFacts += ([regex]::Matches($ft, '\[Fact\]')).Count
+            $codeTheories += ([regex]::Matches($ft, '\[Theory\]')).Count
+        }
     }
     $factMismatches = @()
     foreach ($rel in $proseFiles) {
         if ($rel -notmatch '\.md$') { continue }
         $text = Read-Utf8 (Join-Path $RepoRoot $rel)
         if (-not $text) { continue }
-        foreach ($m in [regex]::Matches($text, '([\d,]+)\s*个\s*\[Fact\]')) {
+        foreach ($m in [regex]::Matches($text, '([\d,]+)\s*个?\s*\[(Fact|Theory)\]')) {
             $claim = [int]($m.Groups[1].Value -replace ',', '')
-            if ($claim -ne $codeFacts) { $factMismatches += "${rel}: '$($m.Value)' ($claim != $codeFacts)" }
+            $kind = $m.Groups[2].Value
+            $actual = if ($kind -eq 'Theory') { $codeTheories } else { $codeFacts }
+            if ($claim -ne $actual) { $factMismatches += "${rel}: '$($m.Value)' ($claim != $actual)" }
         }
     }
-    if ($factMismatches.Count -eq 0) { Check "Fact count claims ($codeFacts)" "OK" }
+    if ($factMismatches.Count -eq 0) { Check "Fact count claims ($codeFacts Fact / $codeTheories Theory)" "OK" }
     else { Check "Fact count claims" ($factMismatches -join ' | ') }
 } else {
     Check-Skip "Fact count claims" "no test sources found"

@@ -6,6 +6,28 @@
 
 > 版本一致性：每个 `v*` git tag 必须在本文档有对应条目（`verify-docs.ps1` 强制检查，见规则 [documentation.md](docs/governance/documentation.md)）。
 
+## [2.3.0] - 2026-09-13
+
+### Added（2026-09-12/13 SOLVE.* 模块 + rate 演进）
+
+- **SOLVE.* 工艺参数反解模块（4 个函数，UDF 总数 236→240）**：`SOLVE.INVERSE`（有界多起点反解：推荐值 / 各输出预测 / 最大偏差σ / 可达状态）、`SOLVE.PREDICT`（前向预测）、`SOLVE.QUALITY`（逐输出候选模型 5 折 / LOO 交叉验证）、`SOLVE.EQUATION`（前向方程 + 单变量线性闭式反解公式）；决策见 ADR-0007
+  - 表头前缀角色（`Incoming*/来料*`、`Variable*/可调*/变量*`、`Fixed*/固定*`、`Output*/输出*`、`SharedOutput*/共享输出*`）+ 请求行分类 + 边界表（按序/按名）+ 2000 点可达性采样（相对容差）+ 目标优先多起点坐标旋转模式搜索
+  - **rate / rate_poly 速率模型（ADR-0008/0009）**：`Output(t)=Incoming−t·g`；配对来料列与全部时间列约束出 g；多时间列后缀配对（`FixedTimeZ1↔OutputZ1`，唯一时间列全局回落）；`SharedOutput*` 同组池化共享一条 g（池化 CV 在 rate/rate_poly 间选优）
+  - 分配前规模上限（历史 5000 行 / 请求 200 / 特征 50 / 可调 20 / 输出 20 / poly 100 项 / max_starts 50 / 单起点 4000 次评估）→ 超限 `#VALUE!`；大尺度标准化溢出回退 + 项不可表示显式报错
+  - 文档：ADR-0007/0008/0009、api-reference、user-manual（SOLVE 42 条示例复算）、context 术语表、README 双通道计数
+- **验证覆盖**：manifest 146→159 条（SOLVE 13 条真对照，含共享池化 CV 数值锁；夹具覆盖微尺度 / 病态 / 退化输入）；Python 侧独立复算（含 XorShift64 同折复刻）
+- **门禁增强**：verify-docs 新增检查 20（`[Fact]`/`[Theory]` 计数声明 ↔ 源码实测）；检查 16 区间链语义（历史区间不再强制等于当前计数，发版新增递增区间）
+
+### Fixed（2026-09-13 两轮深度审查 + 发行前全量审查处置）
+
+- **F1-F12（第一轮）**：大尺度标准化溢出静默丢列 → max 归一化回退 + 不可表示显式报错；auto 下请求时间非法回退 linear/poly（显式 rate 仍报错）；`PredictTable`/`Quality`/`Equation` 补齐规模守卫；共享池化 CV 时间正性守卫；auto 线性候选秩亏按跳过处理；`CrossValidateShared`/`FitSharedRate` 补矩形/有限校验
+- **2.1-2.5（第二轮）**：共享 CV 时间正性守卫（QUALITY 与 INVERSE 行为对齐）；spec `[Fact]` 计数 2,562→2,649 回填 + 门禁；auto 秩亏全候选聚合报错；共享池化 CV 硬编码回归锁 + CrossVal 条目
+- **R7-1~R7-5（发行前 max-level 全量审查）**：verify-docs 区间链改为按起点升序校验（修复新版本区间位于 CHANGELOG 顶部时被误判 FAIL）；`[Theory]` 纳入计数门禁；ExcelDnaPack 瞬时文件锁（Win32Exception 110）在 verify-all 与 CI Release 构建自动重试 1 次；verify-all 构建后对 4 个模块/TFM 运行 verify-pack（Debug 亦拦截跨 TFM 残留 / 坏产物）；verify-manual 注释陈旧计数清理
+
+### 验证
+
+- verify-all 6 步全绿；双 TFM 测试 2,649 用例 ×2（Foundation 359 / Analytics 847 / DataToolkit 1,443）；CrossVal 418/418（manual-only 234 / cross-validated 184，真 C# 对照 119/240）；覆盖率 Foundation 85.62% / Analytics 89.16% / DataToolkit 89.33%
+
 ## [2.2.6] - 2026-09-06
 
 ### Fixed（2026-09-06 第五轮发行前审查：P1×1 + P2×12 + P3 批量处置，报告归档 logs/reports/ 不入库）
@@ -354,6 +376,7 @@
 [2.2.4]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.3...v2.2.4
 [2.2.3]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.2...v2.2.3
 [2.2.5]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.4...v2.2.5
+[2.3.0]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.6...v2.3.0
 [2.2.6]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.5...v2.2.6
 [Unreleased]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.6...HEAD
 [2.2.1]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.0...v2.2.1
