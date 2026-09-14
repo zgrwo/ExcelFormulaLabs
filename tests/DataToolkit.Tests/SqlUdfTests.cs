@@ -17,15 +17,43 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Join_invalid_sql() => SqlUdf.UDF_SQL_JOIN(Data,Extra,"BAD JOIN").Should().Be(ExcelError.Value);
         [Fact] public void Query3_basic() { var r=(object[,])SqlUdf.UDF_SQL_QUERY3(Data,TableB,TableC,"SELECT a.Name, b.City, c.Dept FROM data a JOIN b ON a.Name=b.Name JOIN c ON a.Name=c.Name"); r.GetLength(0).Should().Be(3); }
         [Fact] public void Query3_invalid_sql() => SqlUdf.UDF_SQL_QUERY3(Data,TableB,TableC,"INVALID").Should().Be(ExcelError.Value);
-        [Fact] public void Type_inference_scans_first_10_rows()
+        [Fact] public void Type_inference_scans_all_rows()
         {
             var d = new object[13, 2];
             d[0, 0] = "Num"; d[0, 1] = "Val";
             for (int i = 1; i <= 10; i++) { d[i, 0] = (double)i; d[i, 1] = (long)(i * 10); }
-            d[11, 0] = 11.0; d[11, 1] = 115.5;   // beyond scan window → INTEGER affinity
+            d[11, 0] = 11.0; d[11, 1] = 115.5;   // beyond the old 10-row window
             d[12, 0] = 12.0; d[12, 1] = (long)120;
-            var r = (object[,])SqlUdf.UDF_SQL_QUERY(d, "SELECT * FROM data WHERE Val > 50");
+            var r = (object[,])SqlUdf.UDF_SQL_QUERY(d, "SELECT * FROM data WHERE Val > 50 ORDER BY Val");
             r.GetLength(0).Should().Be(8);  // header + 7 rows (>50)
+            r[6, 1].Should().Be(115.5);     // not truncated by a stale INTEGER affinity
+            r[7, 1].Should().Be(120.0);
+        }
+
+        [Fact] public void Query_excel_dna_error_cell_becomes_empty()
+        {
+            // ExcelDna.Integration.ExcelError (real Excel error cell) → NULL.
+            var d = new object[,]
+            {
+                { "Name", "Score" },
+                { "Alice", ExcelDna.Integration.ExcelError.ExcelErrorValue },
+                { "Bob", 90.0 }
+            };
+            var r = (object[,])SqlUdf.UDF_SQL_QUERY(d, "SELECT * FROM data");
+            r[1, 1].Should().BeNull();
+            r[2, 1].Should().Be(90.0);
+        }
+
+        [Fact] public void Query_select_without_trailing_space_allowed()
+        {
+            var r = (object[,])SqlUdf.UDF_SQL_QUERY(new object[,] { { "Name" }, { "Alice" } }, "SELECT*FROM data");
+            r[1, 0].Should().Be("Alice");
+        }
+
+        [Fact] public void Query_leading_comment_allowed()
+        {
+            var r = (object[,])SqlUdf.UDF_SQL_QUERY(new object[,] { { "Name" }, { "Alice" } }, "-- note\nSELECT * FROM data");
+            r[1, 0].Should().Be("Alice");
         }
 
         // ── Error / null / edge case guards ──────────────────────────

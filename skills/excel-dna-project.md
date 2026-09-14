@@ -303,7 +303,7 @@ xUnit `[Fact]` + FluentAssertions 8.10.0。每 Core 方法覆盖：正常路径 
 
 **安全**：FileSystem 沙箱 FileExists/FolderExists/GetFileSize 补齐 · Regex 全局 Timeout · 全项目 18 处裸 catch → when 过滤器 · IdealGasLaw 零分母 guard
 
-**性能**：StringCore.RandomString ThreadLocal/Random.Shared · SqlCore 列类型推断扫描前 10 行 · RemoveChars StringBuilder 单趟 · RegexMatch/Replace n=1 保留 Match() 快路径（防 delegate→Matches() 回退）
+**性能**：StringCore.RandomString ThreadLocal/Random.Shared · SqlCore 列类型推断全表扫描（2026-09-14 审计：原前 10 行窗口使窗口外文本在 net48 抛 FormatException，正确性优先改为全表；插入本就 O(rows×cols)） · RemoveChars StringBuilder 单趟 · RegexMatch/Replace n=1 保留 Match() 快路径（防 delegate→Matches() 回退）
 
 **构建**：多目标 net8.0+net48 · DataToolkit .dna 双模板 · CleanupDnaAfterBuild 防增量污染 · SandboxRoot 并行测试 xUnit Collection 序列化
 

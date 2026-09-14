@@ -115,19 +115,107 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         }
 
         [Fact]
-        public void Type_inference_scans_first_10_rows()
+        public void Type_inference_scans_all_rows()
         {
-            // Type inference scans max 10 rows per column (performance heuristic).
-            // Rows beyond the scan window inherit the inferred column type.
+            // Type inference scans every data row; a late type change reclassifies
+            // the whole column (mixed → TEXT) instead of being coerced by the
+            // affinity inferred from the old 10-row window.
             var data = new object[13, 2];
             data[0, 0] = "Num"; data[0, 1] = "Val";
-            // First 10 rows are integers → column inferred as INTEGER
             for (int i = 1; i <= 10; i++) { data[i, 0] = (double)i; data[i, 1] = (long)(i * 10); }
-            // Row 11: double value beyond scan window → stored with INTEGER affinity (truncated)
-            data[11, 0] = 11.0; data[11, 1] = 115.5;
+            data[11, 0] = 11.0; data[11, 1] = 115.5;  // beyond the old 10-row window
             data[12, 0] = 12.0; data[12, 1] = (long)120;
             var r = SqlCore.SqlQuery(data, "SELECT Val FROM data WHERE Val > 50");
             r!.GetLength(0).Should().Be(8);  // header + 7 rows (>50)
+            var all = SqlCore.SqlQuery(data, "SELECT Val FROM data ORDER BY Val");
+            all![10, 0].Should().Be(100.0);
+            all![11, 0].Should().Be(115.5);  // preserved, not truncated to 115
+            all![12, 0].Should().Be(120.0);  // long promoted by REAL column
+        }
+
+        [Fact]
+        public void Late_text_in_numeric_column_reclassifies_as_text()
+        {
+            // Regression: text beyond the old 10-row window used to be converted
+            // with the inferred numeric DbType (net48 → FormatException → #VALUE!)
+            // or silently stored inside a REAL column (net8). Full-table scan
+            // reclassifies the column as TEXT for every value.
+            var data = new object[12, 2];
+            data[0, 0] = "k"; data[0, 1] = "v";
+            for (int i = 1; i <= 10; i++) { data[i, 0] = "a" + i; data[i, 1] = (double)i; }
+            data[11, 0] = "a11"; data[11, 1] = "oops";
+            var r = SqlCore.SqlQuery(data, "SELECT v, typeof(v) AS t FROM data WHERE k='a11'");
+            r![1, 0].Should().Be("oops");
+            r![1, 1].Should().Be("text");
+            var r2 = SqlCore.SqlQuery(data, "SELECT v FROM data WHERE k='a1'");
+            r2![1, 0].Should().Be("1");  // canonical invariant text, not REAL 1.0
+        }
+
+        [Fact]
+        public void Excel_dna_error_values_are_null_and_do_not_pollute_aggregates()
+        {
+            // Real Excel error cells arrive as ExcelDna.Integration.ExcelError —
+            // a different type from Foundation.ExcelError. They must become NULL,
+            // never the provider's ToString() garbage ("15"/"ExcelErrorValue").
+            var data = new object[,]
+            {
+                { "Name", "Score" },
+                { "Alice", ExcelDna.Integration.ExcelError.ExcelErrorValue },
+                { "Bob", 90.0 }
+            };
+            var r = SqlCore.SqlQuery(data, "SELECT * FROM data");
+            r![1, 1].Should().BeNull();
+            r![2, 1].Should().Be(90.0);
+            var sum = SqlCore.SqlQuery(data, "SELECT SUM(Score) AS s FROM data");
+            sum![1, 0].Should().Be(90.0);  // error row contributes nothing
+        }
+
+        [Fact]
+        public void Bool_and_datetime_values_use_invariant_text_forms()
+        {
+            // Canonical forms must not depend on the provider (net48 used
+            // CurrentCulture / bool.ToString, net8 numeric "1"/"0").
+            var data = new object[,]
+            {
+                { "Flag", "When" },
+                { true, new DateTime(2026, 9, 14) },
+                { false, new DateTime(2026, 9, 15) }
+            };
+            var r = SqlCore.SqlQuery(data, "SELECT * FROM data");
+            r![1, 0].Should().Be("TRUE");
+            r![2, 0].Should().Be("FALSE");
+            r![1, 1].Should().Be("2026-09-14 00:00:00");
+            r![2, 1].Should().Be("2026-09-15 00:00:00");
+        }
+
+        [Fact]
+        public void Select_keyword_needs_no_trailing_whitespace()
+        {
+            // "SELECT*FROM data" is valid SQLite (native cross-check in audit);
+            // the prefix guard must not require whitespace after the keyword.
+            var data = new object[,] { { "Name" }, { "Alice" } };
+            var r = SqlCore.SqlQuery(data, "SELECT*FROM data");
+            r![1, 0].Should().Be("Alice");
+        }
+
+        [Fact]
+        public void Leading_comments_are_allowed_before_select()
+        {
+            var data = new object[,] { { "Name" }, { "Alice" } };
+            SqlCore.SqlQuery(data, "-- note\nSELECT * FROM data")![1, 0].Should().Be("Alice");
+            SqlCore.SqlQuery(data, "/* note */ SELECT * FROM data")![1, 0].Should().Be("Alice");
+        }
+
+        [Fact]
+        public void Non_select_prefixes_are_still_rejected()
+        {
+            var data = new object[,] { { "Name" }, { "Alice" } };
+            var act1 = () => SqlCore.SqlQuery(data, "SELECTED * FROM data");
+            act1.Should().Throw<ArgumentException>();
+            var act2 = () => SqlCore.SqlQuery(data, "-- comment only");
+            act2.Should().Throw<ArgumentException>();
+            var act3 = () => SqlCore.SqlQuery(data, "/* unterminated");
+            act3.Should().Throw<ArgumentException>();
         }
 
         // ─────────────────────────────────────────────────────────────

@@ -3396,7 +3396,8 @@ aggregation: `"SUM"`（默认）/ `"AVG"` / `"COUNT"` / `"MIN"` / `"MAX"`。
 **语法**：`=SQL.QUERY(source_range, sql_query, [has_headers])`
 
 默认 `has_headers=TRUE`：首行为列名；传 `FALSE` 时首行按数据处理，列名自动生成 `Col1..ColN`。
-仅允许只读查询（SELECT/WITH）；INSERT/UPDATE/DELETE/DDL/PRAGMA/ATTACH 等关键字在整条语句中被拒绝（字符串字面量含整词也会被拒，安全取舍）。
+仅允许只读查询（SELECT/WITH，允许前导空白与注释）；INSERT/UPDATE/DELETE/DDL/PRAGMA/ATTACH 等关键字在整条语句中被拒绝（字符串字面量含整词也会被拒，安全取舍）。
+源区域中的错误单元格（如 `#DIV/0!`）按空值处理；列类型按全表扫描推断，混合类型列按文本处理。
 
 **示例 1** — 条件筛选：
 ```

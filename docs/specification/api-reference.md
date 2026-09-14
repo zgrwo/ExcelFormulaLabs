@@ -374,9 +374,11 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 ## SQL.* -- SQL 查询
 
 > 数据通过参数化 INSERT 插入内存 SQLite 临时表，列名经字母数字消毒。
-> **安全契约**：仅允许只读查询（`SELECT` / `WITH` 前缀）；整条语句中出现 `INSERT`/`UPDATE`/`DELETE`/`REPLACE INTO`/DDL（CREATE/ALTER/DROP）/`PRAGMA`/`ATTACH`/`DETACH`/`VACUUM`/`REINDEX` 关键字即拒绝（含 WITH 数据修改型 CTE），分号一律禁止。
-> 已知取舍：字符串字面量中恰好出现上述整词（如 `WHERE Note='do not delete'`）也会被拒绝。
+> **安全契约**：仅允许只读查询（`SELECT` / `WITH` 前缀，允许前导空白与注释）；整条语句中出现 `INSERT`/`UPDATE`/`DELETE`/`REPLACE INTO`/DDL（CREATE/ALTER/DROP）/`PRAGMA`/`ATTACH`/`DETACH`/`VACUUM`/`REINDEX` 关键字即拒绝（含 WITH 数据修改型 CTE），分号一律禁止。
+> 已知取舍：字符串字面量、列名或注释中恰好出现上述整词（如 `WHERE Note='do not delete'`）也会被拒绝。
 > 表头契约：默认 `has_headers=TRUE`，首行为列名；传 `FALSE` 时首行按数据处理，列名自动生成 `Col1..ColN`。
+> 列类型由全表扫描推断：全整数→`INTEGER`、含小数→`REAL`、含文本→`TEXT`（混合按 TEXT 处理）；布尔/日期以 `TRUE`/`FALSE`、`yyyy-MM-dd HH:mm:ss` 不变式文本存储，双 TFM 结果一致。
+> 源区域中的 Excel 错误单元格（`#VALUE!`/`#DIV/0!` 等）与空单元格一致按 NULL 写入。
 
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|

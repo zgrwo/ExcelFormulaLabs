@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 #if NET48
 using System.Data.SQLite;
 using SqlConn = System.Data.SQLite.SQLiteConnection;
@@ -20,12 +21,16 @@ namespace ExcelFormulaLabs.DataToolkit
         /// <summary>Quick check that a SQL statement is read-only.
         /// Rejects DDL (CREATE/ALTER/DROP), DML (INSERT/UPDATE/DELETE),
         /// ATTACH/DETACH, and PRAGMA for safety in shared-workbook scenarios.
-        /// Accepts SELECT and WITH (CTE) prefixes.</summary>
+        /// Accepts SELECT and WITH (CTE) prefixes, optionally preceded by
+        /// whitespace and comments; no whitespace is required after the keyword
+        /// (native SQLite accepts "SELECT*FROM data").</summary>
         // review 2026-09-05（N10）：SelectOnly/ForbiddenKeyword 补 RegexOptions.CultureInvariant，
         // 对齐 RegexCore.cs 的强制风格——IgnoreCulture 下 IgnoreCase 依赖 CurrentCulture，
         // 土耳其语 locale（i→İ）会让小写 "insert" 无法命中 INSERT 黑名单，安全检查失效。
+        // review 2026-09-14（SQL 审计 P3）：`\s` → `\b`——原正则拒绝合法写法 SELECT*FROM data；
+        // 前导注释由 StripLeadingComments 剥离后再匹配（黑名单/分号检查仍扫原文）。
         private static readonly System.Text.RegularExpressions.Regex SelectOnly =
-            new(@"^\s*(?:SELECT|WITH)\s", System.Text.RegularExpressions.RegexOptions.IgnoreCase
+            new(@"^\s*(?:SELECT|WITH)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase
                 | System.Text.RegularExpressions.RegexOptions.CultureInvariant
                 | System.Text.RegularExpressions.RegexOptions.Compiled,
                 TimeSpan.FromSeconds(5));
@@ -48,7 +53,7 @@ namespace ExcelFormulaLabs.DataToolkit
 
         internal static object[,]? SqlQuery(object[,] range, string sql, Dictionary<string, object[,]>? extra = null, bool hasHeaders = true)
         {
-            if (!SelectOnly.IsMatch(sql))
+            if (!SelectOnly.IsMatch(StripLeadingComments(sql)))
                 throw new ArgumentException(
                     "Only SELECT statements are allowed for security. " +
                     "Use a dedicated database tool for DDL/DML operations.");
@@ -143,19 +148,20 @@ namespace ExcelFormulaLabs.DataToolkit
                 for (int dedup = 2; !usedNames.Add(colName); dedup++)
                     colName = baseName + "_" + dedup;
                 names[c] = colName;
-                // Scan first N rows to determine the widest type; mixed → TEXT.
-                // Limit to MaxScanRows to avoid O(rows×cols) on large tables.
-                // NOTE: If first 10 rows are integers but later rows contain text,
-                // the column is declared INTEGER. SQLite's dynamic typing (type affinity)
-                // still allows storing text in INTEGER columns, but comparisons may
-                // behave unexpectedly. For critical data, use explicit TEXT columns.
-                const int maxScan = 10;
-                int scanEnd = Math.Min(rows, firstDataRow + maxScan);
+                // Scan EVERY data row to determine the widest type; mixed → TEXT.
+                // review 2026-09-14（SQL 审计 P2）：原限前 10 行（MaxScanRows）——
+                // 窗口外文本落入数值列时 net48 参数转换抛 FormatException（整条查询
+                // #VALUE!），net8 则把文本静默存进 REAL 列污染 SUM/比较。插入循环
+                // 本就是 O(rows×cols)，全表扫描只增加一个同阶常数因子，不引入新的
+                // 复杂度上界（输入行数受 Excel 区域规模约束）。
                 bool hasReal = false, hasInt = false;
-                for (int r = firstDataRow; r < scanEnd; r++)
+                for (int r = firstDataRow; r < rows; r++)
                 {
                     object v = data[r, c];
-                    if (v == null || v is DBNull || InputNormalizer.IsExcelEmptyValue(v) || v is ExcelError) continue;
+                    // review 2026-09-14（SQL 审计 P1）：真实 Excel 错误单元格由封送层
+                    // 提供，类型全名与 Foundation.ExcelError 不同——必须走
+                    // IsExcelErrorValue 才按空值跳过（Core 层零 Excel 依赖，只能按名识别）。
+                    if (v == null || v is DBNull || InputNormalizer.IsExcelEmptyValue(v) || InputNormalizer.IsExcelErrorValue(v)) continue;
                     if (v is double or float) hasReal = true;
                     else if (v is int or long) hasInt = true;
                     else { hasReal = false; hasInt = false; break; }  // non-numeric → TEXT
@@ -168,8 +174,58 @@ namespace ExcelFormulaLabs.DataToolkit
             var ph = new string[cols]; for (int c = 0; c < cols; c++) ph[c] = $"@p{c}";
             using var ins = conn.CreateCommand(); ins.CommandText = $"INSERT INTO \"{name}\" VALUES ({string.Join(",", ph)})"; ins.CommandTimeout = SqlTimeoutSeconds;
             for (int c = 0; c < cols; c++) ins.Parameters.Add(new SqlParam($"@p{c}", types[c] == "INTEGER" ? System.Data.DbType.Int64 : types[c] == "REAL" ? System.Data.DbType.Double : System.Data.DbType.String));
-            for (int r = firstDataRow; r < rows; r++) { for (int c = 0; c < cols; c++) { object v = data[r, c]; ins.Parameters[$"@p{c}"].Value = (v == null || v is DBNull || InputNormalizer.IsExcelEmptyValue(v) || v is ExcelError) ? DBNull.Value : v; } ins.ExecuteNonQuery(); }
+            for (int r = firstDataRow; r < rows; r++) { for (int c = 0; c < cols; c++) ins.Parameters[$"@p{c}"].Value = NormalizeForSql(data[r, c], types[c]); ins.ExecuteNonQuery(); }
             tx.Commit();
+        }
+
+        /// <summary>Map an Excel cell to the SQLite value bound for its column.
+        /// null/DBNull/ExcelEmpty/ExcelError → DBNull (empty cell).
+        /// TEXT columns canonicalise non-string values (bool → TRUE/FALSE,
+        /// DateTime → invariant "yyyy-MM-dd HH:mm:ss", other IConvertible →
+        /// invariant string) so that System.Data.SQLite (net48) and
+        /// Microsoft.Data.Sqlite (net8) store identical values instead of
+        /// provider/culture-specific conversions.</summary>
+        private static object NormalizeForSql(object? v, string columnType)
+        {
+            if (v == null || v is DBNull || InputNormalizer.IsExcelEmptyValue(v) || InputNormalizer.IsExcelErrorValue(v))
+                return DBNull.Value;
+            if (columnType == "TEXT")
+            {
+                if (v is bool b) return b ? "TRUE" : "FALSE";
+                if (v is DateTime dt) return dt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+                return v is string s ? s : InputNormalizer.ToString(v);
+            }
+            return v;
+        }
+
+        /// <summary>Strip leading whitespace and SQL comments so the read-only
+        /// prefix check accepts queries like "-- note\nSELECT ..." and
+        /// "/* note */ SELECT ...". Returns an empty string when the statement
+        /// consists only of comments or has an unterminated block comment;
+        /// forbidden-keyword and semicolon checks still scan the raw text.</summary>
+        private static string StripLeadingComments(string sql)
+        {
+            int i = 0;
+            while (i < sql.Length)
+            {
+                while (i < sql.Length && char.IsWhiteSpace(sql[i])) i++;
+                if (i + 1 < sql.Length && sql[i] == '-' && sql[i + 1] == '-')
+                {
+                    int nl = sql.IndexOf('\n', i + 2);
+                    if (nl < 0) return "";
+                    i = nl + 1;
+                    continue;
+                }
+                if (i + 1 < sql.Length && sql[i] == '/' && sql[i + 1] == '*')
+                {
+                    int end = sql.IndexOf("*/", i + 2, StringComparison.Ordinal);
+                    if (end < 0) return "";
+                    i = end + 2;
+                    continue;
+                }
+                break;
+            }
+            return sql.Substring(i);
         }
 
         private static string Sanitize(string raw, int idx)
