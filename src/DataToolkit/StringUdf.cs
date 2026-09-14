@@ -35,10 +35,29 @@ namespace ExcelFormulaLabs.DataToolkit
         [ExcelFunction(Name="STR.RNDSTR", Description="Generate random string of given length from character set")] public static object UDF_STR_RND([ExcelArgument(Name="num_chars", Description="Number of characters to generate, pad, or extract")] object len, [ExcelArgument(Name="[character_set]", Description="Characters to randomly pick from; default is A-Z, a-z, 0-9")] object cs=null!)=>OutputWrapper.WrapError(()=>(object)StringCore.RandomString(InputNormalizer.ToLong(len),InputNormalizer.ToString(cs)));
         [ExcelFunction(Name="STR.RNDALPHA", Description="Generate random alphabetic string (A-Z, a-z)")] public static object UDF_STR_RNDA([ExcelArgument(Name="num_chars", Description="Number of characters to generate, pad, or extract")] object len)=>OutputWrapper.WrapError(()=>(object)StringCore.RandomString(InputNormalizer.ToLong(len),"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
         [ExcelFunction(Name="STR.RNDNUM", Description="Generate random numeric string (0-9 digits)")] public static object UDF_STR_RNDN([ExcelArgument(Name="num_chars", Description="Number of characters to generate, pad, or extract")] object len)=>OutputWrapper.WrapError(()=>(object)StringCore.RandomString(InputNormalizer.ToLong(len),"0123456789"));
-        [ExcelFunction(Name="STR.ISNULLEMPTY", Description="Returns TRUE if string is null or empty")] public static object UDF_STR_ISNE([ExcelArgument(Name="text", Description="The text string to process")] object t)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOver<string,bool>(t,s=>StringCore.IsNullOrEmptyStr(s)));
-        [ExcelFunction(Name="STR.ISNULLWS", Description="Returns TRUE if string is null, empty, or whitespace only")] public static object UDF_STR_ISNW([ExcelArgument(Name="text", Description="The text string to process")] object t)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOver<string,bool>(t,s=>StringCore.IsNullOrWhitespaceStr(s)));
-        [ExcelFunction(Name="STR.COALESCE", Description="Return primary value if not null/empty, otherwise fallback value")] public static object UDF_STR_COAL([ExcelArgument(Name="value1", Description="Primary value; returned if not null or empty")] object p, [ExcelArgument(Name="value2", Description="Fallback value if the primary is null or empty")] object fb)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOverMulti<string,string,string>(p,fb,(a,b)=>StringCore.Coalesce(a,b)));
+        [ExcelFunction(Name="STR.ISNULLEMPTY", Description="Returns TRUE if string is null or empty")] public static object UDF_STR_ISNE([ExcelArgument(Name="text", Description="The text string to process")] object t)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOver<string,bool>(BlankAsEmpty(t),s=>StringCore.IsNullOrEmptyStr(s)));
+        [ExcelFunction(Name="STR.ISNULLWS", Description="Returns TRUE if string is null, empty, or whitespace only")] public static object UDF_STR_ISNW([ExcelArgument(Name="text", Description="The text string to process")] object t)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOver<string,bool>(BlankAsEmpty(t),s=>StringCore.IsNullOrWhitespaceStr(s)));
+        [ExcelFunction(Name="STR.COALESCE", Description="Return primary value if not null/empty, otherwise fallback value")] public static object UDF_STR_COAL([ExcelArgument(Name="value1", Description="Primary value; returned if not null or empty")] object p, [ExcelArgument(Name="value2", Description="Fallback value if the primary is null or empty")] object fb)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOverMulti<string,string,string>(BlankAsEmpty(p),BlankAsEmpty(fb),(a,b)=>StringCore.Coalesce(a,b)));
         [ExcelFunction(Name="STR.FORMAT", Description="Format a value using .NET format string (e.g. '0.00', 'yyyy-MM-dd')")] public static object UDF_STR_FMT([ExcelArgument(Name="value", Description="The value to fill or format")] object v, [ExcelArgument(Name="format_text", Description="A .NET format string, e.g. 0.00 or yyyy-MM-dd")] object fmt)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOverMulti<object,string,string>(v,fmt,(a,b)=>StringCore.FormatValue(a,b)));
         [ExcelFunction(Name="STR.STRIPHTML", Description="Strip HTML tags from a string, leaving only text content")] public static object UDF_STR_SHTML([ExcelArgument(Name="text", Description="The text string to process")] object t)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOver<string,string>(t,StringCore.StripHtml));
+
+        /// <summary>review 2026-09-14（P2 STR-02 / UDF-02）：MapOver 会在 mapper 前短路
+        /// ExcelEmpty（按空白透传），使 COALESCE/ISNULLEMPTY/ISNULLWS 对真空白单元格失效。
+        /// 按产品决策「空白 = 空值」，这三个 UDF 先逐元素把空白哨兵归一化为空串再映射
+        /// （object[]/object[,] 与标量；COM Range 仍由 MapOver 内部提取，属直调残余）。</summary>
+        private static object BlankAsEmpty(object? input)
+        {
+            if (input is object[,] a2)
+            {
+                var r = new object[a2.GetLength(0), a2.GetLength(1)];
+                for (int i = 0; i < a2.GetLength(0); i++)
+                    for (int j = 0; j < a2.GetLength(1); j++)
+                        r[i, j] = InputNormalizer.IsExcelEmptyValue(a2[i, j]) ? "" : a2[i, j];
+                return r;
+            }
+            if (input is object[] a1)
+                return a1.Select(x => InputNormalizer.IsExcelEmptyValue(x) ? (object)"" : x).ToArray();
+            return InputNormalizer.IsExcelEmptyValue(input) ? "" : input;
+        }
     }
 }

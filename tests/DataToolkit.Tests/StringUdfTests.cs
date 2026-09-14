@@ -435,5 +435,24 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         {
             StringUdf.UDF_STR_TRUNC("abcdefgh", 5, sentinel!).Should().Be("ab...");
         }
+
+        // review 2026-09-14（P2 STR-02 / FND-03）：真空白单元格 = 空值（回退/命中），
+        // ExcelMissing 不得泄漏类型全名。
+        [Fact] public void Coalesce_blank_cell_falls_back()
+            => StringUdf.UDF_STR_COAL(ExcelEmpty.Value, "fb").Should().Be("fb");
+        [Fact] public void Coalesce_blank_array_elements_fall_back()
+        {
+            var r = (object[])StringUdf.UDF_STR_COAL(new object[] { ExcelEmpty.Value, "a" }, "fb");
+            r.Should().Equal("fb", "a");
+        }
+        [Fact] public void IsNullEmpty_blank_cell_true()
+            => StringUdf.UDF_STR_ISNE(ExcelEmpty.Value).Should().Be(true);
+        [Fact] public void IsNullWS_blank_cell_true()
+            => StringUdf.UDF_STR_ISNW(ExcelEmpty.Value).Should().Be(true);
+        [Fact] public void ExcelMissing_does_not_leak_type_name()
+        {
+            StringUdf.UDF_STR_FMT(ExcelDna.Integration.ExcelMissing.Value, "0.00").Should().BeNull();
+            StringUdf.UDF_STR_REV(ExcelDna.Integration.ExcelMissing.Value).Should().BeNull();
+        }
     }
 }

@@ -155,8 +155,11 @@ namespace ExcelFormulaLabs.Foundation
 
         private static int CompareText<T>(T a, T b)
         {
-            string sA = a?.ToString() ?? "";
-            string sB = b?.ToString() ?? "";
+            // review 2026-09-14（模块审查 P2 FND-04）：原 `a?.ToString()` 按 CurrentCulture
+            // 格式化数值（de-DE 的 1.5 → "1,5"），ARR.SORTTEXT 顺序随用户 locale 翻转。
+            // 键生成改 InvariantCulture，再按不区分大小写的固定文化比较。
+            string sA = Convert.ToString(a, CultureInfo.InvariantCulture) ?? "";
+            string sB = Convert.ToString(b, CultureInfo.InvariantCulture) ?? "";
             // F-13 (review 2026-09-06)：CurrentCulture 随用户 locale 漂移（tr-TR 的 i/İ 等），
             // ARR.SORTTEXT 结果不确定；与全库 InvariantCulture/Ordinal 纪律对齐。
             return string.Compare(sA, sB, StringComparison.InvariantCultureIgnoreCase);

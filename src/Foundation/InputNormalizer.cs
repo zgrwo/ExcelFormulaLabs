@@ -353,6 +353,9 @@ namespace ExcelFormulaLabs.Foundation
             if (IsExcelErrorValue(value)) return false;
             if (value is bool b) return b;
             if (value is double d) return double.IsNaN(d) ? false : d != 0.0; // L1 NaN guard
+            // review 2026-09-14（模块审查 P2 FND-02）：原 float 落 Convert.ToBoolean 兜底 →
+            // float.NaN 被 Convert 判为 true，与 double 分支的 NaN→false 哨兵契约相悖。
+            if (value is float f) return float.IsNaN(f) ? false : f != 0f;
             if (value is int i) return i != 0;
             if (value is long l) return l != 0;
             if (value is string s)

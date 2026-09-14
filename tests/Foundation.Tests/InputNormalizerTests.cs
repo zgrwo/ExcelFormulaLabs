@@ -59,6 +59,12 @@ public class CoercionTests
     [Fact] public void ToLong_infinity_input_returns_zero() => InputNormalizer.ToLong(double.PositiveInfinity).Should().Be(0);
     [Fact] public void ToBool_nan_input_returns_false() => InputNormalizer.ToBool(double.NaN).Should().BeFalse();
     [Fact] public void ToBool_infinity_input_returns_true() => InputNormalizer.ToBool(double.PositiveInfinity).Should().BeTrue();
+
+    // review 2026-09-14（P2 FND-02）：float 必须与 double 对称——NaN → false 哨兵，
+    // 修复前 float.NaN 落 Convert.ToBoolean 兜底被判 true。
+    [Fact] public void ToBool_float_nan_returns_false() => InputNormalizer.ToBool(float.NaN).Should().BeFalse();
+    [Fact] public void ToBool_float_zero_false() => InputNormalizer.ToBool(0f).Should().BeFalse();
+    [Fact] public void ToBool_float_infinity_returns_true() => InputNormalizer.ToBool(float.PositiveInfinity).Should().BeTrue();
     [Fact] public void ToDateTime_nan_input_returns_minvalue() => InputNormalizer.ToDateTime(double.NaN).Should().Be(DateTime.MinValue);
     [Fact] public void ToDateTime_zero_returns_epoch() => InputNormalizer.ToDateTime(0.0).Should().Be(new DateTime(1899,12,30));
     // P2 (pre-release review): bool is NOT a date (IsNumericCell rejects bool with the

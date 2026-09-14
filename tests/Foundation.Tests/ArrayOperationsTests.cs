@@ -50,6 +50,29 @@ public class SortTests
     [Fact] public void Sort_empty_noop() { var act = () => ArrayOperations.Sort(System.Array.Empty<int>()); act.Should().NotThrow(); }
     [Fact] public void Sort_null_noop() { int[]? n = null; var act = () => ArrayOperations.Sort(n!); act.Should().NotThrow(); }
     [Fact] public void Sorted_null_input_returns_empty() => ArrayOperations.Sorted<int>(null!).Should().BeEmpty();
+
+    // review 2026-09-14（P2 FND-04）：CompareText 键生成原用 CurrentCulture（de-DE 下
+    // 1.5→"1,5"），排序顺序随 locale 翻转；必须与 Invariant 结果一致。
+    [Fact]
+    public void Sorted_text_mode_invariant_key_generation_is_locale_independent()
+    {
+        var input = new object[] { 1.5, "1.4" };
+        var previous = System.Globalization.CultureInfo.CurrentCulture;
+        try
+        {
+            System.Globalization.CultureInfo.CurrentCulture =
+                System.Globalization.CultureInfo.InvariantCulture;
+            var invariant = ArrayOperations.Sorted(input, ascending: true, mode: ComparerMode.Text);
+            System.Globalization.CultureInfo.CurrentCulture =
+                new System.Globalization.CultureInfo("de-DE");
+            var german = ArrayOperations.Sorted(input, ascending: true, mode: ComparerMode.Text);
+            german.Should().Equal(invariant);
+            // 固定期望：Invariant 键 "1.4" < "1.5"（修复前 de-DE 键 "1,5" 反而在前）。
+            invariant[0].Should().Be("1.4");
+            invariant[1].Should().Be(1.5);
+        }
+        finally { System.Globalization.CultureInfo.CurrentCulture = previous; }
+    }
 }
 
 public class SliceTests

@@ -170,6 +170,26 @@ public class MapOverTests
             new object[] { "a", "b", "c" }, new object[] { "x", "y" },
             (string a, string b) => a + b)
             .Should().Be(ExcelError.Value);
+
+    // review 2026-09-14（P2 FND-05）：等元素数但形状不同（[2,3] vs [3,2]）原先在
+    // ReshapeFlatToOriginal2D 抛 InvalidOperationException；契约要求 ExcelError.Value。
+    [Fact] public void MapOverMulti_same_length_mismatched_2D_shapes_returns_ExcelError()
+        => ElementWiseMapper.MapOverMulti(
+            new object[2, 3], new object[3, 2],
+            (int a, int b) => a + b)
+            .Should().Be(ExcelError.Value);
+
+    // review 2026-09-14（P2 FND-03）：ExcelMissing（公式栏省略）不得泄漏类型全名，
+    // 按省略语义返回 null 哨兵。
+    [Fact] public void MapOver_excel_missing_returns_null()
+        => ElementWiseMapper.MapOver<object, string>(
+            ExcelDna.Integration.ExcelMissing.Value, x => "mapped:" + x)
+            .Should().BeNull();
+
+    [Fact] public void MapOverMulti_excel_missing_returns_null()
+        => ElementWiseMapper.MapOverMulti<object, object, string>(
+            ExcelDna.Integration.ExcelMissing.Value, "b", (a, b) => "" + a + b)
+            .Should().BeNull();
 }
 
 public class MapOverMultiThreeArgTests

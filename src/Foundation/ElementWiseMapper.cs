@@ -111,6 +111,11 @@ namespace ExcelFormulaLabs.Foundation
             // multi-cell ranges), so the post-extraction check correctly detects
             // both native object[,] and COM-Range-originated 2D arrays.
             bool was2D = input1 is object[,] || input2 is object[,];
+            // review 2026-09-14（模块审查 P2 FND-05）：等元素数不同形状（[2,3] vs [3,2]）
+            // 原先在 ReshapeFlatToOriginal2D 抛 InvalidOperationException，违背自述的
+            // "尺寸不匹配 → ExcelError.Value" 契约（19 处直调方受影响）。映射前预校验。
+            if (was2D && HasMismatched2DShapes(input1!, input2!))
+                return ExcelError.Value;
 
             // review 2026-09-05（N18）：任一输入展平为空 → 返回 null（而非 ExcelError）——
             // 空区域广播无目标单元格，UDF 层把 null 渲染为空白。此语义此前未写入 skill 契约表。
@@ -154,6 +159,9 @@ namespace ExcelFormulaLabs.Foundation
             if (input3 == null) flat3 = new object[] { null! };
 
             bool was2D = input1 is object[,] || input2 is object[,] || input3 is object[,];
+            // FND-05：三参版本同款形状预校验。
+            if (was2D && HasMismatched2DShapes(input1!, input2!, input3!))
+                return ExcelError.Value;
 
             // 同上（N18）：三参版本空输入 → null。
             if (flat1.Length == 0 || flat2.Length == 0 || flat3.Length == 0)
@@ -199,6 +207,10 @@ namespace ExcelFormulaLabs.Foundation
         {
             if (cell == null) return cell!;
             if (cell is DBNull) return null!;
+            // review 2026-09-14（模块审查 P2 FND-03）：ExcelMissing（公式栏省略的自变量）
+            // 原落 ConvertValue → TInput=object 时原样传给 mapper，类型全名泄漏进结果
+            // （STR.FORMAT(,"0.00") → "ExcelDna.Integration.ExcelMissing"）。按省略 → null。
+            if (InputNormalizer.IsExcelMissing(cell)) return null!;
             // P1-7 (review): return the ORIGINAL empty sentinel — Excel-DNA renders its own
             // ExcelEmpty as an empty cell, while Foundation.ExcelEmpty (a custom class outside
             // the Excel-DNA marshalling allow-list) rendered as #NUM! in real Excel.
@@ -217,6 +229,8 @@ namespace ExcelFormulaLabs.Foundation
             if (cell2 == null) return cell2!;
             if (cell1 is DBNull) return null!;
             if (cell2 is DBNull) return null!;
+            // FND-03：ExcelMissing → 省略 → null（同单参版本）。
+            if (InputNormalizer.IsExcelMissing(cell1) || InputNormalizer.IsExcelMissing(cell2)) return null!;
             // P1-7: pass through the original empty sentinel (Excel-DNA renders as empty).
             if (InputNormalizer.IsExcelEmptyValue(cell1)) return cell1!;
             if (InputNormalizer.IsExcelEmptyValue(cell2)) return cell2!;
@@ -237,6 +251,9 @@ namespace ExcelFormulaLabs.Foundation
             if (cell1 is DBNull) return null!;
             if (cell2 is DBNull) return null!;
             if (cell3 is DBNull) return null!;
+            // FND-03：ExcelMissing → 省略 → null（同单参版本）。
+            if (InputNormalizer.IsExcelMissing(cell1) || InputNormalizer.IsExcelMissing(cell2)
+                || InputNormalizer.IsExcelMissing(cell3)) return null!;
             // P1-7: pass through the original empty sentinel (Excel-DNA renders as empty).
             if (InputNormalizer.IsExcelEmptyValue(cell1)) return cell1!;
             if (InputNormalizer.IsExcelEmptyValue(cell2)) return cell2!;
@@ -389,6 +406,25 @@ namespace ExcelFormulaLabs.Foundation
                 result[i] = MapSingleCell(flat1[i], flat2[i], mapper);
             if (was2D) return ReshapeFlatToOriginal2D(result, orig1!, orig2!);
             return result;
+        }
+
+        /// <summary>True when two or more 2D inputs (excluding 1×1 scalar-semantics cells)
+        /// have different shapes — MapOverMulti's documented contract is ExcelError.Value
+        /// for mismatched sizes, so this is checked before mapping.</summary>
+        private static bool HasMismatched2DShapes(params object[] inputs)
+        {
+            (int Rows, int Cols)? shape = null;
+            foreach (object input in inputs)
+            {
+                if (input is object[,] a)
+                {
+                    if (a.GetLength(0) == 1 && a.GetLength(1) == 1) continue;
+                    var s = (a.GetLength(0), a.GetLength(1));
+                    if (shape == null) shape = s;
+                    else if (shape.Value != s) return true;
+                }
+            }
+            return false;
         }
 
         private static object[,] ReshapeFlatToOriginal2D(
