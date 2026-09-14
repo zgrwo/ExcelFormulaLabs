@@ -66,13 +66,14 @@ namespace ExcelFormulaLabs.Analytics.Tests
         // =====================================================================
         // CROSS-VALIDATION: WLS & Ridge vs Python statsmodels/sklearn
         // =====================================================================
-        // statsmodels.WLS: coef=[0.34075, 1.70377], sse=0.07842, r2=0.99847
+        // statsmodels.WLS（加权尺度）: coef=[0.34075, 1.70377], ssr=0.078415094339623
+        // r2=0.998473285807803（review 2026-09-14 REG-07：SSE/R² 由未加权改为加权尺度）。
         private static readonly double[,] Xwls = {{1},{2},{3},{4},{5}};
         private static readonly double[] ywls_cv = {2.1,3.8,5.2,7.1,8.9};
         private static readonly double[] wwls_cv = {1.0,2.0,1.0,0.5,3.0};
         [Fact] public void CrossVal_WLS_Py_coef() { var c=(double[])RegressionCore.FitWLS(Xwls,ywls_cv,wwls_cv)["coefficients"]; c[0].Should().BeApproximately(0.340754716981135,1e-8); c[1].Should().BeApproximately(1.703773584905660,1e-8); }
-        [Fact] public void CrossVal_WLS_Py_sse() => ((double)RegressionCore.FitWLS(Xwls,ywls_cv,wwls_cv)["sse"]).Should().BeApproximately(0.074041295834818,1e-10);
-        [Fact] public void CrossVal_WLS_Py_r2() => ((double)RegressionCore.FitWLS(Xwls,ywls_cv,wwls_cv)["r_squared"]).Should().BeApproximately(0.997413675568156,1e-10);
+        [Fact] public void CrossVal_WLS_Py_sse() => ((double)RegressionCore.FitWLS(Xwls,ywls_cv,wwls_cv)["sse"]).Should().BeApproximately(0.078415094339623,1e-10);
+        [Fact] public void CrossVal_WLS_Py_r2() => ((double)RegressionCore.FitWLS(Xwls,ywls_cv,wwls_cv)["r_squared"]).Should().BeApproximately(0.998473285807803,1e-10);
         // sklearn.linear_model.Ridge(alpha=1.0) 参考实现下逐位吻合的闭式解金值（下方断言值）；
         // 旧注释 [-0.04742, 1.85676] 为历史运行残留，R5-P3-11 (2026-09-06) 修正。
         private static readonly double[,] Xridge = {{1},{2},{3},{4},{5},{6},{7},{8},{9},{10}};
@@ -233,12 +234,22 @@ namespace ExcelFormulaLabs.Analytics.Tests
             var a = () => RegressionCore.FitOLS(singX, singY);
             a.Should().Throw<ArgumentException>().WithMessage("*near-singular*");
         }
-
-        [Fact] public void FitWLS_all_zero_weights_throws()
+        [Fact]
+        public void FitWLS_all_zero_weights_throws()
         {
-            // All weights = 0 zeroes out all rows → constant y guard triggers
+            // review 2026-09-14（P3 REG-04）：全零权重显式报"权重全零"，不再误报 constant y。
             var a = () => RegressionCore.FitWLS(X, y, new[] { 0.0, 0.0, 0.0 });
-            a.Should().Throw<ArgumentException>();
+            a.Should().Throw<ArgumentException>().WithMessage("*all weights are zero*");
+        }
+
+        // review 2026-09-14（P2 REG-05）：1e308 级列求和溢出曾被误判常量并排最后。
+        [Fact]
+        public void FactorImportance_huge_scale_column_not_treated_as_constant()
+        {
+            var Xbig = new double[,] { { 1e308, 1 }, { 1.5e308, 2 }, { 1.2e308, 3 } };
+            var yBig = new[] { 1e308, 1.5e308, 1.2e308 }; // y 与 col0 完全线性
+            var ranking = RegressionCore.FactorImportance(Xbig, yBig);
+            ranking[0].Should().Be(0, "col0 与 y 完全线性，必须排第一而非被当常量列");
         }
 
         [Fact] public void AnovaOneWay_zero_within_variance()

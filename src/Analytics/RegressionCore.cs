@@ -58,7 +58,7 @@ namespace ExcelFormulaLabs.Analytics
         /// going through an intermediate managed array.
         /// </summary>
         private static Dictionary<string, object> FitOLSCore(
-            Matrix<double> matX, Vector<double> vecY, int n, int p)
+            Matrix<double> matX, Vector<double> vecY, int n, int p, string op = "OLS")
         {
             // df 检查提前到 QR 之前：Thin QR 需要 n ≥ p（MathNet 对宽矩阵抛 NotSupportedException）。
             int df = n - p;
@@ -89,11 +89,11 @@ namespace ExcelFormulaLabs.Analytics
             for (int i = 0; i < n; i++) { double d = vecY[i] - yMean; tss += d * d; }
             if (double.IsNaN(tss) || double.IsInfinity(tss))
                 throw new ArgumentException(
-                    "Cannot fit OLS: total sum of squares is numerically unstable " +
+                    $"Cannot fit {op}: total sum of squares is numerically unstable " +
                     "(response values too large for double precision).");
             if (tss == 0)  // review-2026-08-31（max-level 全量审查）：原 Math.Abs(tss) < 1e-15 绝对阈值把 1e-9 量纲 y 的 tss=2e-18 误判为常量响应抛错——P1-5 修复遗漏。TSS 是平方和（非负），真常量时精确为 0
                 throw new ArgumentException(
-                    "Cannot fit OLS: total sum of squares is zero (constant response variable y).");
+                    $"Cannot fit {op}: total sum of squares is zero (constant response variable y).");
             double r2 = 1.0 - sse / tss;
             double adjR2 = 1.0 - (1.0 - r2) * (n - 1) / (double)df;
             double sigma2 = sse / df;
@@ -115,7 +115,7 @@ namespace ExcelFormulaLabs.Analytics
             for (int j = 0; j < p; j++)
                 if (Math.Abs(R[j, j]) <= diagTol)
                     throw new ArgumentException(
-                        "Cannot fit OLS: design matrix X is near-singular (highly collinear columns). " +
+                        $"Cannot fit {op}: design matrix X is near-singular (highly collinear columns). " +
                         "Consider removing redundant predictors or using ridge regression (REGRESS.RIDGE).");
             // review 2026-09-14（模块审查 P1 REG-02）：对角守卫只能捕获列精确共线；Hilbert 16×14
             // （cond=1.9e17，rank=12<14）R 对角均高于阈值但系数最大误差 8.8 而 r²=1。
@@ -124,7 +124,7 @@ namespace ExcelFormulaLabs.Analytics
             double condEst = R.ConditionNumber();
             if (double.IsNaN(condEst) || double.IsInfinity(condEst) || condEst > 1e14)
                 throw new ArgumentException(
-                    "Cannot fit OLS: design matrix X is too ill-conditioned for a reliable solution " +
+                    $"Cannot fit {op}: design matrix X is too ill-conditioned for a reliable solution " +
                     $"(condition number = {condEst.ToString("E3", System.Globalization.CultureInfo.InvariantCulture)}; " +
                     "guard threshold 1e14). Remove collinear predictors, standardize the columns, " +
                     "or use ridge regression (REGRESS.RIDGE).");
@@ -141,7 +141,7 @@ namespace ExcelFormulaLabs.Analytics
             // check so the more specific X diagnosis wins).
             if (double.IsNaN(sse) || double.IsInfinity(sse))
                 throw new ArgumentException(
-                    "Cannot fit OLS: residual sum of squares is numerically unstable " +
+                    $"Cannot fit {op}: residual sum of squares is numerically unstable " +
                     "(response values too large for double precision).");
             var se = new double[p];
             var tStat = new double[p];
@@ -171,9 +171,10 @@ namespace ExcelFormulaLabs.Analytics
 
         /// <summary>
         /// Weighted Least Squares regression. Minimises Σ wᵢ(yᵢ - xᵢβ)².
-        /// Computes coefficients via sqrt(w)-transformed OLS (standard approach),
-        /// then reports residuals and fitted values on the original (unweighted)
-        /// scale so they are directly comparable to the input y.
+        /// Computes coefficients via sqrt(w)-transformed OLS (standard approach).
+        /// review 2026-09-14（模块审查 P2 REG-07）：SSE/R²/adj-R² 与 SE/t/p 统一为**加权
+        /// （sqrt(w) 变换）尺度**（与 statsmodels WLS 的 ssr/rsquared 一致）；仅
+        /// residuals/fitted_values 保留原始尺度，便于与输入 y 直接比较。
         /// Used by REGRESS.WLS.
         /// </summary>
         /// <param name="X">Design matrix (n observations × p predictors).</param>
@@ -198,6 +199,14 @@ namespace ExcelFormulaLabs.Analytics
             for (int i = 0; i < w.Length; i++)
                 if (w[i] < 0 || double.IsNaN(w[i]) || double.IsInfinity(w[i]))
                     throw new ArgumentException(ErrorMsg.Get("REGRESS_InvalidWeight", i, w[i]));
+            // review 2026-09-14（模块审查 P3 REG-04）：全零权重时加权响应恒为零 →
+            // FitOLSCore 会误报 "constant response y"（且消息冠 OLS）。显式给出权重诊断，
+            // 不让"无数据"伪装成"常量响应"。
+            bool anyPositive = false;
+            foreach (double wi in w) if (wi > 0) { anyPositive = true; break; }
+            if (!anyPositive)
+                throw new ArgumentException(
+                    "Cannot fit WLS: all weights are zero — the weighted model is undefined.");
             var matXw = Matrix<double>.Build.Dense(n, p);
             var vecYw = Vector<double>.Build.Dense(n);
             for (int i = 0; i < n; i++)
@@ -206,8 +215,9 @@ namespace ExcelFormulaLabs.Analytics
                 for (int j = 0; j < p; j++) matXw[i, j] = Xaug[i, j] * sw;
                 vecYw[i] = y[i] * sw;
             }
-            var result = FitOLSCore(matXw, vecYw, n, p); // Xw already has intercept column
-            // Override residuals and fitted_values to ORIGINAL scale
+            var result = FitOLSCore(matXw, vecYw, n, p, "WLS"); // Xw already has intercept column
+            // Override residuals and fitted_values to ORIGINAL scale (coefficients are
+            // identical on both scales; only the residual display scale differs).
             var beta = (double[])result["coefficients"];
             double[] fittedOrig = new double[n];
             double[] residualsOrig = new double[n];
@@ -220,31 +230,31 @@ namespace ExcelFormulaLabs.Analytics
             }
             result["fitted_values"] = fittedOrig;
             result["residuals"] = residualsOrig;
-            // Recompute SSE, TSS and R² in ORIGINAL scale to match residuals/fitted_values.
-            // The SSE/R² returned by FitOLSCore are in the sqrt(w)-transformed scale
-            // and are not comparable with the original-scale residuals.
-            double sseOrig = 0, tssOrig = 0;
-            double yMean = IncrementalMean(y);
+            // review 2026-09-14（P2 REG-07）：FitOLSCore 的 sse 已是加权尺度（Σw·resid²），
+            // 但其 TSS/R² 基于变换后序列的普通均值——WLS 的加权均值不是 sqrt(w)y 的算术均值。
+            // 此处按 statsmodels 口径重算加权 TSS/R²（sse 复用原尺度残差的加权平方和）。
+            double wSum = 0, wySum = 0;
+            for (int i = 0; i < n; i++) { wSum += w[i]; wySum += w[i] * y[i]; }
+            double yMeanW = wySum / wSum;
+            double sseW = 0, tssW = 0;
             for (int i = 0; i < n; i++)
             {
-                sseOrig += residualsOrig[i] * residualsOrig[i];
-                double dev = y[i] - yMean;
-                tssOrig += dev * dev;
+                sseW += w[i] * residualsOrig[i] * residualsOrig[i];
+                double dev = y[i] - yMeanW;
+                tssW += w[i] * dev * dev;
             }
-            if (tssOrig == 0)  // review-2026-08-31：同上（WLS 原尺度）
+            if (double.IsNaN(tssW) || double.IsInfinity(tssW) ||
+                double.IsNaN(sseW) || double.IsInfinity(sseW))
                 throw new ArgumentException(
-                    "Cannot fit WLS: total sum of squares is zero (constant response variable y).");
-            // review 2026-08-29：sseOrig/tssOrig 平方溢出（y≈1e154 + 小权重）可致 r2Orig=1−Inf/Inf=NaN
-            // 静默泄漏（FitOLSCore/FitRidge 已守卫同场景）。
-            if (double.IsNaN(sseOrig) || double.IsInfinity(sseOrig) ||
-                double.IsNaN(tssOrig) || double.IsInfinity(tssOrig))
+                    "Cannot fit WLS: weighted residual/total sum of squares is numerically unstable " +
+                    "(response/weight values too large for double precision).");
+            if (tssW == 0)
                 throw new ArgumentException(
-                    "Cannot fit WLS: residual/total sum of squares is numerically unstable " +
-                    "(response values too large for double precision).");
-            double r2Orig = 1.0 - sseOrig / tssOrig;
-            result["sse"] = sseOrig;
-            result["r_squared"] = r2Orig;
-            result["adj_r_squared"] = 1.0 - (1.0 - r2Orig) * (n - 1) / (double)(n - p);
+                    "Cannot fit WLS: weighted total sum of squares is zero (constant weighted response).");
+            double r2W = 1.0 - sseW / tssW;
+            result["sse"] = sseW;
+            result["r_squared"] = r2W;
+            result["adj_r_squared"] = 1.0 - (1.0 - r2W) * (n - 1) / (double)(n - p);
             return result;
         }
 
@@ -470,12 +480,32 @@ namespace ExcelFormulaLabs.Analytics
             int activeCols = 0;
             for (int j = 0; j < p; j++)
             {
+                // review 2026-09-14（模块审查 P2 REG-05）：原 `mean += X[i,j]` 对 1e308 级列
+                // 求和溢出 +Inf → sd=Inf → 被误判为常量列并排到最后（静默错序）。
+                // 两层修复：① 增量均值（同 IncrementalMean 公式）避免和溢出；
+                // ② 偏差平方和仍可能溢出（(2e307)²=4e614）时，按列 maxAbs 归一化后再算
+                //    sd 并乘回尺度（同 SolveCore.FitExpanded 的既有回退模式）。
                 double mean = 0, sd = 0;
-                for (int i = 0; i < n; i++) mean += X[i, j];
-                mean /= n;
+                for (int i = 0; i < n; i++) mean += (X[i, j] - mean) / (i + 1);
+                double maxAbs = 0;
+                for (int i = 0; i < n; i++) { double a = Math.Abs(X[i, j]); if (a > maxAbs) maxAbs = a; }
+                double ss = 0;
+                if (!double.IsNaN(mean) && !double.IsInfinity(mean))
+                    for (int i = 0; i < n; i++) { double d = X[i, j] - mean; ss += d * d; }
+                if (!double.IsNaN(ss) && !double.IsInfinity(ss) && maxAbs > 0)
+                {
+                    sd = n > 1 ? Math.Sqrt(ss / (n - 1)) : 0.0;
+                }
+                else if (maxAbs > 0)
+                {
+                    double muScaled = 0;
+                    for (int i = 0; i < n; i++) muScaled += (X[i, j] / maxAbs - muScaled) / (i + 1);
+                    double ssScaled = 0;
+                    for (int i = 0; i < n; i++) { double d = X[i, j] / maxAbs - muScaled; ssScaled += d * d; }
+                    mean = muScaled * maxAbs;
+                    sd = n > 1 ? Math.Sqrt(ssScaled / (n - 1)) * maxAbs : 0.0;
+                }
                 means[j] = mean;
-                for (int i = 0; i < n; i++) { double d = X[i, j] - mean; sd += d * d; }
-                sd = Math.Sqrt(sd / (n - 1));
                 sds[j] = sd;
                 // review 2026-08-31（深度审查 P1-5）：原 `sd < 1e-12` 绝对阈值在 1e-9 量级
                 // 数据（sd~1e-9）下误判常数列。标准差与数据同尺度，判据应为精确零（真常量列）；
@@ -503,7 +533,17 @@ namespace ExcelFormulaLabs.Analytics
                 aj++;
             }
             // Fit OLS to reduced model (standardized columns already centered — no intercept needed)
-            var result = FitOLS(Xs, y, addIntercept: false);
+            // review 2026-09-14（P2 REG-05）：y 的 TSS 平方和对 1e308 级响应溢出会误抛
+            // "unstable"——t 统计量对 y 的正缩放不变，先按 maxAbs 缩放响应再拟合。
+            double yMax = 0;
+            for (int i = 0; i < y.Length; i++) { double a = Math.Abs(y[i]); if (a > yMax) yMax = a; }
+            double[] yFit = y;
+            if (yMax > 0 && !double.IsInfinity(yMax))
+            {
+                yFit = new double[y.Length];
+                for (int i = 0; i < y.Length; i++) yFit[i] = y[i] / yMax;
+            }
+            var result = FitOLS(Xs, yFit, addIntercept: false);
             var tReduced = (double[])result["t_stats"];
             var tFull = new double[p]; // constCols entries remain 0.0
             for (int rj = 0; rj < activeCols; rj++)
