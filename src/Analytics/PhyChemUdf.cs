@@ -22,8 +22,26 @@ namespace ExcelFormulaLabs.Analytics
         [ExcelFunction(Name="PHYCHEM.GASSTP", Description="Convert gas volume to standard temperature and pressure (STP)")] public static object UDF_PC_STP([ExcelArgument(Name="volume", Description="Volume (V) in ideal gas law or gas volume to convert")] object vol, [ExcelArgument(Name="temperature", Description="Temperature in Celsius by default; use tUnit=\"K\" for Kelvin")] object temp, [ExcelArgument(Name="pressure", Description="Pressure in atm by default; use pUnit=\"PSI\",\"KPA\", etc.")] object press, [ExcelArgument(Name="[tUnit]", Description="Temperature unit: C (default), K, F")] object tUnit=null, [ExcelArgument(Name="[pUnit]", Description="Pressure unit: atm (default), PSI, KPA, PA, BAR, MMHG, TORR")] object pUnit=null)=>OutputWrapper.WrapError(()=>PhyChemCore.GasToSTP(InputNormalizer.ToDouble(vol),InputNormalizer.ToDouble(temp),InputNormalizer.ToDouble(press),InputNormalizer.IsOmitted(tUnit)?"C":InputNormalizer.ToString(tUnit),InputNormalizer.IsOmitted(pUnit)?"atm":InputNormalizer.ToString(pUnit)));
         [ExcelFunction(Name="PHYCHEM.DENSITY", Description="Compute density: mass / volume")] public static object UDF_PC_DEN([ExcelArgument(Name="mass", Description="Mass value for density calculation")] object mass, [ExcelArgument(Name="volume", Description="Volume value for density calculation")] object vol)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOverMulti<double,double,double>(mass,vol,PhyChemCore.Density));
         private static string S(object o)=>InputNormalizer.ToString(o);
-        // InputNormalizer.IsExcelEmptyValue handles both Foundation.ExcelEmpty and
-        // ExcelDna.Integration.ExcelEmpty via reflection — no separate guard needed.
-        private static double? V(object o){if(o is Foundation.ExcelEmpty||o is ExcelDna.Integration.ExcelEmpty||o==null||o is string s&&s=="*")return null;var d=InputNormalizer.ToDouble(o);return double.IsNaN(d)?null:d;}
+        // review 2026-09-14（模块审查 P2 PHY-01）：Excel 错误/非 "*" 文本原被静默当作
+        // "待求量"（#REF! 输入返回貌似合理的解）。错误值与非占位文本必须显式失败
+        // （→ #VALUE!），只有数值、空白与 "*" 占位参与求解。
+        private static double? V(object o)
+        {
+            if (o == null || InputNormalizer.IsExcelEmptyValue(o)) return null;
+            if (InputNormalizer.IsExcelErrorValue(o))
+                throw new System.ArgumentException(
+                    "Ideal gas parameter is an Excel error value; fix the reference before solving.");
+            if (o is string s)
+            {
+                if (s == "*") return null;
+                throw new System.ArgumentException(
+                    "Ideal gas parameter must be numeric or \"*\" to mark the unknown quantity.");
+            }
+            double d = InputNormalizer.ToDouble(o);
+            if (double.IsNaN(d))
+                throw new System.ArgumentException(
+                    "Ideal gas parameter is not numeric; pass a number or \"*\".");
+            return d;
+        }
     }
 }

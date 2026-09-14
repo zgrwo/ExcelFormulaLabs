@@ -534,8 +534,11 @@ namespace ExcelFormulaLabs.Analytics
         /// </summary>
         private static int[]? TwoLevelResolutionPick(int nCols, int m)
         {
-            if (nCols == 15 && m >= 6 && m <= 8) return L16_RESOLUTION_IV_POS;
-            if (nCols == 31 && m >= 7 && m <= 16) return L32_RESOLUTION_IV_POS;
+            // review 2026-09-14（模块审查 P2 PHY-02）：原条件把不可达区间也写进分支
+            // （nCols==15 只可能在 m=8 时出现——m=6/7 走 Build2Level(3) 的 7 列；
+            // nCols==31 只可能在 m=16 时出现），属死代码。收窄为实际可达点。
+            if (nCols == 15 && m == 8) return L16_RESOLUTION_IV_POS;
+            if (nCols == 31 && m == 16) return L32_RESOLUTION_IV_POS;
             return null;
         }
 

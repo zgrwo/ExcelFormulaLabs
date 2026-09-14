@@ -342,6 +342,12 @@ namespace ExcelFormulaLabs.Analytics.Tests
             ((double)r).Should().BeApproximately(1.0, 0.02);
         }
 
+        // review 2026-09-14（P2 PHY-01）：Excel 错误/文本不得被静默当作"待求量"。
+        [Fact] public void IdealGas_error_input_returns_error()
+            => PhyChemUdf.UDF_PC_GAS(ExcelError.NA, 22.4, 1.0, 273.15).Should().Be(ExcelError.Value);
+        [Fact] public void IdealGas_text_input_returns_error()
+            => PhyChemUdf.UDF_PC_GAS("abc", 22.4, 1.0, 273.15).Should().Be(ExcelError.Value);
+
         // review 2026-09-14（P1 UDF-01）：tUnit/pUnit 省略（Blank/Missing/DBNull）→ C/atm。
         [Theory]
         [MemberData(nameof(OmittedSentinelData.All), MemberType = typeof(OmittedSentinelData))]

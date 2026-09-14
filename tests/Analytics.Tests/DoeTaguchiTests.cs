@@ -170,9 +170,12 @@ namespace ExcelFormulaLabs.Analytics.Tests
 
         // ── review 2026-09-04（reaudit B1 回归守卫）：中间因子段分辨率 ≥ IV ──
         // GF(2) 定义字：最短零异或子集长度。≤3 长字存在 ⇒ 主效应与 2/3 阶交互别名（分辨率 III）。
+        // review 2026-09-14（P2 PHY-02）：修正判定——±1 编码下定义字为乘积 = +I（XOR==0）
+        // 或 = −I（XOR==allOnes）；原实现漏 −I（如 A = −BC 别名）使守卫偏松。
         private static int MinWordLength(double[,] coded)
         {
             int runs = coded.GetLength(0), cols = coded.GetLength(1);
+            ulong allOnes = runs >= 64 ? ulong.MaxValue : (1UL << runs) - 1;
             var g = new ulong[cols];
             for (int c = 0; c < cols; c++)
                 for (int r = 0; r < runs; r++)
@@ -185,7 +188,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
                 {
                     ulong x = 0;
                     foreach (var i in idx) x ^= g[i];
-                    if (x == 0) return size;
+                    if (x == 0 || x == allOnes) return size;
                     int p = size - 1;
                     while (p >= 0 && idx[p] == cols - size + p) p--;
                     if (p < 0) break;
@@ -204,12 +207,25 @@ namespace ExcelFormulaLabs.Analytics.Tests
             m.GetLength(0).Should().Be(32);
             MinWordLength(m).Should().BeGreaterThanOrEqualTo(4);
         }
-
-        [Fact] public void L8_4_factors_resolution_IV_preserved()
+        [Fact]
+        public void L8_4_factors_resolution_IV_preserved()
         {
             var m = Taguchi(4, 2, 0, 2); // n2=4 → L8
             m.GetLength(0).Should().Be(8);
             MinWordLength(m).Should().BeGreaterThanOrEqualTo(4);
+        }
+
+        // review 2026-09-14（P2 PHY-02）：L8 5/6/7 因子按数学容量只能是分辨率 III
+        // （A·B·AB = +I 三长别名）——修正 −I 判定后守卫必须如实报 3，而非漏报为 4。
+        [Theory]
+        [InlineData(5)]
+        [InlineData(6)]
+        [InlineData(7)]
+        public void L8_mid_factor_counts_true_min_word_length_is_3(int factors)
+        {
+            var m = Taguchi(factors, 2, 0, 2);
+            m.GetLength(0).Should().Be(8);
+            MinWordLength(m).Should().Be(3, $"L8 {factors} 因子受 GF(2) 容量限制为分辨率 III");
         }
 
         [Fact] public void L32_31_factors_runs_and_orthogonality_kept()
