@@ -14,11 +14,22 @@ namespace ExcelFormulaLabs.Analytics
     {
         // review 2026-09-05（R22）：均值累加对 1e308 级输入可溢出 ±Inf → NaN 封顶
         // （对齐 Sum/Range 的既有封顶约定）。
+        // review 2026-09-14（模块审查 P1 STA-01）：MathNet 增量均值在跨符号极值
+        // （{-1e308,1e308}）上中间差 2e308 → +Inf。改为 maxAbs 预缩放（缩放后 |x|≤1，
+        // 求和永不溢出），再乘回尺度——与 numpy 真值 0 对齐；常规数据保持原路径
+        // （仅当主路径非有限时才走缩放路径，避免扰动既有逐位结果）。
         internal static double Mean(double[] d)
         {
             if (d.Length == 0) return double.NaN;
             var r = Statistics.Mean(d);
-            return double.IsInfinity(r) ? double.NaN : r;
+            if (!double.IsNaN(r) && !double.IsInfinity(r)) return r;
+            double max = 0;
+            foreach (double x in d) { double a = Math.Abs(x); if (a > max) max = a; }
+            if (max == 0) return double.NaN; // fallback 仅在主路径非有限时到达：max==0 即 NaN 污染
+            double sum = 0;
+            foreach (double x in d) sum += x / max;
+            double scaled = sum / d.Length * max;
+            return double.IsInfinity(scaled) ? double.NaN : scaled;
         }
 
         internal static double GeometricMean(double[] d) =>
@@ -217,7 +228,9 @@ namespace ExcelFormulaLabs.Analytics
             double q1 = QuantileCapped(d, 0.25, qd);
             double q3 = QuantileCapped(d, 0.75, qd);
             double iqr = q3 - q1;
-            return new[] { (double)d.Length, Statistics.Mean(d), Math.Sqrt(Variance(d)),
+            // review 2026-09-14（模块审查 P1 STA-01）：原直调 Statistics.Mean 绕过封顶
+            // → {-1e308,1e308} 的 mean 列泄漏 +Inf。统一走 StatsCore.Mean（maxAbs 缩放）。
+            return new[] { (double)d.Length, Mean(d), Math.Sqrt(Variance(d)),
                 Statistics.Minimum(d), q1, Median(d), q3,
                 Statistics.Maximum(d), double.IsInfinity(iqr) ? double.NaN : iqr };
         }
@@ -361,6 +374,21 @@ namespace ExcelFormulaLabs.Analytics
         internal static double TTestTwoSample(double[] a, double[] b)
         {
             if (a.Length < 2 || b.Length < 2) return double.NaN;
+            // review 2026-09-14（模块审查 P1 STA-03）：Welch df 的中间量对 wᵢ² 求平方——
+            // 跨符号/大量纲（1e150 级）平方溢出，小量纲（1e-160 级）下溢为 0 → p=NaN。
+            // t 与 df 对两组数据的共同正缩放不变：先按 max(|a|,|b|) 预缩放（公共尺度）。
+            double maxA = 0, maxB = 0;
+            foreach (double x in a) { double t0 = Math.Abs(x); if (t0 > maxA) maxA = t0; }
+            foreach (double x in b) { double t0 = Math.Abs(x); if (t0 > maxB) maxB = t0; }
+            double scale = Math.Max(maxA, maxB);
+            if (scale > 0 && !double.IsInfinity(scale))
+            {
+                var sa = new double[a.Length];
+                var sb = new double[b.Length];
+                for (int i = 0; i < a.Length; i++) sa[i] = a[i] / scale;
+                for (int i = 0; i < b.Length; i++) sb[i] = b[i] / scale;
+                a = sa; b = sb;
+            }
             double ma = Statistics.Mean(a), mb = Statistics.Mean(b);
             double va = Variance(a), vb = Variance(b);
             // review 2026-08-31（深度审查 P1-5）：绝对阈值 → 精确零判据（同 TTestOneSample）。
@@ -376,17 +404,32 @@ namespace ExcelFormulaLabs.Analytics
             num *= num;
             double den = (va / a.Length) * (va / a.Length) / (a.Length - 1)
                        + (vb / b.Length) * (vb / b.Length) / (b.Length - 1);
-            return TStatPValue(Math.Abs(t), num / den);
+            double df = num / den;
+            // scipy 约定：df 未定义（方差为 0 但均值不等时）回退 df=1，而非泄漏 NaN 到 p。
+            if (double.IsNaN(df)) df = 1.0;
+            return TStatPValue(Math.Abs(t), df);
         }
 
         internal static double[] ZScore(double[] d)
         {
             if (d.Length == 0) return Array.Empty<double>();
-            double m = Statistics.Mean(d);
-            double sd = Math.Sqrt(VarianceP(d));
+            // review 2026-09-14（模块审查 P1 STA-02）：原实现直接对原尺度算 mean/var——
+            // ① 小量纲（1e-200 级）方差平方下溢为 0 → 误报"常量数据 #VALUE!"；
+            // ② 跨符号极值（{-1e300,1e300}）均值中间量溢出 → NaN。Z-score 对正缩放不变，
+            // 先按 maxAbs 预缩放（尺度归一化），再在缩放域计算并输出（与 scipy 真值一致）。
+            double max = 0;
+            foreach (double x in d) { double a = Math.Abs(x); if (a > max) max = a; }
+            double[] s = d;
+            if (max > 0)
+            {
+                s = new double[d.Length];
+                for (int i = 0; i < d.Length; i++) s[i] = d[i] / max;
+            }
+            double m = Mean(s);
+            double sd = Math.Sqrt(VarianceP(s));
             // review 2026-08-31（深度审查 P1-5）：绝对阈值 → 精确零判据（小量纲数据 sd 与数据同尺度）。
             if (double.IsNaN(sd) || double.IsInfinity(sd) || sd == 0) throw new ArgumentException(ErrorMsg.Get("STATS_ZeroVariance"));
-            return d.Select(x => (x - m) / sd).ToArray();
+            return s.Select(x => (x - m) / sd).ToArray();
         }
 
         /// <summary>Two-tailed p-value from t-statistic using Beta regularised.

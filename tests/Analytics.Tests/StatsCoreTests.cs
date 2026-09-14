@@ -218,6 +218,49 @@ namespace ExcelFormulaLabs.Analytics.Tests
             double.IsNaN(StatsCore.VarianceP(new[] { 1e200, -1e200 })).Should().BeTrue();
         }
 
+        // ── review-2026-09-14：STA-01/02/03 极端量纲回归守卫 ──
+        // 参考值独立来源：numpy.mean([-1e308,1e308]) = 0.0；
+        // Welch t 检验对两组共同缩放不变（t=-0.4472135954999579, df=1.4705882352941178），
+        // p = 2·scipy.t.sf(|t|, df) = 0.7117227912336697（scipy 1.17.1 实测）。
+        [Fact] public void Mean_cross_sign_extreme_returns_zero()
+        {
+            StatsCore.Mean(new[] { -1e308, 1e308 }).Should().Be(0.0);
+            StatsCore.Mean(new[] { 1e308, -1e308 }).Should().Be(0.0);
+        }
+        [Fact] public void Mean_nan_input_stays_NaN()
+        {
+            double.IsNaN(StatsCore.Mean(new[] { double.NaN, 1.0 })).Should().BeTrue();
+            double.IsNaN(StatsCore.Mean(new[] { double.NaN, double.NaN })).Should().BeTrue();
+        }
+        [Fact] public void Summary_mean_column_no_Inf_leak()
+        {
+            var r = StatsCore.Summary(new[] { -1e308, 1e308 });
+            r[1].Should().Be(0.0);
+        }
+        [Fact] public void ZScore_tiny_scale_not_constant_error()
+        {
+            // 修复前 1e-200 量纲方差平方下溢为 0 → 误报常量 #VALUE!；真值 z = {-1.2247…, 0, 1.2247…}
+            var z = StatsCore.ZScore(new[] { 1e-200, 2e-200, 3e-200 });
+            z[0].Should().BeApproximately(-1.224744871391589, 1e-12);
+            z[1].Should().BeApproximately(0.0, 1e-12);
+            z[2].Should().BeApproximately(1.224744871391589, 1e-12);
+        }
+        [Fact] public void ZScore_cross_sign_extreme()
+        {
+            var z = StatsCore.ZScore(new[] { -1e300, 1e300 });
+            z[0].Should().Be(-1.0);
+            z[1].Should().Be(1.0);
+        }
+        [Theory]
+        [InlineData(1e150)]
+        [InlineData(1e-160)]
+        public void TTestTwoSample_extreme_scale_finite(double scale)
+        {
+            // 修复前中间量平方溢出/下溢 → p=NaN；缩放后 t/df 不变，p≈0.71172。
+            var p = StatsCore.TTestTwoSample(new[] { 0.0, 1.0 * scale }, new[] { 0.0, 2.0 * scale });
+            p.Should().BeApproximately(0.7117227912336697, 1e-9);
+        }
+
         // =====================================================================
         // CROSS-VALIDATION TESTS AGAINST PYTHON (numpy / scipy)
         //
