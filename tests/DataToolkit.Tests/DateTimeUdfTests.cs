@@ -132,7 +132,13 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void AgeYears_leap_year_birth() => ((long)DateTimeUdf.UDF_DT_AGEY(OA(2000, 2, 29), OA(2024, 3, 1))).Should().Be(24);
         [Fact] public void AgeYears_same_year() => ((long)DateTimeUdf.UDF_DT_AGEY(OA(2024, 1, 1), OA(2024, 12, 31))).Should().Be(0);
         [Fact] public void AgeYears_null_birth() => DateTimeUdf.UDF_DT_AGEY(null!, OA(2024, 1, 1)).Should().Be(ExcelError.Value);
-        [Fact] public void AgeYears_null_ref() { var r=DateTimeUdf.UDF_DT_AGEY(OA(2000,1,1), null!); r.Should().BeOfType<long>().Which.Should().BeGreaterThanOrEqualTo(0); }
+        [Fact] public void AgeYears_null_ref() 
+        {
+            // 测试治理（review 2026-09-14）：改用「今天 − 30 年」出生日期 → 期望恒为 30，
+            // 不再随运行日漂移（原 >= 0 弱断言）。
+            double birth = System.DateTime.Today.AddYears(-30).ToOADate();
+            ((long)DateTimeUdf.UDF_DT_AGEY(birth, null!)).Should().Be(30);
+        }
         // R5-P3-04 (review 2026-09-06)：序列号 0（1899-12-30）是合法日期，不再是「未提供→今天」；
         // 文本输入与必选参数同语义 → #VALUE!（原先静默按今天计算）。
         [Fact] public void AgeDays_serial_zero_end_is_valid_date()
@@ -147,9 +153,9 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         }
         [Fact] public void AgeYears_empty_cell_ref_defaults_to_today()
         {
-            // 空单元格（ExcelEmpty）语义 = 未提供 → 今天（行为不变）
-            var r = DateTimeUdf.UDF_DT_AGEY(OA(2000, 1, 1), ExcelEmpty.Value);
-            r.Should().BeOfType<long>().Which.Should().BeGreaterThanOrEqualTo(0);
+            // 空单元格（ExcelEmpty）语义 = 未提供 → 今天；用「今天 − 1 年」出生 → 恒为 1。
+            double birth = System.DateTime.Today.AddYears(-1).ToOADate();
+            ((long)DateTimeUdf.UDF_DT_AGEY(birth, ExcelEmpty.Value)).Should().Be(1);
         }
 
         // ══════════════════════════════════════════════════════════════════
@@ -159,7 +165,11 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void AgeMonths_exact_years() => ((long)DateTimeUdf.UDF_DT_AGEM(OA(2020, 1, 1), OA(2024, 1, 1))).Should().Be(48);
         [Fact] public void AgeMonths_partial_month() => ((long)DateTimeUdf.UDF_DT_AGEM(OA(2024, 1, 15), OA(2024, 2, 1))).Should().Be(0);
         [Fact] public void AgeMonths_null_birth() => DateTimeUdf.UDF_DT_AGEM(null!, OA(2024, 1, 1)).Should().Be(ExcelError.Value);
-        [Fact] public void AgeMonths_null_ref() { var r=DateTimeUdf.UDF_DT_AGEM(OA(2024,1,1), null!); r.Should().BeOfType<long>().Which.Should().BeGreaterThanOrEqualTo(0); }
+        [Fact] public void AgeMonths_null_ref()
+        {
+            double birth = System.DateTime.Today.AddMonths(-7).ToOADate();
+            ((long)DateTimeUdf.UDF_DT_AGEM(birth, null!)).Should().Be(7);
+        }
 
         // ══════════════════════════════════════════════════════════════════
         //  DT.AGEDAYS  (manual — long)
@@ -168,7 +178,11 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void AgeDays_same_day() => ((long)DateTimeUdf.UDF_DT_AGED(OA(2024, 6, 15), OA(2024, 6, 15))).Should().Be(0);
         [Fact] public void AgeDays_across_year() => ((long)DateTimeUdf.UDF_DT_AGED(OA(2023, 12, 31), OA(2024, 1, 1))).Should().Be(1);
         [Fact] public void AgeDays_null_birth() => DateTimeUdf.UDF_DT_AGED(null!, OA(2024, 1, 1)).Should().Be(ExcelError.Value);
-        [Fact] public void AgeDays_null_ref() { var r=DateTimeUdf.UDF_DT_AGED(OA(2024,1,1), null!); r.Should().BeOfType<long>().Which.Should().BeGreaterThanOrEqualTo(0); }
+        [Fact] public void AgeDays_null_ref()
+        {
+            double birth = System.DateTime.Today.AddDays(-10).ToOADate();
+            ((long)DateTimeUdf.UDF_DT_AGED(birth, null!)).Should().Be(10);
+        }
 
         // ══════════════════════════════════════════════════════════════════
         //  DT.ISWE  (MapOver<double,bool> — is-weekend)

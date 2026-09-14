@@ -319,13 +319,13 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         {
             var data = new object[,] { { "Name", "Desc" }, { "A", "hello" } };
             var csv = RangeExportCore.RangeToCsv(data, quote: false);
-            csv.Should().Be("Name,Desc\r\nA,hello\r\n");
+            csv.Should().Be("Name,Desc" + Environment.NewLine + "A,hello" + Environment.NewLine);
         }
 
         [Fact]
         public void ToCsv_quote_true_quotes_all_fields()
             => RangeExportCore.RangeToCsv(new object[,] { { "A" }, { "plain" } })
-                .Should().Be("\"A\"\r\n\"plain\"\r\n");
+                .Should().Be("\"A\"" + Environment.NewLine + "\"plain\"" + Environment.NewLine);
 
         [Fact]
         public void ToCsv_quote_false_escapes_delimiter_quote_and_crlf()
@@ -625,7 +625,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         public void ToCsv_signed_numbers_are_symmetric_and_not_defanged()
         {
             var csv = RangeExportCore.RangeToCsv(new object[,] { { "+42" }, { "-42" } }, quote: false);
-            csv.Should().Be("+42\r\n-42\r\n");
+            csv.Should().Be("+42" + Environment.NewLine + "-42" + Environment.NewLine);
             csv.Should().NotContain("'");
         }
 

@@ -376,7 +376,9 @@ namespace ExcelFormulaLabs.Analytics.Tests
         private const double PyPct75     = 119.136157628341;
         private const double PyIQR       = 37.4866353148077;
         private const double PySkewness  = -0.0982409368961175;
-        private const double PyKurtosis  = 0.0818960710244716;
+        // review 2026-09-14（测试治理）：原 0.0818960710244716 是 scipy 默认 bias=True（有偏）值，
+        // 与 StatsCore.Kurtosis（无偏，type 2）错配且用 tol=0.05 掩盖。改 bias=False 精确值。
+        private const double PyKurtosis  = 0.10494906881821642;
         // ReSharper restore InconsistentNaming
 
         // --- Cross-validation test methods --------------------------------
@@ -435,7 +437,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
 
         [Fact]
         public void CrossVal_Kurtosis() =>
-            StatsCore.Kurtosis(LoadNumericX1()).Should().BeApproximately(PyKurtosis, 0.05);
+            StatsCore.Kurtosis(LoadNumericX1()).Should().BeApproximately(PyKurtosis, 1e-10);
         // Edge: zero/negative values -> NaN
         [Fact] public void GeometricMean_with_zero() => StatsCore.GeometricMean(new[]{1.0,0,3}).Should().Be(0.0);
         [Fact] public void GeometricMean_with_negative() => StatsCore.GeometricMean(new[]{1.0,-2,3}).Should().Be(double.NaN);
@@ -594,7 +596,9 @@ namespace ExcelFormulaLabs.Analytics.Tests
         private const double UPct75     = 75.25;
         private const double UIQR       = 49.5;
         private const double USkewness  = 0.0;
-        private const double UKurtosis  = -1.2002400240024002;
+        // review 2026-09-14（测试治理）：UKurtosis 原 -1.2002400240024002 为 bias=True 值；
+        // 无偏超额峰度（scipy bias=False）= -1.2，tol 由 0.1 收紧到 1e-10。
+        private const double UKurtosis  = -1.1999999999999997;
 
         [Fact] public void CrossVal_U_Mean()     => StatsCore.Mean(DsUniform).Should().BeApproximately(UMean, 1e-10);
         [Fact] public void CrossVal_U_Stdev()    => StatsCore.Stdev(DsUniform).Should().BeApproximately(UStdev, 1e-10);
@@ -606,7 +610,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void CrossVal_U_Pct75()    => StatsCore.Percentile(DsUniform, 75).Should().BeApproximately(UPct75, 1e-10);
         [Fact] public void CrossVal_U_IQR()      => StatsCore.IQR(DsUniform).Should().BeApproximately(UIQR, 1e-10);
         [Fact] public void CrossVal_U_Skewness() => StatsCore.Skewness(DsUniform).Should().BeApproximately(USkewness, 1e-8);
-        [Fact] public void CrossVal_U_Kurtosis() => StatsCore.Kurtosis(DsUniform).Should().BeApproximately(UKurtosis, 0.1);
+        [Fact] public void CrossVal_U_Kurtosis() => StatsCore.Kurtosis(DsUniform).Should().BeApproximately(UKurtosis, 1e-10);
 
         // --- Dataset 3: Mixed signs (includes negatives) ------------------
         private static readonly double[] DsMixed = { -5, -3, -1, 0, 2, 4, 6, 8, 10, 12 };

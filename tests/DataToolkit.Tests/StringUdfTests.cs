@@ -224,7 +224,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         //  STR.SOUNDEX  (MapOver<string,string> — null→null, not error)
         // ══════════════════════════════════════════════════════════════════
         [Fact] public void Sdx_basic() => StringUdf.UDF_STR_SDX("Robert").Should().Be("R163");
-        [Fact] public void Sdx_same_sounding() { var r1=StringUdf.UDF_STR_SDX("Robert"); var r2=StringUdf.UDF_STR_SDX("Rupert"); r1.Should().Be(r2); }
+        [Fact] public void Sdx_same_sounding() => StringUdf.UDF_STR_SDX("Rupert").Should().Be("R163");
         [Fact] public void Sdx_different() => StringUdf.UDF_STR_SDX("abc").Should().NotBe(StringUdf.UDF_STR_SDX("xyz"));
         [Fact] public void Sdx_empty() => StringUdf.UDF_STR_SDX("").Should().Be("");
         [Fact] public void Sdx_null() => StringUdf.UDF_STR_SDX(null!).Should().BeNull();

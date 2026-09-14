@@ -343,10 +343,36 @@ namespace ExcelFormulaLabs.Analytics.Tests
         }
 
         // review 2026-09-14（P2 PHY-01）：Excel 错误/文本不得被静默当作"待求量"。
-        [Fact] public void IdealGas_error_input_returns_error()
-            => PhyChemUdf.UDF_PC_GAS(ExcelError.NA, 22.4, 1.0, 273.15).Should().Be(ExcelError.Value);
+        // 错误值原样传播（保持用户原始错误类型），非 "*" 文本 → #VALUE!。
+        [Fact] public void IdealGas_error_input_propagates_error()
+        {
+            PhyChemUdf.UDF_PC_GAS(ExcelError.NA, 22.4, 1.0, 273.15).Should().Be(ExcelError.NA);
+            PhyChemUdf.UDF_PC_GAS(1.0, ExcelError.Div0, 1.0, 273.15).Should().Be(ExcelError.Div0);
+        }
         [Fact] public void IdealGas_text_input_returns_error()
             => PhyChemUdf.UDF_PC_GAS("abc", 22.4, 1.0, 273.15).Should().Be(ExcelError.Value);
+
+        [Fact] public void GasSTP_error_input_propagates_error()
+        {
+            PhyChemUdf.UDF_PC_STP(ExcelError.NA, 25.0, 1.0).Should().Be(ExcelError.NA);
+            PhyChemUdf.UDF_PC_STP(22.4, ExcelError.Div0, 1.0).Should().Be(ExcelError.Div0);
+        }
+
+        // review 2026-09-14（P3 PHY-03）：精确换算因子（定义值）。
+        [Fact] public void Unit_conversion_uses_exact_defined_factors()
+        {
+            ((double)PhyChemUdf.UDF_PC_GAL2L(1.0)).Should().BeApproximately(3.785411784, 1e-12);
+            ((double)PhyChemUdf.UDF_PC_MASS(16.0, "OZ", "LB")).Should().BeApproximately(1.0, 1e-12);
+            ((double)PhyChemUdf.UDF_PC_PRESS(760.0, "MMHG", "ATM")).Should().BeApproximately(1.0, 1e-12);
+        }
+
+        // review 2026-09-14（P3 PHY-03）："(H2O)0" 必须与 H0=0 / H2O0=2.016 语义一致。
+        [Fact] public void MolWt_group_zero_multiplier_is_zero()
+        {
+            ((double)PhyChemUdf.UDF_PC_MOLWT("(H2O)0")).Should().Be(0.0);
+            ((double)PhyChemUdf.UDF_PC_MOLWT("H0")).Should().Be(0.0);
+            ((double)PhyChemUdf.UDF_PC_MOLWT("H2O0")).Should().BeApproximately(2.016, 1e-12);
+        }
 
         // review 2026-09-14（P1 UDF-01）：tUnit/pUnit 省略（Blank/Missing/DBNull）→ C/atm。
         [Theory]

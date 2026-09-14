@@ -6,7 +6,7 @@ namespace ExcelFormulaLabs.Analytics
     public static class DoeUdf
     {
         [ExcelFunction(Name = "DOE.PLAN",
-          Description = "Generate a DOE design matrix (full factorial); StdOrder + RunOrder + coded factors.")]
+          Description = "Generate a DOE design matrix (full/taguchi/fractional/rsm/bb); StdOrder + RunOrder + coded factors.")]
         public static object UDF_DOE_PLAN(
             [ExcelArgument(Name = "factor_qty1", Description = "Number of factors in group 1")]
             object qty1,
@@ -16,7 +16,7 @@ namespace ExcelFormulaLabs.Analytics
             object qty2,
             [ExcelArgument(Name = "factor_level2", Description = "Levels per factor in group 2")]
             object level2,
-            [ExcelArgument(Name = "method", Description = "Design method: FULL")]
+            [ExcelArgument(Name = "method", Description = "Design method: FULL, TAGUCHI, FRACTIONAL, RSM, or BB")]
             object method,
             [ExcelArgument(Name = "[randomize]", Description = "Randomize run order (default TRUE)")]
             object randomize = null,

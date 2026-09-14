@@ -221,10 +221,10 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static string RandomString(long len=8, string? cs=null)
         {
             if (len < 0 || len > 100_000) throw new ArgumentOutOfRangeException(nameof(len), $"Length must be 0–100,000 (got {len}).");
-            if (string.IsNullOrEmpty(cs)) cs = DefaultCharset;
+            string charset = string.IsNullOrEmpty(cs) ? DefaultCharset : cs!;
             int n = (int)len;
             // STR-01：按文本元素抽取，避免从字符集里单独选中高/低代理项产出孤立代理。
-            var elements = TextElements(cs);
+            var elements = TextElements(charset);
             if (elements.Count == 0) elements = TextElements(DefaultCharset);
             var sb = new StringBuilder(n);
             for (int i = 0; i < n; i++) sb.Append(elements[Random.Shared.Next(elements.Count)]);
@@ -235,9 +235,9 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static string RandomString(long len=8, string? cs=null)
         {
             if (len < 0 || len > 100_000) throw new ArgumentOutOfRangeException(nameof(len), $"Length must be 0–100,000 (got {len}).");
-            if (string.IsNullOrEmpty(cs)) cs = DefaultCharset;
+            string charset = string.IsNullOrEmpty(cs) ? DefaultCharset : cs!;
             int n = (int)len;
-            var elements = TextElements(cs);
+            var elements = TextElements(charset);
             if (elements.Count == 0) elements = TextElements(DefaultCharset);
             var sb = new StringBuilder(n);
             var r = _rng.Value!;
