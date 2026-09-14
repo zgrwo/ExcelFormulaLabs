@@ -135,7 +135,10 @@ namespace ExcelFormulaLabs.DataToolkit
         }
         internal static string RegexEscape(string l) => Regex.Escape(l);
         private static RegexOptions F(bool ic) =>
-            (ic ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture;
+            (ic ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.CultureInvariant;
+            // review 2026-09-14（模块审查 P2 SEC-03）：原含 ExplicitCapture → 无名组 (\w)\1
+            // 的反向引用全函数 #VALUE!（REPLACE n=1 却成功，内部不一致）。移除 ExplicitCapture
+            // 恢复正常捕获组语义；GROUPS 用 FC，不受影响。
             // Compiled omitted: one-shot UDF calls benefit from interpretation + timeout,
             // and the 5s Timeout already prevents ReDoS.
 

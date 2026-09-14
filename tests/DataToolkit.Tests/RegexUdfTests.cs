@@ -106,5 +106,17 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Default_ignore_case_Split() { var r=(object[])RegexUdf.UDF_RX_SPLIT("Hello,World,hello", "hello"); r.Should().Equal("", ",World,", ""); }
         [Fact] public void Default_ignore_case_MatchAll() { var r=(object[])RegexUdf.UDF_RX_MALL("Hello hello", "hello"); ((string)r[0]).Should().Be("Hello"); ((string)r[1]).Should().Be("hello"); }
         [Fact] public void Default_ignore_case_Groups() { var r=(object[,])RegexUdf.UDF_RX_GRP("Hello", "(hello)"); r[1,0].Should().Be("Hello"); }
+
+        // review 2026-09-14（P2 SEC-03）：无名组反向引用在 UDF 全函数可用（修复前 #VALUE!）。
+        [Fact] public void Backreference_udf_test_count_matchall_replace()
+        {
+            ((bool)RegexUdf.UDF_RX_TEST("aabb", @"(\w)\1")).Should().BeTrue();
+            ((long)RegexUdf.UDF_RX_COUNT("aabbcc", @"(\w)\1")).Should().Be(3);
+            ((string)RegexUdf.UDF_RX_MATCH("aabbcc", @"(\w)\1", null!, 2)).Should().Be("bb");
+            var all = (object[])RegexUdf.UDF_RX_MALL("aabbcc", @"(\w)\1");
+            all.Should().Equal("aa", "bb", "cc");
+            ((string)RegexUdf.UDF_RX_REPL("aabb", @"(\w)\1", "X", null!, 1)).Should().Be("Xbb");
+            ((string)RegexUdf.UDF_RX_REPL("aabb", @"(\w)\1", "X", null!, -1)).Should().Be("aaX");
+        }
     }
 }

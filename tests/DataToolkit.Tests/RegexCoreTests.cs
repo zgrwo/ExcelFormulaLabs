@@ -43,6 +43,37 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Escape() => RegexCore.RegexEscape("a.b(c)").Should().Be(@"a\.b\(c\)");             // Python re: escape
 
         // =====================================================================
+        // review 2026-09-14（P2 SEC-03）：F() 移除 ExplicitCapture 后，无名组反向引用
+        // (\w)\1 必须在全函数可用（修复前 #VALUE!：无名组不捕获 → 反向引用非法）。
+        // =====================================================================
+        [Fact] public void Backreference_test() => RegexCore.RegexTest("aabb", @"(\w)\1").Should().BeTrue();
+        [Fact] public void Backreference_test_nomatch() => RegexCore.RegexTest("abab", @"(\w)\1").Should().BeFalse();
+        [Fact] public void Backreference_count() => RegexCore.RegexCount("aabbcc", @"(\w)\1").Should().Be(3);
+        [Fact] public void Backreference_match_nth()
+        {
+            RegexCore.RegexMatch("aabbcc", @"(\w)\1", n: 1).Should().Be("aa");
+            RegexCore.RegexMatch("aabbcc", @"(\w)\1", n: 2).Should().Be("bb");
+            RegexCore.RegexMatch("aabbcc", @"(\w)\1", n: -1).Should().Be("cc");
+        }
+        [Fact] public void Backreference_matchall() => RegexCore.RegexMatchAll("aabbcc", @"(\w)\1").Should().Equal("aa", "bb", "cc");
+        [Fact] public void Backreference_replace_all_and_nth()
+        {
+            RegexCore.RegexReplace("aabbcc", @"(\w)\1", "X").Should().Be("XXX");
+            RegexCore.RegexReplace("aabbcc", @"(\w)\1", "X", n: 1).Should().Be("Xbbcc");
+            RegexCore.RegexReplace("aabbcc", @"(\w)\1", "X", n: 2).Should().Be("aaXcc");
+            RegexCore.RegexReplace("aabbcc", @"(\w)\1", "X", n: -1).Should().Be("aabbX");
+        }
+        [Fact] public void Backreference_split()
+        {
+            // .NET Regex.Split 会在结果中包含捕获组内容（既有契约）。
+            RegexCore.RegexSplit("aabb", @"(\w)\1").Should().Equal("", "a", "", "b", "");
+        }
+        [Fact] public void Named_backreference_still_works()
+        {
+            RegexCore.RegexMatch("aa", @"(?<x>\w)\k<x>").Should().Be("aa");
+            RegexCore.RegexCaptureGroups("aa", @"(?<x>\w)\k<x>")[1, 1].Should().Be("a");
+        }
+
         // EDGE CASE & ERROR BEHAVIOR TESTS
         // (systematic coverage — null, empty, invalid patterns, match failures)
         // =====================================================================
