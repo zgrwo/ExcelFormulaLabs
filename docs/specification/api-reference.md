@@ -89,7 +89,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `LINALG.LU_U` | (array) | `double[,]` | LU 分解上三角矩阵 U。A = P*L*U |
 | `LINALG.LU_P` | (array) | `double[,]` | LU 分解置换矩阵 P。A = P*L*U |
 | `LINALG.PINV` | (array) | `double[,]` | Moore-Penrose 伪逆 |
-| `LINALG.CHOLESKY` | (array) | `double[,]` | Cholesky 分解。要求对称矩阵，非对称 → `#VALUE!` |
+| `LINALG.CHOLESKY` | (array) | `double[,]` | Cholesky 分解。要求对称**正定**矩阵：非对称或非正定 → `#VALUE!` |
 | `LINALG.IDENTITY` | (size) | `double[,]` | 生成 n×n 单位矩阵 |
 | `LINALG.SVD_U_ASYNC` | (array) | `double[,]` | SVD 左奇异向量 U（异步，大矩阵不阻塞 UI） |
 | `LINALG.SVD_S_ASYNC` | (array) | `double[]` | SVD 奇异值 S（异步） |
