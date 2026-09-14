@@ -125,6 +125,9 @@ namespace ExcelFormulaLabs.DataToolkit
 
         internal static string NormalizePath(string p)
         {
+            // review 2026-09-14（模块审查 P3 SEC-07）：FS.NORM 曾绕过 EndSession 守卫——同模块
+            // 其他 FS.* 通过 ValidatePath→EnsureSessionActive 在 AutoClose 后拒绝访问。
+            EnsureSessionActive();
             string normalized = Path.GetFullPath(p);
             // Sandbox check (inline to avoid recursion: ValidatePath calls NormalizePath internally)
             var sandboxRoot = _config.Root; // single read — immutable, no race
@@ -184,7 +187,27 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static string ReadTextFile(string p, Encoding? e = null) { ValidatePath(p); var enc = e ?? Encoding.UTF8; using var fs = new FileStream(p, FileMode.Open, FileAccess.Read, FileShare.Read); if (MaxReadSizeBytes > 0 && fs.Length > MaxReadSizeBytes) throw new ArgumentException(ErrorMsg.Get("FS_ReadLimitExceeded", MaxReadSizeBytes)); using var sr = new StreamReader(fs, enc); return sr.ReadToEnd(); }
         internal static string[] ReadAllLines(string p, Encoding? e = null) { ValidatePath(p); var enc = e ?? Encoding.UTF8; using var fs = new FileStream(p, FileMode.Open, FileAccess.Read, FileShare.Read); if (MaxReadSizeBytes > 0 && fs.Length > MaxReadSizeBytes) throw new ArgumentException(ErrorMsg.Get("FS_ReadLimitExceeded", MaxReadSizeBytes)); using var sr = new StreamReader(fs, enc); var lines = new System.Collections.Generic.List<string>(); string? line; while ((line = sr.ReadLine()) != null) lines.Add(line); return lines.ToArray(); }
         internal static bool WriteTextFile(string p, string c, Encoding? e = null) { ValidatePath(p); var enc = e ?? Encoding.UTF8; if (MaxWriteSizeBytes > 0 && enc.GetByteCount(c) > MaxWriteSizeBytes) throw new ArgumentException(ErrorMsg.Get("FS_WriteLimitExceeded", MaxWriteSizeBytes)); File.WriteAllText(p, c, enc); return true; }
-        internal static bool AppendTextFile(string p, string c, Encoding? e = null) { ValidatePath(p); var enc = e ?? Encoding.UTF8; if (MaxWriteSizeBytes > 0 && enc.GetByteCount(c) > MaxWriteSizeBytes) throw new ArgumentException(ErrorMsg.Get("FS_WriteLimitExceeded", MaxWriteSizeBytes)); File.AppendAllText(p, c, enc); return true; }
+        internal static bool AppendTextFile(string p, string c, Encoding? e = null)
+        {
+            ValidatePath(p);
+            var enc = e ?? Encoding.UTF8;
+            int addBytes = enc.GetByteCount(c);
+            if (MaxWriteSizeBytes > 0 && addBytes > MaxWriteSizeBytes)
+                throw new ArgumentException(ErrorMsg.Get("FS_WriteLimitExceeded", MaxWriteSizeBytes));
+            // review 2026-09-14（模块审查 P3 SEC-09）：原仅限制单次写入——反复 APPEND 累计无界。
+            // 累计上限 = MaxWriteSizeBytes（现有文件长度 + 本次追加）。
+            if (MaxWriteSizeBytes > 0)
+            {
+                long existing = 0;
+                try { if (File.Exists(p)) existing = new FileInfo(p).Length; }
+                catch (Exception ex) when (ExceptionFilters.IsCatchable(ex)) { existing = 0; }
+                if (existing + addBytes > MaxWriteSizeBytes)
+                    throw new ArgumentException(
+                        ErrorMsg.Get("FS_AppendLimitExceeded", MaxWriteSizeBytes, existing, addBytes));
+            }
+            File.AppendAllText(p, c, enc);
+            return true;
+        }
         internal static bool DeleteFile(string p) { ValidatePath(p); if (File.Exists(p)) File.Delete(p); return true; }
         internal static bool CopyFile(string s, string d, bool o = false) { ValidatePath(s); ValidatePath(d); File.Copy(s, d, o); return true; }
         internal static bool MoveFile(string s, string d) { ValidatePath(s); ValidatePath(d); File.Move(s, d); return true; }

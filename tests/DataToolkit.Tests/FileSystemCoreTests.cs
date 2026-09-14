@@ -150,9 +150,9 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             }
             finally { if (FileSystemCore.FileExists(path)) FileSystemCore.DeleteFile(path); }
         }
-
         // AppendTextFile test
-        [Fact] public void AppendTextFile_appends()
+        [Fact]
+        public void AppendTextFile_appends()
         {
             var path = FileSystemCore.GetTempFileName();
             try
@@ -162,6 +162,43 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
                 FileSystemCore.ReadTextFile(path).Should().Be("FirstSecond");
             }
             finally { if (FileSystemCore.FileExists(path)) FileSystemCore.DeleteFile(path); }
+        }
+
+        // review 2026-09-14（P3 SEC-09）：单块限制之外的累计上限。
+        [Fact]
+        public void AppendTextFile_cumulative_limit_enforced()
+        {
+            var tmp = FileSystemCore.GetTempPath();
+            FileSystemCore.ResetForTesting();
+            FileSystemCore.Initialize(new SandboxConfig(tmp, MaxWriteBytes: 10));
+            var path = System.IO.Path.Combine(tmp, "efl_append_" + Guid.NewGuid().ToString("N") + ".txt");
+            try
+            {
+                // ASCII：无 BOM，文件字节数 == 字符数（Encoding.UTF8 会写 3 字节 BOM）。
+                FileSystemCore.WriteTextFile(path, "123456", System.Text.Encoding.ASCII).Should().BeTrue();
+                var act = () => FileSystemCore.AppendTextFile(path, "67890", System.Text.Encoding.ASCII);
+                act.Should().Throw<ArgumentException>().WithMessage("*maximum file size limit*");
+                FileSystemCore.AppendTextFile(path, "7890", System.Text.Encoding.ASCII).Should().BeTrue(); // 6+4 == 10
+                FileSystemCore.ReadTextFile(path, System.Text.Encoding.ASCII).Should().Be("1234567890");
+            }
+            finally
+            {
+                try { if (File.Exists(path)) File.Delete(path); } catch (Exception) { }
+                FileSystemCore.ResetForTesting();
+            }
+        }
+
+        // review 2026-09-14（P3 SEC-07）：FS.NORM 与同模块其他 FS.* 一致受 EndSession 守卫。
+        [Fact]
+        public void NormalizePath_after_EndSession_throws()
+        {
+            try
+            {
+                FileSystemCore.EndSession();
+                var act = () => FileSystemCore.NormalizePath(@"C:\Windows");
+                act.Should().Throw<InvalidOperationException>();
+            }
+            finally { FileSystemCore.ResetForTesting(); }
         }
 
         // DeleteFile test

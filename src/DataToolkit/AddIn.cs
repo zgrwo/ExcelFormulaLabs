@@ -42,18 +42,33 @@ namespace ExcelFormulaLabs.DataToolkit
                 string resX64 = "sqlite_native_x64";
 #endif
                 string dllPath = Path.Combine(xllDir, arch, dllName);
+                string resName = IntPtr.Size == 8 ? resX64 : resX86;
+
+                // 先读取嵌入资源字节（打包模式）；无嵌入资源 = 非打包/开发模式。
+                byte[]? embedded = null;
+                using (var probe = typeof(AddIn).Assembly.GetManifestResourceStream(resName))
+                {
+                    if (probe != null)
+                    {
+                        using var ms = new MemoryStream();
+                        probe.CopyTo(ms);
+                        embedded = ms.ToArray();
+                    }
+                }
 
                 // 1) 文件系统优先（非打包模式）
-                if (File.Exists(dllPath))
+                // review 2026-09-14（模块审查 P3 SEC-08）：原实现无条件信任同目录文件——
+                // 打包发行时 x86\x64\ 旁路的篡改 DLL 会被直接加载，绕过嵌入资源 SHA-256。
+                // 现在有嵌入基线时逐次重验，不一致则落回内容寻址提取（fail-safe）。
+                if (File.Exists(dllPath)
+                    && (embedded == null || NativeDllStore.FileHashEquals(dllPath, embedded)))
                 {
                     LoadNativeLibrary(dllPath);
                     return;
                 }
 
                 // 2) 从嵌入资源提取（打包模式）
-                string resName = IntPtr.Size == 8 ? resX64 : resX86;
-                using var stream = typeof(AddIn).Assembly.GetManifestResourceStream(resName);
-                if (stream != null)
+                if (embedded != null)
                 {
                     // 内容寻址提取（NativeDllStore）：目标路径由嵌入字节的 SHA-256 派生，
                     // 且每次调用重新比对盘上文件哈希与嵌入字节，不一致即原子替换。
@@ -62,10 +77,8 @@ namespace ExcelFormulaLabs.DataToolkit
                     string localDir = Path.Combine(
                         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                         "ExcelFormulaLabs", "DataToolkit");
-                    using var ms = new MemoryStream();
-                    stream.CopyTo(ms);
                     string extractedPath = NativeDllStore.GetOrExtract(
-                        localDir, "native", ms.ToArray(), dllName);
+                        localDir, "native", embedded, dllName);
 
                     LoadNativeLibrary(extractedPath);
                     return;

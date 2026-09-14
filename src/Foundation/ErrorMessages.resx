@@ -49,6 +49,9 @@
   <data name="FS_WriteLimitExceeded" xml:space="preserve">
     <value>Content byte length exceeds maximum write limit of {0} bytes.</value>
   </data>
+  <data name="FS_AppendLimitExceeded" xml:space="preserve">
+    <value>Appending would exceed the maximum file size limit of {0} bytes (current {1} + appended {2}).</value>
+  </data>
 
   <!-- DateTime -->
   <data name="DT_InvalidDate" xml:space="preserve">

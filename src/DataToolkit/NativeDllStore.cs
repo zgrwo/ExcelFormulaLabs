@@ -77,7 +77,9 @@ namespace ExcelFormulaLabs.DataToolkit
                 File.Move(temp, target);            // 目标不存在即移动
         }
 
-        private static bool FileHashEquals(string path, byte[] expected)
+        /// <summary>True when the file on disk hashes to the expected embedded bytes.
+        /// review 2026-09-14（SEC-08）：AddIn 的「文件优先」分支复用本方法做逐次重验。</summary>
+        internal static bool FileHashEquals(string path, byte[] expected)
         {
             try
             {
