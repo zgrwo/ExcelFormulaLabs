@@ -204,5 +204,15 @@ namespace ExcelFormulaLabs.Analytics.Tests
             var singleY = new double[] { 7 };
             RegressionUdf.UDF_REGRESS_FACTORIMP(singleY, singleX).Should().Be(ExcelError.Value);
         }
+
+        // review 2026-09-14（P1 UDF-01）：lambda 省略（Blank/Missing/DBNull）→ 默认 1.0。
+        [Theory]
+        [MemberData(nameof(OmittedSentinelData.All), MemberType = typeof(OmittedSentinelData))]
+        public void Ridge_omitted_lambda_uses_default(object? sentinel)
+        {
+            var expected = FindRow((object[,])RegressionUdf.UDF_REGRESS_RIDGE(y_test, X_test, 1.0), "coefficients");
+            var actual = FindRow((object[,])RegressionUdf.UDF_REGRESS_RIDGE(y_test, X_test, sentinel!), "coefficients");
+            actual.Should().BeEquivalentTo(expected);
+        }
     }
 }

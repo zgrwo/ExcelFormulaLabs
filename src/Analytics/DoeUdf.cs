@@ -29,6 +29,7 @@ namespace ExcelFormulaLabs.Analytics
                 InputNormalizer.ToInt32(level2),
                 InputNormalizer.ToString(method),
                 InputNormalizer.ToBool(randomize, true),
-                seed == null || seed is ExcelMissing ? (long?)null : InputNormalizer.ToLong(seed)));
+                // review 2026-09-14（P1 UDF-01）：空白单元格（ExcelEmpty）与省略同语义 → null=随机。
+                InputNormalizer.IsOmitted(seed) ? (long?)null : InputNormalizer.ToLong(seed)));
     }
 }

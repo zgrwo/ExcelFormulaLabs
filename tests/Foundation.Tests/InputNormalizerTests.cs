@@ -159,6 +159,23 @@ public class ExcelSentinelTests
 
     [Fact] public void IsExcelMissing_DBNull_returns_false()
         => InputNormalizer.IsExcelMissing(DBNull.Value).Should().BeFalse();
+
+    // review 2026-09-14（P1 UDF-01）：可选参数「未提供」统一判定。
+    [Fact] public void IsOmitted_null_true()
+        => InputNormalizer.IsOmitted(null).Should().BeTrue();
+
+    [Fact] public void IsOmitted_DBNull_true()
+        => InputNormalizer.IsOmitted(DBNull.Value).Should().BeTrue();
+
+    [Fact] public void IsOmitted_ExcelEmpty_true()
+        => InputNormalizer.IsOmitted(ExcelEmpty.Value).Should().BeTrue();
+
+    [Fact] public void IsOmitted_scalar_false()
+    {
+        InputNormalizer.IsOmitted(0).Should().BeFalse();
+        InputNormalizer.IsOmitted("").Should().BeFalse();      // 显式空串不是省略
+        InputNormalizer.IsOmitted(ExcelError.Value).Should().BeFalse();
+    }
 }
 
 public class ComRangeExtractionTests

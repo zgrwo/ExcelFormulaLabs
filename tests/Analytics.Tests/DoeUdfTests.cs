@@ -45,5 +45,22 @@ namespace ExcelFormulaLabs.Analytics.Tests
         // 测试用 MaxFactors+1 避免回归时真实 4GB 分配。
         [Fact] public void Plan_huge_factor_count_returns_error()
             => DoeUdf.UDF_DOE_PLAN(DoeCore.MaxFactors + 1, 2, 0, 2, "full", false, null!).Should().Be(ExcelError.Value);
+
+        // review 2026-09-14（P1 UDF-01）：seed 省略 = 随机（null 语义），不是固定种子 0。
+        // 修复前 ExcelEmpty/DBNull 被 ToLong 转成 0 → 两次调用同序列（静默可复现）。
+        [Theory]
+        [MemberData(nameof(OmittedSentinelData.All), MemberType = typeof(OmittedSentinelData))]
+        public void Plan_omitted_seed_is_random_not_seed_zero(object? sentinel)
+        {
+            var seed0 = (object[,])DoeUdf.UDF_DOE_PLAN(4, 2, 0, 2, "full", null!, 0L);
+            bool everDiffers = false;
+            for (int attempt = 0; attempt < 3 && !everDiffers; attempt++)
+            {
+                var r = (object[,])DoeUdf.UDF_DOE_PLAN(4, 2, 0, 2, "full", null!, sentinel!);
+                for (int i = 1; i <= 16; i++)
+                    if (!Equals(r[i, 1], seed0[i, 1])) { everDiffers = true; break; }
+            }
+            everDiffers.Should().BeTrue("omitted seed must randomize, not behave like seed=0");
+        }
     }
 }

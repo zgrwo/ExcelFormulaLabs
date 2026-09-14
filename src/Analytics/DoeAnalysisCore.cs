@@ -17,7 +17,8 @@ namespace ExcelFormulaLabs.Analytics
         // F-32 (review 2026-09-06)：terms 参数解析从 UDF 层下沉（红线：UDF 仅分发适配）。
         internal static (int maxOrder, bool quadratic) ParseTerms(object terms)
         {
-            if (terms == null || InputNormalizer.IsExcelMissing(terms))
+            // review 2026-09-14（P1 UDF-01）：空白单元格（ExcelEmpty）与省略同语义 → 默认 2way。
+            if (InputNormalizer.IsOmitted(terms))
                 return (2, false); // default: main + 2-way interactions
             string t = InputNormalizer.ToString(terms).Trim().ToUpperInvariant();
             return t switch

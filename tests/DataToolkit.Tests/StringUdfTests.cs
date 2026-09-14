@@ -427,5 +427,13 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Default_match_case_StartsWith() => ((bool)StringUdf.UDF_STR_SW("Hello", "hello")).Should().BeFalse();
         [Fact] public void Default_match_case_EndsWith() => ((bool)StringUdf.UDF_STR_EW("Hello.World", "world")).Should().BeFalse();
         [Fact] public void Default_match_case_CommonPrefix() => StringUdf.UDF_STR_CPFX("Hello", "hello").Should().Be("");
+
+        // review 2026-09-14（P1 UDF-01）：suffix 省略（Blank/Missing/DBNull）→ "..."。
+        [Theory]
+        [MemberData(nameof(OmittedSentinelData.All), MemberType = typeof(OmittedSentinelData))]
+        public void Trunc_omitted_suffix_defaults_to_ellipsis(object? sentinel)
+        {
+            StringUdf.UDF_STR_TRUNC("abcdefgh", 5, sentinel!).Should().Be("ab...");
+        }
     }
 }

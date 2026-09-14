@@ -140,6 +140,20 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void UDF_terms_unknown_returns_error()
             => DoeAnalysisUdf.UDF_DOE_ANALYZE(X, y, "bogus").Should().Be(ExcelError.Value);
 
+        // review 2026-09-14（P1 UDF-01）：terms 省略（Blank/Missing/DBNull）→ 默认 "2way"。
+        [Theory]
+        [MemberData(nameof(OmittedSentinelData.All), MemberType = typeof(OmittedSentinelData))]
+        public void Udf_omitted_terms_use_2way_default(object? sentinel)
+        {
+            var expected = (object[,])DoeAnalysisUdf.UDF_DOE_ANALYZE(X, y, "2way");
+            var actual = (object[,])DoeAnalysisUdf.UDF_DOE_ANALYZE(X, y, sentinel!);
+            actual.GetLength(0).Should().Be(expected.GetLength(0));
+            actual.GetLength(1).Should().Be(expected.GetLength(1));
+            for (int r = 0; r < expected.GetLength(0); r++)
+                for (int c = 0; c < expected.GetLength(1); c++)
+                    actual[r, c].Should().Be(expected[r, c], $"cell [{r},{c}]");
+        }
+
         // ── Guard paths ───────────────────────────────────────────────
         [Fact] public void Analyze_length_mismatch_throws()
             => new Action(() => DoeAnalysisCore.Analyze(X, new[] { 1.0, 2.0 }, 1, false))

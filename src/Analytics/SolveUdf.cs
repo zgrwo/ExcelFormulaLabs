@@ -25,8 +25,9 @@ namespace ExcelFormulaLabs.Analytics
                 OptionalTable(request),
                 OptionalTable(bounds),
                 InputNormalizer.ToString(model),
-                seed == null || seed is ExcelMissing ? 42L : InputNormalizer.ToLong(seed),
-                maxStarts == null || maxStarts is ExcelMissing ? 10 : InputNormalizer.ToInt32(maxStarts)));
+                // review 2026-09-14（P1 UDF-01）：空白单元格（ExcelEmpty）与省略同语义回退默认值。
+                InputNormalizer.IsOmitted(seed) ? 42L : InputNormalizer.ToLong(seed),
+                InputNormalizer.IsOmitted(maxStarts) ? 10 : InputNormalizer.ToInt32(maxStarts)));
 
         [ExcelFunction(Name = "SOLVE.PREDICT",
           Description = "Forward-predict outputs for one or more complete parameter rows.")]
@@ -48,7 +49,7 @@ namespace ExcelFormulaLabs.Analytics
             => OutputWrapper.WrapError(() => SolveCore.Quality(
                 RequiredTable(data, "data"),
                 InputNormalizer.ToString(model),
-                seed == null || seed is ExcelMissing ? 42L : InputNormalizer.ToLong(seed)));
+                InputNormalizer.IsOmitted(seed) ? 42L : InputNormalizer.ToLong(seed)));
 
         [ExcelFunction(Name = "SOLVE.EQUATION",
           Description = "Forward equation plus closed-form inverse formula for single-variable linear models.")]

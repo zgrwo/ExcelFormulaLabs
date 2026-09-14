@@ -341,5 +341,15 @@ namespace ExcelFormulaLabs.Analytics.Tests
             var r = PhyChemUdf.UDF_PC_GAS("*", 22.4, 1.0, 273.15);
             ((double)r).Should().BeApproximately(1.0, 0.02);
         }
+
+        // review 2026-09-14（P1 UDF-01）：tUnit/pUnit 省略（Blank/Missing/DBNull）→ C/atm。
+        [Theory]
+        [MemberData(nameof(OmittedSentinelData.All), MemberType = typeof(OmittedSentinelData))]
+        public void GasSTP_omitted_units_use_defaults(object? sentinel)
+        {
+            var expected = PhyChemUdf.UDF_PC_STP(22.4, 25.0, 1.0, "C", "atm");
+            var actual = PhyChemUdf.UDF_PC_STP(22.4, 25.0, 1.0, sentinel!, sentinel!);
+            ((double)actual).Should().Be((double)expected);
+        }
     }
 }

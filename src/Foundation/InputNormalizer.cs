@@ -220,6 +220,19 @@ namespace ExcelFormulaLabs.Foundation
         }
 
         /// <summary>
+        /// True when an optional argument carries no value: <c>null</c>, <see cref="DBNull"/>,
+        /// <c>ExcelMissing</c> (omitted in the formula bar) or empty cell
+        /// (<c>ExcelEmpty</c> / <see cref="ExcelEmpty.Value"/>).
+        /// review 2026-09-14（模块审查 P1 UDF-01）：可选参数守卫此前只识别 null/Missing，
+        /// 引用空白单元格（ExcelEmpty）时 9 处静默错值或误抛 #VALUE!——统一走本判定，
+        /// 使空白与省略同语义回退文档默认值。
+        /// </summary>
+        public static bool IsOmitted(object? value)
+        {
+            return value == null || value is DBNull || IsExcelMissing(value) || IsExcelEmptyValue(value);
+        }
+
+        /// <summary>
         /// Detect Excel error signals: Foundation <see cref="ExcelError"/> sentinel
         /// and <c>ExcelDna.Integration.ExcelError</c> (enum arriving from real Excel
         /// error cells) without a hard assembly reference.

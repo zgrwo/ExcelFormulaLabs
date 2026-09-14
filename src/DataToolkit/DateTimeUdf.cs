@@ -9,7 +9,7 @@ namespace ExcelFormulaLabs.DataToolkit
         private static DateTime D(object d){double v=InputNormalizer.ToDouble(d);if(double.IsNaN(v))throw new ArgumentException(ErrorMsg.Get("DT_NaNTodate"));return DateTime.FromOADate(v);}
         // Week start-day adapter: default 1=Monday; validates 0-6 range so out-of-range
         // values surface as #VALUE! instead of silently producing wrong dates.
-        private static DayOfWeek SD(object sd){long v=sd==null||sd is ExcelDna.Integration.ExcelMissing?1L:InputNormalizer.ToLong(sd);if(v<0||v>6)throw new ArgumentException("start_day must be between 0 (Sunday) and 6 (Saturday).");return (DayOfWeek)(int)v;}
+        private static DayOfWeek SD(object sd){long v=InputNormalizer.IsOmitted(sd)?1L:InputNormalizer.ToLong(sd);if(v<0||v>6)throw new ArgumentException("start_day must be between 0 (Sunday) and 6 (Saturday).");return (DayOfWeek)(int)v;}
         // R5-P3-04 (review 2026-09-06)：可选日期参数「未提供」只认 null/ExcelMissing/DBNull/ExcelEmpty。
         // 原 `ToDouble(r)>0?D(r):null` 把合法序列号 0（1899-12-30）与 NaN（文本/区域输入）都
         // 吞成「默认今天」——静默错值。已提供但不可转换 → D() 抛错 → #VALUE!（与必选参数同语义）。

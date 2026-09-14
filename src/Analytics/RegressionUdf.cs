@@ -22,7 +22,7 @@ namespace ExcelFormulaLabs.Analytics
         [ExcelFunction(Name = "REGRESS.RIDGE",
           Description = "Ridge regression (L2, default lambda=1.0); no se/t/p (inference invalid).")]
         public static object UDF_REGRESS_RIDGE([ExcelArgument(Name="known_y", Description="The Y variable range (dependent variable)")] object y, [ExcelArgument(Name="known_x", Description="The X variable range (independent variables)")] object X, [ExcelArgument(Name="[lambda]", Description="Regularization parameter; default is 1.0")] object lambda=null)
-            => OutputWrapper.WrapError(() => AnalyticsHelpers.DictToReport(RegressionCore.FitRidge(M(X), V(y), lambda==null||lambda is ExcelDna.Integration.ExcelMissing?1.0:InputNormalizer.ToDouble(lambda))));
+            => OutputWrapper.WrapError(() => AnalyticsHelpers.DictToReport(RegressionCore.FitRidge(M(X), V(y), InputNormalizer.IsOmitted(lambda)?1.0:InputNormalizer.ToDouble(lambda))));
 
         [ExcelFunction(Name = "REGRESS.ANOVA1",
           Description = "One-way ANOVA (groups as columns); returns SS, df, MS, F and p-value report.")]

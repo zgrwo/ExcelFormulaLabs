@@ -281,5 +281,14 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Eow_start_day_negative_returns_error() => DateTimeUdf.UDF_DT_EOW(OA(2024,6,17), -1).Should().Be(ExcelError.Value);
         [Fact] public void Wom_start_day_out_of_range_returns_error() => DateTimeUdf.UDF_DT_WOM(OA(2024,6,17), 9).Should().Be(ExcelError.Value);
         [Fact] public void Sow_start_day_sunday_ok() => DateTimeUdf.UDF_DT_SOW(OA(2024,6,17), 0).Should().Be(OA(2024,6,16));
+
+        // review 2026-09-14（P1 UDF-01）：start_day 省略（Blank/Missing/DBNull）→ 1=Mon（非 0=Sun）。
+        [Theory]
+        [MemberData(nameof(OmittedSentinelData.All), MemberType = typeof(OmittedSentinelData))]
+        public void Sow_omitted_start_day_defaults_to_monday(object? sentinel)
+        {
+            // serial 45000 = 2023-03-15（周三）→ 默认周一起点 2023-03-13 = 44998。
+            ((double)DateTimeUdf.UDF_DT_SOW(45000.0, sentinel!)).Should().Be(44998.0);
+        }
     }
 }

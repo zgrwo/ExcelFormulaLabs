@@ -58,7 +58,7 @@ namespace ExcelFormulaLabs.Analytics
         {
             double[,] mX = M(X);
             double[] vY = V(y);
-            double lam = lambda == null || lambda is ExcelMissing ? 1.0 : InputNormalizer.ToDouble(lambda);
+            double lam = InputNormalizer.IsOmitted(lambda) ? 1.0 : InputNormalizer.ToDouble(lambda);
             return ExcelAsyncUtil.Run(nameof(UDF_REGRESS_RIDGE_ASYNC), new object[] { AsyncKey(mX), AsyncKeyV(vY), lam }, () =>
                 OutputWrapper.WrapError(() => AnalyticsHelpers.DictToReport(
                     RegressionCore.FitRidge(mX, vY, lam))));

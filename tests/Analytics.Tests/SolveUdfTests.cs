@@ -130,5 +130,32 @@ namespace ExcelFormulaLabs.Analytics.Tests
         {
             SolveUdf.UDF_SOLVE_EQUATION(History(), "poly2").Should().Be(ExcelError.Value);
         }
+
+        // review 2026-09-14（P1 UDF-01）：seed/max_starts 省略 → 42/10。
+        // 修复前 ExcelEmpty/DBNull 分别被 ToLong/ToInt32 转成 0 → max_starts=0 越界 #VALUE!。
+        [Theory]
+        [MemberData(nameof(OmittedSentinelData.All), MemberType = typeof(OmittedSentinelData))]
+        public void Inverse_omitted_seed_and_max_starts_use_defaults(object? sentinel)
+        {
+            var expected = (object[,])SolveUdf.UDF_SOLVE_INVERSE(History(), Request(), null!, "auto", 42L, 10);
+            var actual = (object[,])SolveUdf.UDF_SOLVE_INVERSE(History(), Request(), null!, "auto", sentinel!, sentinel!);
+            ((double)actual[1, 1]).Should().Be((double)expected[1, 1]);
+            ((double)actual[1, 2]).Should().Be((double)expected[1, 2]);
+            actual[1, 4].Should().Be(expected[1, 4]);
+        }
+
+        [Theory]
+        [MemberData(nameof(OmittedSentinelData.All), MemberType = typeof(OmittedSentinelData))]
+        public void Quality_omitted_seed_uses_default(object? sentinel)
+        {
+            var expected = (object[,])SolveUdf.UDF_SOLVE_QUALITY(History(), "auto", 42L);
+            var actual = (object[,])SolveUdf.UDF_SOLVE_QUALITY(History(), "auto", sentinel!);
+            actual.GetLength(0).Should().Be(expected.GetLength(0));
+            for (int r = 1; r < expected.GetLength(0); r++)
+            {
+                actual[r, 3].Should().Be(expected[r, 3], $"CV_R2 row {r}");
+                actual[r, 4].Should().Be(expected[r, 4], $"CV_MAE row {r}");
+            }
+        }
     }
 }
