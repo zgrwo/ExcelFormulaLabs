@@ -518,5 +518,85 @@ namespace ExcelFormulaLabs.Analytics.Tests
         k1.Should().NotBe(LinalgCore.MatrixHash(new double[,] { { 1 }, { 2 }, { 3 } })); // 与矩阵 key 域分离
         Regex.IsMatch(k1, @"^V3:[0-9A-F]{32}$").Should().BeTrue();
     }
+
+    // ── review-2026-09-14（P1 LIN-01）：DecompCache 元素预算与 LRU 逐出 ──
+    // 该组测试修改全局预算/缓存状态，必须与其它测试类串行（DisableParallelization），
+    // 否则并发访问 DecompCache 的测试会使 Count/预算断言不稳定。
+    [CollectionDefinition("DecompCache", DisableParallelization = true)]
+    public class DecompCacheCollectionDefinition { }
+
+    [Collection("DecompCache")]
+    public class DecompCacheTests
+    {
+        public DecompCacheTests()
+        {
+            LinalgCore.ClearDecompCache();
+            LinalgCore.DecompCache.TotalElementBudget = LinalgCore.DecompCache.MaxTotalElems;
+        }
+
+        [Fact]
+        public void DecompCache_ElementCount_counts_decomposition_tuples()
+        {
+            // 修复前元组落 `_ => 1` 分支 → 600×600 SVD 仅计 1 元素，预算失效。
+            var svd = (U: new double[600, 600], S: new double[600], Vt: new double[600, 600]);
+            LinalgCore.DecompCache.ElementCount(svd).Should().Be(2L * 600 * 600 + 600);
+            LinalgCore.DecompCache.ElementCount((Q: new double[10, 4], R: new double[4, 4])).Should().Be(56L);
+            LinalgCore.DecompCache.ElementCount(
+                (L: new double[5, 5], U: new double[5, 5], P: new double[5, 5])).Should().Be(75L);
+            LinalgCore.DecompCache.ElementCount(new double[3]).Should().Be(3L);
+            LinalgCore.DecompCache.ElementCount(42).Should().Be(1L);
+        }
+
+        [Fact]
+        public void DecompCache_Svd_entry_accounts_full_tuple()
+        {
+            // 真实路径：SVD_U 首次访问缓存完整元组，账目 = U+S+Vt。
+            var m = new double[600, 600];
+            for (int i = 0; i < 600; i++) m[i, i] = i + 1.0;
+            LinalgCore.SvdU(m);
+            var snap = LinalgCore.DecompCache.Snapshot();
+            snap.Count.Should().Be(1);
+            snap.TotalElems.Should().Be(600L * 600 + 600 + 600L * 600);
+        }
+
+        [Fact]
+        public void DecompCache_evicts_LRU_when_over_element_budget()
+        {
+            LinalgCore.DecompCache.TotalElementBudget = 10;
+            try
+            {
+                LinalgCore.DecompCache.GetOrAdd("a", () => new double[6]);
+                LinalgCore.DecompCache.GetOrAdd("b", () => new double[6]); // 12 > 10 → 逐出最旧的 a
+                var snap = LinalgCore.DecompCache.Snapshot();
+                snap.Count.Should().Be(1);
+                snap.TotalElems.Should().Be(6);
+                // b 被再次访问提升为 MRU，新增 c 后应逐出 b（而非 c）。
+                LinalgCore.DecompCache.GetOrAdd("b", () => new double[6]);
+                LinalgCore.DecompCache.GetOrAdd("c", () => new double[6]);
+                snap = LinalgCore.DecompCache.Snapshot();
+                snap.Count.Should().Be(1);
+                int recomputed = 0;
+                LinalgCore.DecompCache.GetOrAdd("a", () => { recomputed++; return new double[6]; });
+                recomputed.Should().Be(1); // a 已被逐出 → 工厂重算
+            }
+            finally
+            {
+                LinalgCore.DecompCache.TotalElementBudget = LinalgCore.DecompCache.MaxTotalElems;
+                LinalgCore.ClearDecompCache();
+            }
+        }
+
+        [Fact]
+        public void DecompCache_evicts_when_entry_count_exceeds_max()
+        {
+            for (int i = 0; i < LinalgCore.DecompCache.MaxEntries + 1; i++)
+                LinalgCore.DecompCache.GetOrAdd("k" + i, () => new double[i + 1]);
+            var snap = LinalgCore.DecompCache.Snapshot();
+            snap.Count.Should().Be(LinalgCore.DecompCache.MaxEntries);
+            int recomputed = 0;
+            LinalgCore.DecompCache.GetOrAdd("k0", () => { recomputed++; return new double[1]; });
+            recomputed.Should().Be(1); // 最旧的 k0 已逐出
+        }
+    }
 }
 }

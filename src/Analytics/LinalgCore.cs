@@ -19,16 +19,19 @@ namespace ExcelFormulaLabs.Analytics
         /// are called consecutively with the same input in Excel.
         /// Thread-safe; max 32 entries with LRU eviction.
         /// </summary>
-        private static class DecompCache
+        internal static class DecompCache
         {
             private static readonly Dictionary<string, (object Value, LinkedListNode<string> Node, long Elems)> Store = new();
             private static readonly LinkedList<string> LruList = new(); // front = LRU, back = MRU
             private static readonly object Lock = new();
-            private const int MaxEntries = 32;
+            internal const int MaxEntries = 32;
             // review 2026-08-31（深度审查 P2-34）：原按条目数（32）限流——单条 2000×2000 SVD
             // ≈ 64MB，32 条 ≈ 2GB。改为按累计元素数限流（2000 万元素 ≈ 160MB），
             // 大矩阵条目数更少但总内存有界。
-            private const long MaxTotalElems = 20_000_000;
+            internal const long MaxTotalElems = 20_000_000;
+            /// <summary>Effective element budget; tests may lower it to exercise LRU eviction
+            /// without allocating 20M-element matrices. Defaults to <see cref="MaxTotalElems"/>.</summary>
+            internal static long TotalElementBudget = MaxTotalElems;
 
             internal static T GetOrAdd<T>(string key, Func<T> factory)
             {
@@ -65,7 +68,7 @@ namespace ExcelFormulaLabs.Analytics
                     // F-16 (review 2026-09-06)：单条目自身超 MaxTotalElems 时，下面的 while 会
                     // 清空整个缓存后仍插入（与"总内存有界"口径不符）→ 直接放弃缓存该条目，
                     // 结果照常返回（下次访问重算）。当前最大合法条目 2000 万元素 ≈160MB。
-                    if (elems > MaxTotalElems)
+                    if (elems > TotalElementBudget)
                     {
                         return result;
                     }
@@ -74,7 +77,7 @@ namespace ExcelFormulaLabs.Analytics
                     long total = 0;
                     foreach (var kv in Store) total += kv.Value.Elems;
                     while (Store.Count > 0 &&
-                           (Store.Count >= MaxEntries || total + elems > MaxTotalElems))
+                           (Store.Count >= MaxEntries || total + elems > TotalElementBudget))
                     {
                         var oldest = LruList.First!;
                         LruList.RemoveFirst();
@@ -88,12 +91,30 @@ namespace ExcelFormulaLabs.Analytics
                 }
             }
 
-            private static long ElementCount(object value) => value switch
+            // review 2026-09-14（模块审查 P1 LIN-01）：原 `_ => 1` 把 SVD/QR/LU 的元组结果
+            // 计为 1 元素 → 20M 元素预算失效（600×600 SVD 真实 ≈72 万元素，最坏 ~2GB 缓存
+            // → 32 位 Excel OOM）。为三个分解元组补显式 case，逐分量求和。
+            internal static long ElementCount(object value) => value switch
             {
                 double[,] m2 => (long)m2.GetLength(0) * m2.GetLength(1),
                 double[] v1 => v1.Length,
+                (double[,] u, double[] s, double[,] vt) => (long)u.Length + s.Length + (long)vt.Length,
+                (double[,] q, double[,] r) => (long)q.Length + (long)r.Length,
+                (double[,] l, double[,] u2, double[,] p2) => (long)l.Length + (long)u2.Length + (long)p2.Length,
                 _ => 1,
             };
+
+            /// <summary>Test hook: current entry count and accounted element total.
+            /// Used by LinalgCoreTests to verify the element budget and LRU eviction.</summary>
+            internal static (int Count, long TotalElems) Snapshot()
+            {
+                lock (Lock)
+                {
+                    long total = 0;
+                    foreach (var kv in Store) total += kv.Value.Elems;
+                    return (Store.Count, total);
+                }
+            }
 
             /// <summary>
             /// Clear all cached decompositions. Called on add-in unload to release
