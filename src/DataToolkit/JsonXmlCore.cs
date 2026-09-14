@@ -47,7 +47,27 @@ namespace ExcelFormulaLabs.DataToolkit
         }
 
         private static object? Elm(JsonElement e)=>e.ValueKind switch
-        { JsonValueKind.Null=>null,JsonValueKind.True=>true,JsonValueKind.False=>false,JsonValueKind.String=>e.GetString(),JsonValueKind.Number=>ElmNumber(e),JsonValueKind.Array=>e.EnumerateArray().Select(Elm).ToArray(),JsonValueKind.Object=>e.EnumerateObject().ToDictionary(p=>p.Name,p=>Elm(p.Value)),_=>e.GetRawText() };
+        { JsonValueKind.Null=>null,JsonValueKind.True=>true,JsonValueKind.False=>false,JsonValueKind.String=>e.GetString(),JsonValueKind.Number=>ElmNumber(e),JsonValueKind.Array=>e.EnumerateArray().Select(Elm).ToArray(),JsonValueKind.Object=>ElmObject(e),_=>e.GetRawText() };
+
+        /// <summary>review 2026-09-14（模块审查 P3 SEC-06）：原 ToDictionary 遇重复键抛异常，
+        /// 而 QUERY（TryGetProperty 取首个）与 TOTABLE（后写覆盖）各自成功——三条通道行为矛盾。
+        /// 统一为「后者覆盖」（JSON 解析器通行语义，Python json.loads / JSON.NET 同款）。</summary>
+        private static object? ElmObject(JsonElement e)
+        {
+            var dict = new Dictionary<string, object?>(StringComparer.Ordinal);
+            foreach (var p in e.EnumerateObject()) dict[p.Name] = Elm(p.Value);
+            return dict;
+        }
+
+        /// <summary>取同名属性的最后一次出现（与 ElmObject 的后者覆盖语义一致）。</summary>
+        private static bool TryGetPropertyLast(JsonElement e, string name, out JsonElement value)
+        {
+            value = default;
+            bool found = false;
+            foreach (var p in e.EnumerateObject())
+                if (p.Name == name) { value = p.Value; found = true; }
+            return found;
+        }
 
         private static object? ElmNumber(JsonElement e)
         {
@@ -69,11 +89,16 @@ namespace ExcelFormulaLabs.DataToolkit
         }
 
         private static object? Q(JsonElement e,string p)
-        { foreach(var s in p.Split('.')){int b=s.IndexOf('[');string k=b>=0?s.Substring(0,b):s; if(!string.IsNullOrEmpty(k)&&e.ValueKind==JsonValueKind.Object){ if(e.TryGetProperty(k,out JsonElement c))e=c;else return null; } if(b>=0&&e.ValueKind==JsonValueKind.Array){ int idxLen=s.Length-b-2; if(idxLen>=0&&int.TryParse(s.Substring(b+1,idxLen),out int ix)&&ix>=0&&ix<e.GetArrayLength())e=e[ix];else return null; } } return Elm(e); }
+        { foreach(var s in p.Split('.')){int b=s.IndexOf('[');string k=b>=0?s.Substring(0,b):s; if(!string.IsNullOrEmpty(k)&&e.ValueKind==JsonValueKind.Object){ if(TryGetPropertyLast(e,k,out JsonElement c))e=c;else return null; } if(b>=0&&e.ValueKind==JsonValueKind.Array){ int idxLen=s.Length-b-2; if(idxLen>=0&&int.TryParse(s.Substring(b+1,idxLen),out int ix)&&ix>=0&&ix<e.GetArrayLength())e=e[ix];else return null; } } return Elm(e); }
 
         // ── XML ────────────────────────────────────────────────────────────
 
-        /// <summary>Secure XmlReader settings: no DTD, no external entities.</summary>
+        /// <summary>Secure XmlReader settings: no DTD, no external entities.
+        /// review 2026-09-14（模块审查 P3 SEC-04）：XDocument 构树按元素深度递归，
+        /// 20,000 层直调曾 StackOverflow（进程退出，不可捕获）。解析前用迭代 XmlReader
+        /// 预扫深度（MaxXmlDepth 远低于栈上限），超限即抛 XmlException。</summary>
+        private const int MaxXmlDepth = 1024;
+
         private static readonly XmlReaderSettings SecureXmlSettings = new()
         {
             DtdProcessing = DtdProcessing.Prohibit,
@@ -83,6 +108,25 @@ namespace ExcelFormulaLabs.DataToolkit
 
         private static XDocument ParseXmlSafe(string xml)
         {
+            // 迭代预扫：不构树、不递归，只统计嵌套深度（自闭合元素无 EndElement）。
+            using (var scan = XmlReader.Create(new StringReader(xml), SecureXmlSettings))
+            {
+                int depth = 0;
+                while (scan.Read())
+                {
+                    if (scan.NodeType == XmlNodeType.Element)
+                    {
+                        if (++depth > MaxXmlDepth)
+                            throw new XmlException(
+                                $"XML nesting depth exceeds the limit of {MaxXmlDepth}.");
+                        if (scan.IsEmptyElement) depth--;
+                    }
+                    else if (scan.NodeType == XmlNodeType.EndElement)
+                    {
+                        depth--;
+                    }
+                }
+            }
             using var reader = XmlReader.Create(new StringReader(xml), SecureXmlSettings);
             return XDocument.Load(reader);
         }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using ExcelFormulaLabs.DataToolkit;
+using ExcelFormulaLabs.Foundation;
 using FluentAssertions;
 using Xunit;
 
@@ -103,11 +104,39 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             var r = JsonXmlCore.JsonQuery("{\"items\":[10,20,30]}", "items[1]");
             r.Should().Be(20L);
         }
-
-        [Fact] public void JsonValidate_whitespace_only()
+        [Fact]
+        public void JsonValidate_whitespace_only()
         {
             // Empty/whitespace is not valid JSON
             JsonXmlCore.JsonValidate("   ").Should().BeFalse();
+        }
+
+        // review 2026-09-14（模块审查 P3 SEC-06）：重复键三通道行为必须一致——后者覆盖。
+        [Fact]
+        public void Json_duplicate_keys_last_wins_across_channels()
+        {
+            const string json = "{\"a\":1,\"a\":2}";
+            JsonXmlCore.JsonValidate(json).Should().BeTrue();
+            var parsed = (Dictionary<string, object?>)JsonXmlCore.JsonParse(json)!;
+            parsed["a"].Should().Be(2L);
+            JsonXmlCore.JsonQuery(json, "a").Should().Be(2L);
+            var table = JsonXmlCore.JsonToTable("[{\"a\":1,\"a\":2}]");
+            table![1, 0].Should().Be(2L);
+        }
+
+        // review 2026-09-14（模块审查 P3 SEC-04）：超深 XML 必须被拒绝而不是 StackOverflow
+        // （20,000 层直调曾使进程退出）。
+        [Fact]
+        public void Deep_xml_rejected_without_stack_overflow()
+        {
+            const int depth = 20_000;
+            var sb = new System.Text.StringBuilder(depth * 7 + 8);
+            for (int i = 0; i < depth; i++) sb.Append("<a>");
+            for (int i = 0; i < depth; i++) sb.Append("</a>");
+            string xml = sb.ToString();
+            JsonXmlCore.XmlValidate(xml).Should().BeFalse();
+            JsonXmlCore.XmlXPath(xml, "//a").Should().BeEmpty();
+            JsonXmlCore.XmlToTable(xml).Should().BeNull();
         }
 
         [Fact] public void JsonPrettify_preserves_structure()
@@ -253,12 +282,37 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             var r = PivotCore.Pivot(d, 0, 1, 2, "MIN");
             r[1, 1].Should().Be(10.0);  // MIN of 10 and 50
         }
-
-        [Fact] public void Pivot_nan_values_skipped()
+        [Fact]
+        public void Pivot_nan_values_propagate_nan()
         {
+            // PIV-01（review 2026-09-14）：NaN/错误值/Inf 传播 NaN 标记分组不可用（不再静默跳过）。
             var d = new object[,] { { "K", "P", "V" }, { "A", "X", double.NaN }, { "A", "X", 30 } };
             var r = PivotCore.Pivot(d, 0, 1, 2);
-            r[1, 1].Should().Be(30.0);  // NaN skipped, only 30 used
+            double.IsNaN((double)r[1, 1]).Should().BeTrue();
+        }
+
+        [Fact]
+        public void Pivot_error_and_infinity_values_propagate_nan()
+        {
+            var withError = new object[,] { { "K", "P", "V" }, { "A", "X", ExcelError.NA }, { "A", "X", 30.0 } };
+            double.IsNaN((double)PivotCore.Pivot(withError, 0, 1, 2)[1, 1]).Should().BeTrue();
+            var withInf = new object[,] { { "K", "P", "V" }, { "A", "X", double.PositiveInfinity }, { "A", "X", 30.0 } };
+            double.IsNaN((double)PivotCore.Pivot(withInf, 0, 1, 2)[1, 1]).Should().BeTrue();
+        }
+
+        [Fact]
+        public void Pivot_text_values_are_still_skipped()
+        {
+            // 文本（非 error）仍按 Excel SUM 语义跳过；仅当全组无有效数值时单元格为空。
+            var d = new object[,] { { "K", "P", "V" }, { "A", "X", "text" }, { "A", "X", 30.0 } };
+            PivotCore.Pivot(d, 0, 1, 2)[1, 1].Should().Be(30.0);
+        }
+
+        [Fact]
+        public void GroupBy_error_value_propagates_nan()
+        {
+            var d = new object[,] { { "G", "V" }, { "A", 10.0 }, { "A", ExcelError.Div0 } };
+            double.IsNaN((double)PivotCore.GroupBy(d, new[] { 0 }, 1)[0, 1]).Should().BeTrue();
         }
 
         // review 2026-08-29（发行前 max level 复审）：SUM/AVG 累加 `current+incoming` 溢出为 ±Inf，
@@ -397,9 +451,10 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
 
         [Fact] public void GroupBy_nan_values_skipped()
         {
+            // PIV-01（review 2026-09-14）：NaN 传播 → 分组结果 NaN（原静默跳过）。
             var d = new object[,] { { "G", "V" }, { "A", double.NaN }, { "A", 20 }, { "A", 30 } };
             var r = PivotCore.GroupBy(d, new[] { 0 }, 1);
-            r[0, 1].Should().Be(50.0);  // NaN skipped, 20+30
+            double.IsNaN((double)r[0, 1]).Should().BeTrue();
         }
 
         [Fact] public void GroupBy_lowercase_avg()
