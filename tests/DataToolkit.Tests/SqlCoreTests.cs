@@ -206,6 +206,56 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             SqlCore.SqlQuery(data, "/* note */ SELECT * FROM data")![1, 0].Should().Be("Alice");
         }
 
+        // review 2026-09-14（模块审查 P0 SEC-01）：注释拆分关键字的绕过向量——黑名单
+        // 必须在注释剥离后的归一化文本上匹配，且拼接处恢复为独立 token。
+        [Fact]
+        public void Comment_split_forbidden_keywords_are_rejected()
+        {
+            var data = new object[,] { { "Name", "Age" }, { "Alice", 30.0 } };
+            var cases = new[]
+            {
+                "REPLACE/**/INTO data VALUES ('X',1)",
+                "REPLACE--x\nINTO data VALUES ('X',1)",
+                "WITH x AS (SELECT 1) REPLACE/**/INTO data VALUES ('X',1)",
+                "INSERT/**/INTO data VALUES ('X',1)",
+                "WITH x AS (SELECT 1) DELETE/**/FROM data",
+                "UPDATE/**/data SET Age = 0",
+            };
+            foreach (var sql in cases)
+            {
+                var act = () => SqlCore.SqlQuery(data, sql);
+                act.Should().Throw<ArgumentException>($"comment-split keyword must be rejected: {sql}");
+            }
+            // The would-be DML must not have executed — table still intact.
+            var after = SqlCore.SqlQuery(data, "SELECT * FROM data");
+            after!.GetLength(0).Should().Be(2);
+        }
+
+        // review 2026-09-14（模块审查 P0 SEC-01）：注释剥离器不得误伤字符串字面量。
+        [Fact]
+        public void Comment_stripping_preserves_string_literals()
+        {
+            var data = new object[,] { { "Name" }, { "Alice" } };
+            var r1 = SqlCore.SqlQuery(data, "SELECT '--' AS c");
+            r1![1, 0].Should().Be("--");
+            var r2 = SqlCore.SqlQuery(data, "SELECT '/*' AS c");
+            r2![1, 0].Should().Be("/*");
+            var r3 = SqlCore.SqlQuery(data, "SELECT 'it''s -- not a comment' AS c");
+            r3![1, 0].Should().Be("it's -- not a comment");
+        }
+
+        // review 2026-09-14（模块审查 P2 SEC-02）：单值 10MB 上限必须覆盖文本型巨值。
+        [Theory]
+        [InlineData("SELECT hex(randomblob(11000000))")]
+        [InlineData("SELECT quote(randomblob(11000000))")]
+        [InlineData("SELECT CAST(randomblob(11000000) AS TEXT)")]
+        public void Oversized_text_values_are_rejected(string sql)
+        {
+            var data = new object[,] { { "Name" }, { "Alice" } };
+            var act = () => SqlCore.SqlQuery(data, sql);
+            act.Should().Throw<ArgumentException>().WithMessage("*10 MB*");
+        }
+
         [Fact]
         public void Non_select_prefixes_are_still_rejected()
         {

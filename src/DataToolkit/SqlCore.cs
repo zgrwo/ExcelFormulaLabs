@@ -53,11 +53,18 @@ namespace ExcelFormulaLabs.DataToolkit
 
         internal static object[,]? SqlQuery(object[,] range, string sql, Dictionary<string, object[,]>? extra = null, bool hasHeaders = true)
         {
-            if (!SelectOnly.IsMatch(StripLeadingComments(sql)))
+            // review 2026-09-14（模块审查 P0 SEC-01）：黑名单原扫原文，SQL 注释可拆分关键字
+            // （REPLACE/**/INTO、REPLACE--x\nINTO）使其不被正则匹配而实际执行 DML，绕过
+            // 行数/耗时预算 → 不可捕获 OOM。所有结构检查（前缀/黑名单）统一扫
+            // StripSqlComments 归一化文本（注释替换为空格，保留字符串字面量与引号标识符）。
+            if (!TryStripSqlComments(sql, out string normalized))
+                throw new ArgumentException(
+                    "SQL query contains an unterminated block comment and cannot be safely validated.");
+            if (!SelectOnly.IsMatch(normalized))
                 throw new ArgumentException(
                     "Only SELECT statements are allowed for security. " +
                     "Use a dedicated database tool for DDL/DML operations.");
-            if (ForbiddenKeyword.IsMatch(sql))
+            if (ForbiddenKeyword.IsMatch(normalized))
                 throw new ArgumentException(
                     "Data-modifying or schema statements (INSERT/UPDATE/DELETE/RECURSIVE/DDL/PRAGMA/ATTACH) " +
                     "are forbidden inside SQL queries, including WITH (CTE) prefixes.");
@@ -117,6 +124,13 @@ namespace ExcelFormulaLabs.DataToolkit
                         throw new ArgumentException(
                             $"SQL query returned a {blob.Length:N0}-byte blob at row {row}, column {i} — " +
                             "possible runaway query (randomblob). Limit blobs to 10 MB.");
+                    // review 2026-09-14（模块审查 P2 SEC-02）：单值上限原只查 byte[]，
+                    // hex(randomblob(11e6)) 等文本型巨值（22,000,000 字符）不受限——
+                    // 与 blob 共用 10MB 单值预算（32 位 Excel 单元格无法承载）。
+                    if (v is string hugeText && hugeText.Length > 10_000_000)
+                        throw new ArgumentException(
+                            $"SQL query returned a {hugeText.Length:N0}-character text value at row {row}, column {i} — " +
+                            "possible runaway query (hex/quote/CAST on randomblob). Limit values to 10 MB.");
                     // review 2026-09-05（R10）：null =「空单元格」哨兵（DBNull→null，与 Excel 空单元格
                     // 语义一致），null! 豁免的是可空性分析而非断言运行时非空（经 warnlab 实证：
                     // object?[,] 本地数组方案会在返回处触发 CS8619，不可用）。
@@ -198,34 +212,77 @@ namespace ExcelFormulaLabs.DataToolkit
             return v;
         }
 
-        /// <summary>Strip leading whitespace and SQL comments so the read-only
-        /// prefix check accepts queries like "-- note\nSELECT ..." and
-        /// "/* note */ SELECT ...". Returns an empty string when the statement
-        /// consists only of comments or has an unterminated block comment;
-        /// forbidden-keyword and semicolon checks still scan the raw text.</summary>
-        private static string StripLeadingComments(string sql)
+        /// <summary>Remove SQL comments (<c>--</c> to end of line and <c>/* ... */</c>)
+        /// while preserving string literals (<c>'...'</c> with <c>''</c> escapes) and
+        /// quoted identifiers (<c>"..."</c>, <c>`...`</c>, <c>[...]</c>). Comments are
+        /// replaced by a single space so keywords split by comments
+        /// (e.g. <c>REPLACE/**/INTO</c>) are re-joined as separate tokens and become
+        /// visible to the keyword blacklist.
+        /// Returns false when a block comment is unterminated — the caller must reject
+        /// the statement (SQLite would also fail, but this is an explicit fail-closed path).</summary>
+        private static bool TryStripSqlComments(string sql, out string normalized)
         {
+            var sb = new System.Text.StringBuilder(sql.Length);
             int i = 0;
             while (i < sql.Length)
             {
-                while (i < sql.Length && char.IsWhiteSpace(sql[i])) i++;
-                if (i + 1 < sql.Length && sql[i] == '-' && sql[i + 1] == '-')
+                char ch = sql[i];
+                if (ch == '\'') // string literal — copy verbatim, support '' escape
+                {
+                    sb.Append(ch); i++;
+                    while (i < sql.Length)
+                    {
+                        if (sql[i] == '\'')
+                        {
+                            if (i + 1 < sql.Length && sql[i + 1] == '\'') { sb.Append("''"); i += 2; continue; }
+                            sb.Append('\''); i++; break;
+                        }
+                        sb.Append(sql[i]); i++;
+                    }
+                    continue;
+                }
+                if (ch == '"' || ch == '`') // quoted identifier — copy verbatim, doubled quote escapes
+                {
+                    char quote = ch;
+                    sb.Append(ch); i++;
+                    while (i < sql.Length)
+                    {
+                        if (sql[i] == quote)
+                        {
+                            if (i + 1 < sql.Length && sql[i + 1] == quote) { sb.Append(quote); sb.Append(quote); i += 2; continue; }
+                            sb.Append(quote); i++; break;
+                        }
+                        sb.Append(sql[i]); i++;
+                    }
+                    continue;
+                }
+                if (ch == '[') // bracket identifier — no escape inside
+                {
+                    int end = sql.IndexOf(']', i + 1);
+                    if (end < 0) { sb.Append(sql, i, sql.Length - i); break; }
+                    sb.Append(sql, i, end - i + 1); i = end + 1;
+                    continue;
+                }
+                if (ch == '-' && i + 1 < sql.Length && sql[i + 1] == '-') // line comment
                 {
                     int nl = sql.IndexOf('\n', i + 2);
-                    if (nl < 0) return "";
+                    sb.Append(' ');
+                    if (nl < 0) break;
                     i = nl + 1;
                     continue;
                 }
-                if (i + 1 < sql.Length && sql[i] == '/' && sql[i + 1] == '*')
+                if (ch == '/' && i + 1 < sql.Length && sql[i + 1] == '*') // block comment
                 {
                     int end = sql.IndexOf("*/", i + 2, StringComparison.Ordinal);
-                    if (end < 0) return "";
+                    if (end < 0) { normalized = string.Empty; return false; }
+                    sb.Append(' ');
                     i = end + 2;
                     continue;
                 }
-                break;
+                sb.Append(ch); i++;
             }
-            return sql.Substring(i);
+            normalized = sb.ToString();
+            return true;
         }
 
         private static string Sanitize(string raw, int idx)

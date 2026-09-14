@@ -118,6 +118,15 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Query_replace_into_rejected() =>
             SqlUdf.UDF_SQL_QUERY(Data, "REPLACE INTO data VALUES ('x', 1)").Should().Be(ExcelError.Value);
 
+        // review 2026-09-14（模块审查 P0 SEC-01）：UDF 端注释拆分绕过全部 #VALUE!。
+        [Theory]
+        [InlineData("REPLACE/**/INTO data VALUES ('X',1)")]
+        [InlineData("REPLACE--x\nINTO data VALUES ('X',1)")]
+        [InlineData("WITH x AS (SELECT 1) REPLACE/**/INTO data VALUES ('X',1)")]
+        [InlineData("INSERT/**/INTO data VALUES ('X',1)")]
+        public void Query_comment_split_dml_rejected(string sql) =>
+            SqlUdf.UDF_SQL_QUERY(Data, sql).Should().Be(ExcelError.Value);
+
         [Fact] public void Query_literal_containing_keyword_rejected()
         {
             // Known trade-off (documented in api-reference): whole-word keywords
