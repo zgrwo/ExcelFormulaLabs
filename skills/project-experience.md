@@ -180,7 +180,7 @@ description: 项目经验库 — 从 v2.0.0 至今全部 commit/审查/CI 事故
 - **现象**：审计的计时基准（5.3s）未含 ComparisonUtils 分发开销（实测 152s，差 30 倍）；构建竞态"50% 失败率"实为 bin 残留 .dna 污染（BuildInParallel=false 早已修复）。
 - **铁律**：性能/概率声称必须用**与生产代码相同路径**的复刻测量（含全部分发层）；"间歇性失败"先查环境残留（bin/obj 陈旧产物）再归因代码。
 - **证据**：清理 bin 残留 .dna 后 10 次并行构建 0 失败。
-- **补充（2026-08-31 max-level 审查）**：残留自愈设计——双 TFM 串行内建（BuildInParallel=false）下，GenerateDnaFromTemplate 应保留**通配删除**（`*-AddIn*.dna`）而非按 TFM 条件化删除：通配 Delete 在下一次构建时自动清理 pack 中断残留，条件化删除会失去自愈（残留反复导致 build 报 "System.Data.SQLite NOT FOUND"）。**注意依赖关系**：通配删除依赖串行化，移除 BuildInParallel=false 前必须改回条件化删除。
+- **补充（2026-09-15 Release 构建竞态）**：`BuildInParallel=false` 只串行化**同一外层**的 inner dispatch——solution 级并行 / `ProjectReference` 直连会产生同一项目的并发内建（`-m:1` 复测可消、默认 `-m` 复现）。`CreateExcelAddIn` 通过 evaluation 期的 `None/Content` 发现 `.dna`：并发下对方 TFM 的 `.dna` 被本 TFM 打包进自己的 publish（实测 net8.0 XLL 落入 net48 目录），通配 Delete 还会删掉对方正在用的 `.dna`（pack Win32Exception 110 / 回退默认模板 → 静默坏 XLL）。**正确设计（已实施）**：① evaluation 期 `None Remove` 对方 TFM 的 `.dna`（`FilesInProject` 只含本 TFM，不存在时走 ExcelDna 默认名回退）；② `GenerateDnaFromTemplate`/`CleanupDnaAfterBuild` 只删本 TFM 的 `.dna`。残留自愈保留：本 TFM 上次 pack 中断残留由本次 Generate 删除；对方残留被 None Remove 屏蔽，不再污染（旧"通配删除 + 串行化"假设已废弃）。
 
 ---
 

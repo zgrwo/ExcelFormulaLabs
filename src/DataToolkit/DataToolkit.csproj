@@ -111,17 +111,26 @@
   </Target>
 
   <!-- Generate correct .dna from templates per target before ExcelDnaBuild,
-       then clean up afterward. The generated DNA file is shared across inner
-       builds; a stale file on disk can poison incremental builds.
-       Wildcard-delete every ExcelDnaBuild-generated .dna so that 32/64-bit
-       variants from the opposite TFM inner build never leak across. -->
+       then clean up afterward. Each inner TFM build only touches its own .dna. -->
+  <!-- review-2026-09-15（Release 构建竞态）：solution 级并行 / ProjectReference 直连会产生
+       同一项目的并发内建，BuildInParallel=false 只能串行化同一外层的 inner dispatch，挡不住
+       直连实例。CreateExcelAddIn 通过 evaluation 期的 None/Content 发现 .dna——并发下对方
+       TFM 的 .dna 会被本 TFM 打包进自己的 publish（实测 net8.0 XLL 落入 net48 目录），
+       且通配 Delete 会删掉对方正在使用的 .dna（pack Win32Exception 110 / 回退默认模板）。
+       按 TFM 隔离：① evaluation 期从 None 移除对方 .dna（FilesInProject 只含本 TFM；
+       不存在时走 ExcelDna 默认名回退）；② 生成/清理只删本 TFM 的 .dna。残留自愈保留：
+       本 TFM 上次 pack 中断的残留由本次 GenerateDnaFromTemplate 删除。 -->
+  <PropertyGroup>
+    <_OwnDnaName Condition="'$(TargetFramework)' == 'net8.0-windows'">DataToolkit-AddIn-net8.0.dna</_OwnDnaName>
+    <_OwnDnaName Condition="'$(TargetFramework)' == 'net48'">DataToolkit-AddIn-net48.dna</_OwnDnaName>
+    <_OtherDnaName Condition="'$(TargetFramework)' == 'net8.0-windows'">DataToolkit-AddIn-net48.dna</_OtherDnaName>
+    <_OtherDnaName Condition="'$(TargetFramework)' == 'net48'">DataToolkit-AddIn-net8.0.dna</_OtherDnaName>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(_OtherDnaName)' != ''">
+    <None Remove="$(_OtherDnaName)" />
+  </ItemGroup>
   <Target Name="GenerateDnaFromTemplate" BeforeTargets="ExcelDnaBuild">
-    <!-- review-2026-08-31（max-level 全量审查）：恢复通配删除（同 Analytics.csproj）——
-         依赖 BuildInParallel=false 串行化；通配 Delete 自愈 pack 中断残留。 -->
-    <ItemGroup>
-      <_StaleDna Include="DataToolkit-AddIn*.dna" />
-    </ItemGroup>
-    <Delete Files="@(_StaleDna)" />
+    <Delete Files="$(_OwnDnaName)" />
     <Copy Condition="'$(TargetFramework)' == 'net8.0-windows'"
           SourceFiles="DataToolkit-AddIn-net8.dna.tpl"
           DestinationFiles="DataToolkit-AddIn-net8.0.dna" />
@@ -130,10 +139,7 @@
           DestinationFiles="DataToolkit-AddIn-net48.dna" />
   </Target>
   <Target Name="CleanupDnaAfterBuild" AfterTargets="ExcelDnaPack">
-    <ItemGroup>
-      <_GenDna Include="DataToolkit-AddIn*.dna" />
-    </ItemGroup>
-    <Delete Files="@(_GenDna)" />
+    <Delete Files="$(_OwnDnaName)" />
   </Target>
 
   <!-- Patch VERSIONINFO in packed .xll files so Excel add-in manager
