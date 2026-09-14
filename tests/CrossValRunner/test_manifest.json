@@ -233,7 +233,8 @@
     {"id":"SOLVE.CrossValidateRate","module":"SOLVE","coreClass":"SolveCore","coreMethod":"CrossValidateRate","args":[{"ref":"solve_X_rate"},{"ref":"solve_y_rate"},0,3],"kwargs":{"seed":42},"tolerance":1e-6},
     {"id":"SOLVE.PredictRate","module":"SOLVE","coreClass":"SolveCore","coreMethod":"PredictRate","args":[{"ref":"solve_X_rate"},{"ref":"solve_y_rate"},0,3,[10,4,1,90]],"tolerance":1e-9},
     {"id":"SOLVE.SolveInverseRate","module":"SOLVE","coreClass":"SolveCore","coreMethod":"SolveInverseRate","args":[{"ref":"solve_X_rate"},[[9.5],[8.7],[9.4],[8.3],[9.3],[7.9],[10.1],[9.3],[10.0],[8.9],[9.9],[8.5]],[1],[[10,3.99,1,90]],[[7.3]],[[2,7]],10,0,3],"kwargs":{"seed":42},"tolerance":1e-4},
-    {"id":"SOLVE.PredictRatePoly","module":"SOLVE","coreClass":"SolveCore","coreMethod":"FitRatePolyPredict","args":[{"ref":"solve_X_ratepoly"},{"ref":"solve_y_ratepoly"},0,2,[10,4,90]],"tolerance":1e-3},
+    {"id":"SOLVE.PredictRatePoly","module":"SOLVE","coreClass":"SolveCore","coreMethod":"FitRatePolyPredict","args":[{"ref":"solve_X_ratepoly"},{"ref":"solve_y_ratepoly"},0,2,[10,4,90]],"tolerance":1e-6},
+    {"id":"SOLVE.PredictRatePolyExtrap","module":"SOLVE","coreClass":"SolveCore","coreMethod":"FitRatePolyPredict","args":[{"ref":"solve_X_ratepoly"},{"ref":"solve_y_ratepoly"},0,2,[10,4,9000]],"tolerance":1e-4},
     {"id":"SOLVE.FitSharedRate","module":"SOLVE","coreClass":"SolveCore","coreMethod":"FitSharedRate","args":[{"ref":"solve_X_shared"},{"ref":"solve_Y_shared"},[0,1],[[0,3],[1,3]],"rate"],"tolerance":1e-9},
     {"id":"SOLVE.CrossValidateShared","module":"SOLVE","coreClass":"SolveCore","coreMethod":"CrossValidateShared","args":[{"ref":"solve_X_shared_noisy"},{"ref":"solve_Y_shared_noisy"},[0,1],[[0,3],[1,3]],"rate"],"kwargs":{"seed":42},"tolerance":1e-9}
   ]

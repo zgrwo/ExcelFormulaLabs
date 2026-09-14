@@ -453,6 +453,16 @@ namespace ExcelFormulaLabs.Analytics
             return set.ToArray();
         }
 
+        /// <summary>True when a term's power vector involves any excluded feature column
+        /// (powers[j] &gt; 0 and j excluded) — the term is constrained out of g.</summary>
+        private static bool TermExcluded(int[] powers, HashSet<int> excluded)
+        {
+            if (excluded.Count == 0) return false;
+            for (int j = 0; j < powers.Length; j++)
+                if (powers[j] != 0 && excluded.Contains(j)) return true;
+            return false;
+        }
+
         private static SolveModel FitExpanded(double[][] X, double[] y, string kind, int[][] powers,
             bool ridged, int[] excluded, int rateIncoming, int rateTime)
         {
@@ -461,9 +471,16 @@ namespace ExcelFormulaLabs.Analytics
             var mean = new double[terms];
             var scale = new double[terms];
             var active = new List<int>();
+            // review 2026-09-14（模块审查 P1 SOL-01）：原 `excluded.Contains(t)` 把展开后的
+            // **项号**当作特征列号比较——MergeExcluded 装的是特征列号，而 BuildPowers 的
+            // 平方/交互段项号 ≥ baseCount → 约束完全落空（IncomingZ1²、FixedTime²、
+            // Incoming·FixedTime 等泄漏进 g，物理结构破坏且 QUALITY CV 掩盖）。改为按幂向量
+            // 判定：任一分量幂 > 0 且该特征列被排除 → 整项排除。rate（线性 g）项号==列号，
+            // 行为不变。
+            var excludedSet = new HashSet<int>(excluded);
             for (int t = 0; t < terms; t++)
             {
-                if (excluded.Contains(t)) continue; // rate：配对来料/时间列受约束，系数保持 0
+                if (TermExcluded(powers[t], excludedSet)) continue; // rate：配对来料/时间列（含其幂与交互项）受约束
                 var col = new double[n];
                 double maxAbs = 0;
                 for (int i = 0; i < n; i++)

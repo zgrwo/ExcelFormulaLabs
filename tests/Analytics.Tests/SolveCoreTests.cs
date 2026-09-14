@@ -577,13 +577,17 @@ namespace ExcelFormulaLabs.Analytics.Tests
         public void Inverse_FixedBlank_UsesHistoryMedian()
         {
             // y = 1 + 2a + 3u + 4f; f history 1..10 → median 5.5.
+            // 注意（review-2026-09-14 REG-01）：原夹具 u=((3a)%10)+2 与 f=((7a)%10)+1 使
+            // 剔除第 10 行后的 LOO 训练折精确秩亏（rank 3/4）——旧 diagTol 漏检时 CV 静默
+            // 用奇异折求解；P0 修复后正确拒绝该折 → linear 候选被跳过。改用与 a 无精确
+            // 线性关系的 u=2+(i%7)，保持夹具意图（f 中位数仍 5.5、u=5 可达）。
             object[,] Build(object fixedCell)
             {
                 var t = new object[12, 4];
                 t[0, 0] = "IncomingA"; t[0, 1] = "VariableU1"; t[0, 2] = "FixedF"; t[0, 3] = "OutputY1";
                 for (int i = 0; i < 10; i++)
                 {
-                    double a = i + 1, u = ((a * 3) % 10) + 2.0, f = ((a * 7) % 10) + 1.0;
+                    double a = i + 1, u = 2 + (i % 7), f = ((a * 7) % 10) + 1.0;
                     t[i + 1, 0] = a; t[i + 1, 1] = u; t[i + 1, 2] = f;
                     t[i + 1, 3] = 1 + 2 * a + 3 * u + 4 * f;
                 }
@@ -618,11 +622,13 @@ namespace ExcelFormulaLabs.Analytics.Tests
         {
             // 列序 IncomingA | FixedF | VariableU1 | OutputY1 → Features = [0,2,1]：
             // 可调列数据索引 2 对应特征位置 1（固定列插在可调列之前时二者不相等）。
+            // 注意（review-2026-09-14 REG-01）：u 改 2+(i%7)（原 UOf 使 LOO 折精确秩亏，
+            // P0 守卫修复后候选被正确拒绝）；f 中位数仍 5.5、u=4 仍可达。
             var t = new object[12, 4];
             t[0, 0] = "IncomingA"; t[0, 1] = "FixedF"; t[0, 2] = "VariableU1"; t[0, 3] = "OutputY1";
             for (int i = 0; i < 10; i++)
             {
-                double a = i + 1, f = ((a * 7) % 10) + 1.0, u = UOf(i + 1);
+                double a = i + 1, f = ((a * 7) % 10) + 1.0, u = 2 + (i % 7);
                 t[i + 1, 0] = a; t[i + 1, 1] = f; t[i + 1, 2] = u;
                 t[i + 1, 3] = 1 + 0.5 * a + 2 * f + 1.5 * u;
             }
@@ -978,6 +984,31 @@ namespace ExcelFormulaLabs.Analytics.Tests
             m.IsRate.Should().BeTrue();
             SolveCore.Predict(m, new[] { 10.0, 4.0, 90.0 }).Should().BeApproximately(5.86, 1e-3);
             SolveCore.PredictRate(m, new[] { 10.0, 4.0, 90.0 }).Should().BeApproximately(0.046, 1e-5);
+        }
+
+        // review 2026-09-14（模块审查 P1 SOL-01）：排除必须按幂向量判定——修复前
+        // `excluded.Contains(t)` 把展开项号当特征列号，inc²/t²/inc·t 等泄漏（系数非 0），
+        // t 外推 9000 时预测 -2037.34（正确 -404）。
+        [Fact]
+        public void FitModel_RatePoly_ExcludedColumnsNever_leak_in_any_power_or_interaction()
+        {
+            var X = new double[12][];
+            var y = new double[12];
+            for (int i = 0; i < 12; i++)
+            {
+                double inc = 10 + 0.1 * (i + 1), u = 2 + (i % 6), t = i % 2 == 0 ? 30.0 : 60.0;
+                X[i] = new[] { inc, u, t };
+                y[i] = inc - t * (0.01 + 0.005 * u + 0.001 * u * u);
+            }
+            var m = SolveCore.FitModel(X, y, "rate_poly", 0, 2);
+            // 项号映射（BuildPowers 顺序）：0 inc, 1 u, 2 t, 3 inc², 4 u², 5 t², 6 inc·u, 7 inc·t, 8 u·t
+            foreach (int t in new[] { 0, 2, 3, 5, 6, 7, 8 })
+                m.Coef[t].Should().Be(0.0, $"term {t} involves excluded feature 0 or 2");
+            // 允许项精确恢复 g 的二次项。
+            m.Coef[1].Should().BeApproximately(0.005, 1e-5);
+            m.Coef[4].Should().BeApproximately(0.001, 1e-5);
+            // 外推不再被泄漏项污染：正确 10 − 9000·0.046 = −404。
+            SolveCore.Predict(m, new[] { 10.0, 4.0, 9000.0 }).Should().BeApproximately(-404.0, 1e-2);
         }
 
         [Fact]

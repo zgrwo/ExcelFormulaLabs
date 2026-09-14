@@ -1317,8 +1317,14 @@ _rp_poly = RidgeLR(alpha=1e-5).fit((_Zp_raw - _mu_p) / _sd_p, _rate_target_poly)
 _x_poly = _pf_poly.transform(np.array([[4.0]]))
 _g_poly = float(_rp_poly.predict((_x_poly - _mu_p) / _sd_p)[0])
 _predict_ratepoly_py = 10.0 - 90.0 * _g_poly  # t=90 外推
-check("SOLVE.PREDICT_RATE_POLY", _predict_ratepoly_py, 5.86, tol=1e-3)
-cross_vs_csharp("SOLVE.PREDICT_RATE_POLY_CS", _predict_ratepoly_py, "SOLVE.PredictRatePoly", tol=1e-3)
+check("SOLVE.PREDICT_RATE_POLY", _predict_ratepoly_py, 5.86, tol=1e-5)
+# SOL-01（review-2026-09-14）：排除维度错配修复——泄漏项曾使 t=9000 外推 -2037.34（正确 -404）。
+# 反例条目在修复前必 FAIL（diff 1633），修复后与独立 Python 同口径一致。
+_predict_ratepoly_extrap_py = 10.0 - 9000.0 * _g_poly
+check("SOLVE.PREDICT_RATE_POLY_EXTRAP", _predict_ratepoly_extrap_py, -404.0, tol=1e-2)
+cross_vs_csharp("SOLVE.PREDICT_RATE_POLY_CS", _predict_ratepoly_py, "SOLVE.PredictRatePoly", tol=1e-6)
+cross_vs_csharp("SOLVE.PREDICT_RATE_POLY_EXTRAP_CS", _predict_ratepoly_extrap_py,
+                "SOLVE.PredictRatePolyExtrap", tol=1e-4)
 
 # SharedOutput：两个输出共享 g = 0.01 + 0.005·U1（池化速率目标）
 solve_X_shared = np.array([[10.1,12.1,2,30],[10.2,12.2,3,60],[10.3,12.3,4,30],[10.4,12.4,5,60],
