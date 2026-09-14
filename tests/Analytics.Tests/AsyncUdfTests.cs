@@ -151,13 +151,13 @@ namespace ExcelFormulaLabs.Analytics.Tests
         // -- 3. Documented non-Excel behaviour --
 
         [Fact]
-        public void Async_udf_throws_outside_excel_host()
+        public void Async_udf_failure_outside_excel_host_returns_value_error()
         {
-            // ExcelAsyncUtil.Run requires a live Excel host; outside Excel it throws
-            // InvalidOperationException ("not been initialized"). This test documents
-            // that behaviour so an implementation change is a conscious decision.
-            var act = () => LinalgAsyncUdf.UDF_LINALG_SVD_U_ASYNC(new double[,] { { 1 } });
-            act.Should().Throw<InvalidOperationException>();
+            // UDF-03（review 2026-09-14）：参数转换与 Run 均在 WrapError 之内——无 Excel 宿主时
+            // ExcelAsyncUtil.Run 抛 InvalidOperationException，现与同步 UDF 一致转为 #VALUE!
+            //（原异常穿出，同步/异步失败语义分叉）。
+            LinalgAsyncUdf.UDF_LINALG_SVD_U_ASYNC(new double[,] { { 1 } })
+                .Should().Be(ExcelFormulaLabs.Foundation.ExcelError.Value);
         }
     }
 }

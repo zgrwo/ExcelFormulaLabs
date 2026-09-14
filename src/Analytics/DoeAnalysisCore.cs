@@ -31,6 +31,17 @@ namespace ExcelFormulaLabs.Analytics
             };
         }
 
+        /// <summary>Expanded term count (excluding intercept) for a coded design with
+        /// <paramref name="k"/> factors. review 2026-09-14（P3 PHY 系列）：供 UDF 层自动
+        /// 降阶使用（饱和设计 p ≥ n 时 FitOLS 自由度不足 → 默认 terms 曾直接 #VALUE!）。</summary>
+        internal static int ExpandedTermCount(int k, int maxOrder, bool quadratic)
+        {
+            int count = maxOrder >= 1 ? k : 0;
+            if (maxOrder >= 2) count += k * (k - 1) / 2;
+            if (quadratic) count += k;
+            return count;
+        }
+
         /// <summary>
         /// Effect table: one row per term — [Term, Coef, Effect, t, p].
         /// Effect = 2×Coef (the standard DOE effect estimate for ±1-coded factors).

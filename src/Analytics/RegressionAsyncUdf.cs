@@ -29,10 +29,13 @@ namespace ExcelFormulaLabs.Analytics
             [ExcelArgument(Name = "known_y", Description = "The Y variable range (dependent variable)")] object y,
             [ExcelArgument(Name = "known_x", Description = "The X variable range (independent variables)")] object X)
         {
-            double[,] mX = M(X);
-            double[] vY = V(y);
-            return ExcelAsyncUtil.Run(nameof(UDF_REGRESS_OLS_ASYNC), new object[] { AsyncKey(mX), AsyncKeyV(vY) }, () =>
-                OutputWrapper.WrapError(() => AnalyticsHelpers.DictToReport(RegressionCore.FitOLS(mX, vY))));
+            return OutputWrapper.WrapError(() =>
+            {
+                double[,] mX = M(X);
+                double[] vY = V(y);
+                return ExcelAsyncUtil.Run(nameof(UDF_REGRESS_OLS_ASYNC), new object[] { AsyncKey(mX), AsyncKeyV(vY) }, () =>
+                    OutputWrapper.WrapError(() => AnalyticsHelpers.DictToReport(RegressionCore.FitOLS(mX, vY))));
+            });
         }
 
         [ExcelFunction(Name = "REGRESS.WLS_ASYNC",
@@ -42,11 +45,14 @@ namespace ExcelFormulaLabs.Analytics
             [ExcelArgument(Name = "known_x", Description = "The X variable range (independent variables)")] object X,
             [ExcelArgument(Name = "weights", Description = "Weight values for weighted least squares")] object w)
         {
-            double[,] mX = M(X);
-            double[] vY = V(y);
-            double[] vW = V(w);
-            return ExcelAsyncUtil.Run(nameof(UDF_REGRESS_WLS_ASYNC), new object[] { AsyncKey(mX), AsyncKeyV(vY), AsyncKeyV(vW) }, () =>
-                OutputWrapper.WrapError(() => AnalyticsHelpers.DictToReport(RegressionCore.FitWLS(mX, vY, vW))));
+            return OutputWrapper.WrapError(() =>
+            {
+                double[,] mX = M(X);
+                double[] vY = V(y);
+                double[] vW = V(w);
+                return ExcelAsyncUtil.Run(nameof(UDF_REGRESS_WLS_ASYNC), new object[] { AsyncKey(mX), AsyncKeyV(vY), AsyncKeyV(vW) }, () =>
+                    OutputWrapper.WrapError(() => AnalyticsHelpers.DictToReport(RegressionCore.FitWLS(mX, vY, vW))));
+            });
         }
 
         [ExcelFunction(Name = "REGRESS.RIDGE_ASYNC",
@@ -56,12 +62,15 @@ namespace ExcelFormulaLabs.Analytics
             [ExcelArgument(Name = "known_x", Description = "The X variable range (independent variables)")] object X,
             [ExcelArgument(Name = "[lambda]", Description = "Regularization parameter; default is 1.0")] object lambda = null)
         {
-            double[,] mX = M(X);
-            double[] vY = V(y);
-            double lam = InputNormalizer.IsOmitted(lambda) ? 1.0 : InputNormalizer.ToDouble(lambda);
-            return ExcelAsyncUtil.Run(nameof(UDF_REGRESS_RIDGE_ASYNC), new object[] { AsyncKey(mX), AsyncKeyV(vY), lam }, () =>
-                OutputWrapper.WrapError(() => AnalyticsHelpers.DictToReport(
-                    RegressionCore.FitRidge(mX, vY, lam))));
+            return OutputWrapper.WrapError(() =>
+            {
+                double[,] mX = M(X);
+                double[] vY = V(y);
+                double lam = InputNormalizer.IsOmitted(lambda) ? 1.0 : InputNormalizer.ToDouble(lambda);
+                return ExcelAsyncUtil.Run(nameof(UDF_REGRESS_RIDGE_ASYNC), new object[] { AsyncKey(mX), AsyncKeyV(vY), lam }, () =>
+                    OutputWrapper.WrapError(() => AnalyticsHelpers.DictToReport(
+                        RegressionCore.FitRidge(mX, vY, lam))));
+            });
         }
     }
 }

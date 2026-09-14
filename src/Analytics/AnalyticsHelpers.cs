@@ -68,8 +68,20 @@ namespace ExcelFormulaLabs.Analytics
                 var list = new List<double>(rows);
                 for (int r = 0; r < rows; r++)
                 {
-                    double v = InputNormalizer.ToDouble(m[r, c]);
-                    if (!double.IsNaN(v)) list.Add(v);
+                    object raw = m[r, c];
+                    // review 2026-09-14（P3 REG-04）：原实现把文本也静默丢弃——与文档
+                    // （只跳过空/错误）及 OLS/WLS 同输入 #VALUE! 的口径矛盾。现仅跳过
+                    // 空/错误单元格；非数值文本显式报错。
+                    if (raw == null || raw is DBNull
+                        || InputNormalizer.IsExcelEmptyValue(raw)
+                        || InputNormalizer.IsExcelErrorValue(raw))
+                        continue;
+                    double v = InputNormalizer.ToDouble(raw);
+                    if (double.IsNaN(v))
+                        throw new ArgumentException(
+                            $"ANOVA input contains a non-numeric value at row {r}, column {c}. " +
+                            "Only numeric cells are allowed (empty/error cells are skipped).");
+                    list.Add(v);
                 }
                 groups[c] = list.ToArray();
             }

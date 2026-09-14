@@ -77,8 +77,6 @@ namespace ExcelFormulaLabs.DataToolkit
             }
             return r.ToArray();
         }
-        internal static object[] CollectNumeric(object[,] data, int rows, int cols, out string[] names, bool hasHeaders = true) { var ci=ArrayOperations.CollectNumericColumns(data,rows,cols,out names,hasHeaders); return ci.Select(i=>(object)(long)i).ToArray(); }
-
         internal static object[] Shuffle(object[] a)
         {
             var r = new object[a.Length]; Array.Copy(a, r, a.Length);

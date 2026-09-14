@@ -163,6 +163,10 @@ namespace ExcelFormulaLabs.Analytics
         internal static (double[,] U, double[] S, double[,] Vt) Svd(double[,] m)
         {
             NumericGuard.AgainstNonFinite(m);
+            // review 2026-09-14（P3 REG 系列）：0×0/空维矩阵原落 MathNet 内部
+            // IndexOutOfRangeException（裸 CLR 异常）。显式 ArgumentException → #VALUE!。
+            if (m.GetLength(0) == 0 || m.GetLength(1) == 0)
+                throw new ArgumentException("SVD requires a non-empty matrix.");
             var A = Matrix<double>.Build.DenseOfArray(m);
             var svd = A.Svd(computeVectors: true);
             int rows = A.RowCount, cols = A.ColumnCount, k = Math.Min(rows, cols);
@@ -226,6 +230,15 @@ namespace ExcelFormulaLabs.Analytics
         internal static double[] Solve(double[,] A, double[] b)
         {
             NumericGuard.AgainstNonFinite(A);
+            // review 2026-09-14（P3 REG 系列）：空矩阵/非方阵显式拒绝（原 MathNet 裸异常）。
+            int an = A.GetLength(0), am = A.GetLength(1);
+            if (an == 0 || am == 0)
+                throw new ArgumentException("Solve requires a non-empty coefficient matrix.");
+            if (an != am)
+                throw new ArgumentException($"Solve requires a square matrix (got {an}×{am}).");
+            if (b.Length != an)
+                throw new ArgumentException(
+                    $"Right-hand side length ({b.Length}) must equal the matrix size ({an}).");
             if (b.Any(v => double.IsNaN(v) || double.IsInfinity(v)))
                 throw new ArgumentException(ErrorMsg.Get("LINALG_RhsNotFinite"));
             var matA = Matrix<double>.Build.DenseOfArray(A);
@@ -296,6 +309,8 @@ namespace ExcelFormulaLabs.Analytics
         private static void EnsureSymmetric(double[,] m, string op = "Eigenvalue decomposition (Evd)")
         {
             int n = m.GetLength(0);
+            if (n == 0)
+                throw new ArgumentException($"{op} requires a non-empty matrix.");
             if (n != m.GetLength(1))
                 throw new ArgumentException(ErrorMsg.Get("LINALG_EigenNotSquare", n, m.GetLength(1)));
             NumericGuard.AgainstNonFinite(m); // Replaces inline NaN/Inf scan
@@ -332,6 +347,8 @@ namespace ExcelFormulaLabs.Analytics
         internal static int Rank(double[,] m, double tol = 0)
         {
             NumericGuard.AgainstNonFinite(m);
+            if (m.GetLength(0) == 0 || m.GetLength(1) == 0)
+                throw new ArgumentException("Rank requires a non-empty matrix.");
             var A = Matrix<double>.Build.DenseOfArray(m);
             var svd = A.Svd(computeVectors: false);
             // Use relative tolerance (MATLAB/numpy convention) when tol <= 0
@@ -359,7 +376,10 @@ namespace ExcelFormulaLabs.Analytics
                     double t = m[r, c] / max;
                     s += t * t;
                 }
-            return max * Math.Sqrt(s);
+            // review 2026-09-14（P3 REG 系列）：真值超出 double 表示（如 [[1e308,1e308]]）时
+            // max·√s 溢出 → 模块约定 Inf 封顶为 NaN（原返回 +Inf）。
+            double norm = max * Math.Sqrt(s);
+            return double.IsInfinity(norm) ? double.NaN : norm;
         }
 
         internal static double[,] Identity(int n)

@@ -154,6 +154,20 @@ namespace ExcelFormulaLabs.Analytics.Tests
                     actual[r, c].Should().Be(expected[r, c], $"cell [{r},{c}]");
         }
 
+        // review 2026-09-14（P3 PHY 系列）：2×2 饱和设计（n=4）用默认 terms（2way）时
+        // 扩展项+截距=4 ≥ n → 自动降为 main（3 参数，df=1），不再直接 #VALUE!。
+        [Fact]
+        public void Udf_default_terms_on_saturated_2x2_auto_reduces_to_main()
+        {
+            double[,] design = { { -1, -1 }, { 1, -1 }, { -1, 1 }, { 1, 1 } };
+            double[] resp = { 3.0, 5.0, 5.0, 9.0 };
+            var r = (object[,])DoeAnalysisUdf.UDF_DOE_ANALYZE(design, resp, ExcelEmpty.Value);
+            r.GetLength(0).Should().Be(3);  // header + A + B
+            r[1, 0].Should().Be("A");
+            r[2, 0].Should().Be("B");
+            ((double)r[1, 1]).Should().BeApproximately(1.5, 1e-12);
+        }
+
         // ── Guard paths ───────────────────────────────────────────────
         [Fact] public void Analyze_length_mismatch_throws()
             => new Action(() => DoeAnalysisCore.Analyze(X, new[] { 1.0, 2.0 }, 1, false))

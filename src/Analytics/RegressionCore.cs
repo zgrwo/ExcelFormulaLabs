@@ -282,6 +282,14 @@ namespace ExcelFormulaLabs.Analytics
                 throw new ArgumentException(
                     $"Cannot fit Ridge: lambda must be non-negative (got {lambda}).");
             int n = X.GetLength(0), origP = X.GetLength(1);
+            // review 2026-09-14（P3 REG 系列）：Ridge 原缺 y/X 维度与空输入校验——
+            // 失配时落 MathNet 裸异常（信息不可读）。与 FitOLS/FitWLS 同口径。
+            if (n == 0 || y.Length == 0)
+                throw new ArgumentException(
+                    "Input data is empty. Regression requires at least one observation.");
+            if (y.Length != n)
+                throw new ArgumentException(
+                    $"Y length ({y.Length}) must equal X row count ({n}).");
             int p; double[,] Xaug;
             if (addIntercept) { p = origP + 1; Xaug = PrependIntercept(X); }
             else { p = origP; Xaug = X; }

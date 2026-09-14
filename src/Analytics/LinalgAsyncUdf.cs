@@ -39,25 +39,34 @@ namespace ExcelFormulaLabs.Analytics
         [ExcelFunction(Name = "LINALG.SVD_U_ASYNC", Description = "SVD left singular vectors (U matrix), computed asynchronously.")]
         public static object UDF_LINALG_SVD_U_ASYNC([ExcelArgument(Name = "array", Description = "A range or 2D array")] object d)
         {
-            double[,] m = M(d);
-            return ExcelAsyncUtil.Run(nameof(UDF_LINALG_SVD_U_ASYNC), AsyncKey(m), () =>
-                OutputWrapper.WrapError(() => LinalgCore.SvdU(m)));
+            return OutputWrapper.WrapError(() =>
+            {
+                double[,] m = M(d);
+                return ExcelAsyncUtil.Run(nameof(UDF_LINALG_SVD_U_ASYNC), AsyncKey(m), () =>
+                    OutputWrapper.WrapError(() => LinalgCore.SvdU(m)));
+            });
         }
 
         [ExcelFunction(Name = "LINALG.SVD_S_ASYNC", Description = "SVD singular values (S vector), computed asynchronously.")]
         public static object UDF_LINALG_SVD_S_ASYNC([ExcelArgument(Name = "array", Description = "A range or 2D array")] object d)
         {
-            double[,] m = M(d);
-            return ExcelAsyncUtil.Run(nameof(UDF_LINALG_SVD_S_ASYNC), AsyncKey(m), () =>
-                OutputWrapper.WrapError(() => LinalgCore.SvdS(m)));
+            return OutputWrapper.WrapError(() =>
+            {
+                double[,] m = M(d);
+                return ExcelAsyncUtil.Run(nameof(UDF_LINALG_SVD_S_ASYNC), AsyncKey(m), () =>
+                    OutputWrapper.WrapError(() => LinalgCore.SvdS(m)));
+            });
         }
 
         [ExcelFunction(Name = "LINALG.SVD_VT_ASYNC", Description = "SVD right singular vectors transposed (Vt), computed asynchronously.")]
         public static object UDF_LINALG_SVD_VT_ASYNC([ExcelArgument(Name = "array", Description = "A range or 2D array")] object d)
         {
-            double[,] m = M(d);
-            return ExcelAsyncUtil.Run(nameof(UDF_LINALG_SVD_VT_ASYNC), AsyncKey(m), () =>
-                OutputWrapper.WrapError(() => LinalgCore.SvdVt(m)));
+            return OutputWrapper.WrapError(() =>
+            {
+                double[,] m = M(d);
+                return ExcelAsyncUtil.Run(nameof(UDF_LINALG_SVD_VT_ASYNC), AsyncKey(m), () =>
+                    OutputWrapper.WrapError(() => LinalgCore.SvdVt(m)));
+            });
         }
 
         // ── QR (async) ──────────────────────────────────────────────
@@ -65,17 +74,23 @@ namespace ExcelFormulaLabs.Analytics
         [ExcelFunction(Name = "LINALG.QR_Q_ASYNC", Description = "QR decomposition orthogonal matrix Q, computed asynchronously.")]
         public static object UDF_LINALG_QR_Q_ASYNC([ExcelArgument(Name = "array", Description = "A range or 2D array")] object d)
         {
-            double[,] m = M(d);
-            return ExcelAsyncUtil.Run(nameof(UDF_LINALG_QR_Q_ASYNC), AsyncKey(m), () =>
-                OutputWrapper.WrapError(() => LinalgCore.QrQ(m)));
+            return OutputWrapper.WrapError(() =>
+            {
+                double[,] m = M(d);
+                return ExcelAsyncUtil.Run(nameof(UDF_LINALG_QR_Q_ASYNC), AsyncKey(m), () =>
+                    OutputWrapper.WrapError(() => LinalgCore.QrQ(m)));
+            });
         }
 
         [ExcelFunction(Name = "LINALG.QR_R_ASYNC", Description = "QR decomposition upper-triangular matrix R, computed asynchronously.")]
         public static object UDF_LINALG_QR_R_ASYNC([ExcelArgument(Name = "array", Description = "A range or 2D array")] object d)
         {
-            double[,] m = M(d);
-            return ExcelAsyncUtil.Run(nameof(UDF_LINALG_QR_R_ASYNC), AsyncKey(m), () =>
-                OutputWrapper.WrapError(() => LinalgCore.QrR(m)));
+            return OutputWrapper.WrapError(() =>
+            {
+                double[,] m = M(d);
+                return ExcelAsyncUtil.Run(nameof(UDF_LINALG_QR_R_ASYNC), AsyncKey(m), () =>
+                    OutputWrapper.WrapError(() => LinalgCore.QrR(m)));
+            });
         }
 
         // ── Eigen (async) ───────────────────────────────────────────
@@ -83,9 +98,12 @@ namespace ExcelFormulaLabs.Analytics
         [ExcelFunction(Name = "LINALG.EIGEN_ASYNC", Description = "Eigenvalues (symmetric matrix), computed asynchronously.")]
         public static object UDF_LINALG_EIGEN_ASYNC([ExcelArgument(Name = "array", Description = "A range or 2D array")] object d)
         {
-            double[,] m = M(d);
-            return ExcelAsyncUtil.Run(nameof(UDF_LINALG_EIGEN_ASYNC), AsyncKey(m), () =>
-                OutputWrapper.WrapError(() => LinalgCore.Eigenvalues(m)));
+            return OutputWrapper.WrapError(() =>
+            {
+                double[,] m = M(d);
+                return ExcelAsyncUtil.Run(nameof(UDF_LINALG_EIGEN_ASYNC), AsyncKey(m), () =>
+                    OutputWrapper.WrapError(() => LinalgCore.Eigenvalues(m)));
+            });
         }
 
         // ── Solve (async) ───────────────────────────────────────────
@@ -95,10 +113,13 @@ namespace ExcelFormulaLabs.Analytics
             [ExcelArgument(Name = "array1", Description = "Coefficient matrix A")] object A,
             [ExcelArgument(Name = "array2", Description = "Right-hand side vector b")] object b)
         {
-            double[,] mA = M(A);
-            double[] vB = V(b);
-            return ExcelAsyncUtil.Run(nameof(UDF_LINALG_SOLVE_ASYNC), new object[] { AsyncKey(mA), AsyncKeyV(vB) }, () =>
-                OutputWrapper.WrapError(() => LinalgCore.Solve(mA, vB)));
+            return OutputWrapper.WrapError(() =>
+            {
+                double[,] mA = M(A);
+                double[] vB = V(b);
+                return ExcelAsyncUtil.Run(nameof(UDF_LINALG_SOLVE_ASYNC), new object[] { AsyncKey(mA), AsyncKeyV(vB) }, () =>
+                    OutputWrapper.WrapError(() => LinalgCore.Solve(mA, vB)));
+            });
         }
 
         // ── Cholesky (async) ────────────────────────────────────────
@@ -106,9 +127,12 @@ namespace ExcelFormulaLabs.Analytics
         [ExcelFunction(Name = "LINALG.CHOLESKY_ASYNC", Description = "Cholesky decomposition, computed asynchronously. Use for large matrices.")]
         public static object UDF_LINALG_CHOLESKY_ASYNC([ExcelArgument(Name = "array", Description = "A range or 2D array")] object d)
         {
-            double[,] m = M(d);
-            return ExcelAsyncUtil.Run(nameof(UDF_LINALG_CHOLESKY_ASYNC), AsyncKey(m), () =>
-                OutputWrapper.WrapError(() => LinalgCore.Cholesky(m)));
+            return OutputWrapper.WrapError(() =>
+            {
+                double[,] m = M(d);
+                return ExcelAsyncUtil.Run(nameof(UDF_LINALG_CHOLESKY_ASYNC), AsyncKey(m), () =>
+                    OutputWrapper.WrapError(() => LinalgCore.Cholesky(m)));
+            });
         }
 
         // ── Pseudo-Inverse (async) ──────────────────────────────────
@@ -116,9 +140,12 @@ namespace ExcelFormulaLabs.Analytics
         [ExcelFunction(Name = "LINALG.PINV_ASYNC", Description = "Moore-Penrose pseudo-inverse, computed asynchronously. Use for large matrices.")]
         public static object UDF_LINALG_PINV_ASYNC([ExcelArgument(Name = "array", Description = "A range or 2D array")] object d)
         {
-            double[,] m = M(d);
-            return ExcelAsyncUtil.Run(nameof(UDF_LINALG_PINV_ASYNC), AsyncKey(m), () =>
-                OutputWrapper.WrapError(() => LinalgCore.PseudoInverse(m)));
+            return OutputWrapper.WrapError(() =>
+            {
+                double[,] m = M(d);
+                return ExcelAsyncUtil.Run(nameof(UDF_LINALG_PINV_ASYNC), AsyncKey(m), () =>
+                    OutputWrapper.WrapError(() => LinalgCore.PseudoInverse(m)));
+            });
         }
     }
 }

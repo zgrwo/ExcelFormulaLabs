@@ -518,6 +518,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         k1.Should().NotBe(LinalgCore.MatrixHash(new double[,] { { 1 }, { 2 }, { 3 } })); // 与矩阵 key 域分离
         Regex.IsMatch(k1, @"^V3:[0-9A-F]{32}$").Should().BeTrue();
     }
+}
 
     // ── review-2026-09-14（P1 LIN-01）：DecompCache 元素预算与 LRU 逐出 ──
     // 该组测试修改全局预算/缓存状态，必须与其它测试类串行（DisableParallelization），
@@ -598,5 +599,36 @@ namespace ExcelFormulaLabs.Analytics.Tests
             recomputed.Should().Be(1); // 最旧的 k0 已逐出
         }
     }
-}
+
+    // review 2026-09-14（P3 REG 系列）：空矩阵族原先落 MathNet IndexOutOfRange（裸 CLR 异常）。
+    public class LinalgEmptyMatrixTests
+    {
+        [Fact]
+        public void Empty_matrices_throw_ArgumentException()
+        {
+            var e = new double[0, 0];
+            new Action(() => LinalgCore.Svd(e)).Should().Throw<ArgumentException>();
+            new Action(() => LinalgCore.Solve(e, System.Array.Empty<double>())).Should().Throw<ArgumentException>();
+            new Action(() => LinalgCore.Eigenvalues(e)).Should().Throw<ArgumentException>();
+            new Action(() => LinalgCore.Rank(e)).Should().Throw<ArgumentException>();
+        }
+
+        [Fact]
+        public void Solve_non_square_and_length_mismatch_throw()
+        {
+            var rect = new double[,] { { 1, 2, 3 }, { 4, 5, 6 } };
+            new Action(() => LinalgCore.Solve(rect, new[] { 1.0, 2.0 })).Should().Throw<ArgumentException>();
+            new Action(() => LinalgCore.Solve(new double[,] { { 1, 0 }, { 0, 1 } }, new[] { 1.0 }))
+                .Should().Throw<ArgumentException>();
+        }
+
+        [Fact]
+        public void NormFrobenius_overflow_caps_to_NaN()
+        {
+            // 真值 2e308 > double.MaxValue → 不可表示 → NaN（4 个 1e308 的 Frobenius 范数）。
+            double.IsNaN(LinalgCore.NormFrobenius(
+                new double[,] { { 1e308, 1e308 }, { 1e308, 1e308 } })).Should().BeTrue();
+            LinalgCore.NormFrobenius(new double[,] { { 3, 4 } }).Should().Be(5.0);
+        }
+    }
 }

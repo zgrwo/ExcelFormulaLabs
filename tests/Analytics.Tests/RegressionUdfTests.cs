@@ -198,6 +198,19 @@ namespace ExcelFormulaLabs.Analytics.Tests
             RegressionUdf.UDF_REGRESS_ANOVA1(new double[,] { { 1 }, { 2 }, { 3 } })
                 .Should().Be(ExcelError.Value);
         }
+
+        // review 2026-09-14（P3 REG-04）：ANOVA 文本单元格不再静默丢弃（与 OLS/WLS 口径一致）。
+        [Fact] public void Anova1_text_value_returns_error()
+        {
+            var d = new object[,] { { 1.0, 2.0 }, { 3.0, "oops" }, { 5.0, 6.0 } };
+            RegressionUdf.UDF_REGRESS_ANOVA1(d).Should().Be(ExcelError.Value);
+        }
+
+        [Fact] public void Anova1_empty_and_error_cells_are_skipped()
+        {
+            var d = new object[,] { { 1.0, 2.0 }, { 3.0, ExcelError.NA }, { 5.0, 6.0 } };
+            RegressionUdf.UDF_REGRESS_ANOVA1(d).Should().BeOfType<object[,]>();
+        }
         [Fact] public void FactorImportance_single_row_returns_error()
         {
             var singleX = new double[,] { { 1, 5 } };

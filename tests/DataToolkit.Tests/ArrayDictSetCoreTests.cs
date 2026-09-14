@@ -33,19 +33,6 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             ArrayCore.Flatten2D(d, "C").Should().Equal(1, 3, 5, 2, 4, 6);
         }
         [Fact] public void Flatten2D_empty() => ArrayCore.Flatten2D(new object[0, 0]).Should().BeEmpty();
-        [Fact] public void CollectNumeric()
-        {
-            var d = new object[,] { { "Name", "Score", "Note" }, { "Alice", 90, "Good" }, { "Bob", 80, "Ok" } };
-            var r = ArrayCore.CollectNumeric(d, 3, 3, out var names);
-            r.Should().Equal(1L);
-            names.Should().Equal("Name", "Score", "Note");
-        }
-        [Fact] public void CollectNumeric_noHeader()
-        {
-            var d = new object[,] { { 1, "text" }, { 2, "more" } };
-            var r = ArrayCore.CollectNumeric(d, 2, 2, out var names, false);
-            r.Should().Equal(0L);
-        }
 
         // =====================================================================
         // EDGE CASE & ERROR BEHAVIOR TESTS

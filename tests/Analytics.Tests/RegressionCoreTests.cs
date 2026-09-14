@@ -27,6 +27,12 @@ namespace ExcelFormulaLabs.Analytics.Tests
             var act = () => RegressionCore.FitRidge(X, y, -1000.0);
             act.Should().Throw<ArgumentException>().WithMessage("*lambda*");
         }
+        // review 2026-09-14（P3 REG 系列）：Ridge 补 y/X 维度校验（原 MathNet 裸异常）。
+        [Fact] public void FitRidge_y_length_mismatch_throws()
+        {
+            var act = () => RegressionCore.FitRidge(X, new[] { 1.0, 2.0 });
+            act.Should().Throw<ArgumentException>().WithMessage("*must equal*");
+        }
         [Fact] public void FitRidge_keys() => RegressionCore.FitRidge(X,y,0.1).Should().ContainKeys("coefficients","sse","r_squared","lambda");
         [Fact] public void AnovaOneWay_keys() => RegressionCore.AnovaOneWay(new[]{new[]{5.0,6,7},new[]{8.0,9,10}}).Should().ContainKeys("ss_between","f_stat","p_value");
         [Fact] public void FactorImportance() { var r=RegressionCore.FactorImportance(new double[,]{{1},{2},{3}},y); r.Length.Should().Be(1); }
