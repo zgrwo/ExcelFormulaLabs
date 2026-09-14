@@ -495,21 +495,31 @@ namespace ExcelFormulaLabs.Analytics
                 }
                 // 常规路径保持原始矩（既有数值行为不变）；仅当原始偏差平方溢出/为 NaN 时，
                 // 回退到按列 max 归一化的矩估计——旧实现此时把有效列静默当常量剔除（审查 F1）。
+                // review 2026-09-15（模块审查 P2 SOL-02）：镜像缺口——小量纲（~1e-170）下原始
+                // 偏差平方下溢为精确 0，有效列同样被静默当常量剔除。ss==0 且列非常量
+                //（maxAbs>0）时走同一归一化回退；归一化后仍为 0 才是真常量。
                 double sum = 0;
                 for (int i = 0; i < n; i++) sum += col[i];
                 double mu = sum / n;
                 double ss = 0;
                 for (int i = 0; i < n; i++) { double d = col[i] - mu; ss += d * d; }
                 double sd;
-                if (double.IsNaN(ss) || double.IsInfinity(ss))
+                if (double.IsNaN(ss) || double.IsInfinity(ss) || (ss == 0 && maxAbs > 0))
                 {
                     double muNorm = 0;
                     if (maxAbs > 0)
                         for (int i = 0; i < n; i++) muNorm += (col[i] / maxAbs - muNorm) / (i + 1);
                     double ssNorm = 0;
                     for (int i = 0; i < n; i++) { double d = col[i] / maxAbs - muNorm; ssNorm += d * d; }
-                    mu = muNorm * maxAbs;
-                    sd = n > 1 ? Math.Sqrt(ssNorm / (n - 1)) * maxAbs : 0.0;
+                    if (ssNorm > 0)
+                    {
+                        mu = muNorm * maxAbs;
+                        sd = n > 1 ? Math.Sqrt(ssNorm / (n - 1)) * maxAbs : 0.0;
+                    }
+                    else
+                    {
+                        sd = 0.0; // 归一化后无变化 → 真常量
+                    }
                 }
                 else
                 {
@@ -712,15 +722,19 @@ namespace ExcelFormulaLabs.Analytics
 
         /// <summary>
         /// True when poly is structurally unavailable for this sample: expansion over the 100-term
-        /// limit, or the smallest training fold cannot exceed the terms + intercept (prevents a
-        /// fold-level FitModel failure instead of a controlled skip).
+        /// limit, or the smallest training fold has fewer rows than terms + 1 (FitModel's minimum,
+        /// n ≥ terms + 1; poly is ridge-fitted so the boundary case n = terms + 1 is solvable).
+        /// Skip explicitly instead of letting a fold-level FitModel failure surface as an error.
         /// </summary>
         private static bool PolyExcludedBySample(int n, int k)
         {
             if (ExpandedTermCount(k, ModelPoly) > PolyTermLimit) return true;
             int terms = ExpandedTermCount(k, ModelPoly);
             int minTrain = n >= 20 ? n - (n + 4) / 5 : n - 1;
-            return minTrain < terms + 2;
+            // review 2026-09-15（模块审查 P2 SOL-03）：原阈值 minTrain < terms + 2 差一——
+            // poly 走 Ridge（增广 QR），最小训练折 n = terms + 1 满足 FitModel 下限且增广后
+            // 行数 > 列数，可正常拟合；旧判据把该边界误判为跳过。
+            return minTrain < terms + 1;
         }
 
         /// <summary>Rate is structurally unavailable when positions are missing or the smallest fold cannot fit.</summary>

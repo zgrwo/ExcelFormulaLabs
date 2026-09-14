@@ -243,6 +243,25 @@ namespace ExcelFormulaLabs.Analytics.Tests
             r2.Should().BeGreaterThanOrEqualTo(0.99);
         }
 
+        [Fact]
+        public void FitAuto_PolyNotSkipped_WhenMinTrainEqualsTermsPlusOne()
+        {
+            // SOL-03 回归：poly 走 Ridge（增广 QR），最小训练折 n = terms+1（k=2 → 5 项 → 6 行）
+            // 恰好满足 FitModel 的 n ≥ terms+1；旧判据 minTrain < terms+2 差一把该边界误判为跳过。
+            var X = new[]
+            {
+                new[] { 0.0, 0.0 }, new[] { 1.0, 2.0 }, new[] { 2.0, 1.0 },
+                new[] { 3.0, 4.0 }, new[] { 4.0, 3.0 }, new[] { 5.0, 6.0 }, new[] { 6.0, 5.0 }
+            };
+            var y = X.Select(r => 1.0 + 2.0 * r[0] + 3.0 * r[1]
+                + 0.5 * r[0] * r[0] + 0.25 * r[1] * r[1] + 0.1 * r[0] * r[1]).ToArray();
+            var (_, chosen, _, r2, _, polySkipped, rateSkipped) = SolveCore.FitAuto(X, y, 42L);
+            polySkipped.Should().BeFalse();
+            rateSkipped.Should().BeTrue();
+            chosen.Should().Be("poly");
+            r2.Should().BeGreaterThanOrEqualTo(0.999);
+        }
+
         // ──────────────────────────── Task 1.4 反解与可达性 ────────────────────────────
 
         private static double[,] SolveLinear(double target, double init = double.NaN, long seed = 42L)
@@ -765,6 +784,21 @@ namespace ExcelFormulaLabs.Analytics.Tests
             var y = X.Select(r => r[0] / 1e160).ToArray();
             var act = () => SolveCore.FitModel(X, y, "poly");
             act.Should().Throw<ArgumentException>().WithMessage("*not representable*");
+        }
+
+        [Fact]
+        public void FitModel_TinyScaleFeature_IsNotSilentlyDropped()
+        {
+            // SOL-02 回归（F1 镜像缺口）：x~1e-170 时原始偏差平方下溢为精确 0，旧实现把
+            // 有效列静默当常量剔除 → 退化为仅截距模型（逐行预测全错）。
+            var v = new[] { 3.0, 6, 2, 7, 1, 5, 8, 4 };
+            var X = Enumerable.Range(0, 8).Select(i => new[] { 1e-170 * v[i] }).ToArray();
+            var y = Enumerable.Range(0, 8).Select(i => 1.0 + 1e170 * X[i][0]).ToArray();
+            var m = SolveCore.FitModel(X, y, "linear");
+            m.Coef[0].Should().BeApproximately(1e170, 1e158);
+            m.Intercept.Should().BeApproximately(1.0, 1e-9);
+            for (int i = 0; i < X.Length; i++)
+                SolveCore.Predict(m, X[i]).Should().BeApproximately(y[i], 1e-9);
         }
 
         [Fact]
