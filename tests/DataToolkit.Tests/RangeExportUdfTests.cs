@@ -12,7 +12,8 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void ToCsv_default_delimiter_when_omitted()
         {
             var csv = (string)RangeExportUdf.UDF_RANGE_CSV(Data, null!, true);
-            csv.Should().Contain("Name,Age").And.Contain("Alice,30");
+            // RNG-02：quote=true → 全字段引号。
+            csv.Should().Contain("\"Name\",\"Age\"").And.Contain("\"Alice\",\"30\"");
         }
         private static readonly object[,] Data = new object[,] { { "Name", "Age" }, { "Alice", 30 }, { "Bob", 25 } };
         [Fact] public void ToHtml_contains_table() => ((string)RangeExportUdf.UDF_RANGE_HTML(Data,true,null!)).Should().Contain("<table");

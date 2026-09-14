@@ -43,7 +43,21 @@ namespace ExcelFormulaLabs.DataToolkit
             string nl = pretty ? "\n" : "", sp = pretty ? "  " : ""; sb.Append('[');
             int startRow = hasHeaders ? 1 : 0;
             string[]? headers = null;
-            if (hasHeaders && rows > 0) { headers = new string[cols]; for (int c = 0; c < cols; c++) headers[c] = InputNormalizer.ToString(data[0, c]); }
+            if (hasHeaders && rows > 0)
+            {
+                // review 2026-09-14（模块审查 P2 RNG-01）：重复表头会产出重复 JSON 键
+                // （解析端后者覆盖前者，数据静默丢失）。按 _2/_3 后缀去重（同 SqlCore 列名规则）。
+                headers = new string[cols];
+                var usedKeys = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+                for (int c = 0; c < cols; c++)
+                {
+                    string name = InputNormalizer.ToString(data[0, c]);
+                    string candidate = name;
+                    for (int dedup = 2; !usedKeys.Add(candidate); dedup++)
+                        candidate = name + "_" + dedup;
+                    headers[c] = candidate;
+                }
+            }
             for (int r = startRow; r < rows; r++) { if (r > startRow) sb.Append(',').Append(nl); sb.Append(sp).Append('{'); for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(',').Append(' '); string key = headers != null ? $"\"{JsonEncodedText.Encode(headers[c], JavaScriptEncoder.Default).Value}\"" : $"\"Col{c + 1}\""; sb.Append(key).Append(": "); sb.Append(JsonVal(data[r, c])); } sb.Append('}'); }
             sb.Append(nl).Append(']'); return sb.ToString();
         }
@@ -69,6 +83,11 @@ namespace ExcelFormulaLabs.DataToolkit
 
         /// <param name="hasHeaders">Deprecated: has no effect on CSV output (CSV treats all rows as data).
         /// Kept for API compatibility with RangeToJson / RangeToMarkdown / RangeToHtml.</param>
+        /// <remarks>review 2026-09-14（模块审查 P2 RNG-02/RNG-04）：
+        /// quote=true（默认）→ **所有字段**加引号（符合手册/Description 的语义）；
+        /// quote=false → 仅按 RFC 4180 最小引号（含 delimiter/引号/CR/LF 时转义），
+        /// 修复 CR 漏引号（此前只查 \n）与 TSV 不转义 tab/换行（RNG-03）的问题。
+        /// 公式注入 defang 对两种模式都生效，并修复 BOM 前缀绕过与 +/- 不对称。</remarks>
         internal static string RangeToCsv(object[,] data, string delim = ",", bool quote = true, bool hasHeaders = true)
         {
             GuardExportSize(data, "RANGE.TOCSV");
@@ -78,31 +97,34 @@ namespace ExcelFormulaLabs.DataToolkit
                 for (int c = 0; c < cols; c++)
                 {
                     if (c > 0) sb.Append(delim);
-                    string v = InputNormalizer.ToString(data[r, c]);
-                    // Defang formula injection: cells starting with =, +, @, -, Tab, CR are
-                    // potential formula/DDE triggers in CSV.  Check the raw first character
-                    // BEFORE TrimStart because TrimStart strips Tab and CR.
-                    // For '-' prefix: only defang if the value is NOT a valid number
-                    // (i.e. formula expressions like -1+2 or DDE patterns like -|SHEET).
-                    // Legitimate negative numbers like -42 are parsed and left unchanged.
-                    bool tabCrPrefix = v.Length > 0 && (v[0] == '\t' || v[0] == '\r');
-                    string trimmed = v.TrimStart();
-                    bool defang = tabCrPrefix || (trimmed.Length > 0 && (
-                        trimmed[0] == '=' || trimmed[0] == '+' || trimmed[0] == '@' ||
-                        (trimmed[0] == '-' && trimmed.Length > 1 &&
-                         !double.TryParse(trimmed,
-                             System.Globalization.NumberStyles.Float,
-                             System.Globalization.CultureInfo.InvariantCulture,
-                             out _))));
-                    if (defang)
-                        v = "'" + v;
-                    if (quote && (v.Contains(delim) || v.Contains("\"") || v.Contains("\n")))
+                    string v = DefangFormulaInjection(InputNormalizer.ToString(data[r, c]));
+                    if (quote || v.Contains(delim) || v.Contains("\"") || v.Contains('\r') || v.Contains('\n'))
                         v = "\"" + v.Replace("\"", "\"\"") + "\"";
                     sb.Append(v);
                 }
                 sb.AppendLine();
             }
             return sb.ToString();
+        }
+
+        /// <summary>CSV formula-injection defang. 检查原始首字符（TrimStart 会吃掉 Tab/CR）：
+        /// 以 = @，或非数值的 +/−，或 Tab/CR 开头的值前置单引号。BOM 前缀不参与首字符判定
+        /// （RNG-04：U+FEFF=... 曾绕过 defang）；+/− 走同一数值判定（+42 与 −42 对称）。</summary>
+        private static string DefangFormulaInjection(string v)
+        {
+            if (string.IsNullOrEmpty(v)) return v;
+            int start = v[0] == '\uFEFF' ? 1 : 0;
+            if (start >= v.Length) return v;
+            bool tabCrPrefix = v[start] == '\t' || v[start] == '\r';
+            string trimmed = v.Substring(start).TrimStart();
+            if (trimmed.Length == 0) return v;
+            char first = trimmed[0];
+            bool signedNumeric = (first == '+' || first == '-') && trimmed.Length > 1
+                && double.TryParse(trimmed, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out _);
+            bool defang = tabCrPrefix || first == '=' || first == '@'
+                || ((first == '+' || first == '-') && !signedNumeric);
+            return defang ? "'" + v : v;
         }
 
         internal static object[,] Transpose(object[,] d) { int r = d.GetLength(0), c = d.GetLength(1); var t = new object[c, r]; for (int i = 0; i < r; i++) for (int j = 0; j < c; j++) t[j, i] = d[i, j]; return t; }
@@ -131,6 +153,25 @@ namespace ExcelFormulaLabs.DataToolkit
             return t;
         }
 
-        private static string JsonVal(object? v) { if (v == null || v is DBNull) return "null"; if (InputNormalizer.IsExcelEmptyValue(v)) return "null"; if (v is string s) return $"\"{JsonEncodedText.Encode(s, JavaScriptEncoder.Default).Value}\""; if (v is bool b) return b ? "true" : "false"; if (v is double d && (double.IsNaN(d) || double.IsInfinity(d))) return "null"; if (v is double fd) return fd.ToString("G17", System.Globalization.CultureInfo.InvariantCulture); if (v is long l) return l.ToString(); if (v is int i) return i.ToString(); if (v is float f) return f.ToString(System.Globalization.CultureInfo.InvariantCulture); if (v is decimal m) return m.ToString(System.Globalization.CultureInfo.InvariantCulture); return $"\"{JsonEncodedText.Encode(InputNormalizer.ToString(v), JavaScriptEncoder.Default).Value}\""; }
+        private static string JsonVal(object? v)
+        {
+            if (v == null || v is DBNull) return "null";
+            if (InputNormalizer.IsExcelEmptyValue(v)) return "null";
+            if (v is string s) return $"\"{JsonEncodedText.Encode(s, JavaScriptEncoder.Default).Value}\"";
+            if (v is bool b) return b ? "true" : "false";
+            if (v is double d && (double.IsNaN(d) || double.IsInfinity(d))) return "null";
+            // review 2026-09-14（模块审查 P2 RNG-01）：G17 输出 0.10000000000000001 等噪声——
+            // 改 "R"（最短往返格式，等价 Python repr/JSON 默认）；float 同步补非有限守卫
+            // （原 float NaN/Inf 走 f.ToString 产出非法 JSON）。
+            if (v is double fd) return fd.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+            if (v is long l) return l.ToString();
+            if (v is int i) return i.ToString();
+            if (v is float f)
+                return float.IsNaN(f) || float.IsInfinity(f)
+                    ? "null"
+                    : f.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+            if (v is decimal m) return m.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            return $"\"{JsonEncodedText.Encode(InputNormalizer.ToString(v), JavaScriptEncoder.Default).Value}\"";
+        }
     }
 }
