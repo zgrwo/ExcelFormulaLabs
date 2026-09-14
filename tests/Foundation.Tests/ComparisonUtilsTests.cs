@@ -94,4 +94,35 @@ public class SafeKeyTests
         key.Should().StartWith("Array2D(2×2):");
         key.Should().Contain("String:a").And.Contain("Numeric:1").And.Contain("String:b").And.Contain("Numeric:2");
     }
+
+    // review 2026-09-14（P3 FND-06）：DateTime 键格式必须 InvariantCulture——
+    // th-TH 佛历会把 2025 显示为 2568，同一时刻产生不同键。
+    [Fact]
+    public void SafeKey_DateTime_is_invariant_under_thai_culture()
+    {
+        var previous = System.Globalization.CultureInfo.CurrentCulture;
+        try
+        {
+            System.Globalization.CultureInfo.CurrentCulture =
+                new System.Globalization.CultureInfo("th-TH");
+            ComparisonUtils.SafeKey(new System.DateTime(2025, 6, 15, 10, 30, 0))
+                .Should().Be("Date:2025-06-15 10:30:00");
+        }
+        finally { System.Globalization.CultureInfo.CurrentCulture = previous; }
+    }
+
+    // review 2026-09-14（P3 FND-06）：typed 数组原先塌缩为同一 Object 键，内容丢失。
+    [Fact]
+    public void SafeKey_typed_arrays_are_content_sensitive()
+    {
+        var k1 = ComparisonUtils.SafeKey(new double[] { 1, 2, 3 });
+        var k2 = ComparisonUtils.SafeKey(new double[] { 1, 2, 4 });
+        k1.Should().StartWith("Array(3):");
+        k1.Should().Contain("Numeric:1").And.Contain("Numeric:2");
+        k1.Should().NotBe(k2);
+        var m1 = ComparisonUtils.SafeKey(new int[,] { { 1, 2 }, { 3, 4 } });
+        var m2 = ComparisonUtils.SafeKey(new int[,] { { 1, 2 }, { 3, 5 } });
+        m1.Should().StartWith("Array2D(2×2):");
+        m1.Should().NotBe(m2);
+    }
 }

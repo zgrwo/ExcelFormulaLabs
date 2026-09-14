@@ -14,6 +14,16 @@ public class FilterPassesTests
         var act = () => FilterUtils.FilterPasses(5.0, 5.0, null!);
         act.Should().Throw<ArgumentException>();
     }
+
+    // review 2026-09-14（P3 FND-09）：未知 operator 原先静默 false（整列被过滤光）；
+    // 与 null operator 一致改为显式拒绝。
+    [Fact] public void FilterPasses_unknown_operator_throws()
+    {
+        var act = () => FilterUtils.FilterPasses("x", "x", "bogus");
+        act.Should().Throw<ArgumentException>().WithMessage("*Unknown filter operator*");
+    }
+    [Fact] public void FilterPasses_case_insensitive_known_operator_still_works()
+        => FilterUtils.FilterPasses("Hello", "hello", "CONTAINS").Should().BeTrue();
     [Fact] public void Isblank_null_true() => FilterUtils.FilterPasses(null, null, "isblank").Should().BeTrue();
     [Fact] public void Isblank_empty_true() => FilterUtils.FilterPasses(ExcelEmpty.Value, null, "isblank").Should().BeTrue();
     [Fact] public void Isblank_whitespace_true() => FilterUtils.FilterPasses("   ", null, "isblank").Should().BeTrue();

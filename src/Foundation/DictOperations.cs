@@ -46,6 +46,13 @@ namespace ExcelFormulaLabs.Foundation
                 if (InputNormalizer.IsExcelErrorValue(key)) continue;
                 if (InputNormalizer.IsExcelEmptyValue(key)) continue;
                 if (key is Array) continue;
+                // review 2026-09-14（模块审查 P3 FND-11）：文档契约「Object 键跳过」未实现——
+                // 自定义对象经 Convert.ToString 塌缩（new object()×2 → 同一 "System.Object"
+                // 键，静默合并）。仅接受有稳定字符串表示的类型（string/数值/DateTime/bool）。
+                if (key is not string and not bool and not DateTime
+                    and not int and not long and not double and not float and not decimal
+                    and not short and not byte and not sbyte and not ushort and not uint and not ulong)
+                    continue;
 
                 string keyStr = KeyToString(key);
                 if (!dict.ContainsKey(keyStr))

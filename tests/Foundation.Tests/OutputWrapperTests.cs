@@ -179,6 +179,34 @@ namespace ExcelFormulaLabs.Foundation.Tests
             result[1, 1].Should().BeNull();
         }
 
+        // review 2026-09-14（P3 FND-10）：object[,] 原先被压进 [0,0]（且 0×0 目标越界、
+        // targetCols=0 整数除零）；现在按目标尺寸逐格拷贝/裁剪，零尺寸安全返回。
+        [Fact]
+        public void Grid_input_is_copied_cellwise()
+        {
+            var grid = new object[,] { { 1, 2, 3 }, { 4, 5, 6 } };
+            var result = OutputWrapper.ReshapeOutput(grid, 2, 2);
+            result[0, 0].Should().Be(1);
+            result[0, 1].Should().Be(2);
+            result[1, 0].Should().Be(4);
+            result[1, 1].Should().Be(5);
+        }
+
+        [Fact]
+        public void Zero_target_dimensions_return_empty_grid()
+        {
+            var flat = new object[] { 1, 2 };
+            OutputWrapper.ReshapeOutput(flat, 0, 3).Length.Should().Be(0);
+            OutputWrapper.ReshapeOutput(flat, 3, 0).Length.Should().Be(0);
+        }
+
+        [Fact]
+        public void Negative_target_dimensions_throw()
+        {
+            var act = () => OutputWrapper.ReshapeOutput(1, -1, 2);
+            act.Should().Throw<ArgumentException>();
+        }
+
         [Fact]
         public void Null_elements_become_empty()
         {

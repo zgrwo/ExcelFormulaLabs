@@ -28,6 +28,15 @@ namespace ExcelFormulaLabs.Foundation
         private static readonly ConcurrentDictionary<string, Regex> RegexCache = new();
         private const int MaxCachedRegex = 64;
 
+        /// <summary>Known comparison operator names (lowercase). isblank/isnotblank are
+        /// handled before element-type guards (they accept null/error elements).</summary>
+        private static readonly System.Collections.Generic.HashSet<string> KnownOperators =
+            new(System.StringComparer.Ordinal)
+            {
+                "=", "<>", "<", "<=", ">", ">=",
+                "contains", "notcontains", "startswith", "endswith", "regex",
+            };
+
         /// <summary>
         /// Clear the regex cache. Safe to call at any time;
         /// subsequent filter operations will recompile patterns as needed.
@@ -50,6 +59,13 @@ namespace ExcelFormulaLabs.Foundation
                 case "isblank": return IsBlank(element);
                 case "isnotblank": return !IsBlank(element);
             }
+            // review 2026-09-14（模块审查 P3 FND-09）：未知 operator 原先静默返回 false
+            // （整列被过滤光，用户无法区分"无匹配"与"参数错误"）。与 null operator 的
+            // 显式拒绝保持一致：未知 op → ArgumentException → UDF #VALUE!。
+            if (!KnownOperators.Contains(opLower))
+                throw new ArgumentException(
+                    $"Unknown filter operator '{op}'. Supported: =, <>, <, <=, >, >=, " +
+                    "contains, notcontains, startswith, endswith, regex, isblank, isnotblank.");
 
             // All other operators: reject Error/Null/Object/Array elements and matchValues
             if (element == null || element is DBNull) return false;

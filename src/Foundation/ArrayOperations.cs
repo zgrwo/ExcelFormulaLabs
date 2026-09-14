@@ -374,6 +374,14 @@ namespace ExcelFormulaLabs.Foundation
             object[,] data, int numRows, int numCols,
             out string[] colNames, bool hasHeaders = true)
         {
+            // review 2026-09-14（模块审查 P3 FND-12）：维度参数原先未校验——越界直接
+            // IndexOutOfRangeException（裸 CLR 异常）。分配/循环前显式拒绝。
+            if (data == null)
+                throw new ArgumentException("data must not be null.");
+            int maxRows = data.GetLength(0), maxCols = data.GetLength(1);
+            if (numRows < 0 || numCols < 0 || numRows > maxRows || numCols > maxCols)
+                throw new ArgumentException(
+                    $"numRows/numCols ({numRows},{numCols}) are outside the data dimensions ({maxRows}×{maxCols}).");
             colNames = new string[numCols];
             var numericCols = new List<int>();
             int dataStartRow = hasHeaders ? 1 : 0;

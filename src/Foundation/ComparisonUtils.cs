@@ -215,18 +215,20 @@ namespace ExcelFormulaLabs.Foundation
             if (value is DateTime dt)
                 // F-14 (review 2026-09-06)：带亚秒的 DateTime 曾与整秒塌缩为同一去重键
                 // （ARR.UNIQUE 静默丢值）——仅在有亚秒时追加小数段，整秒键格式不变。
+                // review 2026-09-14（模块审查 P3 FND-06）：格式串必须显式 InvariantCulture——
+                // 插值默认 CurrentCulture，th-TH 佛历 / ar-SA 回历会把同一时刻变成不同键。
                 return dt.Ticks % TimeSpan.TicksPerSecond == 0
-                    ? $"Date:{dt:yyyy-MM-dd HH:mm:ss}"
-                    : $"Date:{dt:yyyy-MM-dd HH:mm:ss.fffffff}";
+                    ? $"Date:{dt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)}"
+                    : $"Date:{dt.ToString("yyyy-MM-dd HH:mm:ss.fffffff", CultureInfo.InvariantCulture)}";
 
             if (value is string s)
                 return $"String:{s}";
 
-            if (value is object[] arr1D)
-                return Array1DToKey(arr1D, depth + 1);
-
-            if (value is object[,] arr2D)
-                return Array2DToKey(arr2D, depth + 1);
+            // review 2026-09-14（模块审查 P3 FND-06）：原只识别 object[]/object[,]——typed
+            // double[] 等落 Object 分支（Object:Double[]:System.Double[]）导致内容不同的数组
+            // 全部塌缩为同一键（ARR.UNIQUE/DICT 去重静默丢值）。改为任意 Array 按维度逐元素编码。
+            if (value is Array anyArray)
+                return ArrayToKey(anyArray, depth + 1);
 
             if (IsNumeric(value))
             {
@@ -242,42 +244,57 @@ namespace ExcelFormulaLabs.Foundation
 
         // ── Private helpers ──────────────────────────────────────────────
 
-        /// <summary>Build SafeKey for a 1D array, recursing into elements.</summary>
-        private static string Array1DToKey(object[] arr, int depth)
+        /// <summary>Build SafeKey for any array (typed or object, incl. non-zero lower bounds),
+        /// flattening row-major. Rank ≥ 3 falls back to flat element order.</summary>
+        private static string ArrayToKey(Array arr, int depth)
         {
-            int len = arr.Length;
-            if (len == 0) return "Array(0):##EMPTY##";
-
-            var sb = new StringBuilder();
-            sb.Append("Array(").Append(len).Append("):");
-            for (int i = 0; i < len; i++)
+            if (arr.Rank == 1)
             {
-                if (i > 0) sb.Append('|');
-                AppendKeySegment(sb, SafeKey(arr[i], depth));
-            }
-            return sb.ToString();
-        }
-
-        /// <summary>Build SafeKey for a 2D array, flattening row-major.</summary>
-        private static string Array2DToKey(object[,] arr, int depth)
-        {
-            int rows = arr.GetLength(0);
-            int cols = arr.GetLength(1);
-            if (rows == 0 || cols == 0) return "Array2D(0×0):##EMPTY##";
-
-            var sb = new StringBuilder();
-            sb.Append("Array2D(").Append(rows).Append('×').Append(cols).Append("):");
-            bool first = true;
-            for (int r = 0; r < rows; r++)
-            {
-                for (int c = 0; c < cols; c++)
+                int len = arr.Length;
+                if (len == 0) return "Array(0):##EMPTY##";
+                var sb = new StringBuilder();
+                sb.Append("Array(").Append(len).Append("):");
+                int lo = arr.GetLowerBound(0);
+                for (int i = 0; i < len; i++)
                 {
-                    if (!first) sb.Append('|');
-                    AppendKeySegment(sb, SafeKey(arr[r, c], depth));
-                    first = false;
+                    if (i > 0) sb.Append('|');
+                    AppendKeySegment(sb, SafeKey(arr.GetValue(i + lo), depth));
                 }
+                return sb.ToString();
             }
-            return sb.ToString();
+
+            if (arr.Rank == 2)
+            {
+                int rows = arr.GetLength(0);
+                int cols = arr.GetLength(1);
+                if (rows == 0 || cols == 0) return "Array2D(0×0):##EMPTY##";
+                var sb = new StringBuilder();
+                sb.Append("Array2D(").Append(rows).Append('×').Append(cols).Append("):");
+                int r0 = arr.GetLowerBound(0), c0 = arr.GetLowerBound(1);
+                bool first = true;
+                for (int r = 0; r < rows; r++)
+                {
+                    for (int c = 0; c < cols; c++)
+                    {
+                        if (!first) sb.Append('|');
+                        AppendKeySegment(sb, SafeKey(arr.GetValue(r + r0, c + c0), depth));
+                        first = false;
+                    }
+                }
+                return sb.ToString();
+            }
+
+            // Rank ≥ 3（罕见）：按数组自身枚举顺序（行优先）展平。
+            var high = new StringBuilder();
+            high.Append("Array").Append(arr.Rank).Append('(').Append(arr.Length).Append("):");
+            bool firstItem = true;
+            foreach (object? item in arr)
+            {
+                if (!firstItem) high.Append('|');
+                AppendKeySegment(high, SafeKey(item, depth));
+                firstItem = false;
+            }
+            return high.ToString();
         }
 
         // R5-P3-01 (review 2026-09-06)：数组段改长度前缀编码（对齐 PivotCore.MakeCompoundKey）。

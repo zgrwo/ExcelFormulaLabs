@@ -1,3 +1,4 @@
+using System;
 using ExcelFormulaLabs.Foundation;
 using FluentAssertions;
 using Xunit;
@@ -171,12 +172,25 @@ public class CollectNumericColumnsTests
         var cols = ArrayOperations.CollectNumericColumns(data, 2, 2, out var names);
         cols.Should().BeEmpty();
     }
-
-    [Fact] public void Mixed_with_no_header()
+    [Fact]
+    public void Mixed_with_no_header()
     {
         var data = new object[,] { { 1, "text", 3.0 }, { 4, "more", 6.0 } };
         var cols = ArrayOperations.CollectNumericColumns(data, 2, 3, out var names, hasHeaders: false);
         cols.Should().Equal(0, 2);
+    }
+
+    // review 2026-09-14（P3 FND-12）：维度参数越界原先裸 IndexOutOfRangeException。
+    [Fact]
+    public void Out_of_range_dimensions_throw()
+    {
+        var data = new object[,] { { "A" }, { 1 } };
+        var act1 = () => ArrayOperations.CollectNumericColumns(data, 3, 1, out _);
+        act1.Should().Throw<ArgumentException>();
+        var act2 = () => ArrayOperations.CollectNumericColumns(data, 2, 2, out _);
+        act2.Should().Throw<ArgumentException>();
+        var act3 = () => ArrayOperations.CollectNumericColumns(data, -1, 1, out _);
+        act3.Should().Throw<ArgumentException>();
     }
 }
 
