@@ -319,8 +319,8 @@ namespace ExcelFormulaLabs.Analytics.Tests
         err.Should().BeLessThan(0.05);
         ((double)r["r_squared"]).Should().BeApproximately(1.0, 1e-9);
     }
-
-    [Fact] public void FitOLS_n_equals_p_throws_df_guard()
+    [Fact]
+    public void FitOLS_n_equals_p_throws_df_guard()
     {
         // Hilbert 8×8（n=p）→ df=0，必须显式抛 "Need n > p"（而非静默返回错误系数）。
         const int n = 8, p = 8;
@@ -331,6 +331,75 @@ namespace ExcelFormulaLabs.Analytics.Tests
         for (int i = 0; i < n; i++) { double s = 0; for (int j = 0; j < p; j++) s += X[i, j]; y[i] = s; }
         new Action(() => RegressionCore.FitOLS(X, y, addIntercept: false))
             .Should().Throw<ArgumentException>().WithMessage("*Need n > p*");
+    }
+
+    // ── review-2026-09-14：P0 REG-01 共线漏检 / P1 REG-02 条件数守卫 / P2 REG-03 大 λ ──
+    private static readonly double[,] CollinearX = { { 1, 2 }, { 2, 4 }, { 3, 6 }, { 4, 8 }, { 5, 10 } };
+    private static readonly double[] CollinearY = { 1, 2, 3, 4, 5 };
+
+    [Fact]
+    public void FitOLS_exact_collinear_with_intercept_throws()
+    {
+        // 修复前 Rdiag 尾项 -8.88e-16 > 旧阈值 7.02e-16（仅高 27%）→ 返回 β=[1.59e-15,0.5,0.25]、
+        // r²=1、SE/t/p 有限垃圾。补 max(n,p) 因子后必须显式 near-singular。
+        var act = () => RegressionCore.FitOLS(CollinearX, CollinearY);
+        act.Should().Throw<ArgumentException>().WithMessage("*near-singular*");
+    }
+
+    [Fact]
+    public void FitWLS_exact_collinear_with_intercept_throws()
+    {
+        var w = new[] { 1.0, 2, 1, 2, 1 };
+        var act = () => RegressionCore.FitWLS(CollinearX, CollinearY, w);
+        act.Should().Throw<ArgumentException>().WithMessage("*near-singular*");
+    }
+
+    [Theory]
+    [InlineData(0.0)]
+    [InlineData(1e-300)]
+    public void FitRidge_exact_collinear_tiny_lambda_throws(double lambda)
+    {
+        var act = () => RegressionCore.FitRidge(CollinearX, CollinearY, lambda);
+        act.Should().Throw<ArgumentException>()
+            .Which.Message.Should().Match(m => m.Contains("near-singular") || m.Contains("rank-deficient"));
+    }
+
+    [Fact]
+    public void FitOLS_exact_collinear_no_intercept_still_throws()
+    {
+        // addIntercept:false 在修复前即正确抛错——冻结此契约，防止修复引入回归。
+        var act = () => RegressionCore.FitOLS(CollinearX, CollinearY, addIntercept: false);
+        act.Should().Throw<ArgumentException>().WithMessage("*near-singular*");
+    }
+
+    [Fact]
+    public void FitOLS_hilbert16_condition_guard_throws()
+    {
+        // Hilbert 16×14（numpy cond≈1.89e17，rank=12<14）：修复前 β 最大误差 8.8 而 r²=1.000000。
+        // 条件数/对角守卫必须显式拒绝，不得静默返回错误系数。
+        const int n = 16, p = 14;
+        var X = new double[n, p];
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < p; j++) X[i, j] = 1.0 / (i + j + 1);
+        var y = new double[n];
+        for (int i = 0; i < n; i++) { double s = 0; for (int j = 0; j < p; j++) s += X[i, j]; y[i] = s; }
+        var act = () => RegressionCore.FitOLS(X, y, addIntercept: false);
+        act.Should().Throw<ArgumentException>()
+            .Which.Message.Should().Match(m => m.Contains("near-singular") || m.Contains("ill-conditioned"));
+    }
+
+    [Theory]
+    [InlineData(1e31)]
+    [InlineData(1e32)]
+    [InlineData(1e64)]
+    [InlineData(1e100)]
+    [InlineData(1e300)]
+    public void FitRidge_large_lambda_is_accepted(double lambda)
+    {
+        // 修复前 λ≳6.1e31 被反向误拒（"λ 太小"，阈值被增广 √λ 行污染）。
+        var r = RegressionCore.FitRidge(Xcv, ycv, lambda);
+        foreach (double c in (double[])r["coefficients"])
+            double.IsNaN(c).Should().BeFalse();
     }
 
     // ── review-2026-08-31（max-level 全量审查）：P1-5 修复遗漏——TSS 绝对阈值误判小量纲 y ──

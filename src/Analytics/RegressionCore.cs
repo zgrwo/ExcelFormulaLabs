@@ -107,12 +107,27 @@ namespace ExcelFormulaLabs.Analytics
                 double d = Math.Abs(R[j, j]);
                 if (d > maxDiag) maxDiag = d;
             }
-            double diagTol = Math.Max(maxDiag, 1e-300) * 2.220446049250313e-16;
+            // review 2026-09-14（模块审查 P0 REG-01）：原 diagTol = maxDiag·eps 漏掉 numpy
+            // `max(n,p)` 因子——精确共线列经 QR 舍入后的 R 尾项（实测 -8.88e-16）恰好高于旧
+            // 阈值（7.02e-16，仅高 27%）→ 静默返回任意系数（r²=1、SE/t/p 有限垃圾）。补因子后
+            // 与 LinalgCore.Rank 的 max(n,p)·eps 约定一致；合法高 cond 用例（H10×8）仍放行。
+            double diagTol = Math.Max(maxDiag, 1e-300) * Math.Max(n, p) * 2.220446049250313e-16;
             for (int j = 0; j < p; j++)
                 if (Math.Abs(R[j, j]) <= diagTol)
                     throw new ArgumentException(
                         "Cannot fit OLS: design matrix X is near-singular (highly collinear columns). " +
                         "Consider removing redundant predictors or using ridge regression (REGRESS.RIDGE).");
+            // review 2026-09-14（模块审查 P1 REG-02）：对角守卫只能捕获列精确共线；Hilbert 16×14
+            // （cond=1.9e17，rank=12<14）R 对角均高于阈值但系数最大误差 8.8 而 r²=1。
+            // 与 LINALG.SOLVE（LinalgCore.cs）的 1e14 政策一致：cond(R) = cond(X)（QR 正交变换
+            // 不改变奇异值），>1e14 时解的有效位数不足 2 位，显式拒绝而非静默返回错误系数。
+            double condEst = R.ConditionNumber();
+            if (double.IsNaN(condEst) || double.IsInfinity(condEst) || condEst > 1e14)
+                throw new ArgumentException(
+                    "Cannot fit OLS: design matrix X is too ill-conditioned for a reliable solution " +
+                    $"(condition number = {condEst.ToString("E3", System.Globalization.CultureInfo.InvariantCulture)}; " +
+                    "guard threshold 1e14). Remove collinear predictors, standardize the columns, " +
+                    "or use ridge regression (REGRESS.RIDGE).");
             var Rinv = R.Inverse();
             var xtxInvDiag = new double[p];
             for (int j = 0; j < p; j++)
@@ -298,13 +313,21 @@ namespace ExcelFormulaLabs.Analytics
             // 双精度噪声（λ ≈ eps²·‖X‖²）时才会数值秩亏。λ 太小 → 显式报错而非静默错误系数；
             // λ 足够大（含 λ=0 且 X 满秩）→ 正常求解。
             var R = qr.R;
-            double maxDiag = 0.0;
-            for (int j = 0; j < p; j++)
-            {
-                double d = Math.Abs(R[j, j]);
-                if (d > maxDiag) maxDiag = d;
-            }
-            double diagTol = Math.Max(maxDiag, 1e-300) * 2.220446049250313e-16;
+            // review 2026-09-14（模块审查 P0 REG-01）：补 max(n,p) 因子（同 FitOLSCore）。
+            // review 2026-09-14（模块审查 P2 REG-03）：阈值尺度必须取原始数据块——原实现用
+            // 增广矩阵 R 对角最大值，被判罚列的 √λ 行污染（maxDiag≈√λ），λ≳6e31 时阈值
+            // √λ·eps 远超截距/数据列的 R 对角 → 大 λ 被反向误拒（"λ 太小"）。改用数据块
+            // 元素最大绝对值 · Max(增广行数, 列数) · eps：大 λ 正常放行；λ 低于数据尺度噪声
+            // 且 X 共线时仍显式拒绝。
+            double dataScale = 0.0;
+            for (int i = 0; i < n; i++)
+                for (int j = 0; j < p; j++)
+                {
+                    double a = Math.Abs(Xaug[i, j]);
+                    if (a > dataScale) dataScale = a;
+                }
+            double diagTol = Math.Max(dataScale, 1e-300) * Math.Max(n + penCount, p)
+                * 2.220446049250313e-16;
             for (int j = 0; j < p; j++)
                 if (Math.Abs(R[j, j]) <= diagTol)
                     throw new ArgumentException(
