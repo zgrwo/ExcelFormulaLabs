@@ -25,6 +25,13 @@ namespace ExcelFormulaLabs.DataToolkit
     /// </summary>
     internal static class NativeDllStore
     {
+        /// <summary>同目标路径的进程内互斥。review 2026-09-15：SEC-05 的 GUID 临时名只
+        /// 解决了临时文件互踩，最终 File.Move/File.Replace 的检查-后-行动竞态仍会让并发
+        /// 提取抛"当文件已存在时，无法创建该文件"（24 路复测必现）。跨进程竞争继续由
+        /// catch + 重验兜底。</summary>
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, object> TargetLocks
+            = new System.Collections.Concurrent.ConcurrentDictionary<string, object>(StringComparer.Ordinal);
+
         /// <summary>目标 DLL 路径（内容寻址）。必要时原子写入 / 替换。</summary>
         /// <param name="rootDir">根目录（如 %LOCALAPPDATA%\\ExcelFormulaLabs\\DataToolkit）。</param>
         /// <param name="subDir">子目录（如 "native"）。</param>
@@ -36,34 +43,37 @@ namespace ExcelFormulaLabs.DataToolkit
             string targetDir = Path.Combine(rootDir, subDir, hash);
             string target = Path.Combine(targetDir, fileName);
 
-            if (File.Exists(target) && FileHashEquals(target, content))
-                return target; // 盘上内容与嵌入一致，无需写入
-
-            Directory.CreateDirectory(targetDir);
-            // review 2026-09-14（模块审查 P2 SEC-05）：临时名原仅含 PID——同进程并发提取
-            // （24 路实测 7~19 次伪失败）互相踩踏。追加进程内唯一 GUID，互不共享临时路径。
-            string temp = Path.Combine(targetDir,
-                fileName + $".tmp.{System.Diagnostics.Process.GetCurrentProcess().Id}.{Guid.NewGuid():N}");
-            try
+            lock (TargetLocks.GetOrAdd(target, static _ => new object()))
             {
-                File.WriteAllBytes(temp, content);
-                AtomicMove(temp, target);
-                return target;
-            }
-            catch (IOException ex) when (ExceptionFilters.IsCatchable(ex))
-            {
-                // 并发实例竞争（先到者已写入）或目标被临时占用导致替换失败。
-                try { File.Delete(temp); }
-                catch (Exception cleanupEx) when (ExceptionFilters.IsCatchable(cleanupEx))
-                { /* best-effort */ }
+                if (File.Exists(target) && FileHashEquals(target, content))
+                    return target; // 盘上内容与嵌入一致，无需写入
 
-                // 无论哪种情况都重新核验盘上文件：一致（发完整正确内容）→ 使用；
-                // 不一致（替换未生效，坏文件残留）→ 抛错，由调用方跳过加载——
-                // 宁可 SQL 原生库加载失败，也不加载不可信的 DLL（fail-safe）。
-                if (FileHashEquals(target, content))
+                Directory.CreateDirectory(targetDir);
+                // review 2026-09-14（模块审查 P2 SEC-05）：临时名原仅含 PID——同进程并发提取
+                // （24 路实测 7~19 次伪失败）互相踩踏。追加进程内唯一 GUID，互不共享临时路径。
+                string temp = Path.Combine(targetDir,
+                    fileName + $".tmp.{System.Diagnostics.Process.GetCurrentProcess().Id}.{Guid.NewGuid():N}");
+                try
+                {
+                    File.WriteAllBytes(temp, content);
+                    AtomicMove(temp, target);
                     return target;
-                throw new IOException(
-                    $"Native DLL 完整性校验失败且无法原子替换：{target}（原文件被占用或内容不一致）", ex);
+                }
+                catch (IOException ex) when (ExceptionFilters.IsCatchable(ex))
+                {
+                    // 跨进程实例竞争（先到者已写入）或目标被临时占用导致替换失败。
+                    try { File.Delete(temp); }
+                    catch (Exception cleanupEx) when (ExceptionFilters.IsCatchable(cleanupEx))
+                    { /* best-effort */ }
+
+                    // 无论哪种情况都重新核验盘上文件：一致（发完整正确内容）→ 使用；
+                    // 不一致（替换未生效，坏文件残留）→ 抛错，由调用方跳过加载——
+                    // 宁可 SQL 原生库加载失败，也不加载不可信的 DLL（fail-safe）。
+                    if (FileHashEquals(target, content))
+                        return target;
+                    throw new IOException(
+                        $"Native DLL 完整性校验失败且无法原子替换：{target}（原文件被占用或内容不一致）", ex);
+                }
             }
         }
 
