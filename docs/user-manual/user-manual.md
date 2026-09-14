@@ -1104,7 +1104,7 @@ p > 0.05 = 没有充分证据拒绝原假设（不意味着"没有差异"，而�
 
 **语法**：`=REGRESS.WLS(known_y, known_x, weights)`
 
-用于异方差数据。返回同 OLS 的 11 行报告。
+用于异方差数据。返回同 OLS 的 11 行报告。`sse`/`r_squared`/标准误/t/p 为**加权（√w 变换）尺度**（与 statsmodels WLS 一致）；`residuals`/`fitted_values` 保持原始尺度便于与 y 比较。
 
 **示例**（权重 w = {1, 2, 3, 4, 5}）：
 ```
@@ -1630,7 +1630,7 @@ PV = nRT。将待求量填 `"*"`。R = 0.082057 L·atm/(mol·K)。
 
 ### PHYCHEM.GASSTP — 气体体积换算标况
 
-**语法**：`=PHYCHEM.GASSTP(volume, temperature, pressure, [tUnit], [pUnit])`
+**语法**：`=PHYCHEM.GASSTP(volume, temperature, pressure, [t_unit], [p_unit])`
 
 换算到 STP（273.15K, 1atm）：V_stp = V × P / P_stp × T_stp / T。
 
@@ -1639,8 +1639,8 @@ PV = nRT。将待求量填 `"*"`。R = 0.082057 L·atm/(mol·K)。
 | volume | 气体体积 |
 | temperature | 温度，默认单位 ℃（摄氏度） |
 | pressure | 压力，默认单位 atm |
-| [tUnit] | 温度单位：C（摄氏，默认）/ K（开尔文）/ F（华氏度） |
-| [pUnit] | 压力单位：atm（默认）/ PSI / KPA / PA / BAR / MMHG / TORR |
+| [t_unit] | 温度单位：C（摄氏，默认）/ K（开尔文）/ F（华氏度） |
+| [p_unit] | 压力单位：atm（默认）/ PSI / KPA / PA / BAR / MMHG / TORR |
 
 **示例**：
 ```
@@ -1681,7 +1681,7 @@ PV = nRT。将待求量填 `"*"`。R = 0.082057 L·atm/(mol·K)。
 - `[randomize]`：是否随机化运行顺序，默认 TRUE。
 - `[seed]`：固定随机种子（null=随机）；同 seed 结果可复现。
 
-返回带表头的二维表：`StdOrder`、`RunOrder`、`A`、`B`…。`randomize=FALSE` 时 RunOrder = StandardOrder。
+返回带表头的二维表：`StdOrder`、`RunOrder`、`A`、`B`…。**表行序恒为标准序**（`StdOrder` 1..N），`randomize` 只改变 `RunOrder` 列（打乱后的执行顺序）；`randomize=FALSE` 时 RunOrder = StandardOrder。
 
 **全因子示例**（2 因子 × 2 水平，不随机化）：
 ```
@@ -2566,6 +2566,7 @@ end_date 默认今天。
 ## 9. REGEX — 正则表达式
 
 > .NET 正则引擎。支持数组公式（逐元素），超时 5 秒自动取消。
+> `ignore_case` **默认 TRUE（不区分大小写）**；显式传 FALSE 才区分大小写。
 >
 > **函数索引**：[TEST](#regex-test) · [COUNT](#regex-count) · [MATCH](#regex-match) · [MATCHALL](#regex-matchall) · [REPLACE](#regex-replace) · [SPLIT](#regex-split) · [GROUPS](#regex-groups) · [ESCAPE](#regex-escape) · [ISMATCH](#regex-ismatch)
 

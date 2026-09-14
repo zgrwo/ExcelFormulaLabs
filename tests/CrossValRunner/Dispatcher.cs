@@ -1,6 +1,7 @@
 using System.Text.Json;
 using ExcelFormulaLabs.Analytics;
 using ExcelFormulaLabs.DataToolkit;
+using ExcelFormulaLabs.Foundation;
 
 namespace ExcelFormulaLabs.CrossValRunner;
 
@@ -159,7 +160,7 @@ public static class Dispatcher
         Register("PhyChemCore", "IdealGasLaw", (a, k) =>
             PhyChemCore.IdealGasLaw(NullableDouble(a[0]), NullableDouble(a[1]),
                 NullableDouble(a[2]), NullableDouble(a[3]),
-                Kwarg(k, "r", 0.082057)));
+                Kwarg(k, "r", 8.31446261815324 / 101.325)));
         Register("PhyChemCore", "GasToSTP", (a, k) =>
             PhyChemCore.GasToSTP(ToDouble(a[0]), ToDouble(a[1]), ToDouble(a[2]),
                 Kwarg(k, "tUnit", "C"), Kwarg(k, "pUnit", "atm")));
@@ -209,6 +210,22 @@ public static class Dispatcher
         Register("ArrayCore", "Fill", (a, _) => ArrayCore.Fill(a[0]!, ToLong(a[1])));
         Register("ArrayCore", "Sequence", (a, _) => ArrayCore.Sequence(ToDouble(a[0]), ToDouble(a[1]), ToDouble(a[2])));
         Register("StatsCore", "CountNumeric", (a, _) => StatsCore.CountNumeric(ToObjectArray(a[0])));
+
+        // ═══════════════════ PivotCore / RangeExportCore / DictOperations / Taguchi（review 2026-09-14：CrossVal 盲区补齐）═══════════════════
+        Register("PivotCore", "Pivot", (a, _) =>
+            PivotCore.Pivot(ToObject2D(a[0]), (int)ToLong(a[1]), (int)ToLong(a[2]), (int)ToLong(a[3]), ToString(a[4])));
+        Register("PivotCore", "GroupBy", (a, _) =>
+            PivotCore.GroupBy(ToObject2D(a[0]), ToIntArray(a[1]), (int)ToLong(a[2]), ToString(a[3])));
+        Register("RangeExportCore", "RangeToJson", (a, _) =>
+            RangeExportCore.RangeToJson(ToObject2D(a[0]), ToBool(a[1]), ToBool(a[2])));
+        Register("RangeExportCore", "RangeToCsv", (a, _) =>
+            RangeExportCore.RangeToCsv(ToObject2D(a[0]), ToString(a[1]), ToBool(a[2])));
+        Register("DictOperations", "FromKeys", (a, _) =>
+            DictOperations.FromKeys(ToObjectArray(a[0]), ToString(a[1]), StringComparison.OrdinalIgnoreCase)
+                .OrderBy(kv => kv.Key, StringComparer.Ordinal)
+                .ToDictionary(kv => kv.Key, kv => kv.Value));
+        Register("DoeCore", "TaguchiCoded", (a, _) =>
+            DoeCore.TaguchiCoded((int)ToLong(a[0]), (int)ToLong(a[1]), (int)ToLong(a[2]), (int)ToLong(a[3])));
 
         // ═══════════════════ StringCore ═══════════════════
         Register("StringCore", "ReverseString", (a, _) => StringCore.ReverseString(ToString(a[0])));
@@ -289,6 +306,7 @@ public static class Dispatcher
     private static void Register(string cls, string method, Invoker f) => _map[$"{cls}.{method}"] = f;
     private static double ToDouble(object? v) => v is double d ? d : v is JsonElement je ? je.GetDouble() : Convert.ToDouble(v);
     private static long ToLong(object? v) => v is long l ? l : v is JsonElement je ? je.GetInt64() : Convert.ToInt64(v);
+    private static bool ToBool(object? v) => v is bool b ? b : v is JsonElement je ? je.GetBoolean() : Convert.ToBoolean(v);
     private static string ToString(object? v) => v is string s ? s : v?.ToString() ?? "";
     private static DateTime ToDateTime(object? v) => v is DateTime dt ? dt : DateTime.Parse(v?.ToString() ?? "");
 

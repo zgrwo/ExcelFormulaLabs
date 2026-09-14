@@ -518,8 +518,9 @@ check("PHYCHEM.L_TO_GAL(10)", 10/3.78541, 2.64172, tol=1e-3)
 check("PHYCHEM.GAL_TO_L(10)", 10*3.78541, 37.8541, tol=1e-3)
 check("PHYCHEM.ATM_TO_PSI(2)", 2*14.6959, 29.3918, tol=1e-3)
 check("PHYCHEM.PSI_TO_ATM(30)", 30/14.6959, 2.04139, tol=1e-3)
-Rg=0.082057; Vstp=1*Rg*273.15/1.0
-cross_vs_csharp("PHYCHEM.IDEALGAS(V) vs C#", Vstp, "PHYCHEM.IDEALGAS_V", tol=1e-2)
+# review 2026-09-14（P3 PHY-03）：R 与 C# 同为精确值 8.31446261815324/101.325（原 0.082057 约数）。
+Rg=8.31446261815324/101.325; Vstp=1*Rg*273.15/1.0
+cross_vs_csharp("PHYCHEM.IDEALGAS(V) vs C#", Vstp, "PHYCHEM.IDEALGAS_V", tol=1e-12)
 # P1-10 (review): removed PHYCHEM.IDEALGAS(P≈1) — it was an algebraic identity
 # (Vstp ≡ Rg*273.15 so actual ≡ 1.0 unconditionally). Real cross-validation is
 # covered by the PHYCHEM.IDEALGAS_V cross_check above.
@@ -837,6 +838,10 @@ check("DICT.DICT[0]", dk[0], "A"); check("DICT.DICT value[0]", dv[0], 1)
 check("DICT.COUNT", len(dk), 3)
 check("DICT.KEYS[0]", dk[0], "A")
 check("DICT.VALUES[0]", dv[0], 1)
+# review 2026-09-14（测试治理）：DICT.FromKeys 此前零 C# CrossVal——补活体对照。
+# 键契约：字符串原样、数值 InvariantCulture、bool→TRUE；null 跳过。
+for _k in ["Apple", "Banana", "42", "TRUE"]:
+    cross_vs_csharp(f"DICT.FromKeys[{_k}] vs C#", "X", "DICT.FromKeys", tol=1e-12, field=_k)
 
 # ========================================================================
 # JSON / XML (8 UDFs)
@@ -901,6 +906,12 @@ for r1 in cj1:
         cj_result.append(r1+r2)
 check("PIVOT.CROSSJOIN count", len(cj_result), 4)  # 2×2=4
 check("PIVOT.CROSSJOIN[0]", cj_result[0], ["A","B","X"])
+# review 2026-09-14（测试治理）：PIVOT 此前零 C# CrossVal——补活体对照（同上数据源）。
+cross_vs_csharp("PIVOT.Pivot(Alpha,N) vs C#", 1380.0, "PIVOT.Pivot_SUM", tol=1e-9, field=[1, 1])
+cross_vs_csharp("PIVOT.Pivot(Alpha,S) vs C#", 600.0, "PIVOT.Pivot_SUM", tol=1e-9, field=[1, 2])
+cross_vs_csharp("PIVOT.Pivot(Beta,N) vs C#", 720.0, "PIVOT.Pivot_SUM", tol=1e-9, field=[2, 1])
+cross_vs_csharp("PIVOT.GroupBy(Alpha) vs C#", 1980.0, "PIVOT.GroupBy_SUM", tol=1e-9, field=[0, 1])
+cross_vs_csharp("PIVOT.GroupBy(Beta) vs C#", 1520.0, "PIVOT.GroupBy_SUM", tol=1e-9, field=[1, 1])
 
 # ========================================================================
 # SQL (3 UDFs)
@@ -1032,6 +1043,13 @@ check("RANGE.SELCOLS[0]", sel[0], ["Name","City"])
 # SELROWS
 selr=[rd[1],rd[3]]
 check("RANGE.SELROWS[0]", selr[0][0], "Alice")
+# review 2026-09-14（测试治理）：RANGE 此前零 C# CrossVal——补 TOJSON/TOCSV(最小引号) 活体对照。
+cross_vs_csharp("RANGE.TOJSON minimal vs C#",
+                '[{"Name": "Alice", "Age": 30},{"Name": "Bob", "Age": 25}]',
+                "RANGE.ToJson", tol=1e-12)
+cross_vs_csharp("RANGE.TOCSV minimal vs C#",
+                'Name,Note' + os.linesep + 'Alice,"a,b"' + os.linesep + 'Bob,"x""y"' + os.linesep,
+                "RANGE.ToCsvMinimal", tol=1e-12)
 
 # ========================================================================
 # DOE (1 UDF)
@@ -1063,6 +1081,20 @@ if HAS_PYDOE2:
 else:
     SKIP += 1
     print("  SKIP DOE cross-check: pyDOE2 not installed (pip install pyDOE2)")
+
+# review 2026-09-14（测试治理）：Taguchi 此前零 C# CrossVal——标准 L8 编码矩阵（A,B,C,ABC 列序）
+# 为硬编码参考（主效应按二进制位降序，交互列=乘积），与 C# TaguchiCoded 活体对照。
+_taguchi_l8 = [
+    [-1, -1, -1, -1],
+    [-1, -1,  1,  1],
+    [-1,  1, -1,  1],
+    [-1,  1,  1, -1],
+    [ 1, -1, -1,  1],
+    [ 1, -1,  1, -1],
+    [ 1,  1, -1, -1],
+    [ 1,  1,  1,  1],
+]
+cross_vs_csharp("DOE.TAGUCHI_L8 vs C#", _taguchi_l8, "DOE.TaguchiL8", tol=1e-12)
 
 # DOE.ANALYZE / DOE.ANOVA / DOE.PARETO — 分析函数 cross_check
 # review-2026-08-29 P2-4：此前分析函数仅 scipy golden 常量，无 Python 独立实现对照。

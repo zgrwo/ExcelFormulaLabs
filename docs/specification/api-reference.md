@@ -83,8 +83,8 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `LINALG.SVD_U` | (array) | `double[,]` | SVD 左奇异向量矩阵 U。A = U·diag(S)·Vt |
 | `LINALG.SVD_S` | (array) | `double[]` | SVD 奇异值向量 S（降序排列） |
 | `LINALG.SVD_VT` | (array) | `double[,]` | SVD 右奇异向量转置 Vt。A = U·diag(S)·Vt |
-| `LINALG.QR_Q` | (array) | `double[,]` | QR 分解正交矩阵 Q。A = Q·R |
-| `LINALG.QR_R` | (array) | `double[,]` | QR 分解上三角矩阵 R。A = Q·R |
+| `LINALG.QR_Q` | (array) | `double[,]` | QR 分解正交矩阵 Q。A = Q·R。要求 **行数 ≥ 列数**（宽矩阵 → `#VALUE!`，请改用 SVD 或先转置） |
+| `LINALG.QR_R` | (array) | `double[,]` | QR 分解上三角矩阵 R。A = Q·R。要求 **行数 ≥ 列数** |
 | `LINALG.LU_L` | (array) | `double[,]` | LU 分解下三角矩阵 L。A = P*L*U |
 | `LINALG.LU_U` | (array) | `double[,]` | LU 分解上三角矩阵 U。A = P*L*U |
 | `LINALG.LU_P` | (array) | `double[,]` | LU 分解置换矩阵 P。A = P*L*U |
@@ -112,7 +112,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
 | `REGRESS.OLS` | (known_y, known_x) | `object[11,?]` | **普通最小二乘法**。对标 Excel LINEST。返回 11 行报告：`coefficients`(系数)、`sse`(残差平方和)、`r_squared`(R²)、`adj_r_squared`(调整R²)、`residuals`(残差)、`fitted_values`(拟合值)、`standard_errors`(标准误)、`t_stats`(t值)、`p_values`(p值)、`n`(样本量)、`df`(自由度)。数组字段横向展开到多列。`p<0.05` 该系数显著。 |
-| `REGRESS.WLS` | (known_y, known_x, weights) | `object[11,?]` | **加权最小二乘法**（异方差数据）。返回同 OLS 的 11 行报告。 |
+| `REGRESS.WLS` | (known_y, known_x, weights) | `object[11,?]` | **加权最小二乘法**（异方差数据）。返回同 OLS 的 11 行报告。`sse`/`r_squared`/`standard_errors`/`t_stats`/`p_values` 均为**加权（√w 变换）尺度**（与 statsmodels WLS 一致）；`residuals`/`fitted_values` 保持原始尺度便于与 y 比较。 |
 | `REGRESS.RIDGE` | (known_y, known_x, [lambda]) | `object[8,?]` | **岭回归**（L2 正则化，防过拟合）。λ 默认 1.0。返回 8 行：`coefficients`、`sse`、`r_squared`、`residuals`、`fitted_values`、`lambda`(惩罚参数)、`n`、`df`(简化口径 = 预测变量数 p；岭回归有效自由度严格应为 tr(H)，当前实现按 p 报告)。**不返回**标准误/t值/p值（正则化下推断无效）。 |
 | `REGRESS.ANOVA1` | (input_range) | `object[12,?]` | **单因素方差分析**。数据按列分组（每列一组）。返回 12 行：`ss_between`(组间平方和)、`ss_within`(组内平方和)、`ss_total`、`df_between`、`df_within`、`df_total`、`ms_between`、`ms_within`、`f_stat`(F值)、`p_value`(p值)、`group_means`(各组均值)、`group_counts`(各组样本量)。数组字段横向展开到多列。`p<0.05` = 至少有一组均值显著不同。 |
 | `REGRESS.FACTORIMP` | (known_y, known_x) | `double[]` | **因子重要性排名**。按标准化后的 \|t\| 降序排列，返回 0-based 列索引数组。 |
@@ -158,7 +158,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `PHYCHEM.ATM_TO_PSI` | (atm) | `double` | 大气压 → PSI |
 | `PHYCHEM.PSI_TO_ATM` | (psi) | `double` | PSI → 大气压 |
 | `PHYCHEM.IDEALGAS` | (pressure, volume, moles, temperature) | `double` | 理想气体状态方程 PV=nRT。将待求量填 `*` |
-| `PHYCHEM.GASSTP` | (volume, temperature, pressure, [tUnit], [pUnit]) | `double` | 气体体积换算标况（STP）。tUnit 默认 `"C"`，pUnit 默认 `"ATM"` |
+| `PHYCHEM.GASSTP` | (volume, temperature, pressure, [t_unit], [p_unit]) | `double` | 气体体积换算标况（STP）。t_unit 默认 `"C"`，p_unit 默认 `"atm"` |
 | `PHYCHEM.DENSITY` | (mass, volume) | `double` | 密度 = 质量 / 体积 |
 
 ---
@@ -169,7 +169,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
-| `DOE.PLAN` | (factor_qty1, factor_level1, factor_qty2, factor_level2, method, [randomize], [seed]) | `object[,]` | 生成 DOE 实验设计矩阵。method=`"full"` 全因子（总运行数 = level1^qty1 × level2^qty2）；method=`"taguchi"` 田口正交表（仅支持 2/3 水平，自动选最小 L4/L8/L9/L12/L16/L18/L27/L32）；method=`"fractional"` 2水平 ½ 部分因子（需 ≥4 个因子，生成元：末因子=前面因子乘积）；method=`"rsm"` 响应面 CCD（中心复合，连续因子，可旋转 α=2^(k/4)）；method=`"bb"` Box-Behnken（三水平响应面，需 ≥3 因子）。返回带表头二维表：`StdOrder`、`RunOrder`、`A`、`B`…，因子编码 -1/0/+1。randomize 默认 TRUE，seed 固定随机种子（null=随机）。安全上限：因子数 ≤1000、运行数 ≤1,000,000、输出单元格 ≤1,000,000（超出返回 #VALUE!）。 |
+| `DOE.PLAN` | (factor_qty1, factor_level1, factor_qty2, factor_level2, method, [randomize], [seed]) | `object[,]` | 生成 DOE 实验设计矩阵。method=`"full"` 全因子（总运行数 = level1^qty1 × level2^qty2）；method=`"taguchi"` 田口正交表（仅支持 2/3 水平，自动选最小 L4/L8/L9/L12/L16/L18/L27/L32）；method=`"fractional"` 2水平 ½ 部分因子（需 ≥4 个因子，生成元：末因子=前面因子乘积）；method=`"rsm"` 响应面 CCD（中心复合，连续因子，可旋转 α=2^(k/4)）；method=`"bb"` Box-Behnken（三水平响应面，需 ≥3 因子）。返回带表头二维表：`StdOrder`、`RunOrder`、`A`、`B`…，因子编码 -1/0/+1。randomize 默认 TRUE，seed 固定随机种子（null=随机）。表行序恒为标准序，randomize 仅打乱 `RunOrder` 列。安全上限：因子数 ≤1000、运行数 ≤1,000,000、输出单元格 ≤1,000,000（超出返回 #VALUE!）。 |
 | `DOE.ANALYZE` | (design, response, [terms]) | `object[,]` | DOE 效应表。对编码设计矩阵（DOE.PLAN 的因子列）和响应列做 OLS 拟合，返回每项（主效应/交互/平方项）的 `Term`、`Coef`、`Effect`(2×Coef)、`t`、`p`。terms 默认 `"2way"`（主效应+2阶交互），可选 `"main"`、`"quadratic"`（含平方项，需 3 水平设计）。 |
 | `DOE.ANOVA` | (design, response, [terms]) | `object[,]` | 多因素 ANOVA 表。返回每项的 `Source`、`SS`、`df`、`MS`、`F`、`p`，加 Error 行和 Total 行。F = t²、SS = MSE×t²（单自由度效应）。 |
 | `DOE.PARETO` | (design, response, [terms]) | `object[,]` | DOE Pareto 排序。按 \|效应\| 降序返回每项的 `Term`、`Effect`，供 Pareto 图。 |
@@ -256,6 +256,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 ## REGEX.* -- 正则表达式
 
 > .NET 正则引擎。除 `REGEX.MATCHALL` / `REGEX.GROUPS` / `REGEX.SPLIT` 外支持数组公式（逐元素处理），超时 5 秒自动取消。
+> `[ignore_case]` **默认 TRUE（不区分大小写）**；显式传 FALSE 才区分大小写。
 
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
@@ -419,6 +420,9 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | 正则超时（5 秒） | `#VALUE!` | REGEX.* |
 | 文件路径越界（沙箱模式） | `#VALUE!` | FS.* |
 | SQL 语法错误 | `#VALUE!` | SQL.* |
+| 空白单元格作为可选参数 | 与省略同语义回退文档默认值 | 全部（2026-09-14 起统一） |
+| 空白单元格作为必选数值参数 | 按空值哨兵处理（`ToDouble`→NaN → 通常 `#NUM!`） | 全部 |
+| Excel 错误值作为 PIVOT/GROUPBY 聚合值 | 传播 NaN（分组结果 `#NUM!`，不再静默跳过） | PIVOT.* |
 
 ### 模块特定错误
 
@@ -442,6 +446,10 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | **PHYCHEM** | 未知换算单位 | `#NUM!` |
 | **PHYCHEM** | 理想气体方程待求量 ≠ 1 个 | `#NUM!` |
 | **PHYCHEM** | 理想气体方程除零 | `#NUM!` |
+| **PHYCHEM** | IDEALGAS/GASSTP 输入含 Excel 错误值 | 原样传播该错误 |
+| **PHYCHEM** | IDEALGAS 参数为非 `"*"` 文本 | `#VALUE!` |
+| **DT** | 序列号 60（不存在的 1900-02-29） | `#VALUE!` |
+| **DT** | 序列 1–59 | 按 Excel 显示值 +1 天解释（1900 假闰年修正） |
 | **DOE** | 因子数 > 1000（MaxFactors） | `#VALUE!` |
 | **DOE** | 运行数 > 1,000,000（MaxRuns） | `#VALUE!` |
 | **DOE** | 输出单元格 > 1,000,000（MaxCells） | `#VALUE!` |
