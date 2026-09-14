@@ -36,6 +36,20 @@ namespace ExcelFormulaLabs.DataToolkit
             _       => (double.IsNaN(val + comp) || double.IsInfinity(val + comp)) ? double.NaN : (val + comp),  // SUM, MAX, MIN
         };
 
+        /// <summary>review 2026-09-14（模块审查 P3 PIV-01）：SUM/AVG/MAX/MIN 对错误值/NaN/Inf
+        /// 原先静默跳过（与 COUNT 不对称，聚合结果貌似可信）。产品决策：传播 NaN 显式标记
+        /// 不可用；文本/空白保持跳过（Excel SUM 语义）。返回 false = 该行不参与聚合并跳过。</summary>
+        private static bool TryValueForAggregation(object raw, out double v)
+        {
+            v = InputNormalizer.ToDouble(raw);
+            if (InputNormalizer.IsExcelErrorValue(raw)) { v = double.NaN; return true; }
+            bool isNumericType = raw is double or float or int or long or decimal
+                or short or byte or sbyte or ushort or uint or ulong;
+            if (!isNumericType) return false; // 文本/空白 → 跳过
+            if (double.IsNaN(v) || double.IsInfinity(v)) { v = double.NaN; return true; }
+            return true;
+        }
+
         /// <summary>Neumaier compensated addition: returns (t, comp) with t = a.sum + b (round-to-nearest) and
         /// comp accumulating the rounding error. Final sum = t + comp.</summary>
         private static (double sum, double comp) NeumaierAdd((double sum, double comp) acc, double v)
@@ -64,8 +78,6 @@ namespace ExcelFormulaLabs.DataToolkit
             {
                 string k = InputNormalizer.ToString(data[r, keyCol]);
                 string p = InputNormalizer.ToString(data[r, pivotCol]);
-                double v = InputNormalizer.ToDouble(data[r, valueCol]);
-                bool numeric = !(double.IsNaN(v) || double.IsInfinity(v));
                 // review 2026-08-31（深度审查 P1-10）：COUNT 的本意是统计行数（含空/文本值行）——
                 // 原实现非数值行在 key/pivot 收录前 continue → 该分组的 COUNT 少计、纯空值分组的
                 // 行/列标签整体丢失。COUNT 单独分支：非数值行也计数并收录 key/pivot。
@@ -78,7 +90,7 @@ namespace ExcelFormulaLabs.DataToolkit
                     else { map[kvC] = (0, 0); cnt[kvC] = 1; }
                     continue;
                 }
-                if (!numeric) continue;
+                if (!TryValueForAggregation(data[r, valueCol], out double v)) continue;
                 if (keySet.Add(k)) keyList.Add(k);
                 if (pivotSet.Add(p)) pivotList.Add(p);
                 var kv = (k, p);
@@ -169,8 +181,6 @@ namespace ExcelFormulaLabs.DataToolkit
             {
                 var gk = gCols.Select(c => InputNormalizer.ToString(data[r, c])).ToArray();
                 string gks = MakeCompoundKey(gk);
-                double v = InputNormalizer.ToDouble(data[r, aCol]);
-                bool numeric = !(double.IsNaN(v) || double.IsInfinity(v));
                 // review 2026-08-31（深度审查 P1-10）：COUNT 统计行数（含空/文本值行）——
                 // 原实现非数值行 continue → 分组少计、纯空值分组整行消失。
                 if (agg == "COUNT")
@@ -179,7 +189,7 @@ namespace ExcelFormulaLabs.DataToolkit
                     else { groups[gks] = (0, 0, 1); if (seen.Add(gks)) keyNames.Add(gk); }
                     continue;
                 }
-                if (!numeric) continue;
+                if (!TryValueForAggregation(data[r, aCol], out double v)) continue;
                 if (groups.TryGetValue(gks, out var ex))
                 {
                     if (agg == "SUM" || agg == "AVG")

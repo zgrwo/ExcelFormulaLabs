@@ -32,12 +32,18 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Pivot_agg_max()
         {
             var r = (object[,])PivotUdf.UDF_PIVOT_PIVOT(Data, 0, 1, 2, "MAX");
-            r.GetLength(0).Should().BeGreaterThan(1);
+            r.GetLength(0).Should().Be(3);           // header + A,B
+            r[1, 1].Should().Be(100.0);
+            r[1, 2].Should().Be(200.0);
+            r[2, 1].Should().Be(300.0);
         }
         [Fact] public void Pivot_agg_min()
         {
             var r = (object[,])PivotUdf.UDF_PIVOT_PIVOT(Data, 0, 1, 2, "MIN");
-            r.GetLength(0).Should().BeGreaterThan(1);
+            r.GetLength(0).Should().Be(3);
+            r[1, 1].Should().Be(100.0);
+            r[1, 2].Should().Be(200.0);
+            r[2, 1].Should().Be(300.0);
         }
         [Fact] public void Pivot_null_data() => PivotUdf.UDF_PIVOT_PIVOT(null!, 0, 1, 2, "SUM").Should().Be(ExcelError.Value);
         [Fact] public void Pivot_invalid_aggregation() => PivotUdf.UDF_PIVOT_PIVOT(Data, 0, 1, 2, "UNKNOWN").Should().Be(ExcelError.Value);
