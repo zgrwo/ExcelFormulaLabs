@@ -75,6 +75,24 @@ public class SliceTests
     [Fact] public void Slice_negative_length_full_copy()
         => ArrayOperations.Slice(new[] { 1, 2, 3 }, 0, -1).Should().Equal(1, 2, 3);
     [Fact] public void Slice_null_input_returns_empty() => ArrayOperations.Slice<int>(null!, 0).Length.Should().Be(0);
+
+    // review 2026-09-14（模块审查 P0 FND-01）：length=int.MaxValue 与 start 相加溢出绕过钳制
+    // → new T[int.MaxValue] 不可捕获 OOM。修复后按 n-start 钳制且不分配巨数组。
+    [Theory]
+    [InlineData(0, 4)]
+    [InlineData(1, 3)]
+    [InlineData(2, 2)]
+    [InlineData(4, 0)]
+    public void Slice_intMaxValue_length_is_clamped_without_overflow(int start, int expectedLen)
+    {
+        var r = ArrayOperations.Slice(new[] { 1, 2, 3, 4 }, start, int.MaxValue);
+        r.Length.Should().Be(expectedLen);
+        if (expectedLen > 0) r[0].Should().Be(start + 1);
+    }
+
+    [Fact]
+    public void Slice_intMaxValue_minus_one_length_regression()
+        => ArrayOperations.Slice(new[] { 1, 2, 3 }, 1, int.MaxValue - 1).Should().Equal(2, 3);
 }
 
 public class IndexOfTests

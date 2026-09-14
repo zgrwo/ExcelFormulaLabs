@@ -181,7 +181,11 @@ namespace ExcelFormulaLabs.Foundation
             if (start >= n) return Array.Empty<T>();
             if (length == -1) length = n - start;
             if (length <= 0) return Array.Empty<T>();
-            if (start + length > n) length = n - start;
+            // review 2026-09-14（模块审查 P0 FND-01）：原 `start + length > n` 在
+            // length=int.MaxValue、start>0 时 int 加法回绕为负 → 钳制恒 false →
+            // new T[int.MaxValue] 触发不可捕获 OOM。改为无溢出形式（start < n 已保证
+            // n - start ≥ 1，不会下溢）。
+            if (length > n - start) length = n - start;
             var result = new T[length];
             Array.Copy(array, start, result, 0, length);
             return result;
