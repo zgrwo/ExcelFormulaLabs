@@ -340,11 +340,59 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         }
         finally { System.Threading.Thread.CurrentThread.CurrentCulture = prev; }
     }
-
-    [Fact] public void NthIdx_empty_separator_no_throw()
+    [Fact]
+    public void NthIdx_empty_separator_no_throw()
     {
         // P2-18：空分隔符 + n > len+1 原抛 ArgumentOutOfRangeException（IndexOutOfRange）。
         StringCore.LeftOf("abc", "", 5).Should().Be("abc");
+    }
+
+    // review 2026-09-14（P2 STR-01）：代理对（emoji）必须按文本元素处理，不得截半。
+    [Fact]
+    public void Truncate_counts_text_elements_not_utf16_units()
+    {
+        // "a😀b😀c" = 5 个文本元素；max=3 且后缀占 3 → 保留 3 个元素（a😀b）。
+        var r = StringCore.Truncate("a😀b😀c", 3);
+        r.Should().Be("a😀b");
+        IsValidUtf16(r).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Truncate_surrogate_only_string_never_splits_pair()
+    {
+        var r = StringCore.Truncate("😀😀😀", 2); // keep = 2-3 < 0 → 前 2 个元素
+        r.Should().Be("😀😀");
+        IsValidUtf16(r).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Pad_methods_count_text_elements()
+    {
+        StringCore.PadLeft("😀", 3, '*').Should().Be("**😀");
+        StringCore.PadRight("😀", 3, '*').Should().Be("😀**");
+        StringCore.PadLeft("😀😀", 2).Should().Be("😀😀"); // 元素数已达 len → 原样
+    }
+
+    [Fact]
+    public void RandomString_with_surrogate_charset_produces_valid_utf16()
+    {
+        var s = StringCore.RandomString(50, "a😀b");
+        IsValidUtf16(s).Should().BeTrue();
+        s.Length.Should().BeGreaterThanOrEqualTo(50); // 每个元素 1-2 个 UTF-16 单元
+    }
+
+    private static bool IsValidUtf16(string s)
+    {
+        for (int i = 0; i < s.Length; i++)
+        {
+            if (char.IsHighSurrogate(s[i]))
+            {
+                if (i + 1 >= s.Length || !char.IsLowSurrogate(s[i + 1])) return false;
+                i++;
+            }
+            else if (char.IsLowSurrogate(s[i])) return false;
+        }
+        return true;
     }
 }
 }

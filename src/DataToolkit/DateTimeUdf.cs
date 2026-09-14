@@ -6,7 +6,18 @@ namespace ExcelFormulaLabs.DataToolkit
 {
     public static class DateTimeUdf
     {
-        private static DateTime D(object d){double v=InputNormalizer.ToDouble(d);if(double.IsNaN(v))throw new ArgumentException(ErrorMsg.Get("DT_NaNTodate"));return DateTime.FromOADate(v);}
+        // review 2026-09-14（模块审查 P2 DT-01）：Excel 序列 1–59 经 OADate 比真实 Excel
+        // 显示值早一天（1900 假闰年），且 60 与 59 同值。按产品决策：1–59 统一 +1 对齐
+        // Excel 显示；60（不存在的 1900-02-29）显式 #VALUE! 而非静默给 1900-02-28。
+        // 序列 ≤0 / ≥61 保持 OADate 语义不变。
+        private static DateTime D(object d)
+        {
+            double v = InputNormalizer.ToDouble(d);
+            if (double.IsNaN(v)) throw new ArgumentException(ErrorMsg.Get("DT_NaNTodate"));
+            if (v == 60) throw new ArgumentException("Excel serial 60 (the fictitious 1900-02-29) is not a valid date.");
+            if (v >= 1 && v < 60) v += 1;
+            return DateTime.FromOADate(v);
+        }
         // Week start-day adapter: default 1=Monday; validates 0-6 range so out-of-range
         // values surface as #VALUE! instead of silently producing wrong dates.
         private static DayOfWeek SD(object sd){long v=InputNormalizer.IsOmitted(sd)?1L:InputNormalizer.ToLong(sd);if(v<0||v>6)throw new ArgumentException("start_day must be between 0 (Sunday) and 6 (Saturday).");return (DayOfWeek)(int)v;}

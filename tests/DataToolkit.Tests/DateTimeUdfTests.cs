@@ -92,6 +92,17 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void EOM_already_last() => ((double)DateTimeUdf.UDF_DT_EOM(OA(2024, 6, 30))).Should().Be(OA(2024, 6, 30));
         [Fact] public void EOM_null() => DateTimeUdf.UDF_DT_EOM(null!).Should().BeNull();
         [Fact] public void EOM_error() => DateTimeUdf.UDF_DT_EOM(ExcelError.NA).Should().Be(ExcelError.NA);
+
+        // review 2026-09-14（P2 DT-01）：Excel 1900 序列 1–59 统一 +1 对齐显示值；
+        // 60（不存在的 1900-02-29）显式 #VALUE!；61+ 不变。
+        [Fact] public void Serial_1_maps_to_1900_01_01()
+            => ((double)DateTimeUdf.UDF_DT_EOM(1.0)).Should().Be(32.0);   // 1900-01-31 → OADate 32
+        [Fact] public void Serial_59_maps_to_1900_02_28()
+            => ((double)DateTimeUdf.UDF_DT_EOM(59.0)).Should().Be(60.0);  // 1900-02-28 → OADate 60
+        [Fact] public void Serial_60_is_rejected()
+            => DateTimeUdf.UDF_DT_EOM(60.0).Should().Be(ExcelError.Value);
+        [Fact] public void Serial_61_is_unchanged()
+            => ((double)DateTimeUdf.UDF_DT_EOM(61.0)).Should().Be(91.0);  // 1900-03-31 → OADate 91
         [Fact] public void EOM_array() { var r=(object[])DateTimeUdf.UDF_DT_EOM(new object[]{OA(2024,2,1),OA(2023,2,1)}); ((double)r[0]).Should().Be(OA(2024,2,29)); ((double)r[1]).Should().Be(OA(2023,2,28)); }
 
         // ══════════════════════════════════════════════════════════════════
@@ -126,8 +137,9 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         // 文本输入与必选参数同语义 → #VALUE!（原先静默按今天计算）。
         [Fact] public void AgeDays_serial_zero_end_is_valid_date()
         {
-            // birth = 1900-01-04 (serial 5), end = 1899-12-30 (serial 0) → -5 days
-            ((long)DateTimeUdf.UDF_DT_AGED(5.0, 0.0)).Should().Be(-5);
+            // DT-01（review 2026-09-14）：Excel 序列 5 现按显示值 1900-01-05 解释（+1 修正），
+            // 序列 0 保持 OADate 语义（1899-12-30）→ 相差 -6 天。
+            ((long)DateTimeUdf.UDF_DT_AGED(5.0, 0.0)).Should().Be(-6);
         }
         [Fact] public void AgeDays_text_ref_returns_value_error()
         {

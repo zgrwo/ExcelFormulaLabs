@@ -38,11 +38,40 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static string RemoveChars(string t, string chars) { t ??= ""; chars ??= ""; var set = new System.Collections.Generic.HashSet<char>(chars); var sb = new System.Text.StringBuilder(t.Length); foreach (char c in t) if (!set.Contains(c)) sb.Append(c); return sb.ToString(); }
         internal static string KeepChars(string t, string keep) { t ??= ""; keep ??= ""; var set = new System.Collections.Generic.HashSet<char>(keep); var sb = new StringBuilder(t.Length); foreach (char c in t) if (set.Contains(c)) sb.Append(c); return sb.ToString(); }
 
+        // review 2026-09-14（模块审查 P2 STR-01）：Pad/Truncate/RandomString 原按 UTF-16
+        // 单元（char）计数/切分，代理对（emoji、CJK Ext-B）会被截半产出孤立代理项。
+        // 统一按文本元素（StringInfo）计数与切分；长度 = 用户可见字符数。
+        private static int TextElementCount(string s)
+        {
+            var e = StringInfo.GetTextElementEnumerator(s);
+            int n = 0;
+            while (e.MoveNext()) n++;
+            return n;
+        }
+
+        private static System.Collections.Generic.List<string> TextElements(string s)
+        {
+            var e = StringInfo.GetTextElementEnumerator(s);
+            var list = new System.Collections.Generic.List<string>();
+            while (e.MoveNext()) list.Add(e.GetTextElement());
+            return list;
+        }
+
         internal static string PadLeft(string t, int len, char pad = ' ')
-        { t ??= ""; GuardPadLength(len); if (t.Length >= len) return t; return new string(pad, len - t.Length) + t; }
+        {
+            t ??= ""; GuardPadLength(len);
+            int count = TextElementCount(t);
+            if (count >= len) return t;
+            return new string(pad, len - count) + t;
+        }
 
         internal static string PadRight(string t, int len, char pad = ' ')
-        { t ??= ""; GuardPadLength(len); if (t.Length >= len) return t; return t + new string(pad, len - t.Length); }
+        {
+            t ??= ""; GuardPadLength(len);
+            int count = TextElementCount(t);
+            if (count >= len) return t;
+            return t + new string(pad, len - count);
+        }
 
         /// <summary>P2 (pre-release review): unbounded padding allocated ~GB → uncatchable OOM.
         /// Mirror RandomString's 0–100,000 contract.</summary>
@@ -53,7 +82,16 @@ namespace ExcelFormulaLabs.DataToolkit
         }
 
         internal static string Truncate(string t, int max, string suffix = "...")
-        { t ??= ""; if (max <= 0) return ""; if (t.Length <= max) return t; int keep = max - suffix.Length; if (keep <= 0) return t.Substring(0, max); return t.Substring(0, keep) + suffix; }
+        {
+            t ??= ""; suffix ??= "";
+            if (max <= 0) return "";
+            var elements = TextElements(t);
+            if (elements.Count <= max) return t;
+            // 后缀参与预算（按文本元素计），与旧 UTF-16 语义的比例含义一致。
+            int keep = max - TextElementCount(suffix);
+            if (keep <= 0) return string.Concat(elements.Take(max));
+            return string.Concat(elements.Take(keep)) + suffix;
+        }
 
         internal static long CountSubstring(string t, string s, bool cs = true)
         {
@@ -181,11 +219,31 @@ namespace ExcelFormulaLabs.DataToolkit
 
 #if NET8_0_OR_GREATER
         internal static string RandomString(long len=8, string? cs=null)
-        { if (len < 0 || len > 100_000) throw new ArgumentOutOfRangeException(nameof(len), $"Length must be 0–100,000 (got {len})."); if (string.IsNullOrEmpty(cs)) cs = DefaultCharset; int n = (int)len; var sb = new StringBuilder(n); for (int i = 0; i < n; i++) sb.Append(cs[Random.Shared.Next(cs.Length)]); return sb.ToString(); }
+        {
+            if (len < 0 || len > 100_000) throw new ArgumentOutOfRangeException(nameof(len), $"Length must be 0–100,000 (got {len}).");
+            if (string.IsNullOrEmpty(cs)) cs = DefaultCharset;
+            int n = (int)len;
+            // STR-01：按文本元素抽取，避免从字符集里单独选中高/低代理项产出孤立代理。
+            var elements = TextElements(cs);
+            if (elements.Count == 0) elements = TextElements(DefaultCharset);
+            var sb = new StringBuilder(n);
+            for (int i = 0; i < n; i++) sb.Append(elements[Random.Shared.Next(elements.Count)]);
+            return sb.ToString();
+        }
 #else
         private static readonly ThreadLocal<Random> _rng = new(() => new Random());
         internal static string RandomString(long len=8, string? cs=null)
-        { if (len < 0 || len > 100_000) throw new ArgumentOutOfRangeException(nameof(len), $"Length must be 0–100,000 (got {len})."); if (string.IsNullOrEmpty(cs)) cs = DefaultCharset; int n = (int)len; var sb = new StringBuilder(n); var r = _rng.Value!; for (int i = 0; i < n; i++) sb.Append(cs![r.Next(cs.Length)]); return sb.ToString(); }
+        {
+            if (len < 0 || len > 100_000) throw new ArgumentOutOfRangeException(nameof(len), $"Length must be 0–100,000 (got {len}).");
+            if (string.IsNullOrEmpty(cs)) cs = DefaultCharset;
+            int n = (int)len;
+            var elements = TextElements(cs);
+            if (elements.Count == 0) elements = TextElements(DefaultCharset);
+            var sb = new StringBuilder(n);
+            var r = _rng.Value!;
+            for (int i = 0; i < n; i++) sb.Append(elements[r.Next(elements.Count)]);
+            return sb.ToString();
+        }
 #endif
 
         internal static bool IsNullOrEmptyStr(string? t)=>string.IsNullOrEmpty(t);

@@ -55,12 +55,26 @@ namespace ExcelFormulaLabs.DataToolkit
             if (double.IsNaN(d) || double.IsInfinity(d) || d > 100_000)
                 throw new ArgumentException(ErrorMsg.Get("ARR_RangeTooLarge",
                     d > 100_000 && d <= int.MaxValue ? (int)d : 100_001, 100_000));
-            int n = (int)Math.Floor(d) + 1;
+            // review 2026-09-14（模块审查 P2 ARR-01）：浮点步长丢端点——RANGE(0,0.3,0.1) 的
+            // d=2.9999999999999996 → floor 得 2 → 缺 0.3。计数加相对容差补齐端点；
+            // 末项在容差内吸附到 end（消除 0.30000000000000004），超端项剔除。
+            double countTol = 1e-12 * Math.Max(1.0, Math.Abs(d));
+            int n = (int)Math.Floor(d + countTol) + 1;
             if (n < 1) n = 1;
             if (n > 100_000)
                 throw new ArgumentException(ErrorMsg.Get("ARR_RangeTooLarge", n, 100_000));
+            double endTol = 1e-9 * Math.Max(Math.Max(Math.Abs(start), Math.Abs(end)), Math.Abs(step));
             var r = new List<object>(n);
-            for (int i = 0; i < n; i++) r.Add(start + i * step);
+            for (int i = 0; i < n; i++)
+            {
+                double v = start + i * step;
+                if (i == n - 1)
+                {
+                    if (Math.Abs(v - end) <= endTol) v = end;                       // 吸附真端点
+                    else if (asc ? v > end : v < end) continue;                     // 超端项剔除
+                }
+                r.Add(v);
+            }
             return r.ToArray();
         }
         internal static object[] CollectNumeric(object[,] data, int rows, int cols, out string[] names, bool hasHeaders = true) { var ci=ArrayOperations.CollectNumericColumns(data,rows,cols,out names,hasHeaders); return ci.Select(i=>(object)(long)i).ToArray(); }

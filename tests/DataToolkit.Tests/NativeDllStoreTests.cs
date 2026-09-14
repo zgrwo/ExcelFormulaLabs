@@ -100,5 +100,23 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             File.ReadAllBytes(a).Should().Equal(olde);
             File.ReadAllBytes(b).Should().Equal(newe);
         }
+
+        // review 2026-09-14（P2 SEC-05）：同进程并发提取——临时名仅含 PID 时互相踩踏
+        // （24 路实测 7~19 次伪失败）；GUID 后缀后必须全部成功且内容正确。
+        [Fact]
+        public async System.Threading.Tasks.Task Parallel_same_process_extraction_all_succeed()
+        {
+            byte[] content = Gen(7, 65536);
+            var tasks = new System.Threading.Tasks.Task<string>[24];
+            for (int i = 0; i < tasks.Length; i++)
+                tasks[i] = System.Threading.Tasks.Task.Run(
+                    () => NativeDllStore.GetOrExtract(_root, "native", content, "interop.dll"));
+            string[] paths = await System.Threading.Tasks.Task.WhenAll(tasks);
+            foreach (string path in paths)
+            {
+                File.Exists(path).Should().BeTrue();
+                File.ReadAllBytes(path).Should().Equal(content);
+            }
+        }
     }
 }

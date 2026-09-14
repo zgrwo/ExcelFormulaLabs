@@ -40,7 +40,10 @@ namespace ExcelFormulaLabs.DataToolkit
                 return target; // 盘上内容与嵌入一致，无需写入
 
             Directory.CreateDirectory(targetDir);
-            string temp = Path.Combine(targetDir, fileName + $".tmp.{System.Diagnostics.Process.GetCurrentProcess().Id}");
+            // review 2026-09-14（模块审查 P2 SEC-05）：临时名原仅含 PID——同进程并发提取
+            // （24 路实测 7~19 次伪失败）互相踩踏。追加进程内唯一 GUID，互不共享临时路径。
+            string temp = Path.Combine(targetDir,
+                fileName + $".tmp.{System.Diagnostics.Process.GetCurrentProcess().Id}.{Guid.NewGuid():N}");
             try
             {
                 File.WriteAllBytes(temp, content);

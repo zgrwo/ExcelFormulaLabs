@@ -277,6 +277,31 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         // 会静默产生退化序列或误导性抛错。现与 NaN 一致：非有限输入 → 空数组。
         [Fact] public void Sequence_inf_step_empty() => ArrayCore.Sequence(0, 10, double.PositiveInfinity).Should().BeEmpty();
         [Fact] public void Sequence_inf_start_empty() => ArrayCore.Sequence(double.PositiveInfinity, 10, 1).Should().BeEmpty();
+
+        // review 2026-09-14（P2 ARR-01）：浮点步长丢端点——(int)Floor(2.9999999999999996)=2
+        // 使 RANGE(0,0.3,0.1) 缺 0.3；相对容差补端点且末项吸附为精确 end。
+        [Fact] public void Sequence_float_step_includes_endpoint()
+        {
+            var r = ArrayCore.Sequence(0.0, 0.3, 0.1);
+            r.Should().HaveCount(4);
+            ((double)r[3]).Should().Be(0.3); // 精确端点（非 0.30000000000000004）
+            ((double)r[0]).Should().Be(0.0);
+        }
+
+        [Fact] public void Sequence_float_step_descending_includes_endpoint()
+        {
+            var r = ArrayCore.Sequence(0.3, 0.0, -0.1);
+            r.Should().HaveCount(4);
+            ((double)r[3]).Should().Be(0.0);
+        }
+
+        [Fact] public void Sequence_non_dividing_step_does_not_overshoot()
+        {
+            // 真值 3 项（0, 0.1, 0.2）——0.25/0.1=2.5 不应补端点。
+            var r = ArrayCore.Sequence(0.0, 0.25, 0.1);
+            r.Should().HaveCount(3);
+            ((double)r[2]).Should().BeApproximately(0.2, 1e-12);
+        }
         [Fact] public void Sequence_neg_inf_end_empty() => ArrayCore.Sequence(0, double.NegativeInfinity, 1).Should().BeEmpty();
         [Fact] public void Sequence_step_zero_throws()
             => ((Action)(() => ArrayCore.Sequence(1, 3, 0))).Should().Throw<ArgumentException>();
