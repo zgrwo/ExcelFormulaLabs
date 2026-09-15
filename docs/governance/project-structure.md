@@ -103,6 +103,7 @@ ExcelFormulaLabs/
 │   │   ├── OutputWrapper.cs        #     WrapError 异常→#VALUE!
 │   │   ├── ExceptionFilters.cs     #     统一异常过滤器（IsCatchable）
 │   │   ├── NumericGuard.cs         #     NaN/Inf 矩阵守卫
+│   │   ├── RegexBudget.cs          #     调用级 Regex 墙钟预算（数组级 ReDoS 约束）
 │   │   ├── ArrayOperations.cs      #     数组基础操作
 │   │   ├── FilterUtils.cs          #     过滤工具
 │   │   ├── ComparisonUtils.cs      #     比较工具（NaN/Inf 不对称设计）

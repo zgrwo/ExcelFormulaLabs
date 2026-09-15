@@ -223,7 +223,9 @@ public class SortIndicesTests
     }
 
     [Fact] public void SortIndices_empty_no_throw()
-        => ArrayOperations.SortIndices(System.Array.Empty<int>(), System.Array.Empty<int>());
+        => Record.Exception(() =>
+            ArrayOperations.SortIndices(System.Array.Empty<int>(), System.Array.Empty<int>()))
+            .Should().BeNull();
 
     [Fact] public void SortIndices_single_element()
     {

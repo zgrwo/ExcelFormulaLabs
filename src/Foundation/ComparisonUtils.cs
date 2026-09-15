@@ -208,6 +208,12 @@ namespace ExcelFormulaLabs.Foundation
             if (value is ExcelError err)
                 return $"Error:#ERR({err.Code})";
 
+            // Excel-DNA 枚举错误（真实 Excel 封送值）：ValuesEqual 将全部枚举错误视为同一
+            // 组（见 ValuesEqual 第 3 步注释），SafeKey 必须一致——否则 ARR.UNIQUE/DICT 的
+            // 键去重与判等语义分裂（#N/A 与 #DIV/0! 判等却生成不同键，R3-3）。
+            if (InputNormalizer.IsExcelErrorValue(value))
+                return "Error:#ERR(ExcelDna)";
+
             if (value is bool b)
                 return b ? "Boolean:True" : "Boolean:False";
 
@@ -231,6 +237,11 @@ namespace ExcelFormulaLabs.Foundation
 
             if (IsNumeric(value))
             {
+                // decimal 经 double 精度塌缩：decimal.MaxValue 与 MaxValue−1 会得到同一
+                // G17 键（FromKeys 去重静默合并）。decimal 用自身 Invariant 格式保留全精度
+                // （R3-3）。double/float 等仍走 G17。
+                if (value is decimal dec)
+                    return $"Numeric:{dec.ToString(CultureInfo.InvariantCulture)}";
                 double d = Convert.ToDouble(value, CultureInfo.InvariantCulture);
                 return $"Numeric:{d.ToString("G17", CultureInfo.InvariantCulture)}";
             }
@@ -238,7 +249,9 @@ namespace ExcelFormulaLabs.Foundation
             // 须用 ToString（确定性）：`GetHashCode()` 在 .NET 进程内随机化
             // （string 每进程不同 seed）→ SafeKey 结果不可复现，ARR.UNIQUE 去重结果随进程漂移。
             // 数值/日期/数组等已在上方分支精确处理，此处只剩自定义对象。
-            return $"Object:{value.GetType().Name}:{value.ToString() ?? ""}";
+            // ToString 显式 InvariantCulture（R3-10）：默认 CurrentCulture 下同一对象在
+            // 不同 locale 生成不同键。
+            return $"Object:{value.GetType().Name}:{Convert.ToString(value, CultureInfo.InvariantCulture) ?? ""}";
         }
 
         // ── Private helpers ──────────────────────────────────────────────

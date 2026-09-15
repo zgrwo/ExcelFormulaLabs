@@ -126,3 +126,27 @@ public class SafeKeyTests
         m1.Should().NotBe(m2);
     }
 }
+
+// R3-3 回归：错误键一致性 + decimal 全精度。
+public class SafeKeyPrecisionTests
+{
+        [Fact]
+        public void Decimal_keys_keep_full_precision()
+            => ComparisonUtils.SafeKey(decimal.MaxValue).Should()
+                .NotBe(ComparisonUtils.SafeKey(decimal.MaxValue - 1));
+
+        [Fact]
+        public void ExcelDna_enum_errors_share_one_key()
+        {
+            // ValuesEqual 将全部 Excel-DNA 枚举错误视为同组；SafeKey 必须一致，
+            // 否则 ARR.UNIQUE/DICT 键去重与判等语义分裂。
+            ComparisonUtils.ValuesEqual(ExcelDna.Integration.ExcelError.ExcelErrorNA,
+                ExcelDna.Integration.ExcelError.ExcelErrorDiv0).Should().BeTrue();
+            ComparisonUtils.SafeKey(ExcelDna.Integration.ExcelError.ExcelErrorNA).Should()
+                .Be(ComparisonUtils.SafeKey(ExcelDna.Integration.ExcelError.ExcelErrorDiv0));
+        }
+
+        [Fact]
+        public void Foundation_error_key_unchanged()
+            => ComparisonUtils.SafeKey(ExcelError.Value).Should().Be("Error:#ERR(2015)");
+    }

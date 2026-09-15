@@ -24,9 +24,24 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void GetFolderPath() => FileSystemCore.GetFolderPath("C:\\a\\b.txt").Should().Be("C:\\a");
         [Fact] public void IsPathValid_true() => FileSystemCore.IsPathValid("C:\\").Should().BeTrue();
         [Fact] public void IsPathValid_empty() => FileSystemCore.IsPathValid("").Should().BeFalse();
-        [Fact] public void CurrentFolder() => FileSystemCore.GetCurrentFolder().Should().NotBeEmpty();
-        [Fact] public void TempPath() => FileSystemCore.GetTempPath().Should().NotBeEmpty();
-        [Fact] public void TempFile() => FileSystemCore.GetTempFileName().Should().NotBeEmpty();
+        [Fact] public void CurrentFolder()
+        {
+            var p = FileSystemCore.GetCurrentFolder();
+            System.IO.Path.IsPathRooted(p).Should().BeTrue();
+            System.IO.Directory.Exists(p).Should().BeTrue();
+        }
+        [Fact] public void TempPath()
+        {
+            var p = FileSystemCore.GetTempPath();
+            System.IO.Path.IsPathRooted(p).Should().BeTrue();
+            System.IO.Directory.Exists(p).Should().BeTrue();
+        }
+        [Fact] public void TempFile()
+        {
+            var p = FileSystemCore.GetTempFileName();
+            System.IO.File.Exists(p).Should().BeTrue();
+            System.IO.Path.IsPathRooted(p).Should().BeTrue();
+        }
 
         // FileExists tests
         // hardcoded notepad.exe is missing on some Windows images — use a self-contained
@@ -59,7 +74,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
 
         // NormalizePath tests
         [Fact] public void NormalizePath_forwardSlash() => FileSystemCore.NormalizePath(@"C:/Windows/System32").Should().EndWith("System32");
-        [Fact] public void NormalizePath_noExcept() => FileSystemCore.NormalizePath(@"C:\Windows\").Should().NotBeNullOrEmpty();
+        [Fact] public void NormalizePath_noExcept() => FileSystemCore.NormalizePath(@"C:\Windows\").Should().Be(@"C:\Windows\");
 
         // EnsureFolder test
         [Fact] public void EnsureFolder_createsAndExists()
@@ -74,7 +89,12 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         }
 
         // GetDrives test
-        [Fact] public void GetDrives_returnsArray() => FileSystemCore.GetDrives().Should().NotBeEmpty();
+        [Fact] public void GetDrives_returnsArray()
+        {
+            var drives = FileSystemCore.GetDrives();
+            drives.Should().NotBeEmpty();
+            drives.Should().OnlyContain(d => System.IO.Path.IsPathRooted(d));
+        }
 
     
         // search patterns containing .. segments can traverse outside the sandbox root on

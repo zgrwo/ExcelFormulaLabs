@@ -29,8 +29,9 @@ function Step {
             if ($attempt -le $Retries) {
                 # R7-3 (review-2026-09-13)：ExcelDnaPack 偶发瞬时文件锁（Win32Exception 110，
                 # Defender 扫描刚写出的 .xll）——对构建步骤自动重试；真实错误重试后仍失败。
-                Write-Host "[RETRY] $Label - $_ （第 $attempt 次失败，5s 后重试）"
-                Start-Sleep -Seconds 5
+                # R2-10：HIPS 锁窗口实测 4.4–4.8s → 退避 5/10/20s（3 次尝试）。
+                Write-Host "[RETRY] $Label - $_ （第 $attempt 次失败，$((5 * [Math]::Pow(2, $attempt - 1)))s 后重试）"
+                Start-Sleep -Seconds ([int](5 * [Math]::Pow(2, $attempt - 1)))
                 continue
             }
             Write-Host "[FAIL] $Label - $_"
@@ -45,13 +46,13 @@ Write-Host " ExcelFormulaLabs - Full Verification Gate"
 Write-Host " Config: $Configuration"
 Write-Host "============================================"
 
-# Step 1: verify-docs（文档一致性 20 项）
+# Step 1: verify-docs（文档一致性 20 个编号项；运行时断言数见脚本输出）
 Step "1/6 verify-docs" {
     powershell -NoProfile -File "$root\scripts\verify-docs.ps1"
 }
 
 # Step 2: Build
-Step "2/6 Build ($Configuration)" -Retries 1 -Block {
+Step "2/6 Build ($Configuration)" -Retries 2 -Block {
     dotnet build "$root\ExcelFormulaLabs.sln" -c $Configuration --nologo -v q
     # R7-4 (review-2026-09-13)：构建后校验 4 个模块/TFM 的 publish 产物。verify-pack 原先
     # 只在 csproj 的 Release 目标中运行，Debug 下中断构建留下的跨 TFM 过期 XLL / base 尺寸
@@ -89,7 +90,7 @@ Step "5/6 Pre-commit Checks" {
 }
 
 # Step 6: Release build (dual TFM packaging verification)
-Step "6/6 Release Build" -Retries 1 -Block {
+Step "6/6 Release Build" -Retries 2 -Block {
     dotnet build "$root\ExcelFormulaLabs.sln" -c Release --nologo -v q
 }
 

@@ -335,6 +335,36 @@ namespace ExcelFormulaLabs.Foundation
         /// </summary>
         public static int ToInt32(object? value)
         {
+            // R2-8：委托 ToLong 前先检查原始 double/字符串数值的超 int 范围——ToLong 对
+            // ≥2⁶³ 返回哨兵 0，委托路径永远触发不到下方范围检查（ToInt32(1e300)=0 静默，
+            // 而 3e9 抛错，文档声称 "values outside the int range throw" 不成立）。
+            double? raw = value switch
+            {
+                double d => d,
+                float f => f,
+                decimal m => (double)m,
+                _ => null,
+            };
+            if (raw is double rd0)
+            {
+                if (double.IsNaN(rd0) || double.IsInfinity(rd0)) return 0; // L1 → L2 哨兵
+                double r = Math.Round(rd0);
+                if (r > int.MaxValue || r < int.MinValue)
+                    throw new ArgumentException(
+                        ErrorMsg.Get("Input_IntOutOfRange", rd0, int.MinValue, int.MaxValue));
+                return (int)r;
+            }
+            if (value is string str
+                && double.TryParse(str, NumberStyles.Float | NumberStyles.AllowThousands,
+                    CultureInfo.InvariantCulture, out double ds)
+                && !double.IsNaN(ds) && !double.IsInfinity(ds))
+            {
+                double r = Math.Round(ds);
+                if (r > int.MaxValue || r < int.MinValue)
+                    throw new ArgumentException(
+                        ErrorMsg.Get("Input_IntOutOfRange", ds, int.MinValue, int.MaxValue));
+                return (int)r;
+            }
             long l = ToLong(value);
             if (l > int.MaxValue || l < int.MinValue)
                 throw new ArgumentException(ErrorMsg.Get("Input_IntOutOfRange", l, int.MinValue, int.MaxValue));
@@ -406,7 +436,12 @@ namespace ExcelFormulaLabs.Foundation
             // Serial 1-59 are off by 1 day; serial 60 maps to Feb 28 instead of non-existent Feb 29.
             if (value is IConvertible && value is not string && value is not bool)  // P2: bool is not a date (VBA cell semantics)
             {
-                double d = Convert.ToDouble(value);
+                // Convert.ToDouble 须在 try 内（R2-7）：char 实现 IConvertible 但
+                // ToDouble 抛 InvalidCastException（"Invalid cast from 'Char' to 'Double'"），
+                // 违反 L2 哨兵契约（ToDouble/ToLong/ToBool 均返回哨兵）。
+                double d;
+                try { d = Convert.ToDouble(value); }
+                catch (Exception ex) when (ExceptionFilters.IsCatchable(ex)) { return DateTime.MinValue; }
                 if (d >= 0 && !double.IsNaN(d) && !double.IsInfinity(d))
                 {
                     try { return new DateTime(1899, 12, 30).AddDays(d); }

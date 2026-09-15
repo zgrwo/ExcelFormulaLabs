@@ -139,21 +139,45 @@ namespace ExcelFormulaLabs.Foundation
             if (pattern.Length > maxPatternLength) return false;
             try
             {
-                var regex = RegexCache.GetOrAdd(pattern, p =>
-                    new Regex(p, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
-                        RegexTimeout));
-                // evict OUTSIDE the GetOrAdd factory — eviction inside the factory races
-                // other threads (non-deterministic victim, possible eviction of a pattern
-                // another thread just cached).
-                // 单条驱逐在高并发独特模式下可短暂超上限 → 循环清至预算内
-                // （受害选择保持 first、永不驱逐本次 pattern，防自逐与死循环）。
-                while (RegexCache.Count > MaxCachedRegex)
+                RegexBudget.ThrowIfExhausted("Filter regex");
+                var remaining = RegexBudget.Remaining;
+                Regex regex;
+                if (remaining < RegexTimeout)
                 {
-                    var first = RegexCache.Keys.FirstOrDefault();
-                    if (first == null || first == pattern) break;
-                    RegexCache.TryRemove(first, out _);
+                    // 剩余预算小于单次 5s → 用剩余额度即时构造（不进缓存）：数组后续格子
+                    // 不会各自再耗 5s 放大总时长（R1-4）。cached Regex 的超时无法逐次收紧。
+                    regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
+                        remaining);
+                }
+                else
+                {
+                    regex = RegexCache.GetOrAdd(pattern, p =>
+                        new Regex(p, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
+                            RegexTimeout));
+                    // evict OUTSIDE the GetOrAdd factory — eviction inside the factory races
+                    // other threads (non-deterministic victim, possible eviction of a pattern
+                    // another thread just cached).
+                    // 单条驱逐在高并发独特模式下可短暂超上限 → 循环清至预算内
+                    // （受害选择保持 first、永不驱逐本次 pattern，防自逐与死循环）。
+                    while (RegexCache.Count > MaxCachedRegex)
+                    {
+                        // P3-9：旧实现只看 keys.First()，victim==本次 pattern 即 break
+                        // （枚举顺序恰把本次放首位时会持续超预算）。改为找首个非本次 pattern。
+                        string? victim = null;
+                        foreach (var k in RegexCache.Keys)
+                        {
+                            if (!string.Equals(k, pattern, StringComparison.Ordinal)) { victim = k; break; }
+                        }
+                        if (victim == null) break;
+                        RegexCache.TryRemove(victim, out _);
+                    }
                 }
                 return regex.IsMatch(InputNormalizer.ToString(element));
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                // 超时不得静默判 false（整列被过滤光的假阴性）；显式上抛 → ARR.FILTER #VALUE!。
+                throw;
             }
             catch (Exception ex) when (ExceptionFilters.IsCatchable(ex))
             {

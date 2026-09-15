@@ -610,6 +610,11 @@ namespace ExcelFormulaLabs.Analytics.Tests
             new Action(() => LinalgCore.Solve(e, System.Array.Empty<double>())).Should().Throw<ArgumentException>();
             new Action(() => LinalgCore.Eigenvalues(e)).Should().Throw<ArgumentException>();
             new Action(() => LinalgCore.Rank(e)).Should().Throw<ArgumentException>();
+            // R3-8：同族其余成员的空矩阵守卫（曾裸 IndexOutOfRangeException / MathNet 内部异常）。
+            new Action(() => LinalgCore.PseudoInverse(e)).Should().Throw<ArgumentException>();
+            new Action(() => LinalgCore.ConditionNumber(e)).Should().Throw<ArgumentException>();
+            new Action(() => LinalgCore.Qr(e)).Should().Throw<ArgumentException>();
+            new Action(() => LinalgCore.Lu(e)).Should().Throw<ArgumentException>();
         }
 
         [Fact]
@@ -628,6 +633,148 @@ namespace ExcelFormulaLabs.Analytics.Tests
             double.IsNaN(LinalgCore.NormFrobenius(
                 new double[,] { { 1e308, 1e308 }, { 1e308, 1e308 } })).Should().BeTrue();
             LinalgCore.NormFrobenius(new double[,] { { 3, 4 } }).Should().Be(5.0);
+        }
+    }
+
+    // R0-1/R1-1/R3-7：分解族全量纲覆盖。MathNet 在 |元素| > √DBL_MAX ≈ 1.34e154 时
+    // 列平方和溢出（修复前 QR 返回 Q=0/R=-∞、SVD/COND/PINV/SOLVE NonConvergence、
+    // EIGEN 裸 IndexOutOfRange、LU 输出 -∞）。修复 = maxAbs 归一化 + 解析回缩。
+    public class LinalgScaleTests
+    {
+        public LinalgScaleTests() => LinalgCore.ClearDecompCache();
+
+        private static double RelDiff(double[,] a, double[,] b)
+        {
+            double max = 0;
+            for (int r = 0; r < a.GetLength(0); r++)
+                for (int c = 0; c < a.GetLength(1); c++)
+                    max = Math.Max(max, Math.Abs(a[r, c]));
+            if (max == 0) max = 1;
+            double num = 0, den = 0;
+            for (int r = 0; r < a.GetLength(0); r++)
+                for (int c = 0; c < a.GetLength(1); c++)
+                {
+                    double av = a[r, c] / max, bv = b[r, c] / max;
+                    num += (av - bv) * (av - bv);
+                    den += av * av;
+                }
+            return Math.Sqrt(num / Math.Max(den, double.Epsilon));
+        }
+
+        private static void AssertAllFinite(double[,] m)
+        {
+            foreach (var v in m)
+                (double.IsNaN(v) || double.IsInfinity(v)).Should().BeFalse();
+        }
+
+        [Fact]
+        public void Qr_extreme_scale_orthogonal_and_reconstructs()
+        {
+            // 报告实测输入：修复前 Q 全零、R[-1,1]=-∞（numpy cond≈2.2，良态）。
+            var a = new double[,] { { 1e155, 2e155 }, { 3e155, 1e155 }, { 1e155, 1e155 } };
+            var (q, r) = LinalgCore.Qr(a);
+            AssertAllFinite(q);
+            AssertAllFinite(r);
+            RelDiff(a, LinalgCore.MatMul(q, r)).Should().BeLessThan(1e-12);
+            var qtq = LinalgCore.MatMul(LinalgCore.Transpose(q), q);
+            RelDiff(new double[,] { { 1, 0 }, { 0, 1 } }, qtq).Should().BeLessThan(1e-12);
+        }
+
+        [Theory]
+        [InlineData(2e154)]
+        [InlineData(1e155)]
+        [InlineData(1e308)]
+        public void Qr_extreme_scales_reconstruct(double scale)
+        {
+            var a = new double[,] { { scale, scale / 2 }, { scale / 3, scale } };
+            var (q, r) = LinalgCore.Qr(a);
+            RelDiff(a, LinalgCore.MatMul(q, r)).Should().BeLessThan(1e-12);
+        }
+
+        [Theory]
+        [InlineData(1e155)]
+        [InlineData(1e308)]
+        public void Svd_diagonal_extreme_scale(double scale)
+        {
+            var (u, s, vt) = LinalgCore.Svd(new double[,] { { scale, 0 }, { 0, scale } });
+            s[0].Should().BeApproximately(scale, scale * 1e-12);
+            s[1].Should().BeApproximately(scale, scale * 1e-12);
+            RelDiff(new double[,] { { scale, 0 }, { 0, scale } },
+                LinalgCore.MatMul(LinalgCore.MatMul(u, LinalgCore.Diagonal(s)), vt))
+                .Should().BeLessThan(1e-12);
+        }
+
+        [Fact]
+        public void Svd_tiny_scale()
+        {
+            var (_, s, _) = LinalgCore.Svd(new double[,] { { 1e-200, 0 }, { 0, 2e-200 } });
+            s[0].Should().BeApproximately(2e-200, 1e-212);
+            s[1].Should().BeApproximately(1e-200, 1e-212);
+        }
+
+        [Fact]
+        public void PseudoInverse_extreme_scale()
+        {
+            var pinv = LinalgCore.PseudoInverse(new double[,] { { 1e155, 0 }, { 0, 2e155 } });
+            pinv[0, 0].Should().BeApproximately(1e-155, 1e-167);
+            pinv[1, 1].Should().BeApproximately(0.5e-155, 1e-167);
+        }
+
+        [Theory]
+        [InlineData(1e308)]
+        [InlineData(1e155)]
+        public void ConditionNumber_extreme_scale_is_invariant(double scale)
+            => LinalgCore.ConditionNumber(new double[,] { { scale, 0 }, { 0, scale } })
+                .Should().BeApproximately(1.0, 1e-10);
+
+        [Fact]
+        public void Solve_diagonal_extreme_scale_is_exact()
+        {
+            var x = LinalgCore.Solve(new double[,] { { 1e308, 0 }, { 0, 5e307 } }, new[] { 1e308, 1e308 });
+            x[0].Should().BeApproximately(1.0, 1e-12);
+            x[1].Should().BeApproximately(2.0, 1e-12);
+        }
+
+        [Fact]
+        public void Eigen_extreme_scale_spd()
+        {
+            // 修复前：裸 IndexOutOfRangeException。
+            var r = LinalgCore.Eigen(new double[,] { { 1e308, 1e307 }, { 1e307, 1e308 } });
+            r.values.OrderByDescending(v => v).ToArray()[0].Should().BeApproximately(1.1e308, 1.1e296);
+            r.values.OrderBy(v => v).ToArray()[0].Should().BeApproximately(0.9e308, 0.9e296);
+            var v = r.vectors;
+            RelDiff(new double[,] { { 1, 0 }, { 0, 1 } },
+                LinalgCore.MatMul(LinalgCore.Transpose(v), v)).Should().BeLessThan(1e-12);
+        }
+
+        [Fact]
+        public void Lu_extreme_scale_no_infinity()
+        {
+            // 1e307：cU 全部可表示且有限（修复前 *未* 溢出，但 LU 内部也无 Inf 路径）。
+            var a = new double[,] { { 1e307, 1e307 }, { 1e307, -1e307 } };
+            var (l, u, p) = LinalgCore.Lu(a);
+            AssertAllFinite(l);
+            AssertAllFinite(u);
+            RelDiff(a, LinalgCore.MatMul(p, LinalgCore.MatMul(l, u))).Should().BeLessThan(1e-12);
+            // 1e308：U[1,1] 真值 -2e308 不可表示 → NaN 封顶（修复前直漏 -∞）。
+            var (_, u2, _) = LinalgCore.Lu(new double[,] { { 1e308, 1e308 }, { 1e308, -1e308 } });
+            double.IsInfinity(u2[1, 1]).Should().BeFalse();
+            double.IsNaN(u2[1, 1]).Should().BeTrue();
+        }
+
+        [Fact]
+        public void Cholesky_extreme_scale()
+        {
+            var l = LinalgCore.Cholesky(new double[,] { { 4e307, 1e307 }, { 1e307, 1e308 } });
+            RelDiff(new double[,] { { 4e307, 1e307 }, { 1e307, 1e308 } },
+                LinalgCore.MatMul(l, LinalgCore.Transpose(l))).Should().BeLessThan(1e-12);
+        }
+
+        [Fact]
+        public void Rank_extreme_scale()
+        {
+            LinalgCore.Rank(new double[,] { { 1e155, 0 }, { 0, 1e155 } }).Should().Be(2);
+            LinalgCore.Rank(new double[,] { { 1e155, 2e155 }, { 2e155, 4e155 } }).Should().Be(1);
         }
     }
 }

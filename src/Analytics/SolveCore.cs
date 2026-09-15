@@ -482,6 +482,7 @@ namespace ExcelFormulaLabs.Analytics
                 if (TermExcluded(powers[t], excludedSet)) continue; // rate：配对来料/时间列（含其幂与交互项）受约束
                 var col = new double[n];
                 double maxAbs = 0;
+                double colMin = double.PositiveInfinity, colMax = double.NegativeInfinity;
                 for (int i = 0; i < n; i++)
                 {
                     col[i] = PowerProduct(X[i], powers[t]);
@@ -491,6 +492,8 @@ namespace ExcelFormulaLabs.Analytics
                             "scale feature columns down or use model=\"linear\".");
                     double a = Math.Abs(col[i]);
                     if (a > maxAbs) maxAbs = a;
+                    if (col[i] < colMin) colMin = col[i];
+                    if (col[i] > colMax) colMax = col[i];
                 }
                 // 常规路径保持原始矩（既有数值行为不变）；原始偏差平方溢出/为 NaN，或下溢为
                 // 精确 0（小量纲 ~1e-170）时，回退到按列 max 归一化的矩估计——否则有效列会被
@@ -501,8 +504,13 @@ namespace ExcelFormulaLabs.Analytics
                 double mu = sum / n;
                 double ss = 0;
                 for (int i = 0; i < n; i++) { double d = col[i] - mu; ss += d * d; }
+                // 位级常量判定（R2-2）：constant 0.1 列因 Σc/n 舍入（Σ0.1×3/3=0.10000000000000002
+                // ≠0.1）产生伪 ss>0，标准化后与截距精确共线 → SOLVE 整表 #VALUE!（取决于 n 的
+                // 舍入结果）。min==max 位级相等才是真常量：跳过归一化回退直接 sd=0；
+                // 非常量列的 ss 溢出/下溢（1e154+/1e-170）仍走归一化回退。
+                bool exactConstant = colMin == colMax;
                 double sd;
-                if (double.IsNaN(ss) || double.IsInfinity(ss) || (ss == 0 && maxAbs > 0))
+                if (!exactConstant && (double.IsNaN(ss) || double.IsInfinity(ss) || ss == 0))
                 {
                     double muNorm = 0;
                     if (maxAbs > 0)
@@ -521,7 +529,7 @@ namespace ExcelFormulaLabs.Analytics
                 }
                 else
                 {
-                    sd = n > 1 ? Math.Sqrt(ss / (n - 1)) : 0.0;
+                    sd = (!exactConstant && n > 1) ? Math.Sqrt(ss / (n - 1)) : 0.0;
                 }
                 if (double.IsNaN(sd) || double.IsInfinity(sd))
                     throw new ArgumentException(
@@ -943,6 +951,11 @@ namespace ExcelFormulaLabs.Analytics
                 double d = Y[row][member] - yMean;
                 tss += d * d;
             }
+            // R2-3：池化 CV 缺非有限守卫时，大尺度共享输出（Y≈1e160）的 sse/tss 上溢成
+            // ±Inf，1.0−sse/tss 会得到饱和 R²=1（假完美）；同族非池化 CrossValidate 已有
+            // 同一守卫。两通道结论必须一致：显式拒绝而非静默饱和。
+            if (double.IsNaN(sse) || double.IsInfinity(sse) || double.IsNaN(tss) || double.IsInfinity(tss))
+                throw new ArgumentException("Cross-validation statistics are numerically unstable.");
             if (tss == 0)
                 throw new ArgumentException("Cannot cross-validate: constant response variable y.");
 

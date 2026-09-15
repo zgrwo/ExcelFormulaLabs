@@ -116,7 +116,10 @@ namespace ExcelFormulaLabs.DataToolkit
                     if (scan.NodeType == XmlNodeType.Element)
                     {
                         if (++depth > MaxXmlDepth)
-                            throw new XmlException(
+                            // ArgumentException（而非 XmlException）：深度上限是输入卫生限制，
+                            // XmlToTable 须显式上抛 #VALUE!（与 JSON.TOTABLE 行为一致，R3-11）；
+                            // 真正的解析错误仍是 XmlException → XmlToTable 返回空哨兵。
+                            throw new ArgumentException(
                                 $"XML nesting depth exceeds the limit of {MaxXmlDepth}.");
                         if (scan.IsEmptyElement) depth--;
                     }
@@ -136,7 +139,7 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static object[,]? XmlToTable(string xml, string? rowPath=null)
             // 缺元素单元格写 null =「空单元格」哨兵，null! 豁免可空性分析。
             // 同 JsonToTable——行数 >100_000 分配前拒绝（.NET 直调方纵深防御）。
-        { try{var d=ParseXmlSafe(xml);var rows=rowPath!=null?d.XPathSelectElements(rowPath):d.Root?.Elements()??Enumerable.Empty<XElement>();var rl=rows.ToList();if(rl.Count==0)return null;if(rl.Count>100_000)throw new ArgumentException($"XML input produces {rl.Count} rows; maximum is 100000.");var cn=rl.SelectMany(r=>r.Elements()).Select(e=>e.Name.LocalName).Distinct().ToArray();var rt=new object[rl.Count+1,cn.Length];for(int c=0;c<cn.Length;c++)rt[0,c]=cn[c];for(int i=0;i<rl.Count;i++){var row=rl[i];for(int c=0;c<cn.Length;c++){var el=row.Element(cn[c]);rt[i+1,c]=el!=null?el.Value:null!;}}return rt;}catch(Exception ex) when(ExceptionFilters.IsCatchable(ex)){System.Diagnostics.Debug.WriteLine($"[XmlToTable] Failed: {ex.Message}");return null;} }
+        { try{var d=ParseXmlSafe(xml);var rows=rowPath!=null?d.XPathSelectElements(rowPath):d.Root?.Elements()??Enumerable.Empty<XElement>();var rl=rows.ToList();if(rl.Count==0)return null;if(rl.Count>100_000)throw new ArgumentException($"XML input produces {rl.Count} rows; maximum is 100000.");var cn=rl.SelectMany(r=>r.Elements()).Select(e=>e.Name.LocalName).Distinct().ToArray();var rt=new object[rl.Count+1,cn.Length];for(int c=0;c<cn.Length;c++)rt[0,c]=cn[c];for(int i=0;i<rl.Count;i++){var row=rl[i];for(int c=0;c<cn.Length;c++){var el=row.Element(cn[c]);rt[i+1,c]=el!=null?el.Value:null!;}}return rt;}catch(ArgumentException){throw;}catch(Exception ex) when(ExceptionFilters.IsCatchable(ex)){System.Diagnostics.Debug.WriteLine($"[XmlToTable] Failed: {ex.Message}");return null;} }
 
         internal static bool XmlValidate(string xml)
         { try{ParseXmlSafe(xml);return true;}catch(Exception ex) when(ExceptionFilters.IsCatchable(ex)){return false;} }

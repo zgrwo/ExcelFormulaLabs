@@ -24,6 +24,27 @@ namespace ExcelFormulaLabs.Analytics
             return m;
         }
 
+        /// <summary>列 2-范数（maxAbs 归一化平方和，防止 1e154+ 列 Σx² 上溢为 Inf）。</summary>
+        private static double StableColumnNorm(Matrix<double> m, int col, int rows)
+        {
+            double max = 0;
+            for (int i = 0; i < rows; i++)
+            {
+                double a = Math.Abs(m[i, col]);
+                if (a > max) max = a;
+            }
+            if (max == 0) return 0;
+            double s = 0;
+            for (int i = 0; i < rows; i++)
+            {
+                double t = m[i, col] / max;
+                s += t * t;
+            }
+            double norm = max * Math.Sqrt(s);
+            // 真范数超出 double 表示 → 退回 max（相对判据仍有意义，避免 Inf 传播）。
+            return double.IsInfinity(norm) ? max : norm;
+        }
+
         /// <summary>
         /// Ordinary Least Squares regression. Minimizes sum of squared residuals.
         /// Used by REGRESS.OLS.
@@ -98,25 +119,21 @@ namespace ExcelFormulaLabs.Analytics
             double adjR2 = 1.0 - (1.0 - r2) * (n - 1) / (double)df;
             double sigma2 = sse / df;
             // (X'X)⁻¹ = R⁻¹ R⁻ᵀ（X = QR ⇒ X'X = R'R）。对角线 = Σ_k R⁻¹[j,k]²。
-            // R 对角线相对守卫：|R[j,j]| ≤ eps·maxDiag 即数值秩亏（共线列），显式抛错
-            // 而非静默返回 NaN 标准误。阈值取机器精度级（不误伤多项式趋势等高 cond 但可解输入）。
+            // 逐列相对守卫（R2-1）：|R[j,j]| 与本列范数比较，而非全列最大对角。全局
+            // maxDiag 会把小尺度但合法的列误判共线——混合量纲设计（截距 norm=√n≈71 与
+            // 预测列 norm≈1e14）中 maxDiag 由大列决定，阈值反把截距列判为秩亏
+            // （OLS amp=1e13 整表被拒，而 cond=1.155e13 在 1e14 政策内）。
+            // 判据：列 j 的正交剩余范数 ≤ max(n,p)·eps·‖Aⱼ‖ ⇒ 与前序列数值线性相关。
             var R = qr.R;
-            double maxDiag = 0.0;
+            double diagTolFactor = Math.Max(n, p) * 2.220446049250313e-16;
             for (int j = 0; j < p; j++)
             {
-                double d = Math.Abs(R[j, j]);
-                if (d > maxDiag) maxDiag = d;
-            }
-            // diagTol 须含 max(n,p) 因子（对齐 LinalgCore.Rank 的 max(n,p)·eps 约定）：
-            // 仅 maxDiag·eps 时精确共线列经 QR 舍入后的 R 尾项（实测 -8.88e-16）恰好高于
-            // 阈值（7.02e-16，仅高 27%）→ 静默返回任意系数（r²=1、SE/t/p 有限垃圾）；
-            // 合法高 cond 用例（H10×8）仍放行。
-            double diagTol = Math.Max(maxDiag, 1e-300) * Math.Max(n, p) * 2.220446049250313e-16;
-            for (int j = 0; j < p; j++)
-                if (Math.Abs(R[j, j]) <= diagTol)
+                double colNorm = StableColumnNorm(matX, j, n);
+                if (Math.Abs(R[j, j]) <= Math.Max(colNorm, 1e-300) * diagTolFactor)
                     throw new ArgumentException(
                         $"Cannot fit {op}: design matrix X is near-singular (highly collinear columns). " +
                         "Consider removing redundant predictors or using ridge regression (REGRESS.RIDGE).");
+            }
             // cond(R)=cond(X) > 1e14 必须拒绝（对齐 LINALG.SOLVE 的 1e14 政策）：对角守卫
             // 只能捕获列精确共线；Hilbert 16×14（cond=1.9e17，rank=12<14）R 对角均高于阈值
             // 但系数最大误差 8.8 而 r²=1。QR 正交变换不改变奇异值，cond>1e14 时解的有效
@@ -207,9 +224,17 @@ namespace ExcelFormulaLabs.Analytics
                     "Cannot fit WLS: all weights are zero — the weighted model is undefined.");
             var matXw = Matrix<double>.Build.Dense(n, p);
             var vecYw = Vector<double>.Build.Dense(n);
+            // 权重归一化（R2-4）：WLS 解/加权 TSS/R² 对 w→c·w 不变，但直接用原始权重的
+            // √w 会量纲失衡——1e-300 权重的加权响应被压到 1e-250（tss 下溢 → 假
+            // "constant response"），1e308 权重把平方和推过 DBL_MAX（假 "unstable"）。
+            // 先除 wMax 再开方（anyPositive 已保证 wMax>0）。
+            double wMax = 0;
+            for (int i = 0; i < n; i++) if (w[i] > wMax) wMax = w[i];
+            var wN = new double[n];
+            for (int i = 0; i < n; i++) wN[i] = w[i] / wMax;
             for (int i = 0; i < n; i++)
             {
-                double sw = Math.Sqrt(w[i]);
+                double sw = Math.Sqrt(wN[i]);
                 for (int j = 0; j < p; j++) matXw[i, j] = Xaug[i, j] * sw;
                 vecYw[i] = y[i] * sw;
             }
@@ -232,14 +257,14 @@ namespace ExcelFormulaLabs.Analytics
             // 普通均值——WLS 的加权均值不是 sqrt(w)y 的算术均值。此处按 statsmodels 口径
             // 重算加权 TSS/R²（sse 复用原尺度残差的加权平方和）。
             double wSum = 0, wySum = 0;
-            for (int i = 0; i < n; i++) { wSum += w[i]; wySum += w[i] * y[i]; }
+            for (int i = 0; i < n; i++) { wSum += wN[i]; wySum += wN[i] * y[i]; }
             double yMeanW = wySum / wSum;
             double sseW = 0, tssW = 0;
             for (int i = 0; i < n; i++)
             {
-                sseW += w[i] * residualsOrig[i] * residualsOrig[i];
+                sseW += wN[i] * residualsOrig[i] * residualsOrig[i];
                 double dev = y[i] - yMeanW;
-                tssW += w[i] * dev * dev;
+                tssW += wN[i] * dev * dev;
             }
             if (double.IsNaN(tssW) || double.IsInfinity(tssW) ||
                 double.IsNaN(sseW) || double.IsInfinity(sseW))
@@ -250,7 +275,10 @@ namespace ExcelFormulaLabs.Analytics
                 throw new ArgumentException(
                     "Cannot fit WLS: weighted total sum of squares is zero (constant weighted response).");
             double r2W = 1.0 - sseW / tssW;
-            result["sse"] = sseW;
+            // sse 对外契约 = Σw·resid²（原始权重）：归一化域结果乘回 wMax；真值不可表示
+            // （wMax=1e308 且 sseW·wMax 溢出）→ NaN 封顶（模块约定）。
+            double sseOut = sseW * wMax;
+            result["sse"] = double.IsInfinity(sseOut) ? double.NaN : sseOut;
             result["r_squared"] = r2W;
             result["adj_r_squared"] = 1.0 - (1.0 - r2W) * (n - 1) / (double)(n - p);
             return result;
@@ -327,25 +355,18 @@ namespace ExcelFormulaLabs.Analytics
             // 双精度噪声（λ ≈ eps²·‖X‖²）时才会数值秩亏。λ 太小 → 显式报错而非静默错误系数；
             // λ 足够大（含 λ=0 且 X 满秩）→ 正常求解。
             var R = qr.R;
-            // diagTol 须含 max(n,p) 因子（同 FitOLSCore），且阈值尺度取原始数据块：用
-            // 增广矩阵 R 对角最大值会被判罚列的 √λ 行污染（maxDiag≈√λ），λ≳6e31 时阈值
-            // √λ·eps 远超截距/数据列的 R 对角 → 大 λ 被反向误拒（"λ 太小"）。取数据块
-            // 元素最大绝对值 · Max(增广行数, 列数) · eps：大 λ 正常放行；λ 低于数据尺度噪声
-            // 且 X 共线时仍显式拒绝。
-            double dataScale = 0.0;
-            for (int i = 0; i < n; i++)
-                for (int j = 0; j < p; j++)
-                {
-                    double a = Math.Abs(Xaug[i, j]);
-                    if (a > dataScale) dataScale = a;
-                }
-            double diagTol = Math.Max(dataScale, 1e-300) * Math.Max(n + penCount, p)
-                * 2.220446049250313e-16;
+            // 逐列相对守卫（R2-1，同 FitOLSCore）：与本列（增广后）范数比较。原先的
+            // dataScale（全表 max）会把截距列（norm≈√n≈10）与 1e16 量级预测列同阈比较，
+            // 大尺度且良态的 Ridge 输入（λ=1..1e300）整表被拒。
+            double diagTolFactor = Math.Max(n + penCount, p) * 2.220446049250313e-16;
             for (int j = 0; j < p; j++)
-                if (Math.Abs(R[j, j]) <= diagTol)
+            {
+                double colNorm = StableColumnNorm(Xa, j, n + penCount);
+                if (Math.Abs(R[j, j]) <= Math.Max(colNorm, 1e-300) * diagTolFactor)
                     throw new ArgumentException(
                         "Cannot fit Ridge: design matrix X is near-singular and lambda is too small " +
                         "to regularize at the data scale. Try increasing lambda (e.g. lambda=10 or larger).");
+            }
             // 纵深防御（保留）：极端数据下仍可能溢出为 NaN/Inf。
             for (int j = 0; j < p; j++)
                 if (double.IsNaN(beta[j]) || double.IsInfinity(beta[j]))
@@ -494,7 +515,10 @@ namespace ExcelFormulaLabs.Analytics
                 double ss = 0;
                 if (!double.IsNaN(mean) && !double.IsInfinity(mean))
                     for (int i = 0; i < n; i++) { double d = X[i, j] - mean; ss += d * d; }
-                if (!double.IsNaN(ss) && !double.IsInfinity(ss) && maxAbs > 0)
+                // ss 上溢/下溢（1e154+ 平方 Inf；1e-170 平方下溢 0）时按列 maxAbs 归一化
+                // 回退（R1-7）：`ss == 0 && maxAbs > 0` 不是常量列而是小量纲下溢，
+                // 直接判常量会把有效因子排到最后（镜像 SolveCore.FitExpanded 的模式）。
+                if (ss > 0 && !double.IsInfinity(ss) && maxAbs > 0)
                 {
                     sd = n > 1 ? Math.Sqrt(ss / (n - 1)) : 0.0;
                 }

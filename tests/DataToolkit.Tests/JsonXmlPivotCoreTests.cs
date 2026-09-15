@@ -136,7 +136,12 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             string xml = sb.ToString();
             JsonXmlCore.XmlValidate(xml).Should().BeFalse();
             JsonXmlCore.XmlXPath(xml, "//a").Should().BeEmpty();
-            JsonXmlCore.XmlToTable(xml).Should().BeNull();
+            // R3-11：深度/行数上限是 ArgumentException 卫生检查，必须放行（与 JSON.TOTABLE
+            // 一致）；旧实现吞掉所有异常返回 null，用户无法区分"限制触发"与"XML 解析失败"。
+            new Action(() => JsonXmlCore.XmlToTable(xml)).Should().Throw<ArgumentException>()
+                .WithMessage("*depth*");
+            // 真正的解析错误仍返回 null（哨兵）。
+            JsonXmlCore.XmlToTable("<r><n>").Should().BeNull();
         }
 
         [Fact] public void JsonPrettify_preserves_structure()

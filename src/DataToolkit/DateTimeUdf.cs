@@ -13,7 +13,9 @@ namespace ExcelFormulaLabs.DataToolkit
         {
             double v = InputNormalizer.ToDouble(d);
             if (double.IsNaN(v)) throw new ArgumentException(ErrorMsg.Get("DT_NaNTodate"));
-            if (v == 60) throw new ArgumentException("Excel serial 60 (the fictitious 1900-02-29) is not a valid date.");
+            // 假闰日区间是 [60,61)（R3-5）：旧的 `v == 60` 只挡整数 60，60.5 经
+            // FromOADate 静默映射 1900-02-28 12:00（与契约注释"显式 #VALUE!"相悖）。
+            if (v >= 60 && v < 61) throw new ArgumentException("Excel serial 60 (the fictitious 1900-02-29) is not a valid date.");
             if (v >= 1 && v < 60) v += 1;
             return DateTime.FromOADate(v);
         }

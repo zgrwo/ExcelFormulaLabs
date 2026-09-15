@@ -67,6 +67,20 @@ function Split-TopLevelArgs {
     return $args
 }
 
+# R3-18：参数归一化——两侧文本不同但语义同源的变体须判等：
+#   a 与 a[:] / a[0] / a[1:2]（切片）、f(x) 与 f( x )（空白）、(x) 与 x（外括号）、
+#   f(x,) 与 f(x)（尾逗号）。归一化顺序：剥外括号 → 去尾部下标 → 去全部空白 → 去尾逗号。
+function Normalize-CheckArg {
+    param([string]$A)
+    $A = $A.Trim()
+    while ($A.Length -ge 2 -and $A.StartsWith('(') -and $A.EndsWith(')')) { $A = $A.Substring(1, $A.Length - 2).Trim() }
+    while ($A -match '\[[^\]]*\]$') { $A = $A.Substring(0, $A.LastIndexOf('[')).Trim() }
+    $A = ($A -replace '\s+', '')
+    $A = $A -replace ',\)', ')'   # f(x,) 与 f(x)
+    $A = $A -replace ',$', ''     # (a,) 与 (a)
+    return $A
+}
+
 # -- Check 1: Bare catch {} --
 Write-Host ""
 Write-Host "[1/6] Checking bare catch {} ..."
@@ -118,11 +132,12 @@ if (Test-Path $verifyScript) {
         $before = if ($idx -gt 0) { $verifyText[$idx - 1] } else { ' ' }
         if ($before -match '[A-Za-z0-9_]') { $idx = $verifyText.IndexOf("check(", $idx + 1); continue }
         $args = Split-TopLevelArgs $verifyText ($idx + 6)
-        # check(name, X, X)：第 2、3 个顶层参数完全相同（跨行空白由 Trim 收敛）
+        # check(name, X, X) 及其归一化变体（R3-18）：切片/空白/外括号/尾逗号差异
+        # 归一化后判等（`check(name, a, a[:])`、`check(name, f(x), f( x ))` 旧实现漏检）。
         if ($args.Count -ge 3) {
-            $a2 = $args[1].Trim()
-            $a3 = $args[2].Trim()
-            if ($a2 -eq $a3) {
+            $a2 = Normalize-CheckArg $args[1]
+            $a3 = Normalize-CheckArg $args[2]
+            if ($a2.Length -gt 0 -and $a2 -eq $a3) {
                 $lineNo = ($verifyText.Substring(0, $idx) -split "`n").Count
                 $selfHits += "verify-manual.py:$lineNo ($a2)"
             }

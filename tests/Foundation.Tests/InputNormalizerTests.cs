@@ -44,6 +44,10 @@ public class CoercionTests
     [Fact] public void ToDateTime_null() => InputNormalizer.ToDateTime(null).Should().Be(DateTime.MinValue);
     [Fact] public void ToDateTime_empty() => InputNormalizer.ToDateTime(ExcelEmpty.Value).Should().Be(DateTime.MinValue);
     [Fact] public void ToDateTime_error() => InputNormalizer.ToDateTime(ExcelError.Value).Should().Be(DateTime.MinValue);
+    // R2-7：char 是 IConvertible 但 Convert.ToDouble 抛 InvalidCastException → 必须哨兵化。
+    [Fact] public void ToDateTime_char_returns_minvalue()
+        => InputNormalizer.ToDateTime('2').Should().Be(DateTime.MinValue);
+
     [Fact] public void ToDateTime_string_date() => InputNormalizer.ToDateTime("2024-01-01").Should().Be(new DateTime(2024, 1, 1));
     [Fact] public void ToBool_string_false() => InputNormalizer.ToBool("false").Should().BeFalse();
     [Fact] public void ToBool_string_zero() => InputNormalizer.ToBool("0").Should().BeFalse();
@@ -225,6 +229,18 @@ public class ComRangeExtractionTests
     [Fact] public void ToInt32_nan_zero() => InputNormalizer.ToInt32(double.NaN).Should().Be(0);
     [Fact] public void ToInt32_max_ok() => InputNormalizer.ToInt32(int.MaxValue).Should().Be(int.MaxValue);
     [Fact] public void ToInt32_min_ok() => InputNormalizer.ToInt32(int.MinValue).Should().Be(int.MinValue);
+    // R2-8：≥2⁶³ 的 double 走 ToLong 哨兵 0，委托路径触发不到范围检查 → 静默 0。
+    [Fact] public void ToInt32_1e300_throws()
+        => new Action(() => InputNormalizer.ToInt32(1e300)).Should().Throw<ArgumentException>();
+    [Fact] public void ToInt32_string_1e300_throws()
+        => new Action(() => InputNormalizer.ToInt32("1e300")).Should().Throw<ArgumentException>();
+    [Fact] public void ToInt32_3e9_double_throws()
+        => new Action(() => InputNormalizer.ToInt32(3e9)).Should().Throw<ArgumentException>();
+    // 非有限仍走 L2 哨兵（0），不得抛错。
+    [Fact] public void ToInt32_infinity_zero() => InputNormalizer.ToInt32(double.PositiveInfinity).Should().Be(0);
+    [Fact] public void ToInt32_float_overflow_throws()
+        => new Action(() => InputNormalizer.ToInt32(float.MaxValue)).Should().Throw<ArgumentException>();
+
     [Fact] public void ToInt32_above_int_range_throws()
         => new Action(() => InputNormalizer.ToInt32(2_147_483_648L)).Should().Throw<ArgumentException>();
     [Fact] public void ToInt32_below_int_range_throws()

@@ -565,5 +565,29 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         var act = () => SqlCore.SqlQuery(a, "SELECT * FROM data a, data b", null, true);
         act.Should().Throw<ArgumentException>().WithMessage("*more than*");
     }
+
+    // R3-16：LOAD_EXTENSION 纵深防御（EnableExtensions 未开启时执行必败，但黑名单给出
+    // 结构性拒绝；同时避免未来默认开启扩展后成为静默利用面）。
+    [Fact]
+    public void Load_extension_blocked()
+    {
+        var data = new object[,] { { "x" }, { 1.0 } };
+        var act = () => SqlCore.SqlQuery(data, "SELECT load_extension('evil')");
+        act.Should().Throw<ArgumentException>().WithMessage("*forbidden*");
+    }
+
+    [Fact]
+    public void Pre_first_row_runaway_hits_wall_clock_budget()
+    {
+        // R1-3：500³ 交叉连接聚合在首行前完成计算——旧实现循环内秒表永不触发
+        // （实测 1000³ 阻塞 10.4s 后成功返回）。看门狗 300ms 必须中止并给出预算消息。
+        var a = new object[501, 1];
+        a[0, 0] = "v";
+        for (int i = 1; i <= 500; i++) a[i, 0] = (double)i;
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var act = () => SqlCore.SqlQuery(a, "SELECT count(*) FROM data a, data b, data c", null, true, 300);
+        act.Should().Throw<ArgumentException>().WithMessage("*budget*");
+        sw.ElapsedMilliseconds.Should().BeLessThan(3000);
+    }
 }
 }

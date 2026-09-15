@@ -187,6 +187,11 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static string ReadTextFile(string p, Encoding? e = null) { ValidatePath(p); var enc = e ?? Encoding.UTF8; using var fs = new FileStream(p, FileMode.Open, FileAccess.Read, FileShare.Read); if (MaxReadSizeBytes > 0 && fs.Length > MaxReadSizeBytes) throw new ArgumentException(ErrorMsg.Get("FS_ReadLimitExceeded", MaxReadSizeBytes)); using var sr = new StreamReader(fs, enc); return sr.ReadToEnd(); }
         internal static string[] ReadAllLines(string p, Encoding? e = null) { ValidatePath(p); var enc = e ?? Encoding.UTF8; using var fs = new FileStream(p, FileMode.Open, FileAccess.Read, FileShare.Read); if (MaxReadSizeBytes > 0 && fs.Length > MaxReadSizeBytes) throw new ArgumentException(ErrorMsg.Get("FS_ReadLimitExceeded", MaxReadSizeBytes)); using var sr = new StreamReader(fs, enc); var lines = new System.Collections.Generic.List<string>(); string? line; while ((line = sr.ReadLine()) != null) lines.Add(line); return lines.ToArray(); }
         internal static bool WriteTextFile(string p, string c, Encoding? e = null) { ValidatePath(p); var enc = e ?? Encoding.UTF8; if (MaxWriteSizeBytes > 0 && enc.GetByteCount(c) > MaxWriteSizeBytes) throw new ArgumentException(ErrorMsg.Get("FS_WriteLimitExceeded", MaxWriteSizeBytes)); File.WriteAllText(p, c, enc); return true; }
+        // 同路径进程内串行化（R3-15）：累计上限的"检查长度 → 追加"若不原子，并发 APPEND
+        // 可各自通过检查后合计越界（check-then-act）。锁表按规范化全路径分桶。
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, object> AppendGates =
+            new(StringComparer.OrdinalIgnoreCase);
+
         internal static bool AppendTextFile(string p, string c, Encoding? e = null)
         {
             ValidatePath(p);
@@ -196,16 +201,22 @@ namespace ExcelFormulaLabs.DataToolkit
                 throw new ArgumentException(ErrorMsg.Get("FS_WriteLimitExceeded", MaxWriteSizeBytes));
             // 单次写入限制不足以约束累计——反复 APPEND 会无界。累计上限 =
             // MaxWriteSizeBytes（现有文件长度 + 本次追加）。
-            if (MaxWriteSizeBytes > 0)
+            string gateKey;
+            try { gateKey = Path.GetFullPath(p); }
+            catch (Exception ex) when (ExceptionFilters.IsCatchable(ex)) { gateKey = p; }
+            lock (AppendGates.GetOrAdd(gateKey, _ => new object()))
             {
-                long existing = 0;
-                try { if (File.Exists(p)) existing = new FileInfo(p).Length; }
-                catch (Exception ex) when (ExceptionFilters.IsCatchable(ex)) { existing = 0; }
-                if (existing + addBytes > MaxWriteSizeBytes)
-                    throw new ArgumentException(
-                        ErrorMsg.Get("FS_AppendLimitExceeded", MaxWriteSizeBytes, existing, addBytes));
+                if (MaxWriteSizeBytes > 0)
+                {
+                    long existing = 0;
+                    try { if (File.Exists(p)) existing = new FileInfo(p).Length; }
+                    catch (Exception ex) when (ExceptionFilters.IsCatchable(ex)) { existing = 0; }
+                    if (existing + addBytes > MaxWriteSizeBytes)
+                        throw new ArgumentException(
+                            ErrorMsg.Get("FS_AppendLimitExceeded", MaxWriteSizeBytes, existing, addBytes));
+                }
+                File.AppendAllText(p, c, enc);
             }
-            File.AppendAllText(p, c, enc);
             return true;
         }
         internal static bool DeleteFile(string p) { ValidatePath(p); if (File.Exists(p)) File.Delete(p); return true; }

@@ -690,5 +690,48 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             // 默认 quote=true → 首字段为 "\"ok\""。
             RangeExportCore.RangeToCsv(atLimit).Should().StartWith("\"ok\"");
         }
+
+        // P3-4：CSV 公式注入 defang 的 ±Infinity/NaN 双 TFM 一致性——net8 能解析
+        // "+Infinity" 为数值（曾不 defang），net48 不能（defang）；统一按非数值 defang。
+        [Fact]
+        public void Csv_defangs_infinity_prefixed_values()
+        {
+            var csv = RangeExportCore.RangeToCsv(new object[,]
+            {
+                { "+Infinity" }, { "-Infinity" }, { "+1.5" },
+            }, quote: false);
+            csv.Should().StartWith("'+Infinity");
+            csv.Should().Contain("'-Infinity");
+            csv.Should().Contain("+1.5");
+            csv.Should().NotContain("'+1.5");
+        }
+
+        // R3-14：单元格计数无法约束字符串导出体量（1e6 cells × 32,767 字符 ≈ 3.3e10）。
+        [Fact]
+        public void GuardExportSize_char_budget()
+        {
+            var data = new object[,] { { new string('x', 11) } };
+            new Action(() => RangeExportCore.GuardExportSize(data, "TEST", 10))
+                .Should().Throw<ArgumentException>().WithMessage("*characters*");
+            new Action(() => RangeExportCore.GuardExportSize(data, "TEST", 100))
+                .Should().NotThrow();
+        }
+
+        // R3-13：long/int 分支须 Invariant——sv-SE 下负号为 U+2212，输出 JSON 自身
+        // JSON.VALIDATE=false（double/decimal 分支已 Invariant）。
+        [Fact]
+        public void ToJson_long_negative_invariant_under_svSE()
+        {
+            var prev = System.Globalization.CultureInfo.CurrentCulture;
+            try
+            {
+                System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo("sv-SE");
+                var json = RangeExportCore.RangeToJson(new object[,] { { "v" }, { -12345 } }, true);
+                json.Should().Contain("-12345");
+                json.Should().NotContain("\u2212");
+                json.Should().NotContain("\u2013");
+            }
+            finally { System.Globalization.CultureInfo.CurrentCulture = prev; }
+        }
     }
 }

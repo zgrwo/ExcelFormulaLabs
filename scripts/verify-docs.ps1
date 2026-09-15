@@ -1,7 +1,9 @@
 ﻿# verify-docs.ps1 - 文档一致性验证（唯一实现；verify-docs.sh 为包装器）
 # ============================================================================
 # 用法：.\scripts\verify-docs.ps1 [-RepoRoot <path>]
-# 20 项检查（部分检查含多条断言，运行时逐条输出；R08 review 2026-09-05：检查 19 于 2026-08-31 加入后头注计数漏更）：
+# 20 个编号项（每个编号项含多条断言，运行时逐条输出：基线 26 条 = 25 PASS + 1 SKIP；
+# R08 review 2026-09-05：检查 19 于 2026-08-31 加入后头注计数漏更 → 2026-09-15 起采用
+# 「编号项 + 运行时断言数」双口径，引用者请以脚本尾部 Pass/Fail/Skip 输出为准）：
 #   1.  UDF 数量：api-reference.md 为准，与源码 [ExcelFunction] 一致
 #   2.  UDF 全覆盖：每个源码 UDF 在 api-reference.md 有条目
 #   3.  skill.md 含 RangeExport（数据工具模块技能覆盖）
@@ -382,7 +384,12 @@ if (-not $agentsBlock -or -not $structBlock) {
 $proseMdFiles = Get-ChildItem -Path $RepoRoot -Recurse -Filter "*.md" |
     Where-Object { ($_.FullName -replace '\\', '/') -notmatch '/(\.git|bin|obj|\.qoder|TestResults|logs)/' -and ($_.FullName -replace '\\', '/') -notmatch 'BenchmarkDotNet\.Artifacts/' }
 # 相对路径统一归一化为正斜杠 + 去掉前导分隔符（Windows 为 \，Linux/macOS 为 /，pwsh 双平台兼容）
-$proseFiles = @("src/Foundation/ElementWiseMapper.cs") +
+$proseCsFiles = Get-ChildItem -Path (Join-Path $RepoRoot "src") -Recurse -Filter "*.cs" -ErrorAction SilentlyContinue |
+    Where-Object { $_.FullName -notmatch '[\\](obj|bin)[\\]' } |
+    ForEach-Object { ($_.FullName.Substring($RepoRoot.Length) -replace '\\', '/').TrimStart('/') }
+# P3-6：扫描域从"*.md + 单文件 ElementWiseMapper.cs"扩展为全部 src/**/*.cs（含注释中的
+# 散文计数；此前注释漂移可全绿通过）。
+$proseFiles = @($proseCsFiles) +
     @($proseMdFiles | ForEach-Object { ($_.FullName.Substring($RepoRoot.Length) -replace '\\', '/').TrimStart('/') })
 $proseMismatches = @()
 foreach ($rel in $proseFiles) {
@@ -398,20 +405,32 @@ foreach ($rel in $proseFiles) {
     # 生效：CHANGELOG 的「UDF 总数 X→Y」由下方模式 2 单独按区间链校验。
     if (-not $isHistorical) {
         # 模式 1a：`N UDF` / `N 个 UDF` / `N 项 UDF`
-        foreach ($m in [regex]::Matches($text, '(\d+)\s*(?:个|项)?\s*UDF')) {
+        # R2-15：全部模式加 IgnoreCase（`240 udf` 等小写变体此前 0 命中）。
+        foreach ($m in [regex]::Matches($text, '(\d+)\s*(?:个|项)?\s*UDF', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)) {
             if ([int]$m.Groups[1].Value -ne $codeUdfs) { $proseMismatches += "${rel}: '$($m.Value)'" }
         }
         # 模式 1b：倒装形式 `UDF (数量|总数|共)?[:：=]? N`
-        foreach ($m in [regex]::Matches($text, 'UDF\s*(?:数量|总数|共)?\s*[:：=]?\s*(\d+)')) {
+        foreach ($m in [regex]::Matches($text, 'UDF\s*(?:数量|总数|共)?\s*[:：=]?\s*(\d+)', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)) {
             if ([int]$m.Groups[1].Value -ne $codeUdfs) { $proseMismatches += "${rel}: 倒装 '$($m.Value)'" }
         }
         # 模式 1c：`N 个函数（UDF）`（全角/半角括号均收）
         foreach ($m in [regex]::Matches($text, '(\d+)\s*个函数\s*[（(]\s*UDF\s*[）)]')) {
             if ([int]$m.Groups[1].Value -ne $codeUdfs) { $proseMismatches += "${rel}: '$($m.Value)'" }
         }
+        # 模式 1d：`N 个自定义函数`（R2-15 词表补全）
+        foreach ($m in [regex]::Matches($text, '(\d+)\s*个自定义函数', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)) {
+            if ([int]$m.Groups[1].Value -ne $codeUdfs) { $proseMismatches += "${rel}: '$($m.Value)'" }
+        }
+        # CrossVal 双通道计数自洽（R2-9）：manual-only N / cross-validated M（合计 K）
+        # 必须 N+M==K 且各 ≤ UDF 总数；与 verify-manual.py 实际输出的对账由 CI cross-val job 负责。
+        foreach ($m in [regex]::Matches($text, 'manual-only\s+(\d+)\s*/\s*cross-validated\s+(\d+)\s*[（(]\s*合计\s*(\d+)')) {
+            $man = [int]$m.Groups[1].Value; $cross = [int]$m.Groups[2].Value; $tot = [int]$m.Groups[3].Value
+            if ($man + $cross -ne $tot) { $proseMismatches += "${rel}: CrossVal 计数 '$($m.Value)' ($man+$cross != $tot)" }
+            if ($man -gt $codeUdfs -or $cross -gt $codeUdfs) { $proseMismatches += "${rel}: CrossVal 计数 '$($m.Value)' 超过 UDF 总数" }
+        }
         # 分数形式 `X/Y UDF`（README "224/236 个 UDF"）：分母是总数声明必须 == codeUdfs，
         # 分子是覆盖数只要求 ≤ codeUdfs（两者都验，防分子分母任一侧漂移）。
-        foreach ($m in [regex]::Matches($text, '(\d+)/(\d+)\s*(?:个)?\s*UDF')) {
+        foreach ($m in [regex]::Matches($text, '(\d+)/(\d+)\s*(?:个)?\s*UDF', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)) {
             $num = [int]$m.Groups[1].Value; $den = [int]$m.Groups[2].Value
             if ($den -ne $codeUdfs) { $proseMismatches += "${rel}: 分母 '$($m.Value)' ($den != $codeUdfs)" }
             if ($num -gt $codeUdfs) { $proseMismatches += "${rel}: 分子 '$($m.Value)' ($num > $codeUdfs)" }

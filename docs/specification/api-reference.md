@@ -114,7 +114,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `REGRESS.OLS` | (known_y, known_x) | `object[11,?]` | **普通最小二乘法**。对标 Excel LINEST。返回 11 行报告：`coefficients`(系数)、`sse`(残差平方和)、`r_squared`(R²)、`adj_r_squared`(调整R²)、`residuals`(残差)、`fitted_values`(拟合值)、`standard_errors`(标准误)、`t_stats`(t值)、`p_values`(p值)、`n`(样本量)、`df`(自由度)。数组字段横向展开到多列。`p<0.05` 该系数显著。 |
 | `REGRESS.WLS` | (known_y, known_x, weights) | `object[11,?]` | **加权最小二乘法**（异方差数据）。返回同 OLS 的 11 行报告。`sse`/`r_squared`/`standard_errors`/`t_stats`/`p_values` 均为**加权（√w 变换）尺度**（与 statsmodels WLS 一致）；`residuals`/`fitted_values` 保持原始尺度便于与 y 比较。 |
 | `REGRESS.RIDGE` | (known_y, known_x, [lambda]) | `object[8,?]` | **岭回归**（L2 正则化，防过拟合）。λ 默认 1.0。返回 8 行：`coefficients`、`sse`、`r_squared`、`residuals`、`fitted_values`、`lambda`(惩罚参数)、`n`、`df`(简化口径 = 预测变量数 p；岭回归有效自由度严格应为 tr(H)，当前实现按 p 报告)。**不返回**标准误/t值/p值（正则化下推断无效）。 |
-| `REGRESS.ANOVA1` | (input_range) | `object[12,?]` | **单因素方差分析**。数据按列分组（每列一组）。返回 12 行：`ss_between`(组间平方和)、`ss_within`(组内平方和)、`ss_total`、`df_between`、`df_within`、`df_total`、`ms_between`、`ms_within`、`f_stat`(F值)、`p_value`(p值)、`group_means`(各组均值)、`group_counts`(各组样本量)。数组字段横向展开到多列。`p<0.05` = 至少有一组均值显著不同。 |
+| `REGRESS.ANOVA1` | (input_range) | `object[12,?]` | **单因素方差分析**。数据按列分组（每列一组）；首行若为文本列名自动按表头跳过。返回 12 行：`ss_between`(组间平方和)、`ss_within`(组内平方和)、`ss_total`、`df_between`、`df_within`、`df_total`、`ms_between`、`ms_within`、`f_stat`(F值)、`p_value`(p值)、`group_means`(各组均值)、`group_counts`(各组样本量)。数组字段横向展开到多列。`p<0.05` = 至少有一组均值显著不同。 |
 | `REGRESS.FACTORIMP` | (known_y, known_x) | `double[]` | **因子重要性排名**。按标准化后的 \|t\| 降序排列，返回 0-based 列索引数组。 |
 | `REGRESS.COEF` | (known_y, known_x) | `double[]` | OLS 回归系数向量（仅 beta）。 |
 | `REGRESS.RSQ` | (known_y, known_x) | `double` | OLS 决定系数 R²。范围 0-1，1 = 完美拟合。 |
@@ -170,7 +170,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
 | `DOE.PLAN` | (factor_qty1, factor_level1, factor_qty2, factor_level2, method, [randomize], [seed]) | `object[,]` | 生成 DOE 实验设计矩阵。method=`"full"` 全因子（总运行数 = level1^qty1 × level2^qty2）；method=`"taguchi"` 田口正交表（仅支持 2/3 水平，自动选最小 L4/L8/L9/L12/L16/L18/L27/L32）；method=`"fractional"` 2水平 ½ 部分因子（需 ≥4 个因子，生成元：末因子=前面因子乘积）；method=`"rsm"` 响应面 CCD（中心复合，连续因子，可旋转 α=2^(k/4)）；method=`"bb"` Box-Behnken（三水平响应面，需 ≥3 因子）。返回带表头二维表：`StdOrder`、`RunOrder`、`A`、`B`…，因子编码 -1/0/+1。randomize 默认 TRUE，seed 固定随机种子（null=随机）。表行序恒为标准序，randomize 仅打乱 `RunOrder` 列。安全上限：因子数 ≤1000、运行数 ≤1,000,000、输出单元格 ≤1,000,000（超出返回 #VALUE!）。 |
-| `DOE.ANALYZE` | (design, response, [terms]) | `object[,]` | DOE 效应表。对编码设计矩阵（DOE.PLAN 的因子列）和响应列做 OLS 拟合，返回每项（主效应/交互/平方项）的 `Term`、`Coef`、`Effect`(2×Coef)、`t`、`p`。terms 默认 `"2way"`（主效应+2阶交互），可选 `"main"`、`"quadratic"`（含平方项，需 3 水平设计）。 |
+| `DOE.ANALYZE` | (design, response, [terms]) | `object[,]` | DOE 效应表。对编码设计矩阵（DOE.PLAN 的因子列）和响应列做 OLS 拟合，返回每项（主效应/交互/平方项）的 `Term`、`Coef`、`Effect`(2×Coef)、`t`、`p`。terms 默认 `"2way"`（主效应+2阶交互），可选 `"main"`、`"quadratic"`（含平方项，需 3 水平设计）。显式 terms 遇饱和设计（扩展项+截距 ≥ 样本数）时自动降为 `"main"`，避免秩亏 `#VALUE!`。 |
 | `DOE.ANOVA` | (design, response, [terms]) | `object[,]` | 多因素 ANOVA 表。返回每项的 `Source`、`SS`、`df`、`MS`、`F`、`p`，加 Error 行和 Total 行。F = t²、SS = MSE×t²（单自由度效应）。 |
 | `DOE.PARETO` | (design, response, [terms]) | `object[,]` | DOE Pareto 排序。按 \|效应\| 降序返回每项的 `Term`、`Effect`，供 Pareto 图。 |
 
@@ -334,9 +334,9 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
-| `PIVOT.PIVOT` | (source_range, row_field, col_field, value_field, [aggregation], [has_headers]) | `object[,]` | 透视表。row_field=行标签列, col_field=列标签列, value_field=值列。aggregation=`sum/avg/count/min/max`（默认 SUM），has_headers=首行是否表头（默认 TRUE） |
+| `PIVOT.PIVOT` | (source_range, row_field, col_field, value_field, [aggregation], [has_headers]) | `object[,]` | 透视表。row_field=行标签列, col_field=列标签列, value_field=值列。aggregation=`sum/avg/count/min/max`（默认 SUM），has_headers=首行是否表头（默认 TRUE）。聚合仅统计**数值类型**单元格：文本（含数字文本如 `"10"`）与空白跳过（Excel SUM 语义）；错误值传播 NaN |
 | `PIVOT.UNPIVOT` | (source_range, id_fields, value_fields, [has_headers]) | `object[,]` | 逆透视：宽列转为键值行。has_headers=首行是否表头（默认 TRUE） |
-| `PIVOT.GROUPBY` | (source_range, group_fields, agg_column, [aggregation], [has_headers]) | `object[,]` | 分组聚合。group_fields=分组列号数组, agg_column=聚合列（默认 SUM）。has_headers=首行是否表头（默认 TRUE） |
+| `PIVOT.GROUPBY` | (source_range, group_fields, agg_column, [aggregation], [has_headers]) | `object[,]` | 分组聚合。group_fields=分组列号数组, agg_column=聚合列（默认 SUM）。has_headers=首行是否表头（默认 TRUE）。聚合仅统计数值类型单元格（文本/空白跳过，错误值传播 NaN，同 `PIVOT.PIVOT`） |
 | `PIVOT.CROSSJOIN` | (table1, table2) | `object[,]` | 笛卡尔积交叉连接 |
 
 ---

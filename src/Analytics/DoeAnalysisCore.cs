@@ -35,10 +35,13 @@ namespace ExcelFormulaLabs.Analytics
         /// FitOLS 自由度不足 → #VALUE!。</summary>
         internal static int ExpandedTermCount(int k, int maxOrder, bool quadratic)
         {
-            int count = maxOrder >= 1 ? k : 0;
-            if (maxOrder >= 2) count += k * (k - 1) / 2;
+            // 须与 ExpandTerms 的计数完全一致（R3-9）：缺 3 阶交互段时 ParseTerms 一旦
+            // 放宽到 maxOrder=3，UDF 层饱和降阶判断即静默失配（用 long 域计算后收敛）。
+            long count = maxOrder >= 1 ? k : 0;
+            if (maxOrder >= 2) count += (long)k * (k - 1) / 2;
+            if (maxOrder >= 3) count += (long)k * (k - 1) * (k - 2) / 6;
             if (quadratic) count += k;
-            return count;
+            return count > int.MaxValue ? int.MaxValue : (int)count;
         }
 
         /// <summary>

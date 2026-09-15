@@ -62,11 +62,15 @@ namespace ExcelFormulaLabs.Analytics
             var m = InputNormalizer.NormalizeTo2D(data)
                 ?? throw new ArgumentException(ErrorMsg.Get("Convert_Not2DArray"));
             int rows = m.GetLength(0), cols = m.GetLength(1);
+            // 首行表头自动识别（R1-6）：Excel 区域惯例含列名，user-manual 示例 REGRESS.ANOVA1
+            // 即传 A1:C6（首行 "Group A/B/C"）。首行存在非空且不可转数值的单元格 → 视为表头
+            // 跳过；纯数值首行仍是数据（既有语义不变）。表头行不会触发下方"非数值"报错。
+            int firstRow = rows > 1 && HasNonNumericHeader(m, cols) ? 1 : 0;
             var groups = new double[cols][];
             for (int c = 0; c < cols; c++)
             {
-                var list = new List<double>(rows);
-                for (int r = 0; r < rows; r++)
+                var list = new List<double>(rows - firstRow);
+                for (int r = firstRow; r < rows; r++)
                 {
                     object raw = m[r, c];
                     // 仅跳过空/错误单元格；非数值文本显式报错——与文档（只跳过空/错误）
@@ -79,12 +83,28 @@ namespace ExcelFormulaLabs.Analytics
                     if (double.IsNaN(v))
                         throw new ArgumentException(
                             $"ANOVA input contains a non-numeric value at row {r}, column {c}. " +
-                            "Only numeric cells are allowed (empty/error cells are skipped).");
+                            "Only numeric cells are allowed (empty/error cells are skipped; " +
+                            "a first row of text column names is treated as a header).");
                     list.Add(v);
                 }
                 groups[c] = list.ToArray();
             }
             return groups;
+        }
+
+        /// <summary>首行是否含"非空且不可转数值"的单元格（= 表头行）。</summary>
+        private static bool HasNonNumericHeader(object[,] m, int cols)
+        {
+            for (int c = 0; c < cols; c++)
+            {
+                object raw = m[0, c];
+                if (raw == null || raw is DBNull
+                    || InputNormalizer.IsExcelEmptyValue(raw)
+                    || InputNormalizer.IsExcelErrorValue(raw))
+                    continue;
+                if (double.IsNaN(InputNormalizer.ToDouble(raw))) return true;
+            }
+            return false;
         }
 
         /// <summary>

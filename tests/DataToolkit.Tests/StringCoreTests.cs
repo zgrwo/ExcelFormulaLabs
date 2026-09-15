@@ -194,7 +194,8 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             StringCore.Soundex("Robert").Should().Be("R163");
             StringCore.Soundex("Rupert").Should().Be("R163");
         }
-        [Fact] public void Soundex_different() => StringCore.Soundex("abc").Should().NotBe(StringCore.Soundex("xyz"));
+        // R3-17：硬编码金值（NARA 规则），不再比较两次被测调用。
+        [Fact] public void Soundex_different() { StringCore.Soundex("abc").Should().Be("A120"); StringCore.Soundex("xyz").Should().Be("X200"); }
         [Fact] public void HtmlEncode_all_entities() => StringCore.HtmlEncode("<&\">").Should().Contain("&lt;").And.Contain("&amp;");
         [Fact] public void CommonPrefix_no_match() => StringCore.CommonPrefix("abc", "xyz").Should().Be("");
         [Fact] public void CommonPrefix_case_insensitive() => StringCore.CommonPrefix("Hello", "HELP", false).Should().Be("Hel");
@@ -394,4 +395,21 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         return true;
     }
 }
+}
+
+namespace ExcelFormulaLabs.DataToolkit.Tests
+{
+    // R3-12 回归：转义花括号是字面量，不是格式项。
+    public class StringCoreFmtEscapeTests
+    {
+        [Fact]
+        public void FormatValue_escaped_braces_are_literal_not_rejected()
+        {
+            // .NET 原生输出 12 字符字面量；旧守卫把内部的 0,-200000 当作对齐宽度误杀 #VALUE!。
+            StringCore.FormatValue(1, "{{0,-200000}}").Should().Be("{0,-200000}");
+            // 转义对之外的真实超宽 spec 仍须拒绝。
+            new Action(() => StringCore.FormatValue(1, "{{{0,-200000}}}"))
+                .Should().Throw<ArgumentException>().WithMessage("*width*");
+        }
+    }
 }

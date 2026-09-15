@@ -110,11 +110,26 @@ namespace ExcelFormulaLabs.Analytics
         internal static double Stdev(double[] d) =>
             d.Length < 2 ? double.NaN : Math.Sqrt(Variance(d));
 
-        internal static double Skewness(double[] d) =>
-            d.Length < 3 ? double.NaN : Statistics.Skewness(d); // 无偏样本偏度（type 2，对应 Excel SKEW / scipy bias=False）
+        internal static double Skewness(double[] d)
+        {
+            if (d.Length < 3) return double.NaN;
+            // 无偏样本偏度（type 2，对应 Excel SKEW / scipy bias=False）。
+            // 偏度对公共正缩放不变；MathNet 用原始矩 Σd³/Σd²，超出 ~1e77 上溢、
+            // ~1e-162 下溢 → 主路径非有限时按 maxAbs 归一化重算（无需回缩）。
+            var r = Statistics.Skewness(d);
+            if (!double.IsNaN(r) && !double.IsInfinity(r)) return r;
+            return Statistics.Skewness(PreScaled(d));
+        }
 
-        internal static double Kurtosis(double[] d) =>
-            d.Length < 4 ? double.NaN : Statistics.Kurtosis(d); // 无偏样本超额峰度（type 2，对应 Excel KURT / scipy fisher=True, bias=False）
+        internal static double Kurtosis(double[] d)
+        {
+            if (d.Length < 4) return double.NaN;
+            // 无偏样本超额峰度（type 2，对应 Excel KURT / scipy fisher=True, bias=False）。
+            // 同 Skewness：主路径非有限时按 maxAbs 归一化重算。
+            var r = Statistics.Kurtosis(d);
+            if (!double.IsNaN(r) && !double.IsInfinity(r)) return r;
+            return Statistics.Kurtosis(PreScaled(d));
+        }
 
         internal static double SqrtSafe(double x) => x < 0 ? double.NaN : Math.Sqrt(x);
         internal static double LogSafe(double x) => x <= 0 ? double.NaN : Math.Log(x);
@@ -139,7 +154,22 @@ namespace ExcelFormulaLabs.Analytics
         /// (the mandatory gateway for all STATS UDFs), so this method can rely on clean input.
         /// Infinity result is capped to NaN to avoid propagating ±∞ into Excel cells.
         /// </summary>
-        internal static double Sum(double[] d) { if (d.Length == 0) return 0.0; var r = d.Sum(); return double.IsInfinity(r) ? double.NaN : r; }
+        internal static double Sum(double[] d)
+        {
+            if (d.Length == 0) return 0.0;
+            var r = d.Sum();
+            if (!double.IsInfinity(r) && !double.IsNaN(r)) return r;
+            // 顺序依赖溢出（R3-6）：朴素左折叠 [1e308, 1e308, -1e308] → Inf → NaN，而
+            // 真值 1e308 可表示（交换顺序即正确）。主路径非有限时按 maxAbs 归一化求和
+            // 再乘回尺度；真值不可表示（如 [MaxValue,MaxValue] → 2e308）仍 NaN 封顶。
+            double max = 0;
+            foreach (double x in d) max = Math.Max(max, Math.Abs(x));
+            if (max == 0 || double.IsInfinity(max) || double.IsNaN(max)) return double.NaN;
+            double s = 0;
+            for (int i = 0; i < d.Length; i++) s += d[i] / max;
+            var scaled = s * max;
+            return double.IsInfinity(scaled) ? double.NaN : scaled;
+        }
         /// <summary>
         /// Product of array elements. NaN/Inf input is guarded upstream by <see cref="AnalyticsHelpers.PrepV"/>.
         /// Infinity result is capped to NaN.
@@ -346,6 +376,22 @@ namespace ExcelFormulaLabs.Analytics
         }
 
         internal static double TTestOneSample(double[] d, double mu0 = 0)
+        {
+            var r = TTestOneSampleCore(d, mu0);
+            if (!double.IsNaN(r) && !double.IsInfinity(r)) return r;
+            // R1-2：t 检验对样本与假设均值的公共正缩放不变（镜像 TTestTwoSample）。
+            // 直接路径在 ≲1e-162（dv² 下溢 → 假常量）与 ≳1e154（上溢 → NaN）非有限时，
+            // 按 max(|d|,|mu0|) 预缩放重算；真退化（常量且 mean≠mu0）两路径同为 NaN。
+            double max = 0;
+            foreach (double x in d) max = Math.Max(max, Math.Abs(x));
+            max = Math.Max(max, Math.Abs(mu0));
+            if (max == 0 || double.IsInfinity(max) || double.IsNaN(max)) return double.NaN;
+            var scaled = new double[d.Length];
+            for (int i = 0; i < d.Length; i++) scaled[i] = d[i] / max;
+            return TTestOneSampleCore(scaled, mu0 / max);
+        }
+
+        private static double TTestOneSampleCore(double[] d, double mu0)
         {
             if (d.Length < 2) return double.NaN;
             double va = Variance(d);

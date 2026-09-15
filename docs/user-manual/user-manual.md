@@ -1140,7 +1140,7 @@ L2 正则化（防过拟合）。λ 默认 1.0。不返回标准误/t值/p值（
 
 **语法**：`=REGRESS.ANOVA1(input_range)`
 
-数据按列分组（每列一组）。组内空单元格/错误值会被静默跳过，各组样本量可以不同（不平衡组）。p < 0.05 = 至少有一组均值显著不同。
+数据按列分组（每列一组）。组内空单元格/错误值会被静默跳过，各组样本量可以不同（不平衡组）。首行若为文本列名（如示例的 `Group A/B/C`）会自动作为表头跳过；数据中间的非数值文本仍会报 `#VALUE!`。p < 0.05 = 至少有一组均值显著不同。
 
 **返回**：`object[12,?]` — 12 行：ss_between, ss_within, ss_total, df_between, df_within, df_total, ms_between, ms_within, f_stat, p_value, group_means, group_counts。
 
@@ -1155,7 +1155,7 @@ L2 正则化（防过拟合）。λ 默认 1.0。不返回标准误/t值/p值（
 | 13 | 23 | 14 |
 
 ```
-=REGRESS.ANOVA1(A1:C6)
+=REGRESS.ANOVA1(A1:C6)   ← 首行列名自动跳过
 → f_stat ≈ 50.67, p_value ≈ 1.4e-6  (组间差异极显著)
 ```
 
@@ -1617,7 +1617,7 @@ OutputZx(t) = IncomingZx − t · g(Bow, 可调, 固定, 其他来料)
 
 **语法**：`=PHYCHEM.IDEALGAS(pressure, volume, moles, temperature)`
 
-PV = nRT。将待求量填 `"*"`。R = 0.082057 L·atm/(mol·K)。
+PV = nRT。将待求量填 `"*"`。R 取精确值 `8.31446261815324 / 101.325` ≈ 0.082057366... L·atm/(mol·K)（非 0.082057 约数）。
 
 **示例**（标准状况下 1 mol 理想气体）：
 ```

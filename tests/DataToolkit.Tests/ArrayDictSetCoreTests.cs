@@ -293,11 +293,44 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             => ((Action)(() => ArrayCore.Sequence(0, 1_000_000_000, 1))).Should().Throw<ArgumentException>();
         // end-start 在有限极端值下溢出为 Inf → d=Inf；(int)d 回绕为 int.MinValue 会产生
         // 「-2147483648 elements」误导消息——超限必须抛错。
-        [Fact] public void Sequence_extreme_range_has_sane_message()
+        [Fact]
+        public void Sequence_extreme_range_has_sane_message()
         {
             var ex = Record.Exception(() => ArrayCore.Sequence(-double.MaxValue, double.MaxValue, 1));
             ex.Should().BeOfType<ArgumentException>();
             ex.Message.Should().NotContain("2147483648");
+        }
+
+        // R1-5：端点吸附容差不得与 |start| 同尺度。1.7e9 量级、0.7 步长的真实末项
+        // 1700000099.4 距 end 0.6（旧容差 1.7 → 被错误吸附成 1700000100）。
+        [Fact]
+        public void Sequence_large_start_small_step_does_not_snap()
+        {
+            double end = 1.7e9 + 100;
+            var r = ArrayCore.Sequence(1.7e9, end, 0.7);
+            r.Should().HaveCount(143);
+            ((double)r[142]).Should().Be(1.7e9 + 142 * 0.7);
+            ((double)r[142]).Should().NotBe(end);
+        }
+
+        // R1-5 镜像：大 start 下 `end - start` 灾难性抵消（1e8+0.3-1e8=0.2999999821），
+        // 计数容差须并入 start 的 ulp 粒度才能补回真实端点。
+        [Fact]
+        public void Sequence_large_start_cancellation_includes_endpoint()
+        {
+            double end = 1e8 + 0.3;
+            var r = ArrayCore.Sequence(1e8, end, 0.1);
+            r.Should().HaveCount(4);
+            ((double)r[3]).Should().Be(end);
+        }
+
+        // R1-5 第三态：非端点可达但末项在纯浮点噪声（数 ulp）内 → 吸附精确端点。
+        [Fact]
+        public void Sequence_non_reachable_end_not_snapped_on_loose_tolerance()
+        {
+            var r = ArrayCore.Sequence(1.0, 10.0000000001, 1.0);
+            r.Should().HaveCount(10);
+            ((double)r[9]).Should().Be(10.0);
         }
     }
 }

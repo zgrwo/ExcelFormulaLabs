@@ -205,11 +205,29 @@ namespace ExcelFormulaLabs.Analytics.Tests
             var d = new object[,] { { 1.0, 2.0 }, { 3.0, "oops" }, { 5.0, 6.0 } };
             RegressionUdf.UDF_REGRESS_ANOVA1(d).Should().Be(ExcelError.Value);
         }
-
-        [Fact] public void Anova1_empty_and_error_cells_are_skipped()
+        [Fact]
+        public void Anova1_empty_and_error_cells_are_skipped()
         {
             var d = new object[,] { { 1.0, 2.0 }, { 3.0, ExcelError.NA }, { 5.0, 6.0 } };
             RegressionUdf.UDF_REGRESS_ANOVA1(d).Should().BeOfType<object[,]>();
+        }
+
+        // R1-6：首行文本列名 → 视为表头跳过（user-manual 示例 A1:C6）。
+        // scipy: f_oneway([10,12,14,11,13],[20,22,24,21,23],[15,17,16,18,14])
+        // = (50.666666666666664, 1.4090989859003613e-06)。
+        [Fact]
+        public void Anova1_header_row_is_skipped()
+        {
+            var d = new object[,]
+            {
+                { "Group A", "Group B", "Group C" },
+                { 10.0, 20, 15 }, { 12.0, 22, 17 }, { 14.0, 24, 16 },
+                { 11.0, 21, 18 }, { 13.0, 23, 14 },
+            };
+            var r = (object[,])RegressionUdf.UDF_REGRESS_ANOVA1(d);
+            r.GetLength(0).Should().Be(12);
+            FindScalar(r, "f_stat").Should().BeApproximately(50.666666666666664, 1e-8);
+            FindScalar(r, "p_value").Should().BeApproximately(1.4090989859003613e-06, 1e-14);
         }
         [Fact] public void FactorImportance_single_row_returns_error()
         {

@@ -14,15 +14,29 @@ namespace ExcelFormulaLabs.DataToolkit
         // 整列选择（1,048,576 行 × 多列）会建巨型 StringBuilder（几十 MB～GB 级字符串），
         // 32 位 Excel 冻结 + OOM 不可捕获（ExceptionFilters 排除 OOM）。分配前检查 + long 乘法防回绕。
         private const long MaxExportCells = 1_000_000;
+        // 字符预算（R3-14）：1e6 单元格 × 单值上限 32,767 字符 → 理论出口 ~3.3e10 字符。
+        // 单元格计数无法约束字符串导出体量，分配 StringBuilder 前线性累加（long 域）。
+        private const long MaxExportChars = 50_000_000;
 
-        /// <summary>Guard: (rows × cols) must not exceed MaxExportCells. Call before any StringBuilder allocation.</summary>
-        private static void GuardExportSize(object[,] data, string op)
+        /// <summary>Guard: (rows × cols) must not exceed MaxExportCells, and the text payload
+        /// must not exceed MaxExportChars. Call before any StringBuilder allocation.</summary>
+        internal static void GuardExportSize(Array data, string op, long maxChars = MaxExportChars)
         {
             long cells = (long)data.GetLength(0) * data.GetLength(1);
             if (cells > MaxExportCells)
                 throw new ArgumentException(
                     $"{op} would export {data.GetLength(0):N0} rows × {data.GetLength(1):N0} cols = {cells:N0} cells. " +
                     $"Maximum is {MaxExportCells:N0}. Reduce the range before exporting.");
+            long chars = 0;
+            for (int r = 0; r < data.GetLength(0); r++)
+                for (int c = 0; c < data.GetLength(1); c++)
+                {
+                    if (data.GetValue(r, c) is string s) chars += Math.Min(s.Length, 32_767);
+                    if (chars > maxChars)
+                        throw new ArgumentException(
+                            $"{op} text payload exceeds {maxChars:N0} characters " +
+                            $"(~{chars:N0} chars in at least {r + 1} rows). Reduce the range or shorten values.");
+                }
         }
 
         internal static string RangeToHtml(object[,] data, bool hasHeaders = true, string? tableClass = null)
@@ -116,9 +130,12 @@ namespace ExcelFormulaLabs.DataToolkit
             string trimmed = v.Substring(start).TrimStart();
             if (trimmed.Length == 0) return v;
             char first = trimmed[0];
+            // P3-4：显式排除 ±Infinity/NaN——net8 的 double.TryParse("+Infinity") 返回 true，
+            // net48 返回 false，同一输入的 defang 结果双 TFM 分裂（注入面按 net48 留空）。
             bool signedNumeric = (first == '+' || first == '-') && trimmed.Length > 1
                 && double.TryParse(trimmed, System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out _);
+                    System.Globalization.CultureInfo.InvariantCulture, out double parsed)
+                && !double.IsNaN(parsed) && !double.IsInfinity(parsed);
             bool defang = tabCrPrefix || first == '=' || first == '@'
                 || ((first == '+' || first == '-') && !signedNumeric);
             return defang ? "'" + v : v;
@@ -159,9 +176,27 @@ namespace ExcelFormulaLabs.DataToolkit
             if (v is double d && (double.IsNaN(d) || double.IsInfinity(d))) return "null";
             // "R" 最短往返格式（等价 Python repr/JSON 默认）：G17 会输出 0.10000000000000001 等噪声；
             // float 须有非有限守卫（float NaN/Inf 走 f.ToString 会产出非法 JSON）。
+            // net48 的 "R" 有已知不往返缺陷（如 2.2250738585072011e-308）→ 该 TFM 用 G17，
+            // 保证 JSON 输出可被 JSON.parse 无损读回（R2-13）。
+#if NET48
+            if (v is double fd)
+            {
+                // net48 的 "R" 有已知不往返缺陷（如 2.2250738585072011e-308）→ 先试 R，
+                // 仅当解析回同一位模式（往返验证）时采用最短形式，否则退 G17 保证无损。
+                var inv = System.Globalization.CultureInfo.InvariantCulture;
+                string rs = fd.ToString("R", inv);
+                if (double.TryParse(rs, System.Globalization.NumberStyles.Float, inv, out double back)
+                    && System.BitConverter.DoubleToInt64Bits(back) == System.BitConverter.DoubleToInt64Bits(fd))
+                    return rs;
+                return fd.ToString("G17", inv);
+            }
+#else
             if (v is double fd) return fd.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
-            if (v is long l) return l.ToString();
-            if (v is int i) return i.ToString();
+#endif
+            // long/int 分支必须 Invariant（R3-13）：sv-SE 等文化用 U+2212 负号 → 输出 JSON
+            // 自身 JSON.VALIDATE=false；紧邻 double/decimal 分支均已 Invariant。
+            if (v is long l) return l.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (v is int i) return i.ToString(System.Globalization.CultureInfo.InvariantCulture);
             if (v is float f)
                 return float.IsNaN(f) || float.IsInfinity(f)
                     ? "null"

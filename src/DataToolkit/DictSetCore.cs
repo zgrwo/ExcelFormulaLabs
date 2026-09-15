@@ -18,6 +18,12 @@ namespace ExcelFormulaLabs.DataToolkit
         }
         internal static object[] Values(object[,] d)
         {
+            // R3-10：单列字典表须显式拒绝（裸 IndexOutOfRangeException 虽然也被 WrapError
+            // 转为 #VALUE!，但无诊断信息）。KEYS 读列 0，1 列表仍合法。
+            if (d.GetLength(1) < 2)
+                throw new ArgumentException(
+                    "DICT.VALUES requires a 2-column key/value table " +
+                    $"(got {d.GetLength(1)} column).");
             var r = new object[d.GetLength(0)];
             for (int i = 0; i < r.Length; i++) r[i] = d[i, 1];
             return r;

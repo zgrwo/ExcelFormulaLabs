@@ -1,3 +1,4 @@
+using System;
 using ExcelFormulaLabs.DataToolkit;
 using ExcelFormulaLabs.Foundation;
 using FluentAssertions;
@@ -51,5 +52,21 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Count_empty_table() => ((long)DictSetUdf.UDF_DICT_COUNT(new object[0,0])).Should().Be(0);
         // FREQUENCY(NA): not a MapOver UDF — error cell preserved as raw value in output
         [Fact] public void Frequency_NA_preserves_error_key() { var r = (object[,])DictSetUdf.UDF_DICT_FREQ(ExcelError.NA); r.GetLength(0).Should().Be(1); r[0, 0].Should().Be(ExcelError.NA); r[0, 1].Should().Be(1L); }
+    }
+}
+
+namespace ExcelFormulaLabs.DataToolkit.Tests
+{
+    // R3-10 回归：单列字典表 VALS 显式拒绝（裸 IndexOutOfRange 无诊断信息）。
+    public class DictSetShapeTests
+    {
+        [Fact]
+        public void Values_single_column_throws_explicit()
+            => new Action(() => DictSetCore.Values(new object[,] { { 1 }, { 2 } }))
+                .Should().Throw<ArgumentException>().WithMessage("*2-column*");
+
+        [Fact]
+        public void Keys_single_column_still_reads_column0()
+            => DictSetCore.Keys(new object[,] { { "a" }, { "b" } }).Should().Equal("a", "b");
     }
 }

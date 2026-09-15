@@ -101,6 +101,11 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             => ((double)DateTimeUdf.UDF_DT_EOM(59.0)).Should().Be(60.0);  // 1900-02-28 → OADate 60
         [Fact] public void Serial_60_is_rejected()
             => DateTimeUdf.UDF_DT_EOM(60.0).Should().Be(ExcelError.Value);
+        // R3-5：[60,61) 均为假闰日区间（旧实现只挡整数 60，60.5 静默映射 1900-02-28 12:00）。
+        [Fact] public void EOM_60_5_returns_error()
+            => DateTimeUdf.UDF_DT_EOM(60.5).Should().Be(ExcelError.Value);
+        [Fact] public void EOM_60_999_returns_error()
+            => DateTimeUdf.UDF_DT_EOM(60.999).Should().Be(ExcelError.Value);
         [Fact] public void Serial_61_is_unchanged()
             => ((double)DateTimeUdf.UDF_DT_EOM(61.0)).Should().Be(91.0);  // 1900-03-31 → OADate 91
         [Fact] public void EOM_array() { var r=(object[])DateTimeUdf.UDF_DT_EOM(new object[]{OA(2024,2,1),OA(2023,2,1)}); ((double)r[0]).Should().Be(OA(2024,2,29)); ((double)r[1]).Should().Be(OA(2023,2,28)); }

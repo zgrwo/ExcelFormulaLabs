@@ -45,12 +45,13 @@ jobs:
         run: |
           # R7-3 (review-2026-09-13)：ExcelDnaPack 偶发瞬时文件锁（Win32Exception 110，
           # Defender 扫描刚写出的 .xll）→ 重试 1 次；真实构建错误重试后仍失败。
-          for ($attempt = 1; $attempt -le 2; $attempt++) {
+          # R2-10：外部 HIPS 锁窗口实测 ~4.8s → 3 次尝试 + 10/20s 退避。
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
             dotnet build -c Release --no-restore
             if ($LASTEXITCODE -eq 0) { break }
-            if ($attempt -eq 2) { exit $LASTEXITCODE }
+            if ($attempt -eq 3) { exit $LASTEXITCODE }
             Write-Host "Build failed (attempt $attempt) - retrying after transient ExcelDnaPack lock..."
-            Start-Sleep -Seconds 5
+            Start-Sleep -Seconds (10 * $attempt)
           }
 
       - name: Test (Release, all TFMs)
@@ -143,13 +144,13 @@ jobs:
       - name: Build (Release)
         shell: pwsh
         run: |
-          # R7-3 (review-2026-09-13)：同 build-test job，瞬时 ExcelDnaPack 文件锁重试 1 次。
-          for ($attempt = 1; $attempt -le 2; $attempt++) {
+          # R7-3 (review-2026-09-13)：同 build-test job；R2-10 起 3 次尝试 + 10/20s 退避。
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
             dotnet build -c Release
             if ($LASTEXITCODE -eq 0) { break }
-            if ($attempt -eq 2) { exit $LASTEXITCODE }
+            if ($attempt -eq 3) { exit $LASTEXITCODE }
             Write-Host "Build failed (attempt $attempt) - retrying after transient ExcelDnaPack lock..."
-            Start-Sleep -Seconds 5
+            Start-Sleep -Seconds (10 * $attempt)
           }
 
       - name: Collect XLL artifacts
@@ -185,6 +186,17 @@ jobs:
             exit 1
           }
           $xlls | Copy-Item -Destination artifacts/
+          # R3-2：产物版本元数据 == 项目版本（patch-xll-version 已写入 FileVersion/ProductVersion）。
+          # 此前 8 个产物残留 Excel-DNA 工具版本 1.9.0.14，用户/支持无法从文件属性确认版本。
+          [xml]$props = Get-Content "src/Directory.Build.props"
+          $ver = @($props.Project.PropertyGroup.Version | Where-Object { $_ })[0]
+          foreach ($f in Get-ChildItem artifacts/*.xll) {
+            $vi = $f.VersionInfo
+            if ($vi.FileVersion -notlike "$ver*" -or $vi.ProductVersion -notlike "$ver*") {
+              Write-Error "[Collect] $($f.Name) 版本元数据 ($($vi.FileVersion) / $($vi.ProductVersion)) != 预期 $ver。"
+              exit 1
+            }
+          }
           Get-ChildItem artifacts/
 
       - name: Pack NuGet (Foundation)

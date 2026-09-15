@@ -158,6 +158,20 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static string Base64Encode(string t)=>Convert.ToBase64String(Encoding.UTF8.GetBytes(t??""));
         internal static string Base64Decode(string t)=>Encoding.UTF8.GetString(Convert.FromBase64String(t??""));
 
+        /// <summary>剥离 {{ / }} 转义对（R3-12）：它们输出字面花括号，不构成格式项，
+        /// 对齐宽度扫描前移除可避免字面文本被误判为宽度规格。</summary>
+        private static string StripEscapedBraces(string fmt)
+        {
+            var sb = new System.Text.StringBuilder(fmt.Length);
+            for (int i = 0; i < fmt.Length; i++)
+            {
+                if (fmt[i] == '{' && i + 1 < fmt.Length && fmt[i + 1] == '{') { i++; continue; }
+                if (fmt[i] == '}' && i + 1 < fmt.Length && fmt[i + 1] == '}') { i++; continue; }
+                sb.Append(fmt[i]);
+            }
+            return sb.ToString();
+        }
+
         /// <summary>
         /// Format a value using a .NET format string or specifier.
         /// For numeric/DateTime values, standard format specifiers (e.g. "D4", "P0", "yyyy-MM-dd")
@@ -175,7 +189,9 @@ namespace ExcelFormulaLabs.DataToolkit
                 throw new ArgumentException("Format string too long (max 1000 chars).");
             // 逐 spec 检查对齐宽度（.NET 对 align 取绝对值填充，
             // 负宽度 -N 与 N 分配同量级；TryParse 失败 = 宽度超出 long 量级，同样拒绝）。
-            foreach (var m in AlignmentWidthRx.Matches(fmt).Cast<System.Text.RegularExpressions.Match>())
+            // 先剥离转义花括号 {{ / }}（R3-12）：它们是字面量，不是格式项——
+            // 否则 "{{0,-200000}}"（.NET 原生输出 11 字符字面量）被误杀成 #VALUE!。
+            foreach (var m in AlignmentWidthRx.Matches(StripEscapedBraces(fmt)).Cast<System.Text.RegularExpressions.Match>())
             {
                 var g = m.Groups[1];
                 if (!g.Success) continue;

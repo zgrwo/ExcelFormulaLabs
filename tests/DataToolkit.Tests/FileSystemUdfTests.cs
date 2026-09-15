@@ -10,7 +10,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
     [Collection("Sandbox")]
     public class FileSystemUdfTests
     {
-        [Fact] public void Norm_relative() => ((string)FileSystemUdf.UDF_FS_NORM(".")).Should().NotBeNullOrEmpty();
+        [Fact] public void Norm_relative() => System.IO.Path.IsPathRooted((string)FileSystemUdf.UDF_FS_NORM(".")).Should().BeTrue();
         [Fact] public void Norm_empty() => FileSystemUdf.UDF_FS_NORM("").Should().Be(ExcelError.Value);
         [Fact] public void Norm_null() => FileSystemUdf.UDF_FS_NORM(null!).Should().BeNull();
         [Fact] public void Norm_absolute() => ((string)FileSystemUdf.UDF_FS_NORM(@"C:\Windows")).Should().Be(@"C:\Windows");
@@ -52,9 +52,9 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Delete_null() => FileSystemUdf.UDF_FS_DEL(null!).Should().BeNull();
         [Fact] public void DelDir_empty() => ((bool)FileSystemUdf.UDF_FS_DELDIR("")).Should().BeTrue();
         [Fact] public void DelDir_null() => FileSystemUdf.UDF_FS_DELDIR(null!).Should().BeNull();
-        [Fact] public void Drives_not_empty() { var r=(object[])FileSystemUdf.UDF_FS_DRVS(); r.Should().NotBeEmpty(); }
-        [Fact] public void Pwd_not_empty() => ((string)FileSystemUdf.UDF_FS_PWD()).Should().NotBeNullOrEmpty();
-        [Fact] public void Temp_not_empty() => ((string)FileSystemUdf.UDF_FS_TEMP()).Should().NotBeNullOrEmpty();
+        [Fact] public void Drives_not_empty() { var r=(object[])FileSystemUdf.UDF_FS_DRVS(); r.Should().NotBeEmpty(); r.Should().OnlyContain(d => System.IO.Path.IsPathRooted((string)d)); }
+        [Fact] public void Pwd_not_empty() => System.IO.Path.IsPathRooted((string)FileSystemUdf.UDF_FS_PWD()).Should().BeTrue();
+        [Fact] public void Temp_not_empty() => System.IO.Path.IsPathRooted((string)FileSystemUdf.UDF_FS_TEMP()).Should().BeTrue();
 
         // ── Real file I/O tests ──────────────────────────────────────
         [Fact] public void Write_and_read_back()

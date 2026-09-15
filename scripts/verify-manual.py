@@ -173,10 +173,18 @@ def cross_check(name, python_computed, tol=None):
     # 旧 max 语义下 0 实际生效值也是 max(EPS,0)=1e-10，行为对齐。
     tol_eff = tol if tol is not None else (
         float(ref.get("tolerance")) if ref.get("tolerance") else EPS)
-    # 显式 tol 放宽 manifest 预算时打印审计提示（收紧符合 tol 优先级链；
-    # 放宽属断言级声明，须可见——FitRidge R² 1e-3 vs manifest 1e-10 放宽 7 个数量级）。
+    # 显式 tol 放宽 manifest 预算须可见且受上限约束（R2-11）：
+    # 未列入白名单或超出该条上限倍率 → FAIL（防未来回归被静默放宽吞掉；收紧不受限）。
     if tol is not None and ref.get("tolerance") and float(ref["tolerance"]) > 0 and tol > float(ref["tolerance"]):
-        print(f"  [note] {name}: explicit tol {tol:g} 放宽 manifest {float(ref['tolerance']):g}")
+        _base_tol = float(ref["tolerance"])
+        _ratio = tol / _base_tol
+        _cap = _loosen_cap(name)
+        if _cap is None or _ratio > _cap * 1.000000001:  # 浮点比值容差（如 1e-4/1e-6 = 100.00000000000001）
+            FAIL += 1
+            print(f"  FAIL {name}: explicit tol {tol:g} 放宽 manifest {_base_tol:g} " +
+                  f"({_ratio:.3g}x, cap {_cap if _cap else '未列入白名单'}) — R2-11 禁止无约束放宽")
+            return
+        print(f"  [note] {name}: explicit tol {tol:g} 放宽 manifest {_base_tol:g} ({_ratio:.3g}x, cap {_cap:g})")
     # C# 特殊值（NaN/±Inf）：必须与 Python 同类型同符号才算 PASS
     if isinstance(cs_val, float) and (np.isnan(cs_val) or np.isinf(cs_val)):
         if isinstance(python_computed, (float, np.floating)) and \
@@ -194,6 +202,25 @@ def cross_check(name, python_computed, tol=None):
             FAIL += 1; print(f"  FAIL {name}: Python={python_computed}, C#=null (NaN)")
         return
     check(name, python_computed, cs_val, tol=tol_eff, manual=False)
+
+# R2-11 白名单：显式 tol 可放宽 manifest 的条目与最大倍率（2026-09-15 审查基线实测）。
+# 键为名称前缀；未列出 = 禁止放宽（收紧永远允许）。
+_LOOSEN_CAPS = (
+    ("STATS.SKEW", 100.0),
+    ("LINALG.SOLVE", 100.0),
+    ("LINALG.QR_R", 10.0),
+    ("LINALG.LU_U", 10.0),
+    ("LINALG.CHOLESKY", 100.0),
+    ("REGRESS.COEF", 100.0),
+    # R²≈0.998：绝对 tol 被 1−R² 尺度放大（两实现标准化路径差异），cap 锁定实测 1e7。
+    ("REGRESS.RIDGE", 1e7),
+)
+
+def _loosen_cap(name):
+    for key, cap in _LOOSEN_CAPS:
+        if name == key or name.startswith(key):
+            return cap
+    return None
 
 def _pick_field(cs, field):
     """R02: 按 path 取 C# result 的嵌套字段。str=字典键，int=列表下标，tuple/list=路径。
@@ -227,7 +254,14 @@ def cross_vs_csharp(name, py_value, manifest_id, tol=None, field=None, xform=Non
         return
     cs = unwrap(ref["result"]) if isinstance(ref["result"], (dict, list)) else ref["result"]
     if field is not None:
-        cs = _pick_field(cs, field)
+        try:
+            cs = _pick_field(cs, field)
+        except (KeyError, IndexError, TypeError, ValueError) as exc:
+            # R3-22：字段缺失/类型失配 → FAIL 并指名（旧行为裸 KeyError 崩溃整个脚本，
+            # 与 _pick_field docstring 声称的"由 cross_vs_csharp 转为 FAIL"不符）。
+            FAIL += 1
+            print(f"  FAIL {name}: C# result missing/incompatible field {field!r} ({exc!r})")
+            return
     if xform is not None and isinstance(cs, (int, float)):
         cs = xform(cs)
     tol_eff = tol if tol is not None else (
@@ -1459,6 +1493,16 @@ _ID2UDF = {
     "SOLVE.PredictRate": "SOLVE.PREDICT", "SOLVE.SolveInverseRate": "SOLVE.INVERSE",
     "SOLVE.PredictRatePoly": "SOLVE.PREDICT", "SOLVE.FitSharedRate": "SOLVE.INVERSE",
     "SOLVE.CrossValidateShared": "SOLVE.QUALITY",
+"PIVOT.Pivot_SUM": "PIVOT.PIVOT", "PIVOT.GroupBy_SUM": "PIVOT.GROUPBY",
+    "RANGE.ToJson": "RANGE.TOJSON", "RANGE.ToCsvMinimal": "RANGE.TOCSV",
+    "DOE.TaguchiL8": "DOE.PLAN",
+    # R3-19 续查（大小写不敏感查表 + [unmapped cross refs] 诊断暴露的其余漏映射）
+    "STATS.MEAN_EMPTY": "STATS.MEAN", "STATS.MEAN_SINGLE": "STATS.MEAN",
+    "STATS.VAR_SINGLE": "STATS.VAR", "STATS.SUM_CANCEL": "STATS.SUM",
+    "LINALG.DET_HILBERT8": "LINALG.DET", "LINALG.SOLVE_HILBERT6": "LINALG.SOLVE",
+    "PHYCHEM.DENSITY_OK": "PHYCHEM.DENSITY", "PHYCHEM.DENSITY_ZERO_VOL": "PHYCHEM.DENSITY",
+    "SOLVE.PredictRatePolyExtrap": "SOLVE.PREDICT",
+    "DT.EASTER_2000": "DT.EASTER", "DT.EASTER_2038": "DT.EASTER",
 }
 def _norm_ref(_name):
     """规范化引用名为可匹配形式：先按空格截断（'RANGE.TOHTML table tag' → 'RANGE.TOHTML'），
@@ -1467,21 +1511,29 @@ def _norm_ref(_name):
     return _n
 
 _covered = set()
+# 大小写不敏感查表（R3-19：'RANGE.ToJson' 等混合大小写引用此前漏映射）。
+_ID2UDF_CI = { _k.lower(): _v for _k, _v in _ID2UDF.items() }
 for _name in REFERENCED:
     _base = _norm_ref(_name)
-    _mapped = _ID2UDF.get(_base, _base)
+    _mapped = _ID2UDF_CI.get(_base.lower(), _base)
     for _u in _API_UDFS:
         if _mapped == _u or _mapped.startswith(_u + ".") or _u.startswith(_mapped + "."):
             _covered.add(_u)
+
 udf_count = len(_covered)
 # 同一映射算法作用于 CROSS_REFERENCED，得到真正与 C# 交叉对照的 UDF 数
 _cross_covered = set()
+_cross_unmapped = set()
 for _name in CROSS_REFERENCED:
     _base = _norm_ref(_name)
-    _mapped = _ID2UDF.get(_base, _base)
+    _mapped = _ID2UDF_CI.get(_base.lower(), _base)
+    _hit = False
     for _u in _API_UDFS:
         if _mapped == _u or _mapped.startswith(_u + ".") or _u.startswith(_mapped + "."):
             _cross_covered.add(_u)
+            _hit = True
+    if not _hit:
+        _cross_unmapped.add(_base)
 print(f"\n{'='*60}")
 print(f"  RESULTS: {PASS} passed, {FAIL} failed, {SKIP} skipped ({(PASS+FAIL)} checks)")
 # 双通道分别汇报——check() 纯 Python 自校验不混入"已验证"假象
@@ -1489,6 +1541,10 @@ print(f"    └ manual-only (Python self-verify): {MANUAL_PASS}")
 print(f"    └ cross-validated (vs C#):         {CROSS_PASS}")
 # “UDF coverage” 是手册示例覆盖（含纯 Python 自校验）——
 # 必须同时打印真正与 C# 对照的 cross 覆盖数，防止 README/报告宣称口径虚高。
+if _cross_unmapped:
+    # 诊断（非失败）：C# 对照 manifest id 不能对应任何公开 UDF。DICT.FromKeys 等
+    # Foundation 级对照属预期；若新增 UDF 条目因漏映射未计入覆盖，此行会显式列出（R3-19）。
+    print(f"  [unmapped cross refs] {len(_cross_unmapped)}: {', '.join(sorted(_cross_unmapped))}")
 print(f"  UDF coverage: {udf_count} of {UDF_TOTAL} UDFs covered (sync variants)")
 print(f"    └ of which cross-validated vs C#: {len(_cross_covered)} of {UDF_TOTAL} ({len(_cross_covered)/UDF_TOTAL*100:.1f}%)")
 print(f"{'='*60}")

@@ -1245,5 +1245,40 @@ namespace ExcelFormulaLabs.Analytics.Tests
             ((double)r[1, 3]).Should().BeApproximately(18.74, 1e-6);
             r[1, 7].Should().Be("可达");
         }
+
+        [Fact]
+        public void FitModel_ConstantColumnRounding_NotCollinear()
+        {
+            // R2-2：常量列 0.1（n=3）的 Σc/n 舍入（0.10000000000000002 ≠ 0.1）产生伪 ss>0，
+            // 标准化后与截距精确共线 → 整表 near-singular #VALUE!。修复：min==max 位级常量判定。
+            var X = new double[][]
+            {
+                new[] { 1.0, 0.1 }, new[] { 2.0, 0.1 }, new[] { 3.0, 0.1 },
+            };
+            var y = new double[] { 2.0, 4.0, 6.0 };
+            var m = SolveCore.FitModel(X, y, "linear");
+            SolveCore.Predict(m, new[] { 4.0, 0.1 }).Should().BeApproximately(8.0, 1e-10);
+            // 0.3（n=5）此前正常，一并守回归。
+            var X5 = new double[5][];
+            var y5 = new double[5];
+            for (int i = 0; i < 5; i++) { X5[i] = new[] { i + 1.0, 0.3 }; y5[i] = 2 * (i + 1.0); }
+            var m5 = SolveCore.FitModel(X5, y5, "linear");
+            SolveCore.Predict(m5, new[] { 6.0, 0.3 }).Should().BeApproximately(12.0, 1e-10);
+        }
+
+        [Fact]
+        public void CrossValidateShared_HugeScale_ThrowsNotSaturated()
+        {
+            // R2-3：共享池化 CV 缺非有限守卫时，1e160 尺度 Y 的 sse/tss 上溢 → 1−Inf/NaN
+            // 静默饱和（R²=1，与非池化 CrossValidate 的显式拒绝矛盾）。
+            var (X, Y, pairs) = SharedCvArrays(noisy: true);
+            for (int i = 0; i < X.Length; i++)
+            {
+                for (int j = 0; j < X[i].Length; j++) X[i][j] *= 1e160;
+                for (int j = 0; j < Y[i].Length; j++) Y[i][j] *= 1e160;
+            }
+            var act = () => SolveCore.CrossValidateShared(X, Y, new[] { 0, 1 }, pairs, "rate", 42L);
+            act.Should().Throw<ArgumentException>();
+        }
     }
 }

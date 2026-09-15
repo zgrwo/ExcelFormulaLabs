@@ -34,9 +34,10 @@ namespace ExcelFormulaLabs.Foundation.Tests
             ErrorMsg.Get(missing).Should().Be(missing);
         }
 
-        [Fact] public void Get_missing_key_with_args_still_non_null()
+        [Fact] public void Get_missing_key_with_args_still_returns_key_name()
         {
-            ErrorMsg.Get("NONEXISTENT_Key_XYZ", 1, 2).Should().NotBeNull();
+            // 无占位符的模板经 string.Format 原样返回（弱断言 NotBeNull 恒真）。
+            ErrorMsg.Get("NONEXISTENT_Key_XYZ", 1, 2).Should().Be("NONEXISTENT_Key_XYZ");
         }
     }
 }

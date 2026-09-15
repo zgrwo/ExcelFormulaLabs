@@ -121,6 +121,7 @@ Run-VerifyDocs $fixtureG "Prose UDF counts" $true
 $cXiang  = [char]0x9879                                     # 项
 $cShu    = [string][char]0x6570 + [char]0x91CF              # 数量
 $cGeFn   = [string][char]0x4E2A + [char]0x51FD + [char]0x6570  # 个函数
+$cHanShu = [string][char]0x51FD + [char]0x6570                  # 函数
 $cLp     = [char]0xFF08                                     # （
 $cRp     = [char]0xFF09                                     # ）
 
@@ -138,6 +139,32 @@ Write-Host "[G4] 中文变体「N 个函数（UDF）」漂移应 FAIL（检查 1
 $fixtureG4 = Copy-RepoFixture
 [System.IO.File]::AppendAllText((Join-Path $fixtureG4 "AGENTS.md"), "`n999 $cGeFn$cLp UDF $cRp`n", (New-Object System.Text.UTF8Encoding($false)))
 Run-VerifyDocs $fixtureG4 "Prose UDF counts" $true
+
+# G5/G6/G7：R2-15 大小写与同义词盲区 + R2-9 CrossVal 计数算术
+Write-Host "[G5] 小写「N udf」漂移应 FAIL（检查 16 IgnoreCase）"
+$fixtureG5 = Copy-RepoFixture
+[System.IO.File]::AppendAllText((Join-Path $fixtureG5 "AGENTS.md"), "`n999 udf`n", (New-Object System.Text.UTF8Encoding($false)))
+Run-VerifyDocs $fixtureG5 "Prose UDF counts" $true
+
+$cGe       = [char]0x4E2A                                     # 个
+$cZiDingYi = [string][char]0x81EA + [char]0x5B9A + [char]0x4E49  # 自定义
+Write-Host "[G6] 同义词「N 个自定义函数」漂移应 FAIL（检查 16 模式 1d）"
+$fixtureG6 = Copy-RepoFixture
+[System.IO.File]::AppendAllText((Join-Path $fixtureG6 "AGENTS.md"), "`n999 $cGe$cZiDingYi$cHanShu`n", (New-Object System.Text.UTF8Encoding($false)))
+Run-VerifyDocs $fixtureG6 "Prose UDF counts" $true
+
+Write-Host "[G7] CrossVal 计数算术失配（N+M != K）应 FAIL（检查 16 新增断言）"
+$fixtureG7 = Copy-RepoFixture
+$readmeG7 = Join-Path $fixtureG7 "README.md"
+$g7 = [System.IO.File]::ReadAllText($readmeG7)
+$g7 = [regex]::Replace($g7, '合计\s*432', '合计 999')
+[System.IO.File]::WriteAllText($readmeG7, $g7, (New-Object System.Text.UTF8Encoding($false)))
+Run-VerifyDocs $fixtureG7 "CrossVal" $true
+
+Write-Host "[G8] 源码注释散文计数漂移（.cs）应 FAIL（检查 16 扫描域扩展 P3-6）"
+$fixtureG8 = Copy-RepoFixture
+[System.IO.File]::AppendAllText((Join-Path $fixtureG8 "src\Foundation\NumericGuard.cs"), "`n// 999 UDF`n", (New-Object System.Text.UTF8Encoding($false)))
+Run-VerifyDocs $fixtureG8 "Prose UDF counts" $true
 
 # --- 场景 H：CHANGELOG 幽灵条目（检查 10 反向对账的负向回归守卫）---
 # 检查 10 依赖 git tag——fixture 无 .git 时整体 SKIP（无从验证反向）。此处初始化

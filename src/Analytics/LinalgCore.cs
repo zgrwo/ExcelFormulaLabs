@@ -159,6 +159,106 @@ namespace ExcelFormulaLabs.Analytics
             }
         }
 
+        // ── 尺度归一化（分解族公共前置） ──────────────────────────────
+        // MathNet/LAPACK 在列平方和 > DBL_MAX（|元素| > √DBL_MAX ≈ 1.34e154）时溢出：
+        // QR 返回 Q=0/全零、R=-∞，SVD/Evd 抛 NonConvergence 或内部越界；≲1e-155
+        // 的小量纲同理下溢。各分解对公共正缩放 c = maxAbs 有解析回缩关系，
+        // 归一化到 |A'| ≤ 1 后分解再回缩即可无损覆盖全量纲，c=1 时位级不变：
+        //   QR:  Q(cA)=Q(A),   R(cA)=c·R(A)
+        //   SVD: U(cA)=U(A),   S(cA)=c·S(A),  Vt(cA)=Vt(A)
+        //   LU:  L(cA)=c·L(A), U(cA)=U(A),    P(cA)=P(A)
+        //   Evd: V(cA)=V(A),   λ(cA)=c·λ(A)
+        //   Cholesky: L(cA)=√c·L(A)
+        //   PInv(cA)=PInv(A)/c；Cond/Rank 不变；Solve(A,b)=Solve(cA,cb)
+        // 全零矩阵 c=0：不缩放（分解结果平凡，缩放因子无意义）。
+        /// <summary>逐元素最大绝对值；空矩阵/全零 → 0。</summary>
+        private static double MaxAbs(double[,] m)
+        {
+            double max = 0;
+            for (int r = 0; r < m.GetLength(0); r++)
+                for (int c = 0; c < m.GetLength(1); c++)
+                {
+                    double a = Math.Abs(m[r, c]);
+                    if (a > max) max = a;
+                }
+            return max;
+        }
+
+        /// <summary>返回 m/c（c=maxAbs）；c∈{0,1} 时原样返回（调用方不修改该数组）。</summary>
+        private static double[,] NormalizedCopy(double[,] m, double c)
+        {
+            if (c == 0 || c == 1) return m;
+            int rows = m.GetLength(0), cols = m.GetLength(1);
+            var o = new double[rows, cols];
+            for (int r = 0; r < rows; r++)
+                for (int col = 0; col < cols; col++)
+                    o[r, col] = m[r, col] / c;
+            return o;
+        }
+
+        /// <summary>逐元素乘 factor（返回新数组）。</summary>
+        private static double[,] Multiply(double[,] m, double factor)
+        {
+            int rows = m.GetLength(0), cols = m.GetLength(1);
+            var o = new double[rows, cols];
+            for (int r = 0; r < rows; r++)
+                for (int c = 0; c < cols; c++)
+                    o[r, c] = m[r, c] * factor;
+            return o;
+        }
+
+        /// <summary>逐元素乘 factor（返回新数组）。</summary>
+        private static double[] Multiply(double[] v, double factor)
+        {
+            var o = new double[v.Length];
+            for (int i = 0; i < v.Length; i++) o[i] = v[i] * factor;
+            return o;
+        }
+
+        /// <summary>逐元素乘 factor（原地，用于分解输出的新数组）。</summary>
+        private static void MultiplyInPlace(double[] v, double factor)
+        {
+            if (factor == 1) return;
+            for (int i = 0; i < v.Length; i++) v[i] *= factor;
+        }
+
+        /// <summary>Inf → NaN 封顶（模块输出约定，对齐 MatMul/NormFrobenius）。</summary>
+        private static void CapInfToNaN(double[] v)
+        {
+            for (int i = 0; i < v.Length; i++)
+                if (double.IsInfinity(v[i])) v[i] = double.NaN;
+        }
+
+        /// <summary>Inf → NaN 封顶（模块输出约定）。</summary>
+        private static void CapInfToNaN(double[,] m)
+        {
+            for (int r = 0; r < m.GetLength(0); r++)
+                for (int c = 0; c < m.GetLength(1); c++)
+                    if (double.IsInfinity(m[r, c])) m[r, c] = double.NaN;
+        }
+
+        /// <summary>MathNet SVD 包装：非收敛/内部错误 → 显式参数错误（#VALUE! 语义）。</summary>
+        private static Svd<double> SvdOf(Matrix<double> a, bool computeVectors)
+        {
+            try { return a.Svd(computeVectors); }
+            catch (Exception ex) when (ExceptionFilters.IsCatchable(ex))
+            {
+                throw new ArgumentException(
+                    $"SVD failed ({ex.GetType().Name}: {ex.Message}) for this input.", ex);
+            }
+        }
+
+        /// <summary>MathNet Evd 包装：非收敛/内部越界 → 显式参数错误（#VALUE! 语义）。</summary>
+        private static Evd<double> EvdOf(Matrix<double> a)
+        {
+            try { return a.Evd(); }
+            catch (Exception ex) when (ExceptionFilters.IsCatchable(ex))
+            {
+                throw new ArgumentException(
+                    $"Eigenvalue decomposition failed ({ex.GetType().Name}: {ex.Message}) for this input.", ex);
+            }
+        }
+
         internal static (double[,] U, double[] S, double[,] Vt) Svd(double[,] m)
         {
             NumericGuard.AgainstNonFinite(m);
@@ -166,32 +266,50 @@ namespace ExcelFormulaLabs.Analytics
             // IndexOutOfRangeException（裸 CLR 异常）。
             if (m.GetLength(0) == 0 || m.GetLength(1) == 0)
                 throw new ArgumentException("SVD requires a non-empty matrix.");
-            var A = Matrix<double>.Build.DenseOfArray(m);
-            var svd = A.Svd(computeVectors: true);
+            double c = MaxAbs(m);
+            var A = Matrix<double>.Build.DenseOfArray(NormalizedCopy(m, c));
+            var svd = SvdOf(A, computeVectors: true);
             int rows = A.RowCount, cols = A.ColumnCount, k = Math.Min(rows, cols);
-            return (svd.U.SubMatrix(0, rows, 0, k).ToArray(),
-                    svd.S.ToArray(),
-                    svd.VT.SubMatrix(0, k, 0, cols).ToArray());
+            var s = svd.S.ToArray();
+            MultiplyInPlace(s, c); // S(cA)=c·S(A)
+            var u = svd.U.SubMatrix(0, rows, 0, k).ToArray();
+            var vt = svd.VT.SubMatrix(0, k, 0, cols).ToArray();
+            CapInfToNaN(s);
+            CapInfToNaN(u);
+            CapInfToNaN(vt);
+            return (u, s, vt);
         }
 
         internal static double[,] PseudoInverse(double[,] m)
         {
             NumericGuard.AgainstNonFinite(m);
-            var A = Matrix<double>.Build.DenseOfArray(m);
-            return A.PseudoInverse().ToArray();
+            if (m.GetLength(0) == 0 || m.GetLength(1) == 0)
+                throw new ArgumentException("Pseudo-inverse requires a non-empty matrix.");
+            double c = MaxAbs(m);
+            var A = Matrix<double>.Build.DenseOfArray(NormalizedCopy(m, c));
+            var p = A.PseudoInverse().ToArray();
+            if (c > 0) p = Multiply(p, 1.0 / c); // (cA)⁺ = A⁺/c
+            CapInfToNaN(p);
+            return p;
         }
 
         internal static (double[,] Q, double[,] R) Qr(double[,] m)
         {
             NumericGuard.AgainstNonFinite(m);
             int rows = m.GetLength(0), cols = m.GetLength(1);
+            if (rows == 0 || cols == 0)
+                throw new ArgumentException("QR decomposition requires a non-empty matrix.");
             if (rows >= cols)
             {
                 // Tall or square: MathNet QR directly supported.
-                var A = Matrix<double>.Build.DenseOfArray(m);
+                double c = MaxAbs(m);
+                var A = Matrix<double>.Build.DenseOfArray(NormalizedCopy(m, c));
                 var qr = A.QR(QRMethod.Full);
-                return (qr.Q.SubMatrix(0, rows, 0, cols).ToArray(),
-                        qr.R.SubMatrix(0, cols, 0, cols).ToArray());
+                var q = qr.Q.SubMatrix(0, rows, 0, cols).ToArray();
+                var r = Multiply(qr.R.SubMatrix(0, cols, 0, cols).ToArray(), c); // R(cA)=c·R(A)
+                CapInfToNaN(q);
+                CapInfToNaN(r);
+                return (q, r);
             }
             // Wide (rows < cols): MathNet QR requires m ≥ n.
             // Zero-padding to a square matrix and extracting sub-matrices does NOT
@@ -206,7 +324,11 @@ namespace ExcelFormulaLabs.Analytics
         internal static (double[,] L, double[,] U, double[,] P) Lu(double[,] m)
         {
             NumericGuard.AgainstNonFinite(m);
-            var A = Matrix<double>.Build.DenseOfArray(m);
+            int mRows = m.GetLength(0), mCols = m.GetLength(1);
+            if (mRows == 0 || mCols == 0)
+                throw new ArgumentException("LU decomposition requires a non-empty matrix.");
+            double c = MaxAbs(m);
+            var A = Matrix<double>.Build.DenseOfArray(NormalizedCopy(m, c));
             var lu = A.LU();
             // perm[i] = row index of original A that ends up at row i of the permuted matrix.
             // Build P element-wise: P[i, perm[i]] = 1.0 avoids the swap-in-place bug
@@ -215,7 +337,13 @@ namespace ExcelFormulaLabs.Analytics
             var P = Matrix<double>.Build.Dense(A.RowCount, A.RowCount);
             for (int i = 0; i < A.RowCount; i++)
                 P[i, perm[i]] = 1.0;
-            return (lu.L.ToArray(), lu.U.ToArray(), P.ToArray());
+            // A=P·L·U ⇒ cA=P·L·(cU)：保持 L 单位下三角（既有文档/测试约定），
+            // 仅对 U 回缩；cU 真值不可表示时由 CapInfToNaN 封顶。
+            var L = lu.L.ToArray();
+            var U = Multiply(lu.U.ToArray(), c);
+            CapInfToNaN(L);
+            CapInfToNaN(U);
+            return (L, U, P.ToArray());
         }
 
         internal static double Determinant(double[,] m)
@@ -240,22 +368,26 @@ namespace ExcelFormulaLabs.Analytics
                     $"Right-hand side length ({b.Length}) must equal the matrix size ({an}).");
             if (b.Any(v => double.IsNaN(v) || double.IsInfinity(v)))
                 throw new ArgumentException(ErrorMsg.Get("LINALG_RhsNotFinite"));
-            var matA = Matrix<double>.Build.DenseOfArray(A);
             // 仅输出侧拦 NaN/Inf 不够：近奇异系统（cond→1e16）经 MathNet LU 会静默返回
-            // 错得离谱但全部有限的解（条件数主导精度）。
-            // 求解前加条件数守卫：cond 非有限（精确奇异）或 > 1e14 → 显式拒绝。1e14 与
-            // double 16 位有效数字对应，超过后解的有效位数不足 2 位，必然不可靠。
+            // 错得离谱但全部有限的解（条件数主导精度）。求解前加条件数守卫：cond 非有限
+            // （精确奇异）或 > 1e14 → 显式拒绝。1e14 与 double 16 位有效数字对应，超过后
+            // 解的有效位数不足 2 位，必然不可靠。条件数对公共正缩放不变，故在归一化域判定。
+            double c = MaxAbs(A);
+            var matA = Matrix<double>.Build.DenseOfArray(NormalizedCopy(A, c));
             // SVD 仅在此入口执行一次（n 通常小，成本可接受）；消息含实测 cond 值便于诊断。
             // 注意：消息含 "singular"——精确奇异用例的既有断言（WithMessage("*singular*")）
             // 由此守卫先行触发，保持契约不破。
-            var svd = matA.Svd(computeVectors: false);
+            var svd = SvdOf(matA, computeVectors: false);
             double cond = svd.ConditionNumber;
             if (double.IsNaN(cond) || double.IsInfinity(cond) || cond > 1e14)
                 throw new ArgumentException(
                     "Matrix is singular or too ill-conditioned for a reliable solution " +
                     $"(condition number = {cond.ToString("E3", System.Globalization.CultureInfo.InvariantCulture)}; " +
                     "guard threshold 1e14). Use LINALG.PINV for singular systems.");
-            var x = matA.Solve(Vector<double>.Build.Dense(b));
+            // 解的尺度不变性：x = (cA)⁻¹(cb)。b 与 A 同缩 c（c = maxAbs(A)），
+            // 避免 A 大量纲时 LU 内部溢出（diag(1e308) 本可精确求解）。
+            var rhs = c == 0 || c == 1 ? b : Multiply(b, 1.0 / c);
+            var x = matA.Solve(Vector<double>.Build.Dense(rhs));
             var arr = x.ToArray();
             // MathNet Solve silently returns NaN/±Inf for singular systems; the api-reference
             // contract says singular → #VALUE! (guard, not silent propagation — 防错原则1)。
@@ -273,7 +405,12 @@ namespace ExcelFormulaLabs.Analytics
             // 复用 EnsureSymmetric（含方阵检查、非有限守卫、相对对称判据），与 Eigen 同一
             // 拒绝路径。
             EnsureSymmetric(m, "Cholesky decomposition");
-            return Matrix<double>.Build.DenseOfArray(m).Cholesky().Factor.ToArray();
+            double c = MaxAbs(m);
+            var A = Matrix<double>.Build.DenseOfArray(NormalizedCopy(m, c));
+            // L(cA)=√c·L(A)（A=LLᵀ ⇒ cA=(√c L)(√c L)ᵀ）；√c 恒有限。
+            var L = Multiply(A.Cholesky().Factor.ToArray(), c > 0 ? Math.Sqrt(c) : 1.0);
+            CapInfToNaN(L);
+            return L;
         }
 
         /// <summary>
@@ -285,7 +422,12 @@ namespace ExcelFormulaLabs.Analytics
         internal static double[] Eigenvalues(double[,] m)
         {
             EnsureSymmetric(m);
-            return Matrix<double>.Build.DenseOfArray(m).Evd().EigenValues.Real().ToArray();
+            double c = MaxAbs(m);
+            var A = Matrix<double>.Build.DenseOfArray(NormalizedCopy(m, c));
+            var values = EvdOf(A).EigenValues.Real().ToArray();
+            MultiplyInPlace(values, c); // λ(cA)=c·λ(A)
+            CapInfToNaN(values);
+            return values;
         }
 
         /// <summary>
@@ -295,8 +437,15 @@ namespace ExcelFormulaLabs.Analytics
         internal static (double[] values, double[,] vectors) Eigen(double[,] m)
         {
             EnsureSymmetric(m);
-            var evd = Matrix<double>.Build.DenseOfArray(m).Evd();
-            return (evd.EigenValues.Real().ToArray(), evd.EigenVectors.ToArray());
+            double c = MaxAbs(m);
+            var A = Matrix<double>.Build.DenseOfArray(NormalizedCopy(m, c));
+            var evd = EvdOf(A);
+            var values = evd.EigenValues.Real().ToArray();
+            MultiplyInPlace(values, c); // λ(cA)=c·λ(A)；特征向量 V(cA)=V(A) 不缩放
+            CapInfToNaN(values);
+            var vectors = evd.EigenVectors.ToArray();
+            CapInfToNaN(vectors);
+            return (values, vectors);
         }
 
         /// <summary>
@@ -337,9 +486,12 @@ namespace ExcelFormulaLabs.Analytics
         internal static double ConditionNumber(double[,] m)
         {
             NumericGuard.AgainstNonFinite(m);
+            if (m.GetLength(0) == 0 || m.GetLength(1) == 0)
+                throw new ArgumentException("Condition number requires a non-empty matrix.");
+            // 条件数对公共正缩放不变：归一化后计算覆盖大量纲（diag(1e308) → 1.0）。
+            var cond = Matrix<double>.Build.DenseOfArray(NormalizedCopy(m, MaxAbs(m))).ConditionNumber();
             // 奇异矩阵 cond=+∞ 须按模块 Inf→NaN 输出封顶约定（对齐 Sum/Range/CapNaN
             // 的写法）封顶为 NaN，语义 = "条件数不可表示"。
-            var cond = Matrix<double>.Build.DenseOfArray(m).ConditionNumber();
             return double.IsInfinity(cond) ? double.NaN : cond;
         }
 
@@ -348,8 +500,9 @@ namespace ExcelFormulaLabs.Analytics
             NumericGuard.AgainstNonFinite(m);
             if (m.GetLength(0) == 0 || m.GetLength(1) == 0)
                 throw new ArgumentException("Rank requires a non-empty matrix.");
-            var A = Matrix<double>.Build.DenseOfArray(m);
-            var svd = A.Svd(computeVectors: false);
+            // 数值秩对公共正缩放不变：归一化后 SVD（大量纲下 MathNet 会 NonConvergence）。
+            var A = Matrix<double>.Build.DenseOfArray(NormalizedCopy(m, MaxAbs(m)));
+            var svd = SvdOf(A, computeVectors: false);
             // Use relative tolerance (MATLAB/numpy convention) when tol <= 0
             double effectiveTol = tol > 0
                 ? tol

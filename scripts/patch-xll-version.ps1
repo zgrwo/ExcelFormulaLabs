@@ -36,6 +36,10 @@ param(
     [Parameter(Mandatory = $true)] [string] $XllPath,
     [Parameter(Mandatory = $true)] [string] $FileDescription,
     [Parameter(Mandatory = $true)] [string] $ProductName,
+    # R3-2：FileVersion/ProductVersion 字符串项 = 项目版本（Directory.Build.props $(Version)）。
+    # 可选（治理自测只传 Description/ProductName）——缺省时保持模板原值。
+    [string] $FileVersion = "",
+    [string] $ProductVersion = "",
     # 治理自测用测试开关——首调模拟瞬时文件锁（exit 5），
     # 验证重试路径能收敛到成功；生产构建不传此开关。
     [switch] $SimulateTransientLock
@@ -117,7 +121,8 @@ public static class VersionInfoPatcher
 
     // ---------------------------------------------------------------
 
-    public static int Patch(string filePath, string newFileDescription, string newProductName)
+    public static int Patch(string filePath, string newFileDescription, string newProductName,
+        string newFileVersion, string newProductVersion)
     {
         // 1. Read VERSIONINFO resource bytes
         byte[] data;
@@ -142,6 +147,10 @@ public static class VersionInfoPatcher
         var updates = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         updates["FileDescription"] = newFileDescription;
         updates["ProductName"] = newProductName;
+        // R3-2：8 个 Release .xll 的 FileVersion/ProductVersion 此前残留 Excel-DNA 工具
+        // 版本（1.9.0.14），用户/支持无法从文件属性确认版本。非空时同步字符串表键。
+        if (!string.IsNullOrEmpty(newFileVersion)) updates["FileVersion"] = newFileVersion;
+        if (!string.IsNullOrEmpty(newProductVersion)) updates["ProductVersion"] = newProductVersion;
 
         // 3. Patch each target entry in value-offset order. VERSIONINFO structures are
         //    stored sequentially, so after expanding/contracting entry N, every field of
@@ -204,6 +213,18 @@ public static class VersionInfoPatcher
             Console.WriteLine("  [{0}] patched (delta {1})", entry.Key, delta);
             shift += delta;
             patched++;
+        }
+
+        // R3-2：请求了版本键但模板无该键（布局变更）→ 显式失败，不得静默留下错误版本。
+        foreach (var kv in updates)
+        {
+            if ((kv.Key.Equals("FileVersion", StringComparison.OrdinalIgnoreCase) ||
+                 kv.Key.Equals("ProductVersion", StringComparison.OrdinalIgnoreCase))
+                && !entries.Exists(e => e.Key.Equals(kv.Key, StringComparison.OrdinalIgnoreCase)))
+            {
+                Console.Error.WriteLine("ERROR: VERSIONINFO tree has no " + kv.Key + " entry.");
+                return 7;
+            }
         }
 
         if (patched == 0)
@@ -452,14 +473,17 @@ $exitCode = if ($SimulateTransientLock) {
     Write-Host "ERROR: UpdateResource failed (file in use?)."
     5
 } else {
-    [VersionInfoPatcher]::Patch($resolvedPath, $FileDescription, $ProductName)
+    [VersionInfoPatcher]::Patch($resolvedPath, $FileDescription, $ProductName, $FileVersion, $ProductVersion)
 }
-for ($i = 1; $exitCode -eq 5 -and $i -le 3; $i++) {
-    Start-Sleep -Milliseconds (500 * $i)
-    Write-Host "  UpdateResource failed (file in use?) - retrying ($i/3)..."
-    $exitCode = [VersionInfoPatcher]::Patch($resolvedPath, $FileDescription, $ProductName)
+# R2-10（2026-09-15 发版审查）：外部 HIPS（非 Defender）对新写出 .xll 的扫描锁实测
+# 4.4–4.8s，旧预算 0.5+1+1.5=3s 不够 → 8 次指数退避（0.5/1/2/4/8×4 ≈ 39.5s），
+# 覆盖锁窗口；失败仍如实返回 exit 5（不软跳过）。
+for ($i = 1; $exitCode -eq 5 -and $i -le 8; $i++) {
+    Start-Sleep -Milliseconds ([Math]::Min(8000, [int](500 * [Math]::Pow(2, $i - 1))))
+    Write-Host "  UpdateResource failed (file in use?) - retrying ($i/8)..."
+    $exitCode = [VersionInfoPatcher]::Patch($resolvedPath, $FileDescription, $ProductName, $FileVersion, $ProductVersion)
 }
 if ($exitCode -eq 5) {
-    Write-Host "ERROR: VERSIONINFO patch failed after 3 retries - file may be genuinely locked."
+    Write-Host "ERROR: VERSIONINFO patch failed after 8 retries - file may be genuinely locked."
 }
 exit $exitCode

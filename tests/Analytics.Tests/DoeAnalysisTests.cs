@@ -122,6 +122,24 @@ namespace ExcelFormulaLabs.Analytics.Tests
             CellS(m, 9, 0).Should().Be("C^2");
         }
 
+        // R3-9：计数须与 ExpandTerms 一致（含 3 阶交互段；此前缺 k(k-1)(k-2)/6）。
+        [Fact] public void ExpandedTermCount_matches_expansion_up_to_3rd_order()
+        {
+            for (int k = 1; k <= 6; k++)
+                for (int order = 1; order <= 3; order++)
+                    DoeAnalysisCore.ExpandedTermCount(k, order, false)
+                        .Should().Be(ExpandTermsCount(k, order));
+        }
+
+        private static int ExpandTermsCount(int k, int order)
+        {
+            // 独立枚举：（order≥1 主效应）+（order≥2 两阶）+（order≥3 三阶）
+            int c = k;
+            if (order >= 2) c += k * (k - 1) / 2;
+            if (order >= 3) c += k * (k - 1) * (k - 2) / 6;
+            return c;
+        }
+
         // ── UDF layer ─────────────────────────────────────────────────
         [Fact] public void UDF_analyze_returns_table()
         {
@@ -147,6 +165,16 @@ namespace ExcelFormulaLabs.Analytics.Tests
         {
             var expected = (object[,])DoeAnalysisUdf.UDF_DOE_ANALYZE(X, y, "2way");
             var actual = (object[,])DoeAnalysisUdf.UDF_DOE_ANALYZE(X, y, sentinel!);
+            // R2-12：先钉硬编码锚点（独立于被测实现），再比较 sentinel 与显式调用——
+            // 否则两路调用同坏时"自产期望"假绿（E5）。完整正交设计的 2way 主效应与 main 相同。
+            expected.GetLength(0).Should().Be(7);          // header + 3 main + 3 two-way
+            expected.GetLength(1).Should().Be(5);
+            CellS(expected, 0, 0).Should().Be("Term");
+            CellS(expected, 1, 0).Should().Be("A");
+            Cell(expected, 1, 1).Should().BeApproximately(1.75, 1e-10);
+            CellS(expected, 4, 0).Should().Be("AB");
+            CellS(expected, 5, 0).Should().Be("AC");
+            CellS(expected, 6, 0).Should().Be("BC");
             actual.GetLength(0).Should().Be(expected.GetLength(0));
             actual.GetLength(1).Should().Be(expected.GetLength(1));
             for (int r = 0; r < expected.GetLength(0); r++)

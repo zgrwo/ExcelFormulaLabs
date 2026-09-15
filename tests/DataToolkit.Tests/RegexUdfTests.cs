@@ -106,9 +106,9 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Default_ignore_case_Split() { var r=(object[])RegexUdf.UDF_RX_SPLIT("Hello,World,hello", "hello"); r.Should().Equal("", ",World,", ""); }
         [Fact] public void Default_ignore_case_MatchAll() { var r=(object[])RegexUdf.UDF_RX_MALL("Hello hello", "hello"); ((string)r[0]).Should().Be("Hello"); ((string)r[1]).Should().Be("hello"); }
         [Fact] public void Default_ignore_case_Groups() { var r=(object[,])RegexUdf.UDF_RX_GRP("Hello", "(hello)"); r[1,0].Should().Be("Hello"); }
-
         // 无名组反向引用必须在 UDF 全函数可用（不得 #VALUE!）。
-        [Fact] public void Backreference_udf_test_count_matchall_replace()
+        [Fact]
+        public void Backreference_udf_test_count_matchall_replace()
         {
             ((bool)RegexUdf.UDF_RX_TEST("aabb", @"(\w)\1")).Should().BeTrue();
             ((long)RegexUdf.UDF_RX_COUNT("aabbcc", @"(\w)\1")).Should().Be(3);
@@ -117,6 +117,29 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             all.Should().Equal("aa", "bb", "cc");
             ((string)RegexUdf.UDF_RX_REPL("aabb", @"(\w)\1", "X", null!, 1)).Should().Be("Xbb");
             ((string)RegexUdf.UDF_RX_REPL("aabb", @"(\w)\1", "X", null!, -1)).Should().Be("aaX");
+        }
+
+        // R1-4：每格 5s Timeout 在数组分发下线性放大（旧实现 5 格病态模式 = 5×5s = 25s）。
+        // 调用级预算把总时长钳在 5s + 单格：首格超时后剩余格立即 #VALUE!。
+        [Fact]
+        public void Array_budget_bounds_total_time()
+        {
+            var evil = new string('a', 28) + "!";
+            var arr = new object[] { evil, evil, evil, evil, evil };
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var r = (object[])RegexUdf.UDF_RX_TEST(arr, "(a+)+b");
+            sw.ElapsedMilliseconds.Should().BeLessThan(8000);
+            r.Should().AllSatisfy(v => v.Should().Be(ExcelError.Value));
+        }
+
+        // R1-4 镜像：ARR.FILTER 的 regex 超时必须显式失败（旧实现 FilterUtils 吞超时判 false，
+        // 整列被静默过滤光 → 用户无法区分"无匹配"与"病态模式"）。
+        [Fact]
+        public void Filter_regex_timeout_surfaces_error()
+        {
+            var evil = new string('a', 28) + "!";
+            ArrayUdf.UDF_ARR_FILTER(new object[] { evil }, "(a+)+b", "regex")
+                .Should().Be(ExcelError.Value);
         }
     }
 }

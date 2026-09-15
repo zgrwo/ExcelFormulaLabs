@@ -55,20 +55,30 @@ namespace ExcelFormulaLabs.DataToolkit
                 throw new ArgumentException(ErrorMsg.Get("ARR_RangeTooLarge",
                     d > 100_000 && d <= int.MaxValue ? (int)d : 100_001, 100_000));
             // 浮点步长丢端点——RANGE(0,0.3,0.1) 的 d=2.9999999999999996 → floor 得 2 → 缺 0.3。
-            // 计数加相对容差补齐端点；末项在容差内吸附到 end（消除 0.30000000000000004），超端项剔除。
-            double countTol = 1e-12 * Math.Max(1.0, Math.Abs(d));
+            // 计数容差在相对 eps 基础上并入 start 的 ulp 粒度：start 很大时 `end - start`
+            // 灾难性抵消（1e8+0.3-1e8=0.2999999821），d 的偏差可达 ulp(start)/|step| 量级，
+            // 仅 1e-12 相对容差补不回端点。上限 0.1 防极端 start/step 比把非整数 d 误判为整数。
+            double countTol = Math.Max(1e-12 * Math.Max(1.0, Math.Abs(d)),
+                Math.Min(4.0 * (Math.Abs(start) * 2.220446049250313e-16) / Math.Abs(step), 0.1));
+            bool landsOnEnd = Math.Abs(d - Math.Round(d)) <= countTol;
             int n = (int)Math.Floor(d + countTol) + 1;
             if (n < 1) n = 1;
             if (n > 100_000)
                 throw new ArgumentException(ErrorMsg.Get("ARR_RangeTooLarge", n, 100_000));
-            double endTol = 1e-9 * Math.Max(Math.Max(Math.Abs(start), Math.Abs(end)), Math.Abs(step));
+            // 端点吸附仅限「数学上可达」（landsOnEnd，末项用精确 end）或纯浮点噪声
+            // （数个 ulp 内残差）。旧的 1e-9·max(|start|,|end|,|step|) 容差在 1.7e9 量级
+            // 达 1.7——0.7 步长下离端点 0.6 的**真实**末项 1700000099.4 被错误吸附到
+            // 1700000100（R1-5），同时把 1e8 量的真实端点（差 0.1）当超端剔除。
+            double endUlpTol = 4.0 * 2.220446049250313e-16
+                * Math.Max(Math.Max(Math.Abs(start), Math.Abs(end)), Math.Abs(step));
             var r = new List<object>(n);
             for (int i = 0; i < n; i++)
             {
                 double v = start + i * step;
                 if (i == n - 1)
                 {
-                    if (Math.Abs(v - end) <= endTol) v = end;                       // 吸附真端点
+                    if (landsOnEnd) v = end;                                        // 端点数学可达 → 精确 end
+                    else if (Math.Abs(v - end) <= endUlpTol) v = end;               // 仅纯浮点噪声内吸附
                     else if (asc ? v > end : v < end) continue;                     // 超端项剔除
                 }
                 r.Add(v);

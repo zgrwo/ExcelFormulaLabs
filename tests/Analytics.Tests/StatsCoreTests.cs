@@ -139,6 +139,53 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void TTestOneSample_mu0() =>
             StatsCore.TTestOneSample(D, 0.0).Should().BeApproximately(0.0132356, 1e-6);
 
+        // R1-2：尺度不变量。scipy: ttest_1samp([1e-200,2e-200,3e-200], 2.5e-200).pvalue
+        // = 0.47776703213290644；ttest_1samp([1e308,1.5e308,1.7e308], 1.5e308).pvalue
+        // = 0.6783662395486619。修复前两档均静默 NaN（var 下溢/上溢）。
+        [Fact] public void TTestOneSample_tiny_scale()
+        {
+            var d = new[] { 1e-200, 2e-200, 3e-200 };
+            StatsCore.TTestOneSample(d, 2.5e-200).Should().BeApproximately(0.47776703213290644, 1e-10);
+        }
+
+        [Fact] public void TTestOneSample_huge_scale()
+        {
+            var d = new[] { 1e308, 1.5e308, 1.7e308 };
+            StatsCore.TTestOneSample(d, 1.5e308).Should().BeApproximately(0.6783662395486619, 1e-10);
+        }
+        // R2-5：偏度/峰度尺度不变。scipy: skew([2,4,4,4,5,5,7,9], bias=False)
+        // = 0.8184875533567996（MathNet 无偏 type 2 口径）；
+        // 同序列 ×1e80 直接路径 Σd³ 上溢 → NaN，修复后按 maxAbs 归一化重算。
+        [Fact]
+        public void Skewness_extreme_scale_scale_invariant()
+        {
+            var unit = new[] { 2.0, 4, 4, 4, 5, 5, 7, 9 };
+            var huge = unit.Select(x => x * 1e80).ToArray();
+            var tiny = unit.Select(x => x * 1e-200).ToArray();
+            StatsCore.Skewness(unit).Should().BeApproximately(0.8184875533567996, 1e-10);
+            StatsCore.Skewness(huge).Should().BeApproximately(0.8184875533567996, 1e-10);
+            StatsCore.Skewness(tiny).Should().BeApproximately(0.8184875533567996, 1e-10);
+        }
+
+        [Fact]
+        public void Kurtosis_extreme_scale_scale_invariant()
+        {
+            // scipy: kurtosis([2,4,4,4,5,5,7,9], fisher=True, bias=False) = 0.9406249999999998
+            var unit = new[] { 2.0, 4, 4, 4, 5, 5, 7, 9 };
+            var huge = unit.Select(x => x * 1e80).ToArray();
+            StatsCore.Kurtosis(unit).Should().BeApproximately(0.9406249999999998, 1e-10);
+            StatsCore.Kurtosis(huge).Should().BeApproximately(0.9406249999999998, 1e-10);
+        }
+        // R3-6：求和顺序依赖溢出。[1e308,1e308,-1e308] 朴素折叠 Inf→NaN，真值 1e308。
+        [Fact] public void Sum_order_independent_overflow()
+        {
+            StatsCore.Sum(new[] { 1e308, 1e308, -1e308 }).Should().Be(1e308);
+            StatsCore.Sum(new[] { 1e308, -1e308, 1e308 }).Should().Be(1e308);
+            StatsCore.Sum(new[] { -1e308, 1e308, 1e308 }).Should().Be(1e308);
+            // 真值不可表示（2e308）仍 NaN 封顶。
+            double.IsNaN(StatsCore.Sum(new[] { double.MaxValue, double.MaxValue })).Should().BeTrue();
+        }
+
         // Count is returned as the first element of Summary.
         [Fact] public void Count() =>
             StatsCore.Summary(D)[0].Should().Be(5);

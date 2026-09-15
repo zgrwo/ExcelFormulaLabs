@@ -47,6 +47,15 @@ namespace ExcelFormulaLabs.DataToolkit
         /// （object[]/object[,] 与标量；COM Range 仍由 MapOver 内部提取，属直调残余）。</summary>
         private static object BlankAsEmpty(object? input)
         {
+            // P3-5：须先提取 COM Range——否则 COM 对象落标量分支（非 object[]/[,]），
+            // MapOver 内部再提取时空白单元格已绕过本归一化 → ISNULLEMPTY/ISNULLWS/
+            // COALESCE 对 COM 区域空白列失效。Foundation 的提取器为 internal（设计上
+            // 只给 ElementWiseMapper 用），此处经公开的 NormalizeTo2D 走同一提取路径。
+            if (input is not null && System.Runtime.InteropServices.Marshal.IsComObject(input))
+            {
+                var extracted = InputNormalizer.NormalizeTo2D(input);
+                if (extracted != null) input = extracted;
+            }
             if (input is object[,] a2)
             {
                 var r = new object[a2.GetLength(0), a2.GetLength(1)];

@@ -379,7 +379,10 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [MemberData(nameof(OmittedSentinelData.All), MemberType = typeof(OmittedSentinelData))]
         public void GasSTP_omitted_units_use_defaults(object? sentinel)
         {
+            // R2-12：硬编码独立锚点（22.4 L @25C/1atm → 273.15/298.15 缩放，scipy/numpy 口径），
+            // 再验证 sentinel 与显式调用一致；防止两路同坏的自产期望假绿。
             var expected = PhyChemUdf.UDF_PC_STP(22.4, 25.0, 1.0, "C", "atm");
+            ((double)expected).Should().BeApproximately(20.521750796578903, 1e-10);
             var actual = PhyChemUdf.UDF_PC_STP(22.4, 25.0, 1.0, sentinel!, sentinel!);
             ((double)actual).Should().Be((double)expected);
         }

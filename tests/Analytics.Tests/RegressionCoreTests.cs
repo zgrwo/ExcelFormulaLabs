@@ -487,4 +487,74 @@ namespace ExcelFormulaLabs.Analytics.Tests
             (double.IsNaN(v) || double.IsInfinity(v)).Should().BeFalse();
     }
 }
+
+// 2026-09-15 发版审查 R2-1/R2-4/R1-7 回归守卫。
+public class RegressionMixedScaleTests
+{
+    [Fact]
+    public void FitOLS_mixed_scale_passes()
+    {
+        // R2-1：n=5000, x=1e13·i/(n-1), y=1+x。numpy cond(X)=1.155e13（政策 1e14 内）。
+        // 修复前全局 maxDiag 由大列决定 → 截距列 R 对角 70.7 ≤ 阈值被误判共线整表 #VALUE!。
+        int n = 5000;
+        var X = new double[n, 1];
+        var y = new double[n];
+        for (int i = 0; i < n; i++) { X[i, 0] = 1e13 * i / (n - 1.0); y[i] = 1.0 + X[i, 0]; }
+        var c = (double[])RegressionCore.FitOLS(X, y)["coefficients"];
+        c[1].Should().BeApproximately(1.0, 1e-3);
+        ((double)RegressionCore.FitOLS(X, y)["r_squared"]).Should().BeApproximately(1.0, 1e-12);
+    }
+
+    [Fact]
+    public void FitRidge_mixed_scale_passes()
+    {
+        // R2-1：n=100, x=1e16·i/(n-1), λ=1。修复前截距列被 dataScale=1e16 同阈误判。
+        int n = 100;
+        var X = new double[n, 1];
+        var y = new double[n];
+        for (int i = 0; i < n; i++) { X[i, 0] = 1e16 * i / (n - 1.0); y[i] = 1.0 + X[i, 0]; }
+        var c = (double[])RegressionCore.FitRidge(X, y, 1.0)["coefficients"];
+        c[1].Should().BeApproximately(1.0, 1e-3);
+    }
+
+    [Fact]
+    public void FitRidge_extreme_lambda_still_rejected_on_singular()
+    {
+        // 完全共线列 + λ≈0 → 逐列判据仍须显式拒绝（防"修复放宽守卫"回归）。
+        var X = new double[,] { { 1.0, 1.0 }, { 2.0, 2.0 }, { 3.0, 3.0 }, { 4.0, 4.0 } };
+        var act = () => RegressionCore.FitRidge(X, new[] { 2.0, 4.0, 6.0, 8.0 }, 1e-300);
+        act.Should().Throw<ArgumentException>().WithMessage("*near-singular*");
+    }
+
+    [Fact]
+    public void FitWLS_weight_scale_invariant()
+    {
+        // R2-4：WLS 解对 w→c·w 不变。修复前 w=1e308 平方和上溢 → 假 "unstable"；
+        // w=1e-300 + y~1e-100 时加权响应下溢 → 假 "constant response"。
+        var X = new double[,] { { 1 }, { 2 }, { 3 }, { 4 }, { 5 } };
+        var y = new double[] { 1.1, 2.0, 2.9, 4.2, 5.1 };
+        var c1 = (double[])RegressionCore.FitWLS(X, y, new[] { 1.0, 1, 1, 1, 1 })["coefficients"];
+        var cTiny = (double[])RegressionCore.FitWLS(X, y, new[] { 1e-300, 1e-300, 1e-300, 1e-300, 1e-300 })["coefficients"];
+        var cHuge = (double[])RegressionCore.FitWLS(X, y, new[] { 1e308, 1e308, 1e308, 1e308, 1e308 })["coefficients"];
+        for (int j = 0; j < c1.Length; j++)
+        {
+            cTiny[j].Should().BeApproximately(c1[j], Math.Abs(c1[j]) * 1e-12 + 1e-12);
+            cHuge[j].Should().BeApproximately(c1[j], Math.Abs(c1[j]) * 1e-12 + 1e-12);
+        }
+        // y ~ 1e-100 的小量纲响应（此前 tss_w 下溢 → 误报 constant response）。
+        var Xs = new double[,] { { 1 }, { 2 }, { 3 } };
+        var ys = new double[] { 1e-100, 2e-100, 3e-100 };
+        var cs = (double[])RegressionCore.FitWLS(Xs, ys, new[] { 1e-300, 1e-300, 1e-300 })["coefficients"];
+        cs[1].Should().BeApproximately(1e-100, 1e-112);
+    }
+
+    [Fact]
+    public void FactorImportance_tiny_column_not_constant()
+    {
+        // R1-7：1e-170 列偏差平方和下溢为 ss=0 → 修复前误判常量列排最后（[1,0]）；
+        // numpy 参考 [0,1]（小列完美解释 y，|t| 最大）。
+        var X = new double[,] { { 1e-170, 9 }, { 2e-170, 1 }, { 3e-170, 5 } };
+        RegressionCore.FactorImportance(X, new[] { 1.0, 2, 3 }).Should().Equal(0, 1);
+    }
+}
 }

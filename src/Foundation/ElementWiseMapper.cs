@@ -117,10 +117,12 @@ namespace ExcelFormulaLabs.Foundation
             if (was2D && HasMismatched2DShapes(input1!, input2!))
                 return ExcelError.Value;
 
-            // 任一输入展平为空 → 返回 null（而非 ExcelError）——空区域广播无目标单元格，
-            // UDF 层把 null 渲染为空白。
+            // 任一输入展平为空 → 返回 ExcelEmpty（渲染空白）。R2-6：顶层 null 经
+            // Excel-DNA 1.9 封送（ObjectReturn 首行 `return IntPtr.Zero`）会被 Excel
+            // 显示为 #NUM!，不是空白——仓库自身 JsonXmlUdf 已用 `?? ExcelEmpty.Value`
+            // 规避；此处统一（原实现返回 null!，与 skill 契约"渲染空白"相悖）。
             if (flat1.Length == 0 || flat2.Length == 0)
-                return null!;
+                return ExcelEmpty.Value;
 
             if (flat1.Length == 1 && flat2.Length == 1)
                 return was2D
@@ -163,9 +165,9 @@ namespace ExcelFormulaLabs.Foundation
             if (was2D && HasMismatched2DShapes(input1!, input2!, input3!))
                 return ExcelError.Value;
 
-            // 同上：三参版本空输入 → null。
+            // 同上：三参版本空输入 → ExcelEmpty（渲染空白）。
             if (flat1.Length == 0 || flat2.Length == 0 || flat3.Length == 0)
-                return null!;
+                return ExcelEmpty.Value;
 
             int targetLen = Math.Max(Math.Max(flat1.Length, flat2.Length), flat3.Length);
 

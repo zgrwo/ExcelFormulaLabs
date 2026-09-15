@@ -11,6 +11,15 @@ namespace ExcelFormulaLabs.DataToolkit
         /// <summary>Maximum allowed regex pattern length to guard against extreme-input resource exhaustion.</summary>
         internal const int MaxPatternLength = 10000;
 
+        /// <summary>有效超时 = min(单次 5s, 调用级剩余预算)（R1-4）；预算耗尽立即抛出，
+        /// 数组后续格子不再各耗 5s。无 UDF 预算作用域时（直接 Core 调用）等价原 5s。</summary>
+        private static TimeSpan BudgetedTimeout()
+        {
+            RegexBudget.ThrowIfExhausted("Regex operation");
+            var remaining = RegexBudget.Remaining;
+            return remaining < Timeout ? remaining : Timeout;
+        }
+
         /// <summary>Throw if pattern exceeds <see cref="MaxPatternLength"/>.</summary>
         internal static void ValidatePattern(string p)
         {
@@ -19,9 +28,9 @@ namespace ExcelFormulaLabs.DataToolkit
         }
 
         internal static bool RegexTest(string i, string p, bool ic=true)
-        { ValidatePattern(p); return Regex.IsMatch(i, p, F(ic), Timeout); }
+        { ValidatePattern(p); return Regex.IsMatch(i, p, F(ic), BudgetedTimeout()); }
         internal static long RegexCount(string i, string p, bool ic=true)
-        { ValidatePattern(p); return Regex.Matches(i, p, F(ic), Timeout).Count; }
+        { ValidatePattern(p); return Regex.Matches(i, p, F(ic), BudgetedTimeout()).Count; }
         internal static string RegexMatch(string i, string p, bool ic=true)
             => RegexMatch(i, p, 1, ic);
 
@@ -36,9 +45,9 @@ namespace ExcelFormulaLabs.DataToolkit
             ValidatePattern(p);
             if (n == 0) n = 1;
             // Fast path: first match — Regex.Match scans only until the first hit
-            if (n == 1) { var m = Regex.Match(i, p, F(ic), Timeout); return m.Success ? m.Value : ""; }
+            if (n == 1) { var m = Regex.Match(i, p, F(ic), BudgetedTimeout()); return m.Success ? m.Value : ""; }
             // General path: need a specific index → compute all matches
-            var mc = Regex.Matches(i, p, F(ic), Timeout);
+            var mc = Regex.Matches(i, p, F(ic), BudgetedTimeout());
             if (mc.Count == 0) return "";
             if (n > int.MaxValue || n < int.MinValue) return ""; // out of int range → no match possible
             int idx = n > 0 ? (int)n - 1 : mc.Count + (int)n;
@@ -64,11 +73,11 @@ namespace ExcelFormulaLabs.DataToolkit
             ValidatePattern(p);
             // Literal evaluator keeps the single-scan Regex.Replace fast path
             // while disabling '$' group substitution (matches n≠0 behaviour).
-            if (n == 0) return Regex.Replace(i, p, _ => r, FC(ic), Timeout);
+            if (n == 0) return Regex.Replace(i, p, _ => r, FC(ic), BudgetedTimeout());
             // Fast path: replace first match only
-            if (n == 1) { var m = Regex.Match(i, p, FC(ic), Timeout); return m.Success ? i.Substring(0, m.Index) + r + i.Substring(m.Index + m.Length) : i; }
+            if (n == 1) { var m = Regex.Match(i, p, FC(ic), BudgetedTimeout()); return m.Success ? i.Substring(0, m.Index) + r + i.Substring(m.Index + m.Length) : i; }
             // General path: need a specific index → compute all matches
-            var mc = Regex.Matches(i, p, F(ic), Timeout);
+            var mc = Regex.Matches(i, p, F(ic), BudgetedTimeout());
             if (mc.Count == 0) return i;
             if (n > int.MaxValue || n < int.MinValue) return i; // out of int range → no replace
             int idx = n > 0 ? (int)n - 1 : mc.Count + (int)n;
@@ -92,7 +101,7 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static string[] RegexSplit(string i, string p, long n, bool ic=true)
         {
             ValidatePattern(p);
-            if (n <= 0) return Regex.Split(i, p, F(ic), Timeout);
+            if (n <= 0) return Regex.Split(i, p, F(ic), BudgetedTimeout());
             // 容量预分配在任何 regex 求值前执行：n∈(2³⁰,2³¹) 会预分配 8.6–17.2GB
             // （OOM 不可捕获，ExceptionFilters 排除 OOM → Excel 崩溃）；
             // n=2³¹-1/2³¹ 时 (int) 回绕为负容量 → ArgumentOutOfRangeException。
@@ -104,7 +113,7 @@ namespace ExcelFormulaLabs.DataToolkit
             if (n > MaxSplitCount) n = MaxSplitCount;
             var result = new System.Collections.Generic.List<string>((int)n + 1);
             int pos = 0, splitCount = 0;
-            foreach (Match m in Regex.Matches(i, p, F(ic), Timeout))
+            foreach (Match m in Regex.Matches(i, p, F(ic), BudgetedTimeout()))
             {
                 if (splitCount >= n) break;
                 result.Add(i.Substring(pos, m.Index - pos));
@@ -123,7 +132,7 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static object[,] RegexCaptureGroups(string i, string p, bool ic=true)
         {
             ValidatePattern(p);
-            var m = Regex.Match(i, p, FC(ic), Timeout);
+            var m = Regex.Match(i, p, FC(ic), BudgetedTimeout());
             if (!m.Success) return new object[0, 0];
             var r = new object[2, m.Groups.Count];
             for (int j = 0; j < m.Groups.Count; j++)
