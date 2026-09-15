@@ -24,40 +24,41 @@ namespace ExcelFormulaLabs.DataToolkit
         // R1-3：CommandTimeout 只约束获取锁的等待，不约束执行（net8 SqliteCommand.Cancel
         // 文档 "Does nothing."）；聚合/排序/笛卡尔积在首行前完成计算时，读取循环内的
         // 秒表检查永不执行（实测 1000³ 交叉连接阻塞 10.4s 后成功返回）。
-        // net8：看门狗在 budget 到期时调用 sqlite3_interrupt（官方声明可从其它线程调用），
-        //        SQLite 在 VM 指令边界中止查询并抛异常。
-        // net48：System.Data.SQLite 的 interop 为 C++/CLI（无 sqlite3_interrupt 导出符号，
-        //        P/Invoke 实测 EntryPointNotFound），且 SQLiteCommand.Cancel 实测 no-op
-        //        （500³ 查询照常跑完）；唯一可用机制是公开的 Progress 事件（ProgressOps>0
-        //        时每个 VM 批次回调）+ ProgressEventArgs.ReturnCode=Interrupt。
-        //        实测中断后可能静默返回 null/提前结束 Read（不抛异常）→ 统一查中断标志。
+        // 两个 TFM 统一用「查询线程内的进度回调」执行墙钟检查并中止语句：
+        // net8：SQLitePCL.raw.sqlite3_progress_handler（每 1000 条 VM 指令回调一次，
+        //        返回非 0 中止 → SqliteException SQLITE_INTERRUPT）。
+        // net48：System.Data.SQLite 的 Progress 事件 + ProgressEventArgs.ReturnCode=Interrupt
+        //        （interop 为 C++/CLI，无 sqlite3_interrupt 导出符号，P/Invoke 实测
+        //        EntryPointNotFound；SQLiteCommand.Cancel 实测 no-op，500³ 查询照常跑完）。
+        // 不用 Timer 看门狗（2026-09-15 CI 实证）：Timer 回调走线程池，CI 并行测试下调度
+        // 延迟可超过查询自然完成时间——预算标志来不及置位，500³ 查询照常返回，回归测试在
+        // Coverage/Release 两个 job 同时失败；进度回调在查询线程内执行，不受线程池调度影响。
+        // net48 中断后可能静默返回 null/提前结束 Read（不抛异常）→ 统一查中断标志。
         [ThreadStatic] private static int _budgetInterrupted;
-#if NET48
         // 预算起始 TickCount（int，环境单调毫秒；unchecked 差值比较对 24.9 天回绕安全，
         // 且不含除法表达式——pre-commit 检查 5 对 Core 文件的除法要求同文件 NaN/Inf 守卫）。
         [ThreadStatic] private static int _budgetStartTick;
         [ThreadStatic] private static int _budgetMs;
         [ThreadStatic] private static int _budgetArmed;
+        private static bool BudgetExpired =>
+            _budgetArmed != 0 && unchecked(Environment.TickCount - _budgetStartTick) > _budgetMs;
+#if NET48
         private static void ProgressBudgetTick(object sender, System.Data.SQLite.ProgressEventArgs e)
         {
             _ = sender;
-            if (_budgetArmed != 0 && unchecked(Environment.TickCount - _budgetStartTick) > _budgetMs)
+            if (BudgetExpired)
             {
-                System.Threading.Interlocked.Exchange(ref _budgetInterrupted, 1);
+                _budgetInterrupted = 1;
                 e.ReturnCode = System.Data.SQLite.SQLiteProgressReturnCode.Interrupt;
             }
         }
-        private static void InterruptCommand(SqlConn conn, System.Data.Common.DbCommand cmd)
-        {
-            _ = conn; _ = cmd; // net48 由 Progress 事件中断（前置注册），看门狗无操作
-        }
 #else
-        private static void InterruptCommand(SqlConn conn, System.Data.Common.DbCommand cmd)
+        private static readonly SQLitePCL.delegate_progress ProgressBudgetTick = _ =>
         {
-            _ = cmd;
-            try { SQLitePCL.raw.sqlite3_interrupt(conn.Handle); }
-            catch (Exception ex) when (ExceptionFilters.IsCatchable(ex)) { /* 查询已结束/连接已释放 */ }
-        }
+            if (!BudgetExpired) return 0;
+            _budgetInterrupted = 1;
+            return 1;
+        };
 #endif
         private static bool BudgetInterrupted =>
             System.Threading.Volatile.Read(ref _budgetInterrupted) != 0;
@@ -127,31 +128,18 @@ namespace ExcelFormulaLabs.DataToolkit
             if (extra != null) foreach (var kv in extra) CreateTable(conn, kv.Key, kv.Value, hasHeaders);
             using var cmd = conn.CreateCommand(); cmd.CommandText = sql; cmd.CommandTimeout = SqlTimeoutSeconds;
             _budgetInterrupted = 0;
-#if NET48
-            // 墙钟 deadline（net48 Progress 回调用；net8 由看门狗定时器负责）。
             _budgetStartTick = Environment.TickCount;
             _budgetMs = budgetMs;
             _budgetArmed = 1;
-#endif
 #if NET48
             // 必须在 ExecuteReader 之前注册（ProgressOps 影响语句准备期的进度回调频率）。
             int savedProgressOps = conn.ProgressOps;
             conn.ProgressOps = 1000;
             conn.Progress += ProgressBudgetTick;
+#else
+            // 必须在 ExecuteReader 之前注册；instructions=1000 与 net48 ProgressOps 对齐。
+            SQLitePCL.raw.sqlite3_progress_handler(conn.Handle, 1000, ProgressBudgetTick, null);
 #endif
-            // 看门狗：budget 到期 → InterruptCommand（net8 sqlite3_interrupt；net48 无操作，
-            // 由 Progress 事件中断）；查询在 VM 指令边界中止。Dispose(WaitHandle) 同步等待
-            // 回调完成，避免连接释放后回调触碰已释放的原生句柄（use-after-free）。
-            int budgetExceeded = 0;
-            var watchdog = new System.Threading.Timer(_ =>
-            {
-                try
-                {
-                    System.Threading.Interlocked.Exchange(ref budgetExceeded, 1);
-                    InterruptCommand(conn, cmd);
-                }
-                catch (Exception ex) when (ExceptionFilters.IsCatchable(ex)) { /* 中断失败不得让回调线程崩溃 */ }
-            }, null, budgetMs, System.Threading.Timeout.Infinite);
             System.Data.Common.DbDataReader reader;
             try
             {
@@ -159,19 +147,13 @@ namespace ExcelFormulaLabs.DataToolkit
             }
             catch (Exception ex) when (ExceptionFilters.IsCatchable(ex))
             {
-                if (System.Threading.Volatile.Read(ref budgetExceeded) != 0 || BudgetInterrupted)
-                {
-                    StopWatchdog(watchdog);
-                    throw BudgetError(budgetMs, ex);
-                }
-                StopWatchdog(watchdog);
+                if (BudgetInterrupted) throw BudgetError(budgetMs, ex);
                 throw;
             }
             // net48 的 Progress 中断可能不抛异常而让 ExecuteReader 返回（结果为空/部分）——
             // 统一在此显式失败，不得把中止误当"查询成功但无数据"。
-            if (System.Threading.Volatile.Read(ref budgetExceeded) != 0 || BudgetInterrupted)
+            if (BudgetInterrupted)
             {
-                StopWatchdog(watchdog);
                 reader.Dispose();
                 throw BudgetError(budgetMs, null);
             }
@@ -229,7 +211,7 @@ namespace ExcelFormulaLabs.DataToolkit
                 }
                 // 读取中途被 net48 Progress 中断时 Read() 可能静默返回 false（提前结束循环）
                 // → 返回部分结果前必须查中断标志。
-                if (System.Threading.Volatile.Read(ref budgetExceeded) != 0 || BudgetInterrupted)
+                if (BudgetInterrupted)
                     throw BudgetError(budgetMs, null);
                 if (row < result.GetLength(0))
                 {
@@ -239,14 +221,12 @@ namespace ExcelFormulaLabs.DataToolkit
                 }
                 return result;
             }
-            catch (Exception ex) when (ExceptionFilters.IsCatchable(ex)
-                && (System.Threading.Volatile.Read(ref budgetExceeded) != 0 || BudgetInterrupted))
+            catch (Exception ex) when (ExceptionFilters.IsCatchable(ex) && BudgetInterrupted)
             {
                 throw BudgetError(budgetMs, ex);
             }
             finally
             {
-                StopWatchdog(watchdog);
 #if NET48
                 try
                 {
@@ -254,11 +234,12 @@ namespace ExcelFormulaLabs.DataToolkit
                     conn.ProgressOps = savedProgressOps;
                 }
                 catch (Exception ex) when (ExceptionFilters.IsCatchable(ex)) { /* 连接已释放 */ }
+#else
+                try { SQLitePCL.raw.sqlite3_progress_handler(conn.Handle, 0, null, null); }
+                catch (Exception ex) when (ExceptionFilters.IsCatchable(ex)) { /* 连接已释放 */ }
 #endif
-#if NET48
                 _budgetArmed = 0;
                 _budgetMs = 0;
-#endif
                 _budgetInterrupted = 0;
             }
         }
@@ -266,17 +247,6 @@ namespace ExcelFormulaLabs.DataToolkit
         private static ArgumentException BudgetError(int budgetMs, Exception? cause) =>
             new($"SQL query exceeded the {budgetMs / 1000.0:0.#}-second execution budget — " +
                 "possible runaway query (cross join / recursive CTE). Narrow the query with WHERE/LIMIT.", cause);
-
-        /// <summary>停止看门狗并同步等待进行中的回调结束（防连接释放后回调触碰原生句柄）。</summary>
-        private static void StopWatchdog(System.Threading.Timer watchdog)
-        {
-            try
-            {
-                using var done = new System.Threading.ManualResetEvent(false);
-                if (watchdog.Dispose(done)) done.WaitOne();
-            }
-            catch (Exception ex) when (ExceptionFilters.IsCatchable(ex)) { /* 已停止 */ }
-        }
 
         private static void CreateTable(SqlConn conn, string name, object[,] data, bool hasHeaders = true)
         {
