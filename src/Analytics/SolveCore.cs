@@ -471,12 +471,11 @@ namespace ExcelFormulaLabs.Analytics
             var mean = new double[terms];
             var scale = new double[terms];
             var active = new List<int>();
-            // review 2026-09-14（模块审查 P1 SOL-01）：原 `excluded.Contains(t)` 把展开后的
-            // **项号**当作特征列号比较——MergeExcluded 装的是特征列号，而 BuildPowers 的
-            // 平方/交互段项号 ≥ baseCount → 约束完全落空（IncomingZ1²、FixedTime²、
-            // Incoming·FixedTime 等泄漏进 g，物理结构破坏且 QUALITY CV 掩盖）。改为按幂向量
-            // 判定：任一分量幂 > 0 且该特征列被排除 → 整项排除。rate（线性 g）项号==列号，
-            // 行为不变。
+            // 排除须按幂向量判定而非项号：MergeExcluded 装的是特征列号，而 BuildPowers 的
+            // 平方/交互段项号 ≥ baseCount，若把展开后的**项号**当特征列号比较 → 约束完全落空
+            //（IncomingZ1²、FixedTime²、Incoming·FixedTime 等泄漏进 g，物理结构破坏且 QUALITY
+            // CV 掩盖）。判定式：任一分量幂 > 0 且该特征列被排除 → 整项排除。rate（线性 g）
+            // 项号==列号，行为不变。
             var excludedSet = new HashSet<int>(excluded);
             for (int t = 0; t < terms; t++)
             {
@@ -493,11 +492,10 @@ namespace ExcelFormulaLabs.Analytics
                     double a = Math.Abs(col[i]);
                     if (a > maxAbs) maxAbs = a;
                 }
-                // 常规路径保持原始矩（既有数值行为不变）；仅当原始偏差平方溢出/为 NaN 时，
-                // 回退到按列 max 归一化的矩估计——旧实现此时把有效列静默当常量剔除（审查 F1）。
-                // review 2026-09-15（模块审查 P2 SOL-02）：镜像缺口——小量纲（~1e-170）下原始
-                // 偏差平方下溢为精确 0，有效列同样被静默当常量剔除。ss==0 且列非常量
-                //（maxAbs>0）时走同一归一化回退；归一化后仍为 0 才是真常量。
+                // 常规路径保持原始矩（既有数值行为不变）；原始偏差平方溢出/为 NaN，或下溢为
+                // 精确 0（小量纲 ~1e-170）时，回退到按列 max 归一化的矩估计——否则有效列会被
+                // 静默当常量剔除，溢/下溢两条路径都须回退。ss==0 且列非常量（maxAbs>0）时
+                // 走同一归一化回退；归一化后仍为 0 才是真常量。
                 double sum = 0;
                 for (int i = 0; i < n; i++) sum += col[i];
                 double mu = sum / n;
@@ -731,9 +729,9 @@ namespace ExcelFormulaLabs.Analytics
             if (ExpandedTermCount(k, ModelPoly) > PolyTermLimit) return true;
             int terms = ExpandedTermCount(k, ModelPoly);
             int minTrain = n >= 20 ? n - (n + 4) / 5 : n - 1;
-            // review 2026-09-15（模块审查 P2 SOL-03）：原阈值 minTrain < terms + 2 差一——
-            // poly 走 Ridge（增广 QR），最小训练折 n = terms + 1 满足 FitModel 下限且增广后
-            // 行数 > 列数，可正常拟合；旧判据把该边界误判为跳过。
+            // 阈值 minTrain < terms + 1：poly 走 Ridge（增广 QR），最小训练折 n = terms + 1 满足
+            // FitModel 下限且增广后行数 > 列数，可正常拟合；minTrain < terms + 2 会差一地把该
+            // 边界误判为跳过。
             return minTrain < terms + 1;
         }
 
@@ -773,7 +771,7 @@ namespace ExcelFormulaLabs.Analytics
                 try { rateCv = CrossValidate(X, y, ModelRate, seed, rateIncoming, rateTime, rateTimeColumns); }
                 catch (ArgumentException ex) { rateSkipped = true; firstError ??= ex; }
             }
-            // 审查 2.3：linear 的秩亏（精确共线设计）与 poly/rate 同等按"跳过"处理；
+            // linear 的秩亏（精确共线设计）与 poly/rate 同等按"跳过"处理；
             // 全部候选不可用才抛首个错误（保留 n<5/非有限/常量响应等原始语义）。
             if (linearSkipped && polySkipped && rateSkipped)
                 throw firstError ?? new ArgumentException("No model candidate could be cross-validated.");
@@ -908,7 +906,7 @@ namespace ExcelFormulaLabs.Analytics
             int total = n * members.Length;
             if (total < 5)
                 throw new ArgumentException($"Cross-validation needs at least 5 history rows (got {total}).");
-            // 审查 2.1：时间正性在共享 CV 入口统一校验（与 StackSharedRateTargets 同语义），
+            // 时间正性在共享 CV 入口统一校验（与 StackSharedRateTargets 同语义），
             // 防止 QUALITY 的池化 CV 静默接受 t≤0 而 INVERSE 对同表报错的行为分裂。
             for (int s = 0; s < total; s++)
             {
@@ -2073,7 +2071,7 @@ namespace ExcelFormulaLabs.Analytics
                         try { rate = CrossValidate(X, yj, ModelRate, seed, rateIncoming, rateTime, ratePlan?.TimeFeaturePositions); }
                         catch (ArgumentException ex) { rateSkipped = true; firstError ??= ex; }
                     }
-                    // 审查 2.3：linear 秩亏与 poly/rate 同等跳过；全部候选不可用才抛首个错误。
+                    // linear 秩亏与 poly/rate 同等跳过；全部候选不可用才抛首个错误。
                     if (linSkipped && polySkipped && rateSkipped)
                         throw firstError ?? new ArgumentException("No model candidate could be cross-validated.");
                     string best = linSkipped ? (polySkipped ? ModelRate : ModelPoly) : ModelLinear;

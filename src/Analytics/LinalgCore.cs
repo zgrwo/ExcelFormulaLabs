@@ -25,9 +25,8 @@ namespace ExcelFormulaLabs.Analytics
             private static readonly LinkedList<string> LruList = new(); // front = LRU, back = MRU
             private static readonly object Lock = new();
             internal const int MaxEntries = 32;
-            // review 2026-08-31（深度审查 P2-34）：原按条目数（32）限流——单条 2000×2000 SVD
-            // ≈ 64MB，32 条 ≈ 2GB。改为按累计元素数限流（2000 万元素 ≈ 160MB），
-            // 大矩阵条目数更少但总内存有界。
+            // 按累计元素数限流（2000 万元素 ≈ 160MB）：单条 2000×2000 SVD ≈ 64MB，
+            // 按条目数（32）限流可达 ≈2GB；元素预算使大矩阵条目数更少但总内存有界。
             internal const long MaxTotalElems = 20_000_000;
             /// <summary>Effective element budget; tests may lower it to exercise LRU eviction
             /// without allocating 20M-element matrices. Defaults to <see cref="MaxTotalElems"/>.</summary>
@@ -50,9 +49,9 @@ namespace ExcelFormulaLabs.Analytics
                 // Slow path: compute outside lock so concurrent callers
                 // for different keys are not serialised by decomposition cost
                 var result = factory();
-                // review 2026-09-05（R10/CS8604）：泛型 T 无约束，编译器认为 factory() 可能为
-                // null；但所有 decomp 工厂（Svd/Qr/Lu 及其包装）均返回非 null 数组（见各方法
-                // 签名与调用点），此处不可能为 null —— 显式 `!` 标注该契约。
+                // 泛型 T 无约束，编译器认为 factory() 可能为 null；但所有 decomp 工厂
+                // （Svd/Qr/Lu 及其包装）均返回非 null 数组（见各方法签名与调用点），
+                // 此处不可能为 null —— 显式 `!` 标注该契约。
                 long elems = ElementCount(result!);
 
                 lock (Lock)
@@ -65,9 +64,9 @@ namespace ExcelFormulaLabs.Analytics
                         return (T)entry.Value;
                     }
 
-                    // F-16 (review 2026-09-06)：单条目自身超 MaxTotalElems 时，下面的 while 会
-                    // 清空整个缓存后仍插入（与"总内存有界"口径不符）→ 直接放弃缓存该条目，
-                    // 结果照常返回（下次访问重算）。当前最大合法条目 2000 万元素 ≈160MB。
+                    // 单条目自身超 MaxTotalElems 时直接放弃缓存该条目：下面的 while 会
+                    // 清空整个缓存后仍插入（与"总内存有界"口径不符）。结果照常返回
+                    // （下次访问重算）。当前最大合法条目 2000 万元素 ≈160MB。
                     if (elems > TotalElementBudget)
                     {
                         return result;
@@ -91,9 +90,9 @@ namespace ExcelFormulaLabs.Analytics
                 }
             }
 
-            // review 2026-09-14（模块审查 P1 LIN-01）：原 `_ => 1` 把 SVD/QR/LU 的元组结果
-            // 计为 1 元素 → 20M 元素预算失效（600×600 SVD 真实 ≈72 万元素，最坏 ~2GB 缓存
-            // → 32 位 Excel OOM）。为三个分解元组补显式 case，逐分量求和。
+            // 三个分解元组须逐分量求和的显式 case：`_ => 1` 会把 SVD/QR/LU 的元组结果
+            // 计为 1 元素 → 20M 元素预算失效（600×600 SVD 真实 ≈72 万元素，最坏 ~2GB
+            // 缓存 → 32 位 Excel OOM）。
             internal static long ElementCount(object value) => value switch
             {
                 double[,] m2 => (long)m2.GetLength(0) * m2.GetLength(1),
@@ -163,8 +162,8 @@ namespace ExcelFormulaLabs.Analytics
         internal static (double[,] U, double[] S, double[,] Vt) Svd(double[,] m)
         {
             NumericGuard.AgainstNonFinite(m);
-            // review 2026-09-14（P3 REG 系列）：0×0/空维矩阵原落 MathNet 内部
-            // IndexOutOfRangeException（裸 CLR 异常）。显式 ArgumentException → #VALUE!。
+            // 0×0/空维矩阵须显式 ArgumentException → #VALUE!：否则落 MathNet 内部
+            // IndexOutOfRangeException（裸 CLR 异常）。
             if (m.GetLength(0) == 0 || m.GetLength(1) == 0)
                 throw new ArgumentException("SVD requires a non-empty matrix.");
             var A = Matrix<double>.Build.DenseOfArray(m);
@@ -223,14 +222,14 @@ namespace ExcelFormulaLabs.Analytics
         {
             NumericGuard.AgainstNonFinite(m);
             var r = Matrix<double>.Build.DenseOfArray(m).Determinant();
-            // F-09 (review 2026-09-06)：溢出真值不可表示 → NaN 封顶（模块约定，对齐 COND/Sum）。
+            // 溢出真值不可表示 → NaN 封顶（模块约定，对齐 COND/Sum）。
             return double.IsInfinity(r) ? double.NaN : r;
         }
 
         internal static double[] Solve(double[,] A, double[] b)
         {
             NumericGuard.AgainstNonFinite(A);
-            // review 2026-09-14（P3 REG 系列）：空矩阵/非方阵显式拒绝（原 MathNet 裸异常）。
+            // 空矩阵/非方阵显式拒绝（MathNet 对空矩阵直接抛裸 CLR 异常）。
             int an = A.GetLength(0), am = A.GetLength(1);
             if (an == 0 || am == 0)
                 throw new ArgumentException("Solve requires a non-empty coefficient matrix.");
@@ -242,13 +241,13 @@ namespace ExcelFormulaLabs.Analytics
             if (b.Any(v => double.IsNaN(v) || double.IsInfinity(v)))
                 throw new ArgumentException(ErrorMsg.Get("LINALG_RhsNotFinite"));
             var matA = Matrix<double>.Build.DenseOfArray(A);
-            // review 2026-09-05（R21）：原仅输出侧拦 NaN/Inf——近奇异系统（cond→1e16）经
-            // MathNet LU 静默返回错得离谱但全部有限的解（历史 P0-1 同族：条件数主导精度）。
+            // 仅输出侧拦 NaN/Inf 不够：近奇异系统（cond→1e16）经 MathNet LU 会静默返回
+            // 错得离谱但全部有限的解（条件数主导精度）。
             // 求解前加条件数守卫：cond 非有限（精确奇异）或 > 1e14 → 显式拒绝。1e14 与
             // double 16 位有效数字对应，超过后解的有效位数不足 2 位，必然不可靠。
             // SVD 仅在此入口执行一次（n 通常小，成本可接受）；消息含实测 cond 值便于诊断。
             // 注意：消息含 "singular"——精确奇异用例的既有断言（WithMessage("*singular*")）
-            // 现由此守卫先行触发，保持契约不破。
+            // 由此守卫先行触发，保持契约不破。
             var svd = matA.Svd(computeVectors: false);
             double cond = svd.ConditionNumber;
             if (double.IsNaN(cond) || double.IsInfinity(cond) || cond > 1e14)
@@ -258,9 +257,9 @@ namespace ExcelFormulaLabs.Analytics
                     "guard threshold 1e14). Use LINALG.PINV for singular systems.");
             var x = matA.Solve(Vector<double>.Build.Dense(b));
             var arr = x.ToArray();
-            // P2 (pre-release review): MathNet Solve silently returns NaN/±Inf for singular
-            // systems; the api-reference contract says singular → #VALUE! (guard, not
-            // silent propagation — 防错原则1)。R21 守卫后保留为纵深防御（良态系统不应到达）。
+            // MathNet Solve silently returns NaN/±Inf for singular systems; the api-reference
+            // contract says singular → #VALUE! (guard, not silent propagation — 防错原则1)。
+            // 条件数守卫之后仍保留为纵深防御（良态系统不应到达）。
             for (int i = 0; i < arr.Length; i++)
                 if (double.IsNaN(arr[i]) || double.IsInfinity(arr[i]))
                     throw new ArgumentException(ErrorMsg.Get("LINALG_SingularMatrix"));
@@ -269,8 +268,8 @@ namespace ExcelFormulaLabs.Analytics
 
         internal static double[,] Cholesky(double[,] m)
         {
-            // review 2026-09-05（N04）：与 Eigenvalues/Eigen 同族对齐——MathNet Cholesky 只读
-            // 三角，非对称输入（如 {1,0.5;0,1}）原先被静默按 {1,0;0.5,1} 分解（错误结果）。
+            // 与 Eigenvalues/Eigen 同族对齐：MathNet Cholesky 只读三角，非对称输入
+            // （如 {1,0.5;0,1}）会被静默按 {1,0;0.5,1} 分解（错误结果）。
             // 复用 EnsureSymmetric（含方阵检查、非有限守卫、相对对称判据），与 Eigen 同一
             // 拒绝路径。
             EnsureSymmetric(m, "Cholesky decomposition");
@@ -318,12 +317,12 @@ namespace ExcelFormulaLabs.Analytics
             {
                 for (int j = i + 1; j < n; j++)
                 {
-                    // review 2026-08-31（深度审查 P1-5）：原绝对阈值 1e-8 在 1e9 量级矩阵下
-                    // ULP≈1.2e-7 > 1e-8，理论对称矩阵因浮点舍入被误判为非对称。改为相对判据
-                    // （阈值随元素量级缩放，1e9 量级 → ≈1e1，远大于 ULP；小矩阵保持原 1e-8 行为）。
-                    // review 2026-09-05（R05）：scale 原带 `Math.Max(1.0, …)` 下限——小量纲矩阵
-                    // （如 [[0,0],[1e-9,0]]，相对 100% 非对称）退化为绝对阈值 diff<1e-8 → 误判
-                    // 对称 → Evd 静默按错误矩阵分解。改纯相对判据 scale = max(|aij|,|aji|)；
+                    // 相对判据：绝对阈值 1e-8 在 1e9 量级矩阵下 ULP≈1.2e-7 > 1e-8，
+                    // 理论对称矩阵因浮点舍入被误判为非对称。阈值须随元素量级缩放
+                    // （1e9 量级 → ≈1e1，远大于 ULP；小矩阵保持 1e-8 等效行为）。
+                    // scale 不得带 `Math.Max(1.0, …)` 下限——小量纲矩阵（如 [[0,0],[1e-9,0]]，
+                    // 相对 100% 非对称）会退化为绝对阈值 diff<1e-8 → 误判对称 → Evd 静默
+                    // 按错误矩阵分解。纯相对判据 scale = max(|aij|,|aji|)；
                     // 全零对称对 diff=0、scale=0 → `0 > 0` 不触发（判据无除法，无除零风险）。
                     double diff = Math.Abs(m[i, j] - m[j, i]);
                     double scale = Math.Max(Math.Abs(m[i, j]), Math.Abs(m[j, i]));
@@ -338,8 +337,8 @@ namespace ExcelFormulaLabs.Analytics
         internal static double ConditionNumber(double[,] m)
         {
             NumericGuard.AgainstNonFinite(m);
-            // review 2026-09-05（N05）：奇异矩阵 cond=+∞ 原样返回，违反模块 Inf→NaN 输出
-            // 封顶约定（对齐 Sum/Range/CapNaN 的写法）。封顶为 NaN，语义 = "条件数不可表示"。
+            // 奇异矩阵 cond=+∞ 须按模块 Inf→NaN 输出封顶约定（对齐 Sum/Range/CapNaN
+            // 的写法）封顶为 NaN，语义 = "条件数不可表示"。
             var cond = Matrix<double>.Build.DenseOfArray(m).ConditionNumber();
             return double.IsInfinity(cond) ? double.NaN : cond;
         }
@@ -361,9 +360,9 @@ namespace ExcelFormulaLabs.Analytics
         internal static double NormFrobenius(double[,] m)
         {
             NumericGuard.AgainstNonFinite(m);
-            // review 2026-08-31（深度审查 P2-35）：MathNet FrobeniusNorm 朴素平方和——
-            // [[1e200,1e200]] → 1e400 溢出 Inf（真值 1.41e200 可表示，实测确认）。
-            // 尺度化：先取最大 |x| 归一再平方求和，避免中间溢出。
+            // MathNet FrobeniusNorm 朴素平方和——[[1e200,1e200]] → 1e400 溢出 Inf
+            // （真值 1.41e200 可表示，实测确认）。尺度化：先取最大 |x| 归一再平方
+            // 求和，避免中间溢出。
             double max = 0.0;
             for (int r = 0; r < m.GetLength(0); r++)
                 for (int c = 0; c < m.GetLength(1); c++)
@@ -376,16 +375,16 @@ namespace ExcelFormulaLabs.Analytics
                     double t = m[r, c] / max;
                     s += t * t;
                 }
-            // review 2026-09-14（P3 REG 系列）：真值超出 double 表示（如 [[1e308,1e308]]）时
-            // max·√s 溢出 → 模块约定 Inf 封顶为 NaN（原返回 +Inf）。
+            // 真值超出 double 表示（如 [[1e308,1e308]]）时 max·√s 溢出 →
+            // 模块约定 Inf 封顶为 NaN（否则返回 +Inf）。
             double norm = max * Math.Sqrt(s);
             return double.IsInfinity(norm) ? double.NaN : norm;
         }
 
         internal static double[,] Identity(int n)
         {
-            // review 2026-08-29：上限 10000 → DenseIdentity(10000).ToArray() = 800MB，
-            // 32 位 Excel 单公式 OOM 风险。收紧至 2000（32MB）。
+            // 上限 2000：DenseIdentity(10000).ToArray() = 800MB，32 位 Excel 单公式
+            // OOM 风险（2000 → 32MB）。
             if (n < 0 || n > 2_000)
                 throw new ArgumentException(
                     $"Identity matrix size must be between 0 and 2000 (got {n}).");
@@ -406,7 +405,7 @@ namespace ExcelFormulaLabs.Analytics
             NumericGuard.AgainstNonFinite(A);
             NumericGuard.AgainstNonFinite(B);
             var r = (Matrix<double>.Build.DenseOfArray(A) * Matrix<double>.Build.DenseOfArray(B)).ToArray();
-            // F-09 (review 2026-09-06)：逐元素 Inf → NaN 封顶（1e300×1e300 曾直漏 +Inf 进单元格）。
+            // 逐元素 Inf → NaN 封顶（1e300×1e300 会直漏 +Inf 进单元格）。
             for (int i = 0; i < r.GetLength(0); i++)
                 for (int j = 0; j < r.GetLength(1); j++)
                     if (double.IsInfinity(r[i, j])) r[i, j] = double.NaN;
@@ -423,7 +422,7 @@ namespace ExcelFormulaLabs.Analytics
         {
             NumericGuard.AgainstNonFinite(m);
             var r = Matrix<double>.Build.DenseOfArray(m).Trace();
-            // F-09 (review 2026-09-06)：对角和溢出 → NaN 封顶（模块约定）。
+            // 对角和溢出 → NaN 封顶（模块约定）。
             return double.IsInfinity(r) ? double.NaN : r;
         }
 
@@ -443,7 +442,7 @@ namespace ExcelFormulaLabs.Analytics
         /// 128-bit content hash of a 2D double array (two independent FNV-1a streams
         /// + dimension suffix), shared by the decomposition cache and the async RTD
         /// topic keys. A single 64-bit hash would make an ExcelAsyncUtil.Run key
-        /// collision silently return another matrix's cached result (R24).
+        /// collision silently return another matrix's cached result.
         /// </summary>
         internal static string MatrixHash(double[,] m) => DecompCache.MatrixHash(m);
 

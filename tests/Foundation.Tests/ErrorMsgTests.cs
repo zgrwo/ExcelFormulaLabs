@@ -4,7 +4,6 @@ using Xunit;
 
 namespace ExcelFormulaLabs.Foundation.Tests
 {
-    /// <summary>review-2026-08-29 P2-5：ErrorMsg 此前 0% 行覆盖、无专用测试。</summary>
     public class ErrorMsgTests
     {
         [Fact] public void Get_existing_key_returns_message()

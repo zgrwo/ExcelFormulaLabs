@@ -246,8 +246,8 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact]
         public void FitAuto_PolyNotSkipped_WhenMinTrainEqualsTermsPlusOne()
         {
-            // SOL-03 回归：poly 走 Ridge（增广 QR），最小训练折 n = terms+1（k=2 → 5 项 → 6 行）
-            // 恰好满足 FitModel 的 n ≥ terms+1；旧判据 minTrain < terms+2 差一把该边界误判为跳过。
+            // poly 走 Ridge（增广 QR），最小训练折 n = terms+1（k=2 → 5 项 → 6 行）
+            // 恰好满足 FitModel 的 n ≥ terms+1；判据若为 minTrain < terms+2 会把该边界误判为跳过。
             var X = new[]
             {
                 new[] { 0.0, 0.0 }, new[] { 1.0, 2.0 }, new[] { 2.0, 1.0 },
@@ -596,10 +596,9 @@ namespace ExcelFormulaLabs.Analytics.Tests
         public void Inverse_FixedBlank_UsesHistoryMedian()
         {
             // y = 1 + 2a + 3u + 4f; f history 1..10 → median 5.5.
-            // 注意（review-2026-09-14 REG-01）：原夹具 u=((3a)%10)+2 与 f=((7a)%10)+1 使
-            // 剔除第 10 行后的 LOO 训练折精确秩亏（rank 3/4）——旧 diagTol 漏检时 CV 静默
-            // 用奇异折求解；P0 修复后正确拒绝该折 → linear 候选被跳过。改用与 a 无精确
-            // 线性关系的 u=2+(i%7)，保持夹具意图（f 中位数仍 5.5、u=5 可达）。
+            // 夹具 u=2+(i%7)（与 a 无精确线性关系）：u=((3a)%10)+2 与 f=((7a)%10)+1 会使
+            // 剔除第 10 行后的 LOO 训练折精确秩亏（rank 3/4），被秩守卫拒绝 →
+            // linear 候选跳过，夹具失效。保持夹具意图（f 中位数仍 5.5、u=5 可达）。
             object[,] Build(object fixedCell)
             {
                 var t = new object[12, 4];
@@ -641,8 +640,8 @@ namespace ExcelFormulaLabs.Analytics.Tests
         {
             // 列序 IncomingA | FixedF | VariableU1 | OutputY1 → Features = [0,2,1]：
             // 可调列数据索引 2 对应特征位置 1（固定列插在可调列之前时二者不相等）。
-            // 注意（review-2026-09-14 REG-01）：u 改 2+(i%7)（原 UOf 使 LOO 折精确秩亏，
-            // P0 守卫修复后候选被正确拒绝）；f 中位数仍 5.5、u=4 仍可达。
+            // 夹具 u=2+(i%7)（避免 LOO 折精确秩亏被秩守卫拒绝）；
+            // f 中位数仍 5.5、u=4 仍可达。
             var t = new object[12, 4];
             t[0, 0] = "IncomingA"; t[0, 1] = "FixedF"; t[0, 2] = "VariableU1"; t[0, 3] = "OutputY1";
             for (int i = 0; i < 10; i++)
@@ -748,12 +747,10 @@ namespace ExcelFormulaLabs.Analytics.Tests
             ((string)t[1, 2]).Should().Contain("OutputY1 = ");
         }
 
-        // ──────────────────────────── 审查修复回归（F1/F2/F5/F11）────────────────────────────
-
         [Fact]
         public void FitModel_HugeScaleFeature_IsNotSilentlyDropped()
         {
-            // F1 回归：x~1e200 时原始偏差平方溢出，旧实现把有效列静默当常量剔除（逐行预测全错）。
+            // x~1e200 时原始偏差平方溢出会把有效列静默当常量剔除（逐行预测全错）。
             var v = new[] { 3.0, 6, 2, 7, 1, 5, 8, 4 };
             var X = Enumerable.Range(0, 8).Select(i => new[] { 1e200 * v[i], (double)(i + 1) }).ToArray();
             var y = Enumerable.Range(0, 8).Select(i => 1.0 + 1e-200 * X[i][0]).ToArray();
@@ -767,7 +764,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact]
         public void FitModel_Poly_LargeButRepresentableFeature_Works()
         {
-            // F1 回归：x~1e100 → x²=1e200 可表示，但旧实现偏差平方溢出导致平方项被静默剔除。
+            // x~1e100 → x²=1e200 可表示，但偏差平方溢出会导致平方项被静默剔除。
             var X = Enumerable.Range(1, 8).Select(i => new[] { i * 1e100 }).ToArray();
             var y = X.Select(r => 1.0 + r[0] / 1e100 + 0.5 * (r[0] / 1e100) * (r[0] / 1e100)).ToArray();
             var m = SolveCore.FitModel(X, y, "poly");
@@ -779,7 +776,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact]
         public void FitModel_Poly_NonRepresentableTerm_throws()
         {
-            // F1：项值超出 double（x² 溢出）必须显式报错，禁止静默丢列。
+            // 项值超出 double（x² 溢出）必须显式报错，禁止静默丢列。
             var X = Enumerable.Range(1, 8).Select(i => new[] { i * 1e160 }).ToArray();
             var y = X.Select(r => r[0] / 1e160).ToArray();
             var act = () => SolveCore.FitModel(X, y, "poly");
@@ -789,8 +786,8 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact]
         public void FitModel_TinyScaleFeature_IsNotSilentlyDropped()
         {
-            // SOL-02 回归（F1 镜像缺口）：x~1e-170 时原始偏差平方下溢为精确 0，旧实现把
-            // 有效列静默当常量剔除 → 退化为仅截距模型（逐行预测全错）。
+            // x~1e-170 时原始偏差平方下溢为精确 0，会把有效列静默当常量剔除 →
+            // 退化为仅截距模型（逐行预测全错）。
             var v = new[] { 3.0, 6, 2, 7, 1, 5, 8, 4 };
             var X = Enumerable.Range(0, 8).Select(i => new[] { 1e-170 * v[i] }).ToArray();
             var y = Enumerable.Range(0, 8).Select(i => 1.0 + 1e170 * X[i][0]).ToArray();
@@ -804,7 +801,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact]
         public void Inverse_AutoRate_InvalidVariableTimeBound_FallsBackToNonRate()
         {
-            // F2 回归（ADR-0008）：auto 下时间下界 ≤0 → rate 候选应跳过并保持 linear/poly 可用。
+            // auto 下时间下界 ≤0 → rate 候选应跳过并保持 linear/poly 可用（ADR-0008）。
             object[,] bounds = { { "VariableTime", 0.0, 120.0 } };
             var r = (object[,])SolveUdf.UDF_SOLVE_INVERSE(VariableTimeTable(), null!, bounds, "auto");
             r.GetLength(1).Should().Be(6); // 请求行 | U1 | Time | 预测 | σ | 状态（无速率列）
@@ -815,7 +812,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact]
         public void Inverse_Rate_NonPositiveVariableTimeBound_throws()
         {
-            // F2 回归：显式 rate 下时间下界 ≤0 仍按契约报错（auto 才回退）。
+            // 显式 rate 下时间下界 ≤0 仍按契约报错（auto 才回退）。
             object[,] bounds = { { "VariableTime", 0.0, 120.0 } };
             var act = () => SolveCore.Inverse(VariableTimeTable(), null, bounds, "rate", 42L, 10);
             act.Should().Throw<ArgumentException>().WithMessage("*positive time bound*");
@@ -824,7 +821,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact]
         public void Inverse_AutoRate_NonPositiveRequestTime_FallsBackToNonRate()
         {
-            // F2 回归：FixedTime 请求行 t=0 → auto 退回 linear/poly（显式 rate 仍报错，见上）。
+            // FixedTime 请求行 t=0 → auto 退回 linear/poly（显式 rate 仍报错，见上）。
             var r = (object[,])SolveUdf.UDF_SOLVE_INVERSE(RateTable(requestTime: 0), null!, null!, "auto");
             for (int c = 0; c < r.GetLength(1); c++)
                 (r[0, c]?.ToString() ?? string.Empty).Should().NotContain("速率");
@@ -833,7 +830,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact]
         public void PredictTable_Rate_NonPositiveTime_throws()
         {
-            // F2：PREDICT 显式 rate 时逐行校验 t>0（旧实现静默按 t≤0 外推）。
+            // PREDICT 显式 rate 时须逐行校验 t>0：否则静默按 t≤0 外推。
             object[,] values = { { 10.0, 4.0, 0.0 } };
             var act = () => SolveCore.PredictTable(RateTable(), values, "rate");
             act.Should().Throw<ArgumentException>().WithMessage("*positive finite time*");
@@ -1020,9 +1017,8 @@ namespace ExcelFormulaLabs.Analytics.Tests
             SolveCore.PredictRate(m, new[] { 10.0, 4.0, 90.0 }).Should().BeApproximately(0.046, 1e-5);
         }
 
-        // review 2026-09-14（模块审查 P1 SOL-01）：排除必须按幂向量判定——修复前
-        // `excluded.Contains(t)` 把展开项号当特征列号，inc²/t²/inc·t 等泄漏（系数非 0），
-        // t 外推 9000 时预测 -2037.34（正确 -404）。
+        // 排除必须按幂向量判定——若用 `excluded.Contains(t)` 把展开项号当特征列号，
+        // inc²/t²/inc·t 等会泄漏（系数非 0），t 外推 9000 时预测 -2037.34（正确 -404）。
         [Fact]
         public void FitModel_RatePoly_ExcludedColumnsNever_leak_in_any_power_or_interaction()
         {
@@ -1131,8 +1127,6 @@ namespace ExcelFormulaLabs.Analytics.Tests
             ((string)t[4, 2]).Should().Be("SharedOutputB速率 = 0.01 + 0.005*VariableU1");
         }
 
-        // ──────────────────────── Max-Level 审查修复回归（2.1/2.3/2.4/2.5）────────────────────────
-
         // 共享池化 CV 数组夹具：单时间列，成员 A/B 共享 g；noisy=true 时注入确定性扰动。
         private static (double[][] X, double[][] Y, int[][] Pairs) SharedCvArrays(bool noisy)
         {
@@ -1174,7 +1168,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact]
         public void CrossValidateShared_NegativeHistoryTime_throws()
         {
-            // 审查 2.1：池化 CV 与 FitSharedRate 必须同语义拒绝 t≤0（防 QUALITY/INVERSE 行为分裂）。
+            // 池化 CV 与 FitSharedRate 必须同语义拒绝 t≤0（防 QUALITY/INVERSE 行为分裂）。
             var (X, _, pairs) = SharedCvArrays(noisy: false);
             for (int i = 0; i < X.Length; i++) X[i][3] = -X[i][3];
             var Y = new double[X.Length][];
@@ -1192,7 +1186,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact]
         public void CrossValidateShared_RaggedOrNonFiniteMatrix_throws()
         {
-            // 审查 2.4：共享入口与 CrossValidate 同款矩阵防御。
+            // 共享入口与 CrossValidate 同款矩阵防御。
             var ragged = new[] { new[] { 1.0, 2.0, 3.0, 4.0 }, new[] { 1.0, 2.0 } };
             var Y = new[] { new[] { 1.0, 2.0 }, new[] { 1.0, 2.0 } };
             int[][] pairs = { new[] { 0, 1 } };
@@ -1210,7 +1204,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact]
         public void FitAuto_RankDeficientLinear_SkipsToRate()
         {
-            // 审查 2.3：inc2 = 2×inc1（精确共线）→ linear 秩亏跳过；poly 展开超样本跳过；rate 可用。
+            // inc2 = 2×inc1（精确共线）→ linear 秩亏跳过；poly 展开超样本跳过；rate 可用。
             var X = new double[12][];
             var y = new double[12];
             for (int i = 0; i < 12; i++)

@@ -131,8 +131,8 @@ namespace ExcelFormulaLabs.Analytics.Tests
             SolveUdf.UDF_SOLVE_EQUATION(History(), "poly2").Should().Be(ExcelError.Value);
         }
 
-        // review 2026-09-14（P1 UDF-01）：seed/max_starts 省略 → 42/10。
-        // 修复前 ExcelEmpty/DBNull 分别被 ToLong/ToInt32 转成 0 → max_starts=0 越界 #VALUE!。
+        // seed/max_starts 省略 → 42/10。
+        // 直接把 ExcelEmpty/DBNull 交给 ToLong/ToInt32 会转成 0 → max_starts=0 越界 #VALUE!。
         [Theory]
         [MemberData(nameof(OmittedSentinelData.All), MemberType = typeof(OmittedSentinelData))]
         public void Inverse_omitted_seed_and_max_starts_use_defaults(object? sentinel)

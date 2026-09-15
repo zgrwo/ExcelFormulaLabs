@@ -13,10 +13,10 @@ namespace ExcelFormulaLabs.Analytics
     /// </summary>
     internal static class RegressionCore
     {
-        // R5-P3-06 (review 2026-09-06)：TSS 的 yMean 由 Sum()/n 改增量式（mean += (x-mean)/++m，
-        // 与 MathNet ArrayStatistics.Mean / StatsCore.Mean 同式）——常量 y≈1e308 时 Sum 溢出 +Inf，
-        // tss=Σ(y-ȳ)² 含 NaN 项 → 误报 "numerically unstable"；增量均值下常量 y 的 dev 精确为 0，
-        // tss=0 正确命中 constant-response 守卫（诊断准确，数值语义不变）。
+        // TSS 的 yMean 用增量式（mean += (x-mean)/++m，与 MathNet ArrayStatistics.Mean /
+        // StatsCore.Mean 同式）：常量 y≈1e308 时 Sum()/n 溢出 +Inf，tss=Σ(y-ȳ)² 含 NaN 项 →
+        // 误报 "numerically unstable"；增量均值下常量 y 的 dev 精确为 0，tss=0 正确命中
+        // constant-response 守卫（诊断准确，数值语义不变）。
         private static double IncrementalMean(IEnumerable<double> v)
         {
             double m = 0; int k = 0;
@@ -65,9 +65,9 @@ namespace ExcelFormulaLabs.Analytics
             if (df <= 0)
                 throw new ArgumentException(
                     $"Cannot compute standard errors: degrees of freedom is {df} (n={n}, p={p}). Need n > p.");
-            // review 2026-08-31（深度审查 P0-1）：正规方程 X'X 把设计矩阵条件数**平方**，
-            // cond(X) > 1e8 时在 double 精度下静默返回错误系数（Hilbert 12×8 实测 ‖β−βtrue‖≈10.9
-            // 而 r²=1.000000000000，报表看似完美）。改为 Thin QR 求解——QR 是后向稳定分解，
+            // 用 Thin QR 求解而非正规方程 X'X：正规方程把设计矩阵条件数**平方**，
+            // cond(X) > 1e8 时在 double 精度下静默返回错误系数（Hilbert 12×8 实测
+            // ‖β−βtrue‖≈10.9 而 r²=1.000000000000，报表看似完美）。QR 是后向稳定分解，
             // 精度只随 cond(X)（非 cond(X)²）退化；(X'X)⁻¹ 对角线由 R⁻¹ 求（R 良态，避免二次平方）。
             QR<double> qr;
             Vector<double> beta;
@@ -82,8 +82,8 @@ namespace ExcelFormulaLabs.Analytics
             var fitted = matX * beta;
             var residuals = vecY - fitted;
             double sse = residuals.DotProduct(residuals);
-            // review 2026-08-29：TSS 改单遍中心化形式 Σ(y−ȳ)²——原两遍公式 y'y−(Σy)²/n 在
-            // 大均值 y（量级/散布比 ≥1e12）时灾难性抵消，R² 静默错误（DoeAnalysisCore 已用稳定形式）。
+            // TSS 用单遍中心化形式 Σ(y−ȳ)²：两遍公式 y'y−(Σy)²/n 在大均值 y（量级/散布比
+            // ≥1e12）时灾难性抵消，R² 静默错误（DoeAnalysisCore 同用稳定形式）。
             double yMean = IncrementalMean(vecY);
             double tss = 0;
             for (int i = 0; i < n; i++) { double d = vecY[i] - yMean; tss += d * d; }
@@ -91,7 +91,7 @@ namespace ExcelFormulaLabs.Analytics
                 throw new ArgumentException(
                     $"Cannot fit {op}: total sum of squares is numerically unstable " +
                     "(response values too large for double precision).");
-            if (tss == 0)  // review-2026-08-31（max-level 全量审查）：原 Math.Abs(tss) < 1e-15 绝对阈值把 1e-9 量纲 y 的 tss=2e-18 误判为常量响应抛错——P1-5 修复遗漏。TSS 是平方和（非负），真常量时精确为 0
+            if (tss == 0)  // 判据须精确零：Math.Abs(tss) < 1e-15 绝对阈值会把 1e-9 量纲 y 的 tss=2e-18 误判为常量响应抛错。TSS 是平方和（非负），真常量时精确为 0
                 throw new ArgumentException(
                     $"Cannot fit {op}: total sum of squares is zero (constant response variable y).");
             double r2 = 1.0 - sse / tss;
@@ -107,20 +107,20 @@ namespace ExcelFormulaLabs.Analytics
                 double d = Math.Abs(R[j, j]);
                 if (d > maxDiag) maxDiag = d;
             }
-            // review 2026-09-14（模块审查 P0 REG-01）：原 diagTol = maxDiag·eps 漏掉 numpy
-            // `max(n,p)` 因子——精确共线列经 QR 舍入后的 R 尾项（实测 -8.88e-16）恰好高于旧
-            // 阈值（7.02e-16，仅高 27%）→ 静默返回任意系数（r²=1、SE/t/p 有限垃圾）。补因子后
-            // 与 LinalgCore.Rank 的 max(n,p)·eps 约定一致；合法高 cond 用例（H10×8）仍放行。
+            // diagTol 须含 max(n,p) 因子（对齐 LinalgCore.Rank 的 max(n,p)·eps 约定）：
+            // 仅 maxDiag·eps 时精确共线列经 QR 舍入后的 R 尾项（实测 -8.88e-16）恰好高于
+            // 阈值（7.02e-16，仅高 27%）→ 静默返回任意系数（r²=1、SE/t/p 有限垃圾）；
+            // 合法高 cond 用例（H10×8）仍放行。
             double diagTol = Math.Max(maxDiag, 1e-300) * Math.Max(n, p) * 2.220446049250313e-16;
             for (int j = 0; j < p; j++)
                 if (Math.Abs(R[j, j]) <= diagTol)
                     throw new ArgumentException(
                         $"Cannot fit {op}: design matrix X is near-singular (highly collinear columns). " +
                         "Consider removing redundant predictors or using ridge regression (REGRESS.RIDGE).");
-            // review 2026-09-14（模块审查 P1 REG-02）：对角守卫只能捕获列精确共线；Hilbert 16×14
-            // （cond=1.9e17，rank=12<14）R 对角均高于阈值但系数最大误差 8.8 而 r²=1。
-            // 与 LINALG.SOLVE（LinalgCore.cs）的 1e14 政策一致：cond(R) = cond(X)（QR 正交变换
-            // 不改变奇异值），>1e14 时解的有效位数不足 2 位，显式拒绝而非静默返回错误系数。
+            // cond(R)=cond(X) > 1e14 必须拒绝（对齐 LINALG.SOLVE 的 1e14 政策）：对角守卫
+            // 只能捕获列精确共线；Hilbert 16×14（cond=1.9e17，rank=12<14）R 对角均高于阈值
+            // 但系数最大误差 8.8 而 r²=1。QR 正交变换不改变奇异值，cond>1e14 时解的有效
+            // 位数不足 2 位，须显式拒绝而非静默返回错误系数。
             double condEst = R.ConditionNumber();
             if (double.IsNaN(condEst) || double.IsInfinity(condEst) || condEst > 1e14)
                 throw new ArgumentException(
@@ -136,7 +136,7 @@ namespace ExcelFormulaLabs.Analytics
                 for (int k = j; k < p; k++) { double v = Rinv[j, k]; s += v * v; }
                 xtxInvDiag[j] = s;
             }
-            // P1-6: defence-in-depth — residual squares can still overflow for extreme
+            // defence-in-depth — residual squares can still overflow for extreme
             // y values even when X is stable (guard placed after the near-singular
             // check so the more specific X diagnosis wins).
             if (double.IsNaN(sse) || double.IsInfinity(sse))
@@ -172,9 +172,8 @@ namespace ExcelFormulaLabs.Analytics
         /// <summary>
         /// Weighted Least Squares regression. Minimises Σ wᵢ(yᵢ - xᵢβ)².
         /// Computes coefficients via sqrt(w)-transformed OLS (standard approach).
-        /// review 2026-09-14（模块审查 P2 REG-07）：SSE/R²/adj-R² 与 SE/t/p 统一为**加权
-        /// （sqrt(w) 变换）尺度**（与 statsmodels WLS 的 ssr/rsquared 一致）；仅
-        /// residuals/fitted_values 保留原始尺度，便于与输入 y 直接比较。
+        /// SSE/R²/adj-R² 与 SE/t/p 统一为**加权（sqrt(w) 变换）尺度**（与 statsmodels WLS 的
+        /// ssr/rsquared 一致）；仅 residuals/fitted_values 保留原始尺度，便于与输入 y 直接比较。
         /// Used by REGRESS.WLS.
         /// </summary>
         /// <param name="X">Design matrix (n observations × p predictors).</param>
@@ -199,9 +198,8 @@ namespace ExcelFormulaLabs.Analytics
             for (int i = 0; i < w.Length; i++)
                 if (w[i] < 0 || double.IsNaN(w[i]) || double.IsInfinity(w[i]))
                     throw new ArgumentException(ErrorMsg.Get("REGRESS_InvalidWeight", i, w[i]));
-            // review 2026-09-14（模块审查 P3 REG-04）：全零权重时加权响应恒为零 →
-            // FitOLSCore 会误报 "constant response y"（且消息冠 OLS）。显式给出权重诊断，
-            // 不让"无数据"伪装成"常量响应"。
+            // 全零权重时加权响应恒为零 → FitOLSCore 会误报 "constant response y"（且消息
+            // 冠 OLS）；须显式给出权重诊断，不让"无数据"伪装成"常量响应"。
             bool anyPositive = false;
             foreach (double wi in w) if (wi > 0) { anyPositive = true; break; }
             if (!anyPositive)
@@ -230,9 +228,9 @@ namespace ExcelFormulaLabs.Analytics
             }
             result["fitted_values"] = fittedOrig;
             result["residuals"] = residualsOrig;
-            // review 2026-09-14（P2 REG-07）：FitOLSCore 的 sse 已是加权尺度（Σw·resid²），
-            // 但其 TSS/R² 基于变换后序列的普通均值——WLS 的加权均值不是 sqrt(w)y 的算术均值。
-            // 此处按 statsmodels 口径重算加权 TSS/R²（sse 复用原尺度残差的加权平方和）。
+            // FitOLSCore 的 sse 已是加权尺度（Σw·resid²），但其 TSS/R² 基于变换后序列的
+            // 普通均值——WLS 的加权均值不是 sqrt(w)y 的算术均值。此处按 statsmodels 口径
+            // 重算加权 TSS/R²（sse 复用原尺度残差的加权平方和）。
             double wSum = 0, wySum = 0;
             for (int i = 0; i < n; i++) { wSum += w[i]; wySum += w[i] * y[i]; }
             double yMeanW = wySum / wSum;
@@ -276,14 +274,13 @@ namespace ExcelFormulaLabs.Analytics
             NumericGuard.AgainstNonFinite(X, y);
             if (double.IsNaN(lambda) || double.IsInfinity(lambda))
                 throw new ArgumentException(ErrorMsg.Get("REGRESS_LambdaNotFinite", lambda));
-            // P2 (pre-release review): negative lambda makes XtX+λI non-positive-definite
-            // and silently returns wrong coefficients; documented contract is lambda >= 0.
+            // negative lambda makes XtX+λI non-positive-definite and silently returns wrong
+            // coefficients; documented contract is lambda >= 0.
             if (lambda < 0)
                 throw new ArgumentException(
                     $"Cannot fit Ridge: lambda must be non-negative (got {lambda}).");
             int n = X.GetLength(0), origP = X.GetLength(1);
-            // review 2026-09-14（P3 REG 系列）：Ridge 原缺 y/X 维度与空输入校验——
-            // 失配时落 MathNet 裸异常（信息不可读）。与 FitOLS/FitWLS 同口径。
+            // Ridge 须有 y/X 维度与空输入校验（同 FitOLS/FitWLS 口径）：缺校验时失配落 MathNet 裸异常（信息不可读）。
             if (n == 0 || y.Length == 0)
                 throw new ArgumentException(
                     "Input data is empty. Regression requires at least one observation.");
@@ -295,14 +292,13 @@ namespace ExcelFormulaLabs.Analytics
             else { p = origP; Xaug = X; }
             var matX = Matrix<double>.Build.DenseOfArray(Xaug);
             var vecY = Vector<double>.Build.Dense(y);
-            // review 2026-09-04（reaudit P0 A1）：原实现构造 X'X 显式正规方程（X'X+λI 求解），
-            // 与 P0-1 同族缺陷——cond(X'X) = cond(X)²。λ 相对数据尺度较小时（λ=0 合法），
-            // 病态矩阵的系数错得离谱但全部有限，NaN/Inf 守卫形同虚设（静默错误结果）。
-            // 改为**增广 Thin QR**：把惩罚项作为额外的 √λ·I 行拼进设计矩阵后对 [X;√λI] 做
-            // Thin QR 求解——Ridge 的最小二乘问题 min‖y−Xβ‖²+λ‖β_pen‖² 等价于对增广矩阵的
-            // OLS，QR 是后向稳定分解（精度只随 cond(X_aug) 而非其平方退化，且
-            // cond(X_aug) ≤ sqrt(cond(X'X+λI))）。addIntercept 时截距列不惩罚
-            // （增广行该列为 0），λ=0 时退化为与 FitOLSCore 相同的纯 QR 路径。
+            // 用**增广 Thin QR** 而非显式正规方程（X'X+λI）：cond(X'X) = cond(X)²，λ 相对
+            // 数据尺度较小时（λ=0 合法）病态矩阵的系数错得离谱但全部有限，NaN/Inf 守卫
+            // 形同虚设（静默错误结果）。把惩罚项作为额外的 √λ·I 行拼进设计矩阵后对
+            // [X;√λI] 做 Thin QR：Ridge 的最小二乘问题 min‖y−Xβ‖²+λ‖β_pen‖² 等价于对
+            // 增广矩阵的 OLS，QR 是后向稳定分解（精度只随 cond(X_aug) 而非其平方退化，且
+            // cond(X_aug) ≤ sqrt(cond(X'X+λI))）。addIntercept 时截距列不惩罚（增广行该列
+            // 为 0），λ=0 时退化为与 FitOLSCore 相同的纯 QR 路径。
             int penCount = addIntercept ? p - 1 : p; // 被 L2 惩罚的列数（截距除外）
             var Xa = Matrix<double>.Build.Dense(n + penCount, p);
             var ya = Vector<double>.Build.Dense(n + penCount);
@@ -331,10 +327,9 @@ namespace ExcelFormulaLabs.Analytics
             // 双精度噪声（λ ≈ eps²·‖X‖²）时才会数值秩亏。λ 太小 → 显式报错而非静默错误系数；
             // λ 足够大（含 λ=0 且 X 满秩）→ 正常求解。
             var R = qr.R;
-            // review 2026-09-14（模块审查 P0 REG-01）：补 max(n,p) 因子（同 FitOLSCore）。
-            // review 2026-09-14（模块审查 P2 REG-03）：阈值尺度必须取原始数据块——原实现用
-            // 增广矩阵 R 对角最大值，被判罚列的 √λ 行污染（maxDiag≈√λ），λ≳6e31 时阈值
-            // √λ·eps 远超截距/数据列的 R 对角 → 大 λ 被反向误拒（"λ 太小"）。改用数据块
+            // diagTol 须含 max(n,p) 因子（同 FitOLSCore），且阈值尺度取原始数据块：用
+            // 增广矩阵 R 对角最大值会被判罚列的 √λ 行污染（maxDiag≈√λ），λ≳6e31 时阈值
+            // √λ·eps 远超截距/数据列的 R 对角 → 大 λ 被反向误拒（"λ 太小"）。取数据块
             // 元素最大绝对值 · Max(增广行数, 列数) · eps：大 λ 正常放行；λ 低于数据尺度噪声
             // 且 X 共线时仍显式拒绝。
             double dataScale = 0.0;
@@ -361,11 +356,11 @@ namespace ExcelFormulaLabs.Analytics
             var fitted = matX * beta;
             var residuals = vecY - fitted;
             double sse = residuals.DotProduct(residuals);
-            // review 2026-08-29：TSS 改单遍中心化形式（同 FitOLSCore，防灾难性抵消）
+            // TSS 用单遍中心化形式（同 FitOLSCore，防灾难性抵消）
             double yMean = IncrementalMean(vecY);
             double tss = 0;
             for (int i = 0; i < n; i++) { double d = vecY[i] - yMean; tss += d * d; }
-            // P1-6: same numerical-stability guard as FitOLSCore (Inf−Inf=NaN silent leak).
+            // same numerical-stability guard as FitOLSCore (Inf−Inf=NaN silent leak).
             if (double.IsNaN(sse) || double.IsInfinity(sse))
                 throw new ArgumentException(
                     "Cannot fit Ridge: residual sum of squares is numerically unstable " +
@@ -374,7 +369,7 @@ namespace ExcelFormulaLabs.Analytics
                 throw new ArgumentException(
                     "Cannot fit Ridge: total sum of squares is numerically unstable " +
                     "(response values too large for double precision).");
-            if (tss == 0)  // review-2026-08-31（max-level 全量审查）：原 Math.Abs(tss) < 1e-15 绝对阈值把 1e-9 量纲 y 的 tss=2e-18 误判为常量响应抛错——P1-5 修复遗漏。TSS 是平方和（非负），真常量时精确为 0
+            if (tss == 0)  // 判据须精确零：Math.Abs(tss) < 1e-15 绝对阈值会把 1e-9 量纲 y 的 tss=2e-18 误判为常量响应抛错。TSS 是平方和（非负），真常量时精确为 0
                 throw new ArgumentException(
                     "Cannot fit Ridge: total sum of squares is zero (constant response variable y).");
 
@@ -432,19 +427,18 @@ namespace ExcelFormulaLabs.Analytics
                 throw new ArgumentException(
                     $"ANOVA requires at least 2 observations per group (df_within={dfW}).");
 
-            // review 2026-08-29（发行前 max level 复审）：输入虽已拒绝 NaN/Inf，但有限极大值
-            // （如 1e200）平方后仍可溢出为 Inf。原守卫生效于 `Math.Abs(ssW)<1e-15`，而
-            // `Abs(Inf)<1e-15` 为 false → 绕过守卫 → f=Inf/Inf=NaN 静默泄漏（与 FitOLS/FitRidge 的 Inf 守卫不一致）。
+            // 有限极大值（如 1e200）平方后仍可溢出为 Inf（输入虽已拒绝 NaN/Inf 仍需守卫）：
+            // 若守卫只查 `Math.Abs(ssW)<1e-15`，`Abs(Inf)<1e-15` 为 false → 绕过守卫 →
+            // f=Inf/Inf=NaN 静默泄漏（与 FitOLS/FitRidge 的 Inf 守卫不一致）。
             if (double.IsNaN(ssB) || double.IsInfinity(ssB) || double.IsNaN(ssW) || double.IsInfinity(ssW))
                 throw new ArgumentException(
                     "ANOVA failed: sums of squares are non-finite. Input values are too large in magnitude.");
 
             // Guard against degenerate data where all observations are identical
             // (within-group variance = 0 → F = 0/0 = NaN with no diagnostic message).
-            // review 2026-08-31（深度审查 P1-5）：原 `Math.Abs(ssW) < 1e-15` 绝对阈值把
-            // 小量纲数据（ppm/ppb/nm 级）误判为"组内完全一致"并抛错（{1e-9,2e-9,3e-9} 的
-            // ssW=2e-18 < 1e-15）。方差平方和是尺度相关量，判据必须是精确零（真常量组），
-            // 非有限值已在上方显式守卫。
+            // ssW 判据必须是精确零：`Math.Abs(ssW) < 1e-15` 绝对阈值把小量纲数据（ppm/ppb/nm
+            // 级）误判为"组内完全一致"并抛错（{1e-9,2e-9,3e-9} 的 ssW=2e-18 < 1e-15）。
+            // 方差平方和是尺度相关量，真常量组精确为 0，非有限值已在上方显式守卫。
             if (ssW == 0)
                 throw new ArgumentException(
                     "ANOVA failed: within-group sum of squares is zero. " +
@@ -452,8 +446,8 @@ namespace ExcelFormulaLabs.Analytics
             double msB = ssB / dfB, msW = ssW / dfW;
             double f = msB / msW;
             double p = FDistPValue(f, dfB, dfW);
-            // F-12 (review 2026-09-06)：ssB/ssW 各自有限但之和可溢出 ±Inf → NaN 封顶
-            // （f_stat/p_value 已守卫，Total 行是最后一个漏口；模块约定不向 Excel 泄漏 ±Inf）。
+            // ssB/ssW 各自有限但之和可溢出 ±Inf → NaN 封顶（f_stat/p_value 已守卫；
+            // 模块约定不向 Excel 泄漏 ±Inf）。
             double ssTotal = ssB + ssW;
             if (double.IsInfinity(ssTotal)) ssTotal = double.NaN;
 
@@ -488,11 +482,11 @@ namespace ExcelFormulaLabs.Analytics
             int activeCols = 0;
             for (int j = 0; j < p; j++)
             {
-                // review 2026-09-14（模块审查 P2 REG-05）：原 `mean += X[i,j]` 对 1e308 级列
-                // 求和溢出 +Inf → sd=Inf → 被误判为常量列并排到最后（静默错序）。
-                // 两层修复：① 增量均值（同 IncrementalMean 公式）避免和溢出；
-                // ② 偏差平方和仍可能溢出（(2e307)²=4e614）时，按列 maxAbs 归一化后再算
-                //    sd 并乘回尺度（同 SolveCore.FitExpanded 的既有回退模式）。
+                // 增量均值 + maxAbs 归一化：`mean += X[i,j]` 对 1e308 级列求和溢出 +Inf →
+                // sd=Inf → 被误判为常量列并排到最后（静默错序）。① 增量均值（同
+                // IncrementalMean 公式）避免和溢出；② 偏差平方和仍可能溢出（(2e307)²=4e614）
+                // 时，按列 maxAbs 归一化后再算 sd 并乘回尺度（同 SolveCore.FitExpanded 的
+                // 既有回退模式）。
                 double mean = 0, sd = 0;
                 for (int i = 0; i < n; i++) mean += (X[i, j] - mean) / (i + 1);
                 double maxAbs = 0;
@@ -515,9 +509,9 @@ namespace ExcelFormulaLabs.Analytics
                 }
                 means[j] = mean;
                 sds[j] = sd;
-                // review 2026-08-31（深度审查 P1-5）：原 `sd < 1e-12` 绝对阈值在 1e-9 量级
-                // 数据（sd~1e-9）下误判常数列。标准差与数据同尺度，判据应为精确零（真常量列）；
-                // sd=NaN/Inf（防御性）同样视为常量列跳过标准化。
+                // sd 判据为精确零：`sd < 1e-12` 绝对阈值在 1e-9 量级数据（sd~1e-9）下
+                // 误判常数列。标准差与数据同尺度，真常量列精确为 0；sd=NaN/Inf（防御性）
+                // 同样视为常量列跳过标准化。
                 if (!(sd > 0) || double.IsInfinity(sd))
                 {
                     constCols[j] = true;
@@ -541,8 +535,8 @@ namespace ExcelFormulaLabs.Analytics
                 aj++;
             }
             // Fit OLS to reduced model (standardized columns already centered — no intercept needed)
-            // review 2026-09-14（P2 REG-05）：y 的 TSS 平方和对 1e308 级响应溢出会误抛
-            // "unstable"——t 统计量对 y 的正缩放不变，先按 maxAbs 缩放响应再拟合。
+            // y 的 TSS 平方和对 1e308 级响应溢出会误抛 "unstable"——t 统计量对 y 的正缩放
+            // 不变，先按 maxAbs 缩放响应再拟合。
             double yMax = 0;
             for (int i = 0; i < y.Length; i++) { double a = Math.Abs(y[i]); if (a > yMax) yMax = a; }
             double[] yFit = y;

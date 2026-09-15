@@ -140,7 +140,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void UDF_terms_unknown_returns_error()
             => DoeAnalysisUdf.UDF_DOE_ANALYZE(X, y, "bogus").Should().Be(ExcelError.Value);
 
-        // review 2026-09-14（P1 UDF-01）：terms 省略（Blank/Missing/DBNull）→ 默认 "2way"。
+        // terms 省略（Blank/Missing/DBNull）→ 默认 "2way"。
         [Theory]
         [MemberData(nameof(OmittedSentinelData.All), MemberType = typeof(OmittedSentinelData))]
         public void Udf_omitted_terms_use_2way_default(object? sentinel)
@@ -154,8 +154,8 @@ namespace ExcelFormulaLabs.Analytics.Tests
                     actual[r, c].Should().Be(expected[r, c], $"cell [{r},{c}]");
         }
 
-        // review 2026-09-14（P3 PHY 系列）：2×2 饱和设计（n=4）用默认 terms（2way）时
-        // 扩展项+截距=4 ≥ n → 自动降为 main（3 参数，df=1），不再直接 #VALUE!。
+        // 2×2 饱和设计（n=4）用默认 terms（2way）时
+        // 扩展项+截距=4 ≥ n → 自动降为 main（3 参数，df=1），而非 #VALUE!。
         [Fact]
         public void Udf_default_terms_on_saturated_2x2_auto_reduces_to_main()
         {

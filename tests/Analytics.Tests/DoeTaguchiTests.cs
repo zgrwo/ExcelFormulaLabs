@@ -168,10 +168,10 @@ namespace ExcelFormulaLabs.Analytics.Tests
             => new Action(() => Taguchi(0, 2, 0, 2))
                 .Should().Throw<ArgumentException>().WithMessage("*factor*");
 
-        // ── review 2026-09-04（reaudit B1 回归守卫）：中间因子段分辨率 ≥ IV ──
+        // ── 中间因子段分辨率 ≥ IV ──
         // GF(2) 定义字：最短零异或子集长度。≤3 长字存在 ⇒ 主效应与 2/3 阶交互别名（分辨率 III）。
-        // review 2026-09-14（P2 PHY-02）：修正判定——±1 编码下定义字为乘积 = +I（XOR==0）
-        // 或 = −I（XOR==allOnes）；原实现漏 −I（如 A = −BC 别名）使守卫偏松。
+        // ±1 编码下定义字为乘积 = +I（XOR==0）或 = −I（XOR==allOnes）：
+        // 漏掉 −I（如 A = −BC 别名）会使守卫偏松。
         private static int MinWordLength(double[,] coded)
         {
             int runs = coded.GetLength(0), cols = coded.GetLength(1);
@@ -201,7 +201,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
 
         [Fact] public void L32_16_factors_resolution_IV()
         {
-            // n2=16 → L32。此前按重排前缀取前 16 列 → 分辨率 III（含 {ABCDE,ABCD,E} 3 长字）；
+            // n2=16 → L32：按重排前缀取前 16 列 → 分辨率 III（含 {ABCDE,ABCD,E} 3 长字）；
             // 中间因子段（k+1 < m ≤ 2^{k-1}）可达 IV：取含最高主效应 E 的 16 个 XOR-sum-free 列。
             var m = Taguchi(16, 2, 0, 2);
             m.GetLength(0).Should().Be(32);
@@ -215,8 +215,8 @@ namespace ExcelFormulaLabs.Analytics.Tests
             MinWordLength(m).Should().BeGreaterThanOrEqualTo(4);
         }
 
-        // review 2026-09-14（P2 PHY-02）：L8 5/6/7 因子按数学容量只能是分辨率 III
-        // （A·B·AB = +I 三长别名）——修正 −I 判定后守卫必须如实报 3，而非漏报为 4。
+        // L8 5/6/7 因子按数学容量只能是分辨率 III（A·B·AB = +I 三长别名）——
+        // 守卫必须如实报 3，而非漏报为 4。
         [Theory]
         [InlineData(5)]
         [InlineData(6)]

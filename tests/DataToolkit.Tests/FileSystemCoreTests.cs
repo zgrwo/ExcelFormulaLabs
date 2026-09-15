@@ -29,8 +29,8 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void TempFile() => FileSystemCore.GetTempFileName().Should().NotBeEmpty();
 
         // FileExists tests
-        // P2 (review): replaced hardcoded notepad.exe (missing on some Windows images) with
-        // a self-contained temp file so the test is deterministic on any machine.
+        // hardcoded notepad.exe is missing on some Windows images — use a self-contained
+        // temp file so the test is deterministic on any machine.
         [Fact] public void FileExists_true()
         {
             var tmp = Path.Combine(Path.GetTempPath(), "efl_" + Guid.NewGuid().ToString("N") + ".txt");
@@ -44,7 +44,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         // GetFileSize tests
         [Fact] public void GetFileSize_knownFile()
         {
-            // P2 (review): self-contained temp file with known content (deterministic size).
+            // self-contained temp file with known content (deterministic size).
             var tmp = Path.Combine(Path.GetTempPath(), "efl_" + Guid.NewGuid().ToString("N") + ".bin");
             File.WriteAllBytes(tmp, new byte[1234]);
             try { FileSystemCore.GetFileSize(tmp).Should().Be(1234); }
@@ -77,9 +77,9 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void GetDrives_returnsArray() => FileSystemCore.GetDrives().Should().NotBeEmpty();
 
     
-        // P2 (pre-release review): search patterns containing .. segments can traverse
-        // outside the sandbox root on unpatched .NET Framework runtimes (FindFirstFile
-        // resolves .. before Directory.GetFiles validates); reject them explicitly.
+        // search patterns containing .. segments can traverse outside the sandbox root on
+        // unpatched .NET Framework runtimes (FindFirstFile resolves .. before
+        // Directory.GetFiles validates); reject them explicitly.
         [Fact] public void ListFiles_dotdot_pattern_throws()
         {
             var act = () => FileSystemCore.ListFiles(Path.GetTempPath(), "..\\*.txt");
@@ -94,7 +94,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
     // ListFiles test
         [Fact] public void ListFiles_in_temp_dir()
         {
-            // P2 (review): System32/notepad was machine-dependent — use a temp dir.
+            // System32/notepad is machine-dependent — use a temp dir.
             var dir = Path.Combine(Path.GetTempPath(), "efl_ls_" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(dir);
             try
@@ -111,7 +111,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         // ListFolders test
         [Fact] public void ListFolders_in_temp_dir()
         {
-            // P2 (review): C:\Windows scan was machine-dependent — use a temp dir.
+            // C:\Windows scan is machine-dependent — use a temp dir.
             var dir = Path.Combine(Path.GetTempPath(), "efl_lsd_" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Path.Combine(dir, "subA"));
             Directory.CreateDirectory(Path.Combine(dir, "subB"));
@@ -164,7 +164,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             finally { if (FileSystemCore.FileExists(path)) FileSystemCore.DeleteFile(path); }
         }
 
-        // review 2026-09-14（P3 SEC-09）：单块限制之外的累计上限。
+        // 单块限制之外还须累计上限。
         [Fact]
         public void AppendTextFile_cumulative_limit_enforced()
         {
@@ -188,7 +188,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             }
         }
 
-        // review 2026-09-14（P3 SEC-07）：FS.NORM 与同模块其他 FS.* 一致受 EndSession 守卫。
+        // FS.NORM 与同模块其他 FS.* 一致受 EndSession 守卫。
         [Fact]
         public void NormalizePath_after_EndSession_throws()
         {
@@ -292,8 +292,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         // SANDBOX EDGE CASES
         // =====================================================================
 
-        // P2-22 (review-2026-08-31): 10 处 sandbox 测试中 9 处有 finally 复位，唯独此条漏了
-        // （共享静态状态泄漏到后续测试）。
+        // 共享静态状态必须 finally 复位，否则泄漏到后续测试（本组 sandbox 测试同此约束）。
         [Fact] public void Sandbox_null_root_allows_access()
         {
             FileSystemCore.ResetForTesting();
@@ -467,8 +466,8 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
                 };
                 using var proc = System.Diagnostics.Process.Start(psi)!;
                 proc.WaitForExit(5000);
-                // P2-23 (review-2026-08-31): mklink /J 依赖权限，受限 CI 下可能失败——
-                // 此时 junction 未创建，后续断言无意义。环境敏感测试降级为跳过而非 FAIL。
+                // mklink /J 依赖权限，受限 CI 下可能失败——junction 未创建时后续断言无意义，
+                // 环境敏感测试降级为跳过而非 FAIL。
                 if (proc.ExitCode != 0 || !System.IO.Directory.Exists(link))
                 {
                     FileSystemCore.ResetForTesting();

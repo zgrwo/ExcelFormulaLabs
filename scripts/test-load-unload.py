@@ -12,8 +12,8 @@ import win32com.client
 import pythoncom
 import psutil
 
-# review-2026-08-30：产物名随 v2.2.0 命名变更更新——旧 `Analytics-AddIn64-packed.xll` 已不存在，
-# 现为 `<Module>-AddIn-<tfm>[-64]-packed.xll`（net48/net8.0 各出 32/64 两变体）。本脚本测试 64 位变体。
+# 产物名依 v2.2.0 命名：`<Module>-AddIn-<tfm>[-64]-packed.xll`
+# （net48/net8.0 各出 32/64 两变体）；旧 `Analytics-AddIn64-packed.xll` 命名已不存在。本脚本测试 64 位变体。
 parser = argparse.ArgumentParser(description='Excel XLL 加载/卸载自动化测试')
 parser.add_argument('--built', default=r"D:\Workspace\zgrwo\VBA\DeepSeek\ClaudeCode\已编译文件",
                     help='编译产物根目录（含 net48/ 与 net8.0-windows/ 子目录）')

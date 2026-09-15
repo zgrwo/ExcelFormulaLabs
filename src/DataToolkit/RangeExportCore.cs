@@ -10,9 +10,8 @@ namespace ExcelFormulaLabs.DataToolkit
     /// <summary>Range export to HTML, JSON, Markdown, CSV + row/column operations. Ported from RangeUtils.bas.</summary>
     internal static class RangeExportCore
     {
-        // review 2026-09-05（N02）：四个导出函数补输出规模守卫——与 PivotCore 的 maxCells=1e6
-        // 纪律对齐（Pivot/Unpivot/GroupBy/CrossJoin 四处已有，RangeExport 全员缺位）。
-        // 整列选择（1,048,576 行 × 多列）此前会建巨型 StringBuilder（几十 MB～GB 级字符串），
+        // 输出规模守卫与 PivotCore 的 maxCells=1e6 纪律对齐。
+        // 整列选择（1,048,576 行 × 多列）会建巨型 StringBuilder（几十 MB～GB 级字符串），
         // 32 位 Excel 冻结 + OOM 不可捕获（ExceptionFilters 排除 OOM）。分配前检查 + long 乘法防回绕。
         private const long MaxExportCells = 1_000_000;
 
@@ -45,8 +44,8 @@ namespace ExcelFormulaLabs.DataToolkit
             string[]? headers = null;
             if (hasHeaders && rows > 0)
             {
-                // review 2026-09-14（模块审查 P2 RNG-01）：重复表头会产出重复 JSON 键
-                // （解析端后者覆盖前者，数据静默丢失）。按 _2/_3 后缀去重（同 SqlCore 列名规则）。
+                // 重复表头会产出重复 JSON 键（解析端后者覆盖前者，数据静默丢失），
+                // 按 _2/_3 后缀去重（同 SqlCore 列名规则）。
                 headers = new string[cols];
                 var usedKeys = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
                 for (int c = 0; c < cols; c++)
@@ -83,11 +82,9 @@ namespace ExcelFormulaLabs.DataToolkit
 
         /// <param name="hasHeaders">Deprecated: has no effect on CSV output (CSV treats all rows as data).
         /// Kept for API compatibility with RangeToJson / RangeToMarkdown / RangeToHtml.</param>
-        /// <remarks>review 2026-09-14（模块审查 P2 RNG-02/RNG-04）：
-        /// quote=true（默认）→ **所有字段**加引号（符合手册/Description 的语义）；
-        /// quote=false → 仅按 RFC 4180 最小引号（含 delimiter/引号/CR/LF 时转义），
-        /// 修复 CR 漏引号（此前只查 \n）与 TSV 不转义 tab/换行（RNG-03）的问题。
-        /// 公式注入 defang 对两种模式都生效，并修复 BOM 前缀绕过与 +/- 不对称。</remarks>
+        /// <remarks>quote=true（默认）→ **所有字段**加引号（符合手册/Description 的语义）；
+        /// quote=false → 仅按 RFC 4180 最小引号（含 delimiter/引号/CR/LF 时转义；CR 不可漏引号，
+        /// TSV 的 tab/换行须被处理）。公式注入 defang 对两种模式都生效，BOM 前缀与 +/- 对称。</remarks>
         internal static string RangeToCsv(object[,] data, string delim = ",", bool quote = true, bool hasHeaders = true)
         {
             GuardExportSize(data, "RANGE.TOCSV");
@@ -109,7 +106,7 @@ namespace ExcelFormulaLabs.DataToolkit
 
         /// <summary>CSV formula-injection defang. 检查原始首字符（TrimStart 会吃掉 Tab/CR）：
         /// 以 = @，或非数值的 +/−，或 Tab/CR 开头的值前置单引号。BOM 前缀不参与首字符判定
-        /// （RNG-04：U+FEFF=... 曾绕过 defang）；+/− 走同一数值判定（+42 与 −42 对称）。</summary>
+        /// （U+FEFF=... 会绕过 defang）；+/− 走同一数值判定（+42 与 −42 对称）。</summary>
         private static string DefangFormulaInjection(string v)
         {
             if (string.IsNullOrEmpty(v)) return v;
@@ -160,9 +157,8 @@ namespace ExcelFormulaLabs.DataToolkit
             if (v is string s) return $"\"{JsonEncodedText.Encode(s, JavaScriptEncoder.Default).Value}\"";
             if (v is bool b) return b ? "true" : "false";
             if (v is double d && (double.IsNaN(d) || double.IsInfinity(d))) return "null";
-            // review 2026-09-14（模块审查 P2 RNG-01）：G17 输出 0.10000000000000001 等噪声——
-            // 改 "R"（最短往返格式，等价 Python repr/JSON 默认）；float 同步补非有限守卫
-            // （原 float NaN/Inf 走 f.ToString 产出非法 JSON）。
+            // "R" 最短往返格式（等价 Python repr/JSON 默认）：G17 会输出 0.10000000000000001 等噪声；
+            // float 须有非有限守卫（float NaN/Inf 走 f.ToString 会产出非法 JSON）。
             if (v is double fd) return fd.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
             if (v is long l) return l.ToString();
             if (v is int i) return i.ToString();

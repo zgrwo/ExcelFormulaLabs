@@ -46,9 +46,9 @@ namespace ExcelFormulaLabs.Foundation
                 if (InputNormalizer.IsExcelErrorValue(key)) continue;
                 if (InputNormalizer.IsExcelEmptyValue(key)) continue;
                 if (key is Array) continue;
-                // review 2026-09-14（模块审查 P3 FND-11）：文档契约「Object 键跳过」未实现——
-                // 自定义对象经 Convert.ToString 塌缩（new object()×2 → 同一 "System.Object"
-                // 键，静默合并）。仅接受有稳定字符串表示的类型（string/数值/DateTime/bool）。
+                // 文档契约「Object 键跳过」：自定义对象经 Convert.ToString 会塌缩
+                // （new object()×2 → 同一 "System.Object" 键，静默合并）。
+                // 仅接受有稳定字符串表示的类型（string/数值/DateTime/bool）。
                 if (key is not string and not bool and not DateTime
                     and not int and not long and not double and not float and not decimal
                     and not short and not byte and not sbyte and not ushort and not uint and not ulong)
@@ -101,7 +101,7 @@ namespace ExcelFormulaLabs.Foundation
             return result;
         }
 
-        // review 2026-09-05（N18）：字符串化键空间有已知歧义——double NaN→"NaN"、bool→"TRUE"/"FALSE"
+        // 字符串化键空间有已知歧义——double NaN→"NaN"、bool→"TRUE"/"FALSE"
         // 与真实字符串键同形冲突。VBA/VBA Dictionary 键本无类型区分，此为移植保真的有意取舍，
         // 调用方若混用类型键需自行保证无歧义（文档已在 context.md「字典」语义说明）。
         private static string KeyToString(object value)
@@ -114,7 +114,7 @@ namespace ExcelFormulaLabs.Foundation
             if (value is long l) return l.ToString(System.Globalization.CultureInfo.InvariantCulture);
             if (value is short s16) return s16.ToString(System.Globalization.CultureInfo.InvariantCulture);
             if (value is byte b8) return b8.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            // F-14 (review 2026-09-06)：与 SafeKey 同步——带亚秒的 DateTime 追加小数段，防塌缩。
+            // 与 SafeKey 同步：带亚秒的 DateTime 追加小数段，防塌缩。
             if (value is DateTime dt) return dt.Ticks % TimeSpan.TicksPerSecond == 0
                 ? dt.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture)
                 : dt.ToString("yyyy-MM-dd HH:mm:ss.fffffff", System.Globalization.CultureInfo.InvariantCulture);

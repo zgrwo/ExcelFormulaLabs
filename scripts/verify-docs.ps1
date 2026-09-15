@@ -33,8 +33,8 @@ param(
 # 3 字符，Substring($RepoRoot.Length) 前缀错位会让检查 16/18 的相对路径变成
 # "ure/src/..." 而全部失配（test_verify_docs 场景 A 在 CI 上复现）。
 $RepoRoot = [System.IO.Path]::GetFullPath($RepoRoot)
-# F-26/N-15 (review 2026-09-06)：尾分隔符会让 Substring($RepoRoot.Length) 多剥一字符
-# （检查 16/18 相对路径错位）。修剪之；盘根（如 D:\，长度 3）不动。
+# 修剪尾分隔符：否则 Substring($RepoRoot.Length) 多剥一字符（检查 16/18 相对路径错位）；
+# 盘根（如 D:\，长度 3）不动。
 if ($RepoRoot.Length -gt 3) { $RepoRoot = $RepoRoot.TrimEnd('\', '/') }
 $ErrorActionPreference = "Continue"
 $script:pass = 0; $script:fail = 0; $script:skip = 0
@@ -51,8 +51,8 @@ function Check {
     else { Write-Host "  [FAIL] ${Label}: ${Result}"; $script:fail++ }
 }
 
-# SKIP 分支（如无 git 环境）：P2-29 (review-2026-08-31) 不再计入 pass——
-# 原实现把 SKIP 计为 pass，"Pass: 23" 含跳过项会掩盖未执行的检查。单列 skip 计数。
+# SKIP 分支（如无 git 环境）单列 skip 计数、不计入 pass：把 SKIP 计为 pass
+# 会让 "Pass: 23" 含跳过项，掩盖未执行的检查。
 function Check-Skip {
     param([string]$Label, [string]$Reason)
     Write-Host "  [SKIP] $Label ($Reason)"
@@ -91,7 +91,7 @@ else { Check "skill.md RangeExport" "missing" }
 if ($skillContent -match 'MapOver') { Check "skill.md MapOver term" "OK" }
 else { Check "skill.md MapOver term" "missing" }
 $readmeContent = Read-Utf8 (Join-Path $RepoRoot "README.md")
-# F-22 (review 2026-09-06)：README 缺失曾使本检查与检查 9 静默 PASS——显式 FAIL。
+# README 缺失须显式 FAIL：否则本检查与检查 9 静默 PASS。
 if ($null -eq $readmeContent) { Check "README.md present" "missing" }
 elseif ($readmeContent -match 'ElementWiseMapper') { Check "README no internal class names" "should use MapOver not internal class" }
 else { Check "README no internal impl details" "OK" }
@@ -99,15 +99,15 @@ else { Check "README no internal impl details" "OK" }
 # ---------- 5. MathNet 版本匹配 ----------
 $docVer = if ((Read-Utf8 (Join-Path $RepoRoot "docs/governance/context.md")) -match 'MathNet\.Numerics\s+([0-9.]+)') { $Matches[1] } else { "?" }
 $csprojVer = if ((Read-Utf8 (Join-Path $RepoRoot "src/Analytics/Analytics.csproj")) -match 'MathNet\.Numerics.*Version="([0-9.]+)"') { $Matches[1] } else { "?" }
-# F-05 (review 2026-09-06)：任一侧解析失败（"?"）→ FAIL——两侧同为 "?" 曾恒真 PASS，
-# 版本一致性门禁整体空转且全绿。
+# 任一侧解析失败（"?"）→ FAIL：两侧同为 "?" 会恒真 PASS，
+# 版本一致性门禁整体空转。
 if ($docVer -eq "?" -or $csprojVer -eq "?") { Check "MathNet version" "unparseable (doc=$docVer csproj=$csprojVer)" }
 elseif ($docVer -eq $csprojVer) { Check "MathNet version ($docVer)" "OK" }
 else { Check "MathNet version" "doc=$docVer csproj=$csprojVer" }
 
 # ---------- 6. 无裸 catch ----------
-# R5-P3-39 (review 2026-09-06)：原 Select-String 行级匹配对跨行写法盲（`catch // 注释` 换行
-# `{` 为合法 C# 且注释文本阻断 \s*）——改读全文正则（允许 catch 与 { 之间的行注释），行号由偏移计算。
+# 须读全文正则（允许 catch 与 { 之间的行注释），行号由偏移计算：Select-String 行级匹配
+# 对跨行写法盲（`catch // 注释` 换行 `{` 为合法 C# 且注释文本阻断 \s*）。
 $bareCatches = Get-ChildItem -Path (Join-Path $RepoRoot "src") -Recurse -Filter "*.cs" |
     Where-Object { $_.FullName -notmatch "[/\\](obj|bin)[/\\]" } | ForEach-Object {
         $t = Read-Utf8 $_.FullName
@@ -121,8 +121,8 @@ if ($bcArr.Count -eq 0) { Check "No bare catch" "OK" }
 else { Check "No bare catch" "$($bcArr.Count) found: $($bcArr | ForEach-Object { "$($_.Path):$($_.LineNumber)" })" }
 
 # ---------- 7. .dna 模板完整 ----------
-# F-06 (review 2026-09-06)：原硬编码 DataToolkit 两个 tpl 路径——Analytics 的 2 个模板
-# 零门禁（删除无拦截）。改为推导：凡 csproj 引用 .dna 的 src 模块目录必须齐 net48+net8 模板。
+# .dna 模板由 csproj 推导：凡 csproj 引用 .dna 的 src 模块目录必须齐 net48+net8 模板——
+# 硬编码 DataToolkit 两个 tpl 路径会让其余模块模板零门禁（删除无拦截）。
 $dnaModules = Get-ChildItem -Path (Join-Path $RepoRoot "src") -Directory | Where-Object {
     (Get-ChildItem $_.FullName -Filter "*.csproj" -File -ErrorAction SilentlyContinue |
         ForEach-Object { [System.IO.File]::ReadAllText($_.FullName, [System.Text.Encoding]::UTF8) }) -match '\.dna'
@@ -137,9 +137,9 @@ elseif ($tplMissing.Count -eq 0) { Check ".dna templates ($($dnaModules.Count) m
 else { Check ".dna templates" "$($tplMissing -join '; ')" }
 
 # ---------- 8. 无残留生成 .dna ----------
-# P2 (review): generated .dna files carry TFM suffixes (*-net48.dna / *-net8.0.dna);
-# the old no-suffix pattern missed stale files from interrupted builds.
-# F-06 (review 2026-09-06)：扫描域由 src/DataToolkit 扩至 src 全模块（Analytics 残留曾不设防）。
+# generated .dna files carry TFM suffixes (*-net48.dna / *-net8.0.dna);
+# a no-suffix pattern misses stale files from interrupted builds.
+# 扫描域须为 src 全模块：单扫 DataToolkit 时 Analytics 等模块的残留不设防。
 $residual = Get-ChildItem -Path (Join-Path $RepoRoot "src") -Recurse -Filter "*.dna" -File -ErrorAction SilentlyContinue |
     Where-Object { $_.Name -notlike "*.tpl" -and $_.FullName -notmatch "[/\\](obj|bin)[/\\]" }
 if (-not $residual) { Check "No residual .dna" "OK" }
@@ -149,7 +149,7 @@ else {
 }
 
 # ---------- 9. README 无硬编码数量徽章 ----------
-# F-21/F-22 (review 2026-09-06)：① 扩展到 README.en.md（原仅 README.md）；② README 缺失 → FAIL。
+# ① README.md 与 README.en.md 均纳入扫描；② README 缺失 → FAIL。
 $badgeFail = @()
 foreach ($rf in @("README.md", "README.en.md")) {
     $rc = Read-Utf8 (Join-Path $RepoRoot $rf)
@@ -174,8 +174,8 @@ if ($LASTEXITCODE -ne 0) {
     foreach ($t in $semverTags) {
         $ver = $t -replace '^v', ''
         if ($changelog -notmatch [regex]::Escape("## [$ver]")) { $untracked += $t }
-        # P1-15 (review-2026-08-31, max-level 全量审查)：章节头与版本链接行必须成对——
-        # 原检查只查 `## [X]`，链接行（`[X]: ...`）丢失时门禁放过（[Unreleased] 悬空案例）。
+        # 章节头与版本链接行必须成对：只查 `## [X]` 时链接行（`[X]: ...`）丢失会门禁放过
+        # （[Unreleased] 悬空案例）。
         elseif ($changelog -notmatch [regex]::Escape("[$ver]:")) { $untracked += $t }
     }
     if ($untracked.Count -eq 0) { Check "CHANGELOG covers all tags ($($semverTags.Count) tags)" "OK" }
@@ -233,7 +233,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # ---------- 11. 模块 csproj 描述数量 == [ExcelFunction] 计数 ----------
-# F-21 (review 2026-09-06)：① 计命中数而非行数（同行双 [ExcelFunction 曾少计）；
+# ① 计命中数而非行数（同行双 [ExcelFunction 会少计）；
 # ② 描述数量锚定 <Description> 标签（防 csproj 前部注释里的"N 个"被首匹配吞掉）；
 # ③ 反向守卫——src/ 下出现含 [ExcelFunction] 而不在名单的模块目录即指名 FAIL（防新模块漏对账）。
 foreach ($module in @("Analytics", "DataToolkit")) {
@@ -255,15 +255,15 @@ if ($unlistedModules.Count -eq 0) { Check "csproj count covers all UDF modules" 
 else { Check "csproj count covers all UDF modules" "unlisted module(s) with UDFs: $($unlistedModules.Name -join ', ')" }
 
 # ---------- 12. Markdown 相对链接断链扫描 ----------
-# F-26 (review 2026-09-06)：排除正则原为反斜杠形态——Linux 下 FullName 用 '/' 时排除失效
-# （.git/TestResults/logs 内 .md 会被误扫）。统一归一化为 '/' 后匹配。
+# 归一化为 '/' 后再匹配排除正则：排除正则若用反斜杠形态，Linux 下 FullName 用 '/' 时失效
+# （.git/TestResults/logs 内 .md 会被误扫）。
 $mdFiles = Get-ChildItem -Path $RepoRoot -Recurse -Filter "*.md" |
     Where-Object { ($_.FullName -replace '\\', '/') -notmatch '\.git/|/bin/|/obj/|\.qoder/|TestResults/|/logs/|BenchmarkDotNet\.Artifacts/' }
 $broken = @()
 foreach ($f in $mdFiles) {
     $text = Read-Utf8 $f.FullName
-    # review 2026-09-05（N19）：读文件失败原为静默 continue——与检查 19 同法改为 SKIP 计数
-    # 输出，对齐"SKIP 不计入 pass"语义，防止文件不可读时检查 12 静默空转。
+    # 读文件失败须 SKIP 计数输出（与检查 19 同法），对齐"SKIP 不计入 pass"语义，
+    # 防止文件不可读时检查 12 静默空转。
     if (-not $text) { Check-Skip "Markdown broken links" "unreadable: $($f.Name)"; continue }
     foreach ($m in [regex]::Matches($text, '\]\(([^)]+)\)')) {
         $target = $m.Groups[1].Value.Trim()
@@ -341,8 +341,8 @@ if (-not $structEntries) {
     foreach ($e in $structEntries) {
         $top = ($e.Path -split '/')[0]
         if ($top -in $ignoredDirs) { continue }
-        # F-26 (review 2026-09-06)：原恒转反斜杠——Linux 下 Test-Path 收到 '\' 路径恒 false，
-        # 全树误报 missing。Windows 用 '\'，其余平台保留 '/'。
+        # 按平台选分隔符：Linux 下 Test-Path 收到 '\' 路径恒 false 会全树误报 missing；
+        # Windows 用 '\'，其余平台保留 '/'。
         $local = if ($IsWindows -or $env:OS -eq 'Windows_NT') { $e.Path -replace '/', '\' } else { $e.Path }
         if (-not (Test-Path (Join-Path $RepoRoot $local))) { $missingEntries += $e.Path }
     }
@@ -387,15 +387,14 @@ $proseFiles = @("src/Foundation/ElementWiseMapper.cs") +
 $proseMismatches = @()
 foreach ($rel in $proseFiles) {
     $text = Read-Utf8 (Join-Path $RepoRoot $rel)
-    # review 2026-09-05（N19）：读文件失败原为静默 continue——改为 SKIP 计数输出（同检查 19）。
+    # 读文件失败须 SKIP 计数输出（同检查 19），不得静默 continue。
     if (-not $text) { Check-Skip "Prose UDF counts" "unreadable: $rel"; continue }
     $isHistorical = ($rel -eq "CHANGELOG.md")
-    # 模式 1：`N UDF`（如 "236 UDF"）与中文 `N 个 UDF`——除历史文件外强制执行 == codeUdfs
-    # P0-4 (review-2026-08-31)：原正则 `(\d+)\s+UDF` 匹配不上中文「236 个 UDF」（中间隔着
-    # 「个」），中文 README 计数漂移全绿通过（负向注入 236→999 仅英文被拦）。
-    # R13 (review-2026-09-05)：词表化扩三个变体——量词扩 个|项（`236 项 UDF`）、倒装形式
+    # 模式 1：`N UDF`（如 "236 UDF"）与中文 `N 个 UDF`——除历史文件外强制执行 == codeUdfs。
+    # 正则须覆盖中文变体：`(\d+)\s+UDF` 匹配不上「236 个 UDF」（中间隔着「个」），
+    # 中文 README 计数漂移会全绿通过。变体词表：量词 个|项（`236 项 UDF`）、倒装形式
     # （`UDF 数量 236` / `UDF 总数 236` / `UDF 共 236` / `UDF: 236`）、`236 个函数（UDF）`。
-    # 三个变体均经负向注入实测（test_verify_docs 场景 G2/G3/G4）。倒装模式仅对非历史文件
+    # 各变体经负向注入实测（test_verify_docs 场景 G2/G3/G4）。倒装模式仅对非历史文件
     # 生效：CHANGELOG 的「UDF 总数 X→Y」由下方模式 2 单独按区间链校验。
     if (-not $isHistorical) {
         # 模式 1a：`N UDF` / `N 个 UDF` / `N 项 UDF`
@@ -448,8 +447,8 @@ if ($proseMismatches.Count -eq 0) { Check "Prose UDF counts ($codeUdfs)" "OK" }
 else { Check "Prose UDF counts" ($proseMismatches -join ' | ') }
 
 # ---------- 17. [ExcelArgument] 名称 ↔ api-reference 参数列 ----------
-# review-2026-08-29 P2：api-reference 参数列与源码 [ExcelArgument(Name=...)] 自动比对，
-# 防文档参数名/顺序与实现漂移（H4 曾手工修正 STATS.SUMMARY/MODE 的参数名）。
+# api-reference 参数列与源码 [ExcelArgument(Name=...)] 自动比对，
+# 防文档参数名/顺序与实现漂移。
 # 归一化：两端都剥离可选参数方括号——源码 [ExcelArgument(Name="[x]")] ↔ 文档 (x)。
 $apiParams = @{}
 foreach ($row in [regex]::Matches($apiContent, '^\|\s*`([A-Za-z0-9_.]+)`\s*\|\s*\(([^)]*)\)\s*\|', [System.Text.RegularExpressions.RegexOptions]::Multiline)) {
@@ -481,17 +480,17 @@ if ($paramMismatches.Count -eq 0) { Check "[ExcelArgument] vs api-reference para
 else { Check "[ExcelArgument] vs api-reference params" ($paramMismatches -join ' | ') }
 
 # ---------- 18. 反向检查：src/ 实际文件必须被目录树声明 ----------
-# review-2026-08-29 P2：新增源码文件（如 NativeDllStore.cs）若忘记登记到 project-structure.md
-# 目录树，前向检查（声明→存在，检查 14）无法发现。本检查反向扫描 src/ 下实际文件。
+# 反向扫描 src/ 下实际文件：新增源码文件（如 NativeDllStore.cs）若忘记登记到 project-structure.md
+# 目录树，前向检查（声明→存在，检查 14）无法发现。
 $declaredSrcFiles = @()
 foreach ($e in $structEntries) {
     if (-not $e.IsDir -and $e.Path -like 'src/*') { $declaredSrcFiles += $e.Path }
 }
 $srcFiles = Get-ChildItem -Path (Join-Path $RepoRoot "src") -Recurse -File |
     Where-Object { $_.FullName -notmatch "[/\\](obj|bin)[/\\]" -and $_.Extension -ne ".dna" -and $_.FullName -notmatch "BenchmarkDotNet\.Artifacts" }
-# review 2026-09-05（N17）：排除 .dna 生成物——构建并发时 GenerateDna 产物可能瞬时落盘
-# （.gitignore:12 已声明 src/**/*.dna 为生成物，不入库），检查 18 会把瞬时 .dna 当未登记
-# 文件假 FAIL（本轮实测复现）。
+# 排除 .dna 生成物：构建并发时 GenerateDna 产物可能瞬时落盘
+# （.gitignore:12 已声明 src/**/*.dna 为生成物，不入库），否则检查 18 会把瞬时 .dna 当未登记
+# 文件假 FAIL。
 $undeclaredFiles = @()
 foreach ($f in $srcFiles) {
     # 相对路径统一归一化为正斜杠 + 去前导分隔符（Windows \ / Linux /，pwsh 双平台兼容）
@@ -502,19 +501,19 @@ if ($undeclaredFiles.Count -eq 0) { Check "src files declared in tree ($($srcFil
 else { Check "src files declared in tree" "undeclared: $($undeclaredFiles -join ', ')" }
 
 # ---------- 19. 文档版本头 == Directory.Build.props <Version> ----------
-# review-2026-08-31（深度审查 P1-14）：specification/user-manual/cross-validation 版本头曾停在
-# 2.2.1（实际 2.2.3），CHANGELOG 声称"已同步"而 v2.2.2/v2.2.3 两次发版都没同步，且原 18 项检查
-# 无一覆盖（检查 5 只查 MathNet 版本，检查 10 只查 CHANGELOG/tag）。
-# 2026-09-05：docs/cross-validation.md 已归档至 logs/reports/（审查报告唯一存放处），不再参与版本头校验。
+# specification/user-manual/api-reference 的版本头须与 Directory.Build.props <Version> 一致：
+# CHANGELOG 声称"已同步"不能作数——版本头漂移时检查 5 只查 MathNet 版本、检查 10 只查
+# CHANGELOG/tag，均不覆盖。
+# docs/cross-validation.md 归档于 logs/reports/（审查报告唯一存放处），不参与版本头校验。
 $propsVersion = [regex]::Match((Read-Utf8 (Join-Path $RepoRoot "src/Directory.Build.props")), '<Version>([^<]+)</Version>').Groups[1].Value
 $verMismatches = @()
 foreach ($vf in @("docs/specification/specification.md", "docs/user-manual/user-manual.md", "docs/specification/api-reference.md")) {
     $vt = Read-Utf8 (Join-Path $RepoRoot $vf)
-    # R16 (review-2026-09-05)：文件缺失/不可读原为静默 continue——改为 SKIP 计数输出，
+    # 文件缺失/不可读须 SKIP 计数输出（不得静默 continue），
     # 对齐 Check-Skip"不计入 pass"语义（防止两文件全丢时检查 19 静默空转成 PASS）。
     if (-not $vt) { Check-Skip "Doc version header ($vf)" "file missing/unreadable"; continue }
     # specification「版本：v2.2.5」/ user-manual「**版本**：v2.2.5」
-    # R16：行首锚定——原无锚正则会命中正文任意位置的「版本：X.Y.Z」（如变更记录、示例），
+    # 行首锚定：无锚正则会命中正文任意位置的「版本：X.Y.Z」（如变更记录、示例），
     # 与真正的文档版本头混淆。锚定后需保证 spec/user-manual 的版本头行（行首 + Markdown
     # 前缀 > * #）仍命中（正向已实测）。
     $m = [regex]::Match($vt, '(?m)^\s*[>*#\s]*(?:版本|Version|v)\s*[:：*]*\s*(v?\d+\.\d+\.\d+)')
@@ -526,10 +525,9 @@ if ($verMismatches.Count -eq 0) { Check "Doc version headers == $propsVersion" "
 else { Check "Doc version headers" ($verMismatches -join ' | ') }
 
 # ---------- 20. [Fact] 计数声明一致性（md 声明 ↔ tests/**/*.cs 实测）----------
-# 审查 2026-09-13（max-level）：spec 声称 2,562 个 [Fact] 而源码实测 2,642——F1 ②
-# "一切计数必须纳入门禁"未覆盖测试断言数（历史同类：2,466 vs 2,485 漂移全绿）。
-# R7-2 (review-2026-09-13 发行前审查)：旧实现仅统计 [Fact] 且量词"个"必填——新增
-# [Theory] 用例或英文计数写法会静默漏过。改为 [Fact]/[Theory] 分型统计、量词可选。
+# [Fact] 计数声明须与源码实测一致：spec 声称数与 tests/**/*.cs 实测数漂移即 FAIL。
+# [Fact]/[Theory] 分型统计、量词可选——仅统计 [Fact] 且量词"个"必填会静默漏过
+# [Theory] 用例或英文计数写法。
 $factFiles = @(Get-ChildItem -Path (Join-Path $RepoRoot "tests") -Recurse -Filter "*.cs" -ErrorAction SilentlyContinue |
     Where-Object { ($_.FullName -replace '\\', '/') -notmatch '/(bin|obj)/' })
 if ($factFiles.Count -gt 0) {

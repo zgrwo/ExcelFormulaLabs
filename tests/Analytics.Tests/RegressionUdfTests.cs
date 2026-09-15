@@ -169,7 +169,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
             FindRow(r, "group_means").Should().HaveCount(2);
         }
 
-        // ── P0 guard UDF-level: WrapError → #VALUE! ──
+        // ── UDF-level guard: WrapError → #VALUE! ──
         [Fact] public void OLS_null_y_returns_error() => RegressionUdf.UDF_REGRESS_OLS(null!, X_test).Should().Be(ExcelError.Value);
         [Fact] public void OLS_null_X_returns_error() => RegressionUdf.UDF_REGRESS_OLS(y_test, null!).Should().Be(ExcelError.Value);
         [Fact] public void WLS_null_y_returns_error() => RegressionUdf.UDF_REGRESS_WLS(null!, X_test, new double[] { 1.0, 1.0, 1.0 }).Should().Be(ExcelError.Value);
@@ -199,7 +199,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
                 .Should().Be(ExcelError.Value);
         }
 
-        // review 2026-09-14（P3 REG-04）：ANOVA 文本单元格不再静默丢弃（与 OLS/WLS 口径一致）。
+        // ANOVA 文本单元格须报错（与 OLS/WLS 口径一致），不得静默丢弃。
         [Fact] public void Anova1_text_value_returns_error()
         {
             var d = new object[,] { { 1.0, 2.0 }, { 3.0, "oops" }, { 5.0, 6.0 } };
@@ -218,7 +218,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
             RegressionUdf.UDF_REGRESS_FACTORIMP(singleY, singleX).Should().Be(ExcelError.Value);
         }
 
-        // review 2026-09-14（P1 UDF-01）：lambda 省略（Blank/Missing/DBNull）→ 默认 1.0。
+        // lambda 省略（Blank/Missing/DBNull）→ 默认 1.0。
         [Theory]
         [MemberData(nameof(OmittedSentinelData.All), MemberType = typeof(OmittedSentinelData))]
         public void Ridge_omitted_lambda_uses_default(object? sentinel)

@@ -17,9 +17,9 @@ public static class ResultSerializer
     };
 
     /// <summary>Convert any Core method result to a JSON-serializable object.
-    /// review 2026-08-31（深度审查 P0-3a）：NaN/±Inf 原来被压成同一个 null，verify-manual.py 又把
-    /// null 一律还原为 NaN → C#=+Inf 对 Python=NaN 这对"都错且互不相同"的结果判 PASS。
-    /// 改为带标签对象：{{"__nan__":true}} / {{"__inf__":1|-1}}，与真正的 null 返回值区分。</summary>
+    /// NaN/±Inf 须序列化为带标签对象（{{"__nan__":true}} / {{"__inf__":1|-1}}），与真正的 null
+    /// 返回值区分：压成同一个 null 后 verify-manual.py 会一律还原为 NaN，使 C#=+Inf 对
+    /// Python=NaN 这对"都错且互不相同"的结果误判 PASS。</summary>
     public static object? ToJsonFriendly(object? value)
     {
         return value switch

@@ -1,7 +1,7 @@
 # test-xll.ps1 - 本地 Excel XLL 加载/卸载冒烟测试（不入 CI）
 # 用法: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-xll.ps1 [-BaseDir <编译产物目录>]
-# review-2026-08-30：产物名随 v2.2.0 命名变更更新——旧 `Analytics-AddIn64-packed.xll` 已不存在，
-# 现为 `<Module>-AddIn-<tfm>[-64]-packed.xll`（net48/net8.0 各出 32/64 两变体）。本脚本测试 64 位变体。
+# 产物名依 v2.2.0 命名：`<Module>-AddIn-<tfm>[-64]-packed.xll`
+# （net48/net8.0 各出 32/64 两变体）；旧 `Analytics-AddIn64-packed.xll` 命名已不存在。本脚本测试 64 位变体。
 param(
     [string]$BaseDir = 'D:\Workspace\zgrwo\VBA\DeepSeek\ClaudeCode\已编译文件'
 )
@@ -23,7 +23,7 @@ for ($r = 1; $r -le $ROUNDS; $r++) {
     $xl = New-Object -ComObject Excel.Application
     $xl.Visible = $false; $xl.DisplayAlerts = $false
     foreach ($x in $xlls) {
-        # F-26 (review 2026-09-06)：SKIP 不计 fail（标签与计数曾不一致）。
+        # SKIP 不计 fail（标签与计数须一致）。
         if (-not (Test-Path $x.Path)) { Write-Output "  SKIP $($x.Name): missing"; continue }
         try {
             $xl.RegisterXLL($x.Path) | Out-Null

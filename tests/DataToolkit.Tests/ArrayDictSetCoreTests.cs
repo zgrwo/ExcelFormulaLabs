@@ -238,9 +238,6 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             r.GetLength(0).Should().Be(0);
         }
 
-        // ══════════════════════════════════════════════════════════════════
-        //  ArrayCore.Fill / ArrayCore.Sequence（review-2026-08-29 P1-2 下沉后的 Core 层测试）
-        // ══════════════════════════════════════════════════════════════════
         [Fact] public void Fill_basic() => ArrayCore.Fill("x", 3).Should().Equal("x", "x", "x");
         [Fact] public void Fill_zero_count() => ArrayCore.Fill("x", 0).Should().BeEmpty();
         [Fact] public void Fill_null_value()
@@ -260,12 +257,12 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Sequence_start_gt_end_asc_empty() => ArrayCore.Sequence(5, 1, 1).Should().BeEmpty();
         [Fact] public void Sequence_single() => ArrayCore.Sequence(7, 7, 1).Should().Equal(7.0);
         [Fact] public void Sequence_nan_start_empty() => ArrayCore.Sequence(double.NaN, 5, 1).Should().BeEmpty();
-        // review 2026-08-29（发行前 max level 复审）：原仅挡 NaN，±Inf 的 start/end/step 未挡，
-        // 会静默产生退化序列或误导性抛错。现与 NaN 一致：非有限输入 → 空数组。
+        // 非有限 start/end/step 统一返回空数组（与 NaN 一致）：
+        // 否则会静默产生退化序列或误导性抛错。
         [Fact] public void Sequence_inf_step_empty() => ArrayCore.Sequence(0, 10, double.PositiveInfinity).Should().BeEmpty();
         [Fact] public void Sequence_inf_start_empty() => ArrayCore.Sequence(double.PositiveInfinity, 10, 1).Should().BeEmpty();
 
-        // review 2026-09-14（P2 ARR-01）：浮点步长丢端点——(int)Floor(2.9999999999999996)=2
+        // 浮点步长丢端点——(int)Floor(2.9999999999999996)=2
         // 使 RANGE(0,0.3,0.1) 缺 0.3；相对容差补端点且末项吸附为精确 end。
         [Fact] public void Sequence_float_step_includes_endpoint()
         {
@@ -294,8 +291,8 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             => ((Action)(() => ArrayCore.Sequence(1, 3, 0))).Should().Throw<ArgumentException>();
         [Fact] public void Sequence_over_limit_throws()
             => ((Action)(() => ArrayCore.Sequence(0, 1_000_000_000, 1))).Should().Throw<ArgumentException>();
-        // review 2026-08-29（max level 复审）：end-start 在有限极端值下溢出为 Inf → d=Inf，
-        // 旧代码 (int)d 回绕为 int.MinValue → 消息「-2147483648 elements」误导。现按超限抛错。
+        // end-start 在有限极端值下溢出为 Inf → d=Inf；(int)d 回绕为 int.MinValue 会产生
+        // 「-2147483648 elements」误导消息——超限必须抛错。
         [Fact] public void Sequence_extreme_range_has_sane_message()
         {
             var ex = Record.Exception(() => ArrayCore.Sequence(-double.MaxValue, double.MaxValue, 1));

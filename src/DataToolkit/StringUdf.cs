@@ -41,7 +41,7 @@ namespace ExcelFormulaLabs.DataToolkit
         [ExcelFunction(Name="STR.FORMAT", Description="Format a value using .NET format string (e.g. '0.00', 'yyyy-MM-dd')")] public static object UDF_STR_FMT([ExcelArgument(Name="value", Description="The value to fill or format")] object v, [ExcelArgument(Name="format_text", Description="A .NET format string, e.g. 0.00 or yyyy-MM-dd")] object fmt)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOverMulti<object,string,string>(v,fmt,(a,b)=>StringCore.FormatValue(a,b)));
         [ExcelFunction(Name="STR.STRIPHTML", Description="Strip HTML tags from a string, leaving only text content")] public static object UDF_STR_SHTML([ExcelArgument(Name="text", Description="The text string to process")] object t)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOver<string,string>(t,StringCore.StripHtml));
 
-        /// <summary>review 2026-09-14（P2 STR-02 / UDF-02）：MapOver 会在 mapper 前短路
+        /// <summary>MapOver 会在 mapper 前短路
         /// ExcelEmpty（按空白透传），使 COALESCE/ISNULLEMPTY/ISNULLWS 对真空白单元格失效。
         /// 按产品决策「空白 = 空值」，这三个 UDF 先逐元素把空白哨兵归一化为空串再映射
         /// （object[]/object[,] 与标量；COM Range 仍由 MapOver 内部提取，属直调残余）。</summary>

@@ -107,7 +107,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Default_ignore_case_MatchAll() { var r=(object[])RegexUdf.UDF_RX_MALL("Hello hello", "hello"); ((string)r[0]).Should().Be("Hello"); ((string)r[1]).Should().Be("hello"); }
         [Fact] public void Default_ignore_case_Groups() { var r=(object[,])RegexUdf.UDF_RX_GRP("Hello", "(hello)"); r[1,0].Should().Be("Hello"); }
 
-        // review 2026-09-14（P2 SEC-03）：无名组反向引用在 UDF 全函数可用（修复前 #VALUE!）。
+        // 无名组反向引用必须在 UDF 全函数可用（不得 #VALUE!）。
         [Fact] public void Backreference_udf_test_count_matchall_replace()
         {
             ((bool)RegexUdf.UDF_RX_TEST("aabb", @"(\w)\1")).Should().BeTrue();

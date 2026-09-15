@@ -1,11 +1,10 @@
 ﻿# ============================================================================
 # test_precommit_check.ps1 — pre-commit-check.ps1 回归守卫
-# 场景：14 个 fixture，逐一验证 6 项检查的检测能力（含修复后的自校验/hasHeaders 检测：
-#       跨行调用、短别名、元组参数、泛型委托、二层元组/NRT/修饰符链、豁免名单不误报——
-#       R15/R18/F-04 review-2026-09-05/06）。
+# 场景：14 个 fixture，逐一验证 6 项检查的检测能力（含自校验/hasHeaders 检测：
+#       跨行调用、短别名、元组参数、泛型委托、二层元组/NRT/修饰符链、豁免名单不误报）。
 # 用法：pwsh 或 powershell 均可 -NoProfile -ExecutionPolicy Bypass -File tests/scripts/test_precommit_check.ps1
-# F-24 (review-2026-09-06)：被测门禁经 $hostCmd 优先 pwsh7 调用（原恒 powershell，
-#       pwsh7 语义差异永不暴露）；与 run-tests.ps1 的宿主策略一致。
+# 被测门禁经 $hostCmd 优先 pwsh7 调用（恒用 powershell 会使 pwsh7 语义差异永不暴露）；
+#       与 run-tests.ps1 的宿主策略一致。
 # ============================================================================
 $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)   # 仓库根
@@ -100,7 +99,7 @@ Write-Host "[7/14] object[,] 无 hasHeaders 应被检出 (HAS_HEADERS)"
 $c7 = New-Fixture "headers" @{ "src\TableCore.cs" = "internal static class TableCore { internal static object[] Foo(object[,] data) { return null; } }`n" }
 Run-Check $c7 "HAS_HEADERS"
 
-# --- 场景 8：跨行自校验（R15：全文扫描必须检出跨行 check(，单行解析曾绕过）---
+# --- 场景 8：跨行自校验（全文扫描必须检出跨行 check(，单行解析会绕过）---
 Write-Host "[8/14] 跨行自校验应被检出 (SELF_CHECK)"
 $c8 = New-Fixture "selfcheck-multiline" @{
     "scripts\verify-manual.py" = @"
@@ -111,7 +110,7 @@ check("m",
 }
 Run-Check $c8 "SELF_CHECK"
 
-# --- 场景 9：短别名自校验（R15：移除 Length>3 豁免，check("m", x, x) 必须检出）---
+# --- 场景 9：短别名自校验（无长度豁免，check("m", x, x) 必须检出）---
 Write-Host "[9/14] 短别名自校验应被检出 (SELF_CHECK)"
 $c9 = New-Fixture "selfcheck-alias" @{
     "scripts\verify-manual.py" = @"
@@ -121,27 +120,27 @@ check("m", x, x)
 }
 Run-Check $c9 "SELF_CHECK"
 
-# --- 场景 10：元组参数含 object[,]（R18：一层嵌套括号提取，原 [^)]* 正则漏报）---
+# --- 场景 10：元组参数含 object[,]（一层嵌套括号提取，[^)]* 正则会漏报）---
 Write-Host "[10/14] 元组参数 object[,] 无 hasHeaders 应被检出 (HAS_HEADERS)"
 $c10 = New-Fixture "tuple-headers" @{ "src\TableCore.cs" = "internal static class TableCore { internal static void Join((int,int) key, object[,] data) { } }`n" }
 Run-Check $c10 "HAS_HEADERS"
 
-# --- 场景 11：泛型委托参数 object[,]（R18：Func<object[,],bool> 保持命中）---
+# --- 场景 11：泛型委托参数 object[,]（Func<object[,],bool> 必须命中）---
 Write-Host "[11/14] 泛型 Func<object[,],bool> 无 hasHeaders 应被检出 (HAS_HEADERS)"
 $c11 = New-Fixture "generic-headers" @{ "src\TableCore.cs" = "internal static class TableCore { internal static void Map(Func<object[,],bool> f) { } }`n" }
 Run-Check $c11 "HAS_HEADERS"
 
-# --- 场景 12：二层元组参数（F-04：一层嵌套正则曾漏报，fixture 实测 exit=0）---
+# --- 场景 12：二层元组参数（一层嵌套正则会漏报，fixture 实测 exit=0）---
 Write-Host "[12/14] 二层元组参数 object[,] 无 hasHeaders 应被检出 (HAS_HEADERS)"
 $c12 = New-Fixture "tuple2-headers" @{ "src\TableCore.cs" = "internal static class TableCore { internal static void Join((int,(int,string)) t, object[,] data) { } }`n" }
 Run-Check $c12 "HAS_HEADERS"
 
-# --- 场景 13：NRT 注解 + 修饰符链 + protected（F-04：object?[,-] 与 protected 曾漏报）---
+# --- 场景 13：NRT 注解 + 修饰符链 + protected（object?[,-] 与 protected 会漏报）---
 Write-Host "[13/14] NRT object?[,] + 修饰符链 + protected 应被检出 (HAS_HEADERS)"
 $c13 = New-Fixture "nrt-headers" @{ "src\TableCore.cs" = "internal static class TableCore { protected internal static object[,] Pivot(object?[,] data, (int,(int,string)) t) { return data!; } }`n" }
 Run-Check $c13 "HAS_HEADERS"
 
-# --- 场景 14：豁免名单与 private 不误报（F-04 反向：结构性豁免/private 不产生违例）---
+# --- 场景 14：豁免名单与 private 不误报（结构性豁免/private 不产生违例）---
 Write-Host "[14/14] 豁免名单方法与 private helper 不应误报"
 $c14 = New-Fixture "exempt-ok" @{
     "src\TableCore.cs" = @"

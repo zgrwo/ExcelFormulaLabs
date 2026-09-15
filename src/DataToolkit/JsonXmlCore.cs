@@ -34,14 +34,14 @@ namespace ExcelFormulaLabs.DataToolkit
             foreach(var el in d.RootElement.EnumerateArray())
             { if(el.ValueKind==JsonValueKind.Object){ var row=new Dictionary<string,object?>(); foreach(var p in el.EnumerateObject()){row[p.Name]=Elm(p.Value);if(seen.Add(p.Name))keys.Add(p.Name);} rows.Add(row); } }
             if(rows.Count==0)return null;
-            // F-29 (review 2026-09-06)：纵深防御——UDF 输入经单元格字符串（32,767 字符）天然有界，
-            // 但 .NET 直调方无此约束；对齐 PivotCore/RangeExportCore 的规模纪律（分配前拒绝）。
+            // 纵深防御——UDF 输入经单元格字符串（32,767 字符）天然有界，但 .NET 直调方无此约束；
+            // 对齐 PivotCore/RangeExportCore 的规模纪律（分配前拒绝）。
             if(rows.Count>100_000) throw new ArgumentException($"JSON input produces {rows.Count} rows; maximum is 100000.");
             var ka=keys.ToArray(); var r=new object[rows.Count+1,ka.Length];
             for(int c=0;c<ka.Length;c++)r[0,c]=ka[c];
-            // review 2026-09-05（R10）：网格单元的 null =「空单元格」哨兵（JSON null 值与缺键均
-            // 合法），v! / null! 豁免的是 object[,] 元素类型无法表达可空，而非断言运行时非空
-            // （经 warnlab 实证：object?[,] 本地数组方案会在返回处触发 CS8619，不可用）。
+            // 网格单元的 null =「空单元格」哨兵（JSON null 值与缺键均合法），v! / null! 豁免的是
+            // object[,] 元素类型无法表达可空，而非断言运行时非空（object?[,] 本地数组方案会在
+            // 返回处触发 CS8619，不可用）。
             for(int i=0;i<rows.Count;i++)for(int c=0;c<ka.Length;c++)r[i+1,c]=rows[i].TryGetValue(ka[c],out var v)?v!:null!;
             return r;
         }
@@ -49,9 +49,9 @@ namespace ExcelFormulaLabs.DataToolkit
         private static object? Elm(JsonElement e)=>e.ValueKind switch
         { JsonValueKind.Null=>null,JsonValueKind.True=>true,JsonValueKind.False=>false,JsonValueKind.String=>e.GetString(),JsonValueKind.Number=>ElmNumber(e),JsonValueKind.Array=>e.EnumerateArray().Select(Elm).ToArray(),JsonValueKind.Object=>ElmObject(e),_=>e.GetRawText() };
 
-        /// <summary>review 2026-09-14（模块审查 P3 SEC-06）：原 ToDictionary 遇重复键抛异常，
-        /// 而 QUERY（TryGetProperty 取首个）与 TOTABLE（后写覆盖）各自成功——三条通道行为矛盾。
-        /// 统一为「后者覆盖」（JSON 解析器通行语义，Python json.loads / JSON.NET 同款）。</summary>
+        /// <summary>重复键须统一为「后者覆盖」（JSON 解析器通行语义，Python json.loads /
+        /// JSON.NET 同款）：ToDictionary 遇重复键抛异常，而 QUERY（TryGetProperty 取首个）与
+        /// TOTABLE（后写覆盖）各自成功——三条通道行为矛盾。</summary>
         private static object? ElmObject(JsonElement e)
         {
             var dict = new Dictionary<string, object?>(StringComparer.Ordinal);
@@ -94,9 +94,8 @@ namespace ExcelFormulaLabs.DataToolkit
         // ── XML ────────────────────────────────────────────────────────────
 
         /// <summary>Secure XmlReader settings: no DTD, no external entities.
-        /// review 2026-09-14（模块审查 P3 SEC-04）：XDocument 构树按元素深度递归，
-        /// 20,000 层直调曾 StackOverflow（进程退出，不可捕获）。解析前用迭代 XmlReader
-        /// 预扫深度（MaxXmlDepth 远低于栈上限），超限即抛 XmlException。</summary>
+        /// XDocument 构树按元素深度递归，20,000 层直调会 StackOverflow（进程退出，不可捕获）。
+        /// 解析前用迭代 XmlReader 预扫深度（MaxXmlDepth 远低于栈上限），超限即抛 XmlException。</summary>
         private const int MaxXmlDepth = 1024;
 
         private static readonly XmlReaderSettings SecureXmlSettings = new()
@@ -135,8 +134,8 @@ namespace ExcelFormulaLabs.DataToolkit
         { try{var d=ParseXmlSafe(xml);return d.XPathSelectElements(xpath).Select(e=>e.Value).ToArray();}catch(Exception ex) when(ExceptionFilters.IsCatchable(ex)){System.Diagnostics.Debug.WriteLine($"[XmlXPath] Failed: {ex.Message}");return Array.Empty<string>();} }
 
         internal static object[,]? XmlToTable(string xml, string? rowPath=null)
-            // review 2026-09-05（R10）：缺元素单元格写 null =「空单元格」哨兵，null! 豁免可空性分析。
-            // F-29：同 JsonToTable——行数 >100_000 分配前拒绝（.NET 直调方纵深防御）。
+            // 缺元素单元格写 null =「空单元格」哨兵，null! 豁免可空性分析。
+            // 同 JsonToTable——行数 >100_000 分配前拒绝（.NET 直调方纵深防御）。
         { try{var d=ParseXmlSafe(xml);var rows=rowPath!=null?d.XPathSelectElements(rowPath):d.Root?.Elements()??Enumerable.Empty<XElement>();var rl=rows.ToList();if(rl.Count==0)return null;if(rl.Count>100_000)throw new ArgumentException($"XML input produces {rl.Count} rows; maximum is 100000.");var cn=rl.SelectMany(r=>r.Elements()).Select(e=>e.Name.LocalName).Distinct().ToArray();var rt=new object[rl.Count+1,cn.Length];for(int c=0;c<cn.Length;c++)rt[0,c]=cn[c];for(int i=0;i<rl.Count;i++){var row=rl[i];for(int c=0;c<cn.Length;c++){var el=row.Element(cn[c]);rt[i+1,c]=el!=null?el.Value:null!;}}return rt;}catch(Exception ex) when(ExceptionFilters.IsCatchable(ex)){System.Diagnostics.Debug.WriteLine($"[XmlToTable] Failed: {ex.Message}");return null;} }
 
         internal static bool XmlValidate(string xml)

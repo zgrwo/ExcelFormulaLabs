@@ -58,10 +58,10 @@ namespace ExcelFormulaLabs.Foundation
             if (input is object[] arr1D)
                 return Map1D(arr1D, mapper);
 
-            // P2 (pre-release review): typed arrays (double[], int[,], …) arrive from
-            // direct .NET callers; previously treated as a scalar cell → single NaN.
-            // Route through the normalizer (which handles typed arrays) for element-wise
-            // mapping, consistent with MapOverFlat/NormalizeTo1D behaviour.
+            // typed arrays (double[], int[,], …) arrive from direct .NET callers; treating
+            // them as a scalar cell would collapse to a single NaN. Route through the
+            // normalizer (which handles typed arrays) for element-wise mapping, consistent
+            // with MapOverFlat/NormalizeTo1D behaviour.
             if (input is Array typed)
                 return Map1D(InputNormalizer.NormalizeTo1D(typed), mapper);
 
@@ -101,8 +101,8 @@ namespace ExcelFormulaLabs.Foundation
 
             object[] flat1 = InputNormalizer.NormalizeTo1D(input1);
             object[] flat2 = InputNormalizer.NormalizeTo1D(input2);
-            // review 2026-08-31（深度审查 P2-17 补充）：null 标量输入应广播（视为 [null]）而非被
-            // NormalizeTo1D(null)=空数组 吞掉——MapOverMulti(null, ["a","b"]) 此前直接返回空结果。
+            // null 标量输入应广播（视为 [null]）而非被 NormalizeTo1D(null)=空数组 吞掉——
+            // 否则 MapOverMulti(null, ["a","b"]) 直接返回空结果。
             if (input1 == null) flat1 = new object[] { null! };
             if (input2 == null) flat2 = new object[] { null! };
 
@@ -111,14 +111,14 @@ namespace ExcelFormulaLabs.Foundation
             // multi-cell ranges), so the post-extraction check correctly detects
             // both native object[,] and COM-Range-originated 2D arrays.
             bool was2D = input1 is object[,] || input2 is object[,];
-            // review 2026-09-14（模块审查 P2 FND-05）：等元素数不同形状（[2,3] vs [3,2]）
-            // 原先在 ReshapeFlatToOriginal2D 抛 InvalidOperationException，违背自述的
-            // "尺寸不匹配 → ExcelError.Value" 契约（19 处直调方受影响）。映射前预校验。
+            // 等元素数不同形状（[2,3] vs [3,2]）须在映射前预校验：否则
+            // ReshapeFlatToOriginal2D 抛 InvalidOperationException，违背
+            // "尺寸不匹配 → ExcelError.Value" 契约。
             if (was2D && HasMismatched2DShapes(input1!, input2!))
                 return ExcelError.Value;
 
-            // review 2026-09-05（N18）：任一输入展平为空 → 返回 null（而非 ExcelError）——
-            // 空区域广播无目标单元格，UDF 层把 null 渲染为空白。此语义此前未写入 skill 契约表。
+            // 任一输入展平为空 → 返回 null（而非 ExcelError）——空区域广播无目标单元格，
+            // UDF 层把 null 渲染为空白。
             if (flat1.Length == 0 || flat2.Length == 0)
                 return null!;
 
@@ -153,17 +153,17 @@ namespace ExcelFormulaLabs.Foundation
             object[] flat1 = InputNormalizer.NormalizeTo1D(input1);
             object[] flat2 = InputNormalizer.NormalizeTo1D(input2);
             object[] flat3 = InputNormalizer.NormalizeTo1D(input3);
-            // review 2026-08-31（深度审查 P2-17 补充）：null 标量广播（同 2 参数版本）。
+            // null 标量广播（同 2 参数版本）。
             if (input1 == null) flat1 = new object[] { null! };
             if (input2 == null) flat2 = new object[] { null! };
             if (input3 == null) flat3 = new object[] { null! };
 
             bool was2D = input1 is object[,] || input2 is object[,] || input3 is object[,];
-            // FND-05：三参版本同款形状预校验。
+            // 三参版本同款形状预校验。
             if (was2D && HasMismatched2DShapes(input1!, input2!, input3!))
                 return ExcelError.Value;
 
-            // 同上（N18）：三参版本空输入 → null。
+            // 同上：三参版本空输入 → null。
             if (flat1.Length == 0 || flat2.Length == 0 || flat3.Length == 0)
                 return null!;
 
@@ -189,10 +189,9 @@ namespace ExcelFormulaLabs.Foundation
             }
 
             if (was2D)
-                // review 2026-09-05（R10）：与 :124/:127/:130 同款 —— was2D 门卫保证至少一个输入
-                // 是 object[,]（非 null）；其余输入可为 null 标量，ReshapeFlatToOriginal2D 对
-                // 非 object[,] 元素安全跳过（`orig is object[,]`），故用 null-forgiving 消除
-                // CS8604（0b3a4da 清扫时漏掉的 3 参重载）。
+                // was2D 门卫保证至少一个输入是 object[,]（非 null）；其余输入可为 null 标量，
+                // ReshapeFlatToOriginal2D 对非 object[,] 元素安全跳过（`orig is object[,]`），
+                // 故用 null-forgiving 仅消除 CS8604 告警。
                 return ReshapeFlatToOriginal2D(result, input1!, input2!, input3!);
 
             return result;
@@ -207,13 +206,13 @@ namespace ExcelFormulaLabs.Foundation
         {
             if (cell == null) return cell!;
             if (cell is DBNull) return null!;
-            // review 2026-09-14（模块审查 P2 FND-03）：ExcelMissing（公式栏省略的自变量）
-            // 原落 ConvertValue → TInput=object 时原样传给 mapper，类型全名泄漏进结果
-            // （STR.FORMAT(,"0.00") → "ExcelDna.Integration.ExcelMissing"）。按省略 → null。
+            // ExcelMissing（公式栏省略的自变量）须映射为省略 → null：落 ConvertValue 后
+            // TInput=object 时原样传给 mapper，类型全名泄漏进结果
+            // （STR.FORMAT(,"0.00") → "ExcelDna.Integration.ExcelMissing"）。
             if (InputNormalizer.IsExcelMissing(cell)) return null!;
-            // P1-7 (review): return the ORIGINAL empty sentinel — Excel-DNA renders its own
-            // ExcelEmpty as an empty cell, while Foundation.ExcelEmpty (a custom class outside
-            // the Excel-DNA marshalling allow-list) rendered as #NUM! in real Excel.
+            // return the ORIGINAL empty sentinel — Excel-DNA renders its own ExcelEmpty as an
+            // empty cell, while Foundation.ExcelEmpty (a custom class outside the Excel-DNA
+            // marshalling allow-list) would render as #NUM! in real Excel.
             if (InputNormalizer.IsExcelEmptyValue(cell)) return cell!;
             if (InputNormalizer.IsExcelErrorValue(cell)) return cell;
 
@@ -229,9 +228,9 @@ namespace ExcelFormulaLabs.Foundation
             if (cell2 == null) return cell2!;
             if (cell1 is DBNull) return null!;
             if (cell2 is DBNull) return null!;
-            // FND-03：ExcelMissing → 省略 → null（同单参版本）。
+            // ExcelMissing → 省略 → null（同单参版本）。
             if (InputNormalizer.IsExcelMissing(cell1) || InputNormalizer.IsExcelMissing(cell2)) return null!;
-            // P1-7: pass through the original empty sentinel (Excel-DNA renders as empty).
+            // pass through the original empty sentinel (Excel-DNA renders as empty).
             if (InputNormalizer.IsExcelEmptyValue(cell1)) return cell1!;
             if (InputNormalizer.IsExcelEmptyValue(cell2)) return cell2!;
 
@@ -251,10 +250,10 @@ namespace ExcelFormulaLabs.Foundation
             if (cell1 is DBNull) return null!;
             if (cell2 is DBNull) return null!;
             if (cell3 is DBNull) return null!;
-            // FND-03：ExcelMissing → 省略 → null（同单参版本）。
+            // ExcelMissing → 省略 → null（同单参版本）。
             if (InputNormalizer.IsExcelMissing(cell1) || InputNormalizer.IsExcelMissing(cell2)
                 || InputNormalizer.IsExcelMissing(cell3)) return null!;
-            // P1-7: pass through the original empty sentinel (Excel-DNA renders as empty).
+            // pass through the original empty sentinel (Excel-DNA renders as empty).
             if (InputNormalizer.IsExcelEmptyValue(cell1)) return cell1!;
             if (InputNormalizer.IsExcelEmptyValue(cell2)) return cell2!;
             if (InputNormalizer.IsExcelEmptyValue(cell3)) return cell3!;
@@ -267,10 +266,9 @@ namespace ExcelFormulaLabs.Foundation
         private static object MapValue<TInput, TOutput>(
             object value, Func<TInput, TOutput> mapper)
         {
-            // review 2026-08-31（深度审查 P1-11）：ConvertValue 原在 try 之外——它调用
-            // InputNormalizer.ToInt32/ToLong（对越界值主动抛 ArgumentException），任一单元格
-            // 触发即冲出 Map2D 双层循环 → 整片区域一个 #VALUE!，per-cell 隔离承诺失效。
-            // 移入 try：单格转换失败返回 ExcelError.Value。
+            // ConvertValue 必须在 try 内：它调用 InputNormalizer.ToInt32/ToLong
+            // （对越界值主动抛 ArgumentException），任一单元格触发即冲出 Map2D 双层循环
+            // → 整片区域一个 #VALUE!，per-cell 隔离承诺失效。单格转换失败返回 ExcelError.Value。
             try
             {
                 TInput typed = ConvertValue<TInput>(value);
@@ -333,8 +331,8 @@ namespace ExcelFormulaLabs.Foundation
             if (targetType == typeof(string)) return (T)(object)InputNormalizer.ToString(value);
             if (targetType == typeof(double)) return (T)(object)InputNormalizer.ToDouble(value);
             if (targetType == typeof(long)) return (T)(object)InputNormalizer.ToLong(value);
-            // review 2026-08-29：统一委托 InputNormalizer.ToInt32——原实现 CLAMP（截断后依赖下游
-            // 范围检查兜底），与 ToInt32 的 THROW 语义不一致（超 int 范围应显式失败而非静默钳制）。
+            // 统一委托 InputNormalizer.ToInt32：CLAMP（截断后依赖下游范围检查兜底）与
+            // ToInt32 的 THROW 语义不一致（超 int 范围应显式失败而非静默钳制）。
             if (targetType == typeof(int)) return (T)(object)InputNormalizer.ToInt32(value);
             if (targetType == typeof(bool)) return (T)(object)InputNormalizer.ToBool(value);
             if (targetType == typeof(DateTime)) return (T)(object)InputNormalizer.ToDateTime(value);
@@ -440,8 +438,7 @@ namespace ExcelFormulaLabs.Foundation
                 if (orig is object[,] arr2D)
                 {
                     int r = arr2D.GetLength(0);
-                    // review-2026-08-31（max-level 全量审查，P2-17 遗留）：1×1 输入是标量语义
-                    // （Excel 单元格即 1×1 range），不参与行数一致性校验——
+                    // 1×1 输入是标量语义（Excel 单元格即 1×1 range），不参与行数一致性校验——
                     // MapOverMulti(1×1, n×1) 必须广播为 n×1，而非抛 "Cannot reshape"。
                     if (r == 1 && arr2D.GetLength(1) == 1) continue;
                     if (expectedRows == null) { expectedRows = r; rows = r; }

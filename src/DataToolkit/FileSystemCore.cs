@@ -92,10 +92,10 @@ namespace ExcelFormulaLabs.DataToolkit
         /// Throws <see cref="InvalidOperationException"/> if the session has ended.
         /// </summary>
         /// <remarks>
-        /// review 2026-09-05（N18）：ValidatePath（检查）与各 I/O 方法使用原始路径（使用）之间
-        /// 存在该类前缀检查设计固有的 TOCTOU 窗口——检查后、I/O 前目录 junction 被替换理论上可
-        /// 逃逸。威胁模型为本地攻击者（与 NativeDllStore 的 TOCTOU 残余同等级），已接受并文档化；
-        /// NormalizePath 逐段 reparse 走查的 O(depth) 系统调用开销同样为该设计的已知取舍。
+        /// ValidatePath（检查）与各 I/O 方法使用原始路径（使用）之间存在该类前缀检查设计固有的
+        /// TOCTOU 窗口——检查后、I/O 前目录 junction 被替换理论上可逃逸。威胁模型为本地攻击者
+        /// （与 NativeDllStore 的 TOCTOU 残余同等级），已接受并文档化；NormalizePath 逐段
+        /// reparse 走查的 O(depth) 系统调用开销同样为该设计的已知取舍。
         /// </remarks>
         internal static void ValidatePath(string path)
         {
@@ -125,8 +125,8 @@ namespace ExcelFormulaLabs.DataToolkit
 
         internal static string NormalizePath(string p)
         {
-            // review 2026-09-14（模块审查 P3 SEC-07）：FS.NORM 曾绕过 EndSession 守卫——同模块
-            // 其他 FS.* 通过 ValidatePath→EnsureSessionActive 在 AutoClose 后拒绝访问。
+            // FS.NORM 须走 EndSession 守卫：同模块其他 FS.* 通过 ValidatePath→EnsureSessionActive
+            // 在 AutoClose 后拒绝访问。
             EnsureSessionActive();
             string normalized = Path.GetFullPath(p);
             // Sandbox check (inline to avoid recursion: ValidatePath calls NormalizePath internally)
@@ -142,9 +142,9 @@ namespace ExcelFormulaLabs.DataToolkit
                 // (junctions/symlinks) — Path.GetFullPath does not resolve them,
                 // but System.IO APIs follow them, so a junction could bypass the
                 // string-prefix sandbox check above.
-                // F-31 (review 2026-09-06) 已知残余：NTFS 硬链接不具 ReparsePoint 属性，
-                // 本走查不覆盖——沙箱内硬链接可指向沙箱外同卷文件。威胁模型与 TOCTOU 残余
-                // （上方 :94-99 注释）同级：本地攻击者已可直写文件系统；默认沙箱关闭时无增能。
+                // 已知残余：NTFS 硬链接不具 ReparsePoint 属性，本走查不覆盖——沙箱内硬链接可
+                // 指向沙箱外同卷文件。威胁模型与 TOCTOU 残余（上方 :94-99 注释）同级：本地
+                // 攻击者已可直写文件系统；默认沙箱关闭时无增能。
                 if (normalized.Length > root.Length)
                 {
                     string remaining = normalized.Substring(root.Length).TrimStart(Path.DirectorySeparatorChar);
@@ -194,8 +194,8 @@ namespace ExcelFormulaLabs.DataToolkit
             int addBytes = enc.GetByteCount(c);
             if (MaxWriteSizeBytes > 0 && addBytes > MaxWriteSizeBytes)
                 throw new ArgumentException(ErrorMsg.Get("FS_WriteLimitExceeded", MaxWriteSizeBytes));
-            // review 2026-09-14（模块审查 P3 SEC-09）：原仅限制单次写入——反复 APPEND 累计无界。
-            // 累计上限 = MaxWriteSizeBytes（现有文件长度 + 本次追加）。
+            // 单次写入限制不足以约束累计——反复 APPEND 会无界。累计上限 =
+            // MaxWriteSizeBytes（现有文件长度 + 本次追加）。
             if (MaxWriteSizeBytes > 0)
             {
                 long existing = 0;
@@ -216,9 +216,9 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static string[] ListFiles(string p, string pat = "*") { ValidatePath(p); GuardSearchPattern(pat); return Directory.GetFiles(p, pat); }
         internal static string[] ListFolders(string p, string pat = "*") { ValidatePath(p); GuardSearchPattern(pat); return Directory.GetDirectories(p, pat); }
 
-        /// <summary>P2 (pre-release review): a pattern like "..\*.txt" can resolve through
-        /// the parent segment on unpatched .NET Framework runtimes (FindFirstFile resolves
-        /// ".." before validation), escaping the sandbox root. Reject ".." segments explicitly.</summary>
+        /// <summary>A pattern like "..\*.txt" can resolve through the parent segment on
+        /// unpatched .NET Framework runtimes (FindFirstFile resolves ".." before validation),
+        /// escaping the sandbox root. Reject ".." segments explicitly.</summary>
         private static void GuardSearchPattern(string pat)
         {
             if (string.IsNullOrEmpty(pat)) return;
@@ -243,10 +243,9 @@ namespace ExcelFormulaLabs.DataToolkit
         /// </summary>
         private static void DeleteFolderRecursive(string p)
         {
-            // review-2026-08-29 P2-1：原递归实现在深层目录树下可致未捕获 StackOverflow
-            // （StackOverflow 被异常过滤器排除，不可 catch，会直接崩溃 Excel）。
-            // 改为显式栈的深度优先遍历：第一遍删除文件/重解析点并收集目录路径（DFS 前序），
-            // 第二遍逆序删除目录（子目录必然先于父目录被访问，逆序即自底向上）。
+            // 递归实现在深层目录树下可致未捕获 StackOverflow（异常过滤器排除，不可 catch，
+            // 会直接崩溃 Excel），故用显式栈深度优先遍历：第一遍删除文件/重解析点并收集目录路径
+            // （DFS 前序），第二遍逆序删除目录（子目录必然先于父目录被访问，逆序即自底向上）。
             var dirs = new System.Collections.Generic.List<string>();
             var pending = new System.Collections.Generic.Stack<string>();
             pending.Push(p);
@@ -317,9 +316,8 @@ namespace ExcelFormulaLabs.DataToolkit
             if (!string.IsNullOrEmpty(root))
             {
                 EnsureFolder(root!);
-                // review 2026-08-31（深度审查 P2-15）：Path.GetRandomFileName 理论上可冲突，
-                // 原实现无重试且 0 字节临时文件从不清理（调用方负责删除，EndSession 不跟踪）。
-                // 补存在性重试（3 次），清理责任在调用方（RangeExport 用完即删）。
+                // Path.GetRandomFileName 理论上可冲突——存在性重试 3 次。0 字节临时文件不清理，
+                // 清理责任在调用方（RangeExport 用完即删；EndSession 不跟踪）。
                 for (int attempt = 0; attempt < 3; attempt++)
                 {
                     string path = Path.Combine(root!, Path.GetRandomFileName());

@@ -47,7 +47,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         }
         [Fact] public void Count() => ((long)StatsUdf.UDF_STAT_CNT(D)).Should().Be(5);
         [Fact] public void Count_mixed_skips_non_numeric()
-            => ((long)StatsUdf.UDF_STAT_CNT(new object[] { 1, "text", 2, null!, 3.5 })).Should().Be(3); // Excel COUNT semantics: text/empty skipped, no throw (review-2026-08-29 P2-3)
+            => ((long)StatsUdf.UDF_STAT_CNT(new object[] { 1, "text", 2, null!, 3.5 })).Should().Be(3); // Excel COUNT semantics: text/empty skipped, no throw
         [Fact] public void Count_empty() => ((long)StatsUdf.UDF_STAT_CNT(null!)).Should().Be(0);
         [Fact] public void Mode() => ((double)StatsUdf.UDF_STAT_MODE(new double[] { 1, 2, 2, 3 })).Should().Be(2.0);
         [Fact] public void Mode_ties_returns_smallest() => ((double)StatsUdf.UDF_STAT_MODE(new double[] { 2, 2, 1, 1 })).Should().Be(1.0); // ties: returns smallest, matches scipy
@@ -131,7 +131,6 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void T1_single_value() => ((double)StatsUdf.UDF_STAT_T1(new double[]{5.0},0.0)).Should().Be(double.NaN);
         [Fact] public void T2_mismatch() => ((double)StatsUdf.UDF_STAT_T2(X, new double[]{1.0})).Should().Be(double.NaN);
 
-        // ── Release-review regression guards ────────────────────────────────
         [Fact] public void Exp_overflow_returns_NaN_not_Infinity() => ((double)StatsUdf.UDF_STAT_EXP(710.0)).Should().Be(double.NaN);
         [Fact] public void Exp_normal_value() => ((double)StatsUdf.UDF_STAT_EXP(1.0)).Should().BeApproximately(Math.E, 1e-10);
     }

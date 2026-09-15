@@ -111,7 +111,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             JsonXmlCore.JsonValidate("   ").Should().BeFalse();
         }
 
-        // review 2026-09-14（模块审查 P3 SEC-06）：重复键三通道行为必须一致——后者覆盖。
+        // 重复键三通道行为必须一致——后者覆盖。
         [Fact]
         public void Json_duplicate_keys_last_wins_across_channels()
         {
@@ -124,8 +124,8 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             table![1, 0].Should().Be(2L);
         }
 
-        // review 2026-09-14（模块审查 P3 SEC-04）：超深 XML 必须被拒绝而不是 StackOverflow
-        // （20,000 层直调曾使进程退出）。
+        // 超深 XML 必须被拒绝而不是 StackOverflow
+        // （20,000 层直调会使进程退出）。
         [Fact]
         public void Deep_xml_rejected_without_stack_overflow()
         {
@@ -285,7 +285,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact]
         public void Pivot_nan_values_propagate_nan()
         {
-            // PIV-01（review 2026-09-14）：NaN/错误值/Inf 传播 NaN 标记分组不可用（不再静默跳过）。
+            // NaN/错误值/Inf 传播 NaN 标记分组不可用（不得静默跳过）。
             var d = new object[,] { { "K", "P", "V" }, { "A", "X", double.NaN }, { "A", "X", 30 } };
             var r = PivotCore.Pivot(d, 0, 1, 2);
             double.IsNaN((double)r[1, 1]).Should().BeTrue();
@@ -315,8 +315,8 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             double.IsNaN((double)PivotCore.GroupBy(d, new[] { 0 }, 1)[0, 1]).Should().BeTrue();
         }
 
-        // review 2026-08-29（发行前 max level 复审）：SUM/AVG 累加 `current+incoming` 溢出为 ±Inf，
-        // 原实现原样返回 → 单元格泄漏 Inf（违反防错原则）。现 AggResult 对非有限累加值返回 NaN。
+        // SUM/AVG 累加 `current+incoming` 溢出为 ±Inf 时须返回 NaN：直接返回会向
+        // 单元格泄漏 Inf（违反防错原则）——AggResult 对非有限累加值返回 NaN。
         [Fact] public void Pivot_sum_overflow_returns_nan()
         {
             var d = new object[,] { { "K", "P", "V" }, { "A", "X", double.MaxValue }, { "A", "X", double.MaxValue } };
@@ -451,7 +451,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
 
         [Fact] public void GroupBy_nan_values_skipped()
         {
-            // PIV-01（review 2026-09-14）：NaN 传播 → 分组结果 NaN（原静默跳过）。
+            // NaN 传播 → 分组结果 NaN（不得静默跳过）。
             var d = new object[,] { { "G", "V" }, { "A", double.NaN }, { "A", 20 }, { "A", 30 } };
             var r = PivotCore.GroupBy(d, new[] { 0 }, 1);
             double.IsNaN((double)r[0, 1]).Should().BeTrue();
@@ -491,7 +491,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             r[1, 1].Should().Be(300.0);  // B group: 300
         }
 
-        // review 2026-08-29 复审：GroupBy 输出 cell 守卫（100k 行 × 12 列 = 1.2M cells > 1M 上限 → 抛）
+        // GroupBy 输出 cell 守卫（100k 行 × 12 列 = 1.2M cells > 1M 上限 → 抛）
         [Fact] public void GroupBy_max_cells_throws_before_alloc()
         {
             var d = new object[100_000, 13];
@@ -507,11 +507,10 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             act.Should().Throw<ArgumentException>().WithMessage("*cells*");
         }
 
-        // ── review-2026-08-31：P1-10 回归守卫 ──
         [Fact] public void GroupBy_Count_includes_non_numeric_rows()
         {
-            // P1-10：COUNT 的本意是统计行数（含空/文本值行）。修复前非数值行整体丢弃 →
-            // 分组 B 完全消失（输出 1 行）。修复后 A=2、B=1。
+            // COUNT 统计行数（含空/文本值行）——非数值行不得整体丢弃，
+            // 否则该分组会消失。此例期望 A=2、B=1。
             var data = new object[,]
             {
                 { "Dept", "Sales" },
@@ -527,7 +526,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
 
         [Fact] public void Unpivot_empty_valueCols_throws()
         {
-            // P2-14：valueCols 为空数组原静默产出 0 行——显式抛错。
+            // valueCols 为空数组须显式抛错——静默产出 0 行会掩盖调用错误。
             var data = new object[,] { { "id", "v" }, { 1, 2.0 } };
             new Action(() => PivotCore.Unpivot(data, new[] { 0 }, System.Array.Empty<int>(), true))
                 .Should().Throw<ArgumentException>();

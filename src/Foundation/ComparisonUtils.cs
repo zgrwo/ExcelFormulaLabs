@@ -87,9 +87,8 @@ namespace ExcelFormulaLabs.Foundation
                 // Handle Infinity explicitly — same-sign infinities are equal, cross-sign are not.
                 if (double.IsInfinity(dA) && double.IsInfinity(dB)) return dA == dB;
                 if (double.IsInfinity(dA) || double.IsInfinity(dB)) return false;
-                // review 2026-09-05（R04）：原绝对容差 |a−b| < 1e-12 与数据量纲无关，
+                // 须用纯相对容差：绝对容差 |a−b| < 1e-12 与数据量纲无关，
                 // 小量纲数据（ppm/ppb）下 100% 相对差也命中（1.5e-16≈2.5e-16 判真）。
-                // 与 review-2026-09-04（reaudit D1）Index 相对容差同族同步：
                 // 相等快路径（覆盖 0==0，相对窗口双零下溢）+ 纯相对容差 |a−b| < ε·max(|a|,|b|)。
                 if (dA == dB) return true;
                 return Math.Abs(dA - dB) <
@@ -213,10 +212,10 @@ namespace ExcelFormulaLabs.Foundation
                 return b ? "Boolean:True" : "Boolean:False";
 
             if (value is DateTime dt)
-                // F-14 (review 2026-09-06)：带亚秒的 DateTime 曾与整秒塌缩为同一去重键
-                // （ARR.UNIQUE 静默丢值）——仅在有亚秒时追加小数段，整秒键格式不变。
-                // review 2026-09-14（模块审查 P3 FND-06）：格式串必须显式 InvariantCulture——
-                // 插值默认 CurrentCulture，th-TH 佛历 / ar-SA 回历会把同一时刻变成不同键。
+                // 带亚秒的 DateTime 须追加小数段：否则与整秒塌缩为同一去重键
+                // （ARR.UNIQUE 静默丢值）——仅在有亚秒时追加，整秒键格式不变。
+                // 格式串必须显式 InvariantCulture：插值默认 CurrentCulture，
+                // th-TH 佛历 / ar-SA 回历会把同一时刻变成不同键。
                 return dt.Ticks % TimeSpan.TicksPerSecond == 0
                     ? $"Date:{dt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)}"
                     : $"Date:{dt.ToString("yyyy-MM-dd HH:mm:ss.fffffff", CultureInfo.InvariantCulture)}";
@@ -224,9 +223,9 @@ namespace ExcelFormulaLabs.Foundation
             if (value is string s)
                 return $"String:{s}";
 
-            // review 2026-09-14（模块审查 P3 FND-06）：原只识别 object[]/object[,]——typed
-            // double[] 等落 Object 分支（Object:Double[]:System.Double[]）导致内容不同的数组
-            // 全部塌缩为同一键（ARR.UNIQUE/DICT 去重静默丢值）。改为任意 Array 按维度逐元素编码。
+            // 任意 Array 须按维度逐元素编码：只识别 object[]/object[,] 时 typed double[]
+            // 等落 Object 分支（Object:Double[]:System.Double[]），内容不同的数组全部
+            // 塌缩为同一键（ARR.UNIQUE/DICT 去重静默丢值）。
             if (value is Array anyArray)
                 return ArrayToKey(anyArray, depth + 1);
 
@@ -236,9 +235,9 @@ namespace ExcelFormulaLabs.Foundation
                 return $"Numeric:{d.ToString("G17", CultureInfo.InvariantCulture)}";
             }
 
-            // review 2026-08-31（深度审查 P2-16）：原 `GetHashCode()` 在 .NET 进程内随机化
+            // 须用 ToString（确定性）：`GetHashCode()` 在 .NET 进程内随机化
             // （string 每进程不同 seed）→ SafeKey 结果不可复现，ARR.UNIQUE 去重结果随进程漂移。
-            // 改为 ToString（确定性）；数值/日期/数组等已在上方分支精确处理，此处只剩自定义对象。
+            // 数值/日期/数组等已在上方分支精确处理，此处只剩自定义对象。
             return $"Object:{value.GetType().Name}:{value.ToString() ?? ""}";
         }
 
@@ -297,8 +296,8 @@ namespace ExcelFormulaLabs.Foundation
             return high.ToString();
         }
 
-        // R5-P3-01 (review 2026-09-06)：数组段改长度前缀编码（对齐 PivotCore.MakeCompoundKey）。
-        // 裸 `|` 连接下，字符串元素内嵌 "String:" 字面量可伪造分隔点（如 ["a","b|String:c"] 与
+        // 数组段用长度前缀编码（对齐 PivotCore.MakeCompoundKey）：裸 `|` 连接下，
+        // 字符串元素内嵌 "String:" 字面量可伪造分隔点（如 ["a","b|String:c"] 与
         // ["a|String:b","c"] 同键）——键空间非单射。长度前缀使元素边界无歧义。
         private static void AppendKeySegment(StringBuilder sb, string key)
         {

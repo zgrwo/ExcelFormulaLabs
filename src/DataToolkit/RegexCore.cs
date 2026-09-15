@@ -93,10 +93,10 @@ namespace ExcelFormulaLabs.DataToolkit
         {
             ValidatePattern(p);
             if (n <= 0) return Regex.Split(i, p, F(ic), Timeout);
-            // review 2026-09-05（R01）：原实现 `new List<string>((int)n + 1)` 在任何 regex 求值前执行——
-            // n∈(2³⁰,2³¹) 预分配 8.6–17.2GB（OOM 不可捕获，ExceptionFilters 排除 OOM → Excel 崩溃）；
+            // 容量预分配在任何 regex 求值前执行：n∈(2³⁰,2³¹) 会预分配 8.6–17.2GB
+            // （OOM 不可捕获，ExceptionFilters 排除 OOM → Excel 崩溃）；
             // n=2³¹-1/2³¹ 时 (int) 回绕为负容量 → ArgumentOutOfRangeException。
-            // 修法镜像 RegexMatch(:43)/RegexReplace(:73) 的越界友好语义（不抛）+ 项目 100k 上限纪律
+            // 语义镜像 RegexMatch/RegexReplace 的越界友好（不抛）+ 项目 100k 上限纪律
             // （StringCore Pad/RandomString 0–100k）：n 超上限饱和到 100_000（对纪律内输入等价于全拆分），
             // 容量提示随之 ≤ 100_001（约 800KB）。容量须先饱和再 +1：字面 `(int)Math.Min(n + 1, 上限+1)`
             // 在 n=long.MaxValue 时 n+1 回绕为负，仍会抛。
@@ -136,9 +136,8 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static string RegexEscape(string l) => Regex.Escape(l);
         private static RegexOptions F(bool ic) =>
             (ic ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.CultureInvariant;
-            // review 2026-09-14（模块审查 P2 SEC-03）：原含 ExplicitCapture → 无名组 (\w)\1
-            // 的反向引用全函数 #VALUE!（REPLACE n=1 却成功，内部不一致）。移除 ExplicitCapture
-            // 恢复正常捕获组语义；GROUPS 用 FC，不受影响。
+            // 无 ExplicitCapture：它会使无名组 (\w)\1 的反向引用全函数 #VALUE!（REPLACE n=1 却成功，
+            // 内部不一致）；F 保持正常捕获组语义，GROUPS 用 FC，不受影响。
             // Compiled omitted: one-shot UDF calls benefit from interpretation + timeout,
             // and the 5s Timeout already prevents ReDoS.
 

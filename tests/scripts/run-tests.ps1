@@ -5,9 +5,9 @@
 # ============================================================================
 $ErrorActionPreference = "Stop"
 $dir = Split-Path -Parent $PSScriptRoot   # tests/
-# R5-P3-38 (review 2026-09-06)：① 测试清单改目录扫描（原硬编码 2 项与头注"全部测试脚本"
-# 矛盾，新增 test_*.ps1 会被静默漏跑）；② 双宿主覆盖——pwsh7 与 PS5.1 语义差异是本项目
-# 已知陷阱域（C2），"pwsh 优先回退"实为单宿主优选，两个宿主都要跑。
+# 测试清单须目录扫描：硬编码清单与头注"全部测试脚本"矛盾，新增 test_*.ps1 会被静默漏跑。
+# 双宿主覆盖——pwsh7 与 PS5.1 语义差异是本项目已知陷阱域（C2），"pwsh 优先回退"实为
+# 单宿主优选，两个宿主都要跑。
 $scripts = @(Get-ChildItem -Path $PSScriptRoot -Filter "test_*.ps1" -File |
     Sort-Object Name | ForEach-Object { $_.Name })
 if ($scripts.Count -eq 0) {

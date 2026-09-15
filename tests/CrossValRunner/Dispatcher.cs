@@ -41,8 +41,7 @@ public static class Dispatcher
         Register("StatsCore", "TTestOneSample", (a, _) => StatsCore.TTestOneSample(ToDouble1D(a[0]), ToDouble(a[1])));
         Register("StatsCore", "TTestTwoSample", (a, _) => StatsCore.TTestTwoSample(ToDouble1D(a[0]), ToDouble1D(a[1])));
         Register("StatsCore", "ZScore", (a, _) => StatsCore.ZScore(ToDouble1D(a[0])));
-        // R5-P3-40 (review 2026-09-06)：初等函数此前仅 manual 通道——补注册接通活体对照
-        //（manifest 条目 STATS.ABS/SQRT/LN/LOG10/EXP/SIGN）。
+        // 初等函数接通活体对照（manifest 条目 STATS.ABS/SQRT/LN/LOG10/EXP/SIGN）。
         Register("StatsCore", "Abs", (a, _) => ToDouble1D(a[0]).Select(Math.Abs).ToArray());
         Register("StatsCore", "SqrtSafe", (a, _) => ToDouble1D(a[0]).Select(StatsCore.SqrtSafe).ToArray());
         Register("StatsCore", "LogSafe", (a, _) => ToDouble1D(a[0]).Select(StatsCore.LogSafe).ToArray());
@@ -140,7 +139,7 @@ public static class Dispatcher
                 ["term_count"] = (long)model.Coef.Length,
             };
         });
-        // 审查 2.5（max-level 2026-09-13）：共享池化 CV 数值锁（QUALITY 共享组候选）
+        // 共享池化 CV 数值锁（QUALITY 共享组候选）
         Register("SolveCore", "CrossValidateShared", (a, k) =>
             SolveCore.CrossValidateShared(ToDoubleJagged(a[0]), ToDoubleJagged(a[1]), ToIntArray(a[2]),
                 ToDoubleJagged(a[3]).Select(r => r.Select(v => (int)v).ToArray()).ToArray(),
@@ -164,7 +163,7 @@ public static class Dispatcher
         Register("PhyChemCore", "GasToSTP", (a, k) =>
             PhyChemCore.GasToSTP(ToDouble(a[0]), ToDouble(a[1]), ToDouble(a[2]),
                 Kwarg(k, "tUnit", "C"), Kwarg(k, "pUnit", "atm")));
-        // R5-P3-40 (review 2026-09-06)：Density 补注册（正常 + 除零哨兵标签路径，PHYCHEM.DENSITY_*）。
+        // Density 对照覆盖正常 + 除零哨兵标签路径（PHYCHEM.DENSITY_*）。
         Register("PhyChemCore", "Density", (a, _) => PhyChemCore.Density(ToDouble(a[0]), ToDouble(a[1])));
 
         // ═══════════════════ LinalgCore ═══════════════════
@@ -173,9 +172,8 @@ public static class Dispatcher
         Register("LinalgCore", "MatMul", (a, _) => LinalgCore.MatMul(ToDouble2D(a[0]), ToDouble2D(a[1])));
         Register("LinalgCore", "Transpose", (a, _) => LinalgCore.Transpose(ToDouble2D(a[0])));
         Register("LinalgCore", "Trace", (a, _) => LinalgCore.Trace(ToDouble2D(a[0])));
-        // review 2026-09-05（R12）：tol 默认对齐 LinalgCore.Rank(:266)/LinalgUdf(:77)/api-reference
-        // （0 = 相对容差，MATLAB/numpy 约定）——此前 harness 独用 1e-10 绝对默认，Excel 中用户
-        // 实际走的相对默认路径从未被 CrossVal 覆盖。
+        // tol 默认对齐 LinalgCore.Rank(:266)/LinalgUdf(:77)/api-reference（0 = 相对容差，
+        // MATLAB/numpy 约定）：harness 独用 1e-10 绝对默认会漏掉 Excel 用户实际走的相对默认路径。
         Register("LinalgCore", "Rank", (a, k) => LinalgCore.Rank(ToDouble2D(a[0]), Kwarg(k, "tol", 0d)));
         Register("LinalgCore", "ConditionNumber", (a, _) => LinalgCore.ConditionNumber(ToDouble2D(a[0])));
         Register("LinalgCore", "Eigenvalues", (a, _) => LinalgCore.Eigenvalues(ToDouble2D(a[0])));
@@ -198,7 +196,6 @@ public static class Dispatcher
         Register("DoeCore", "RsmBb", (a, _) =>
             DoeCore.RsmBb((int)ToLong(a[0])));
 
-        // ═══════════════════ DoeAnalysisCore（review-2026-08-29 P2-4：此前分析函数无 cross_check）═══════════════
         Register("DoeAnalysisCore", "Analyze", (a, k) =>
             DoeAnalysisCore.Analyze(ToDouble2D(a[0]), ToDouble1D(a[1]), (int)ToLong(a[2]), Kwarg(k, "quadratic", false)));
         Register("DoeAnalysisCore", "Anova", (a, k) =>
@@ -206,12 +203,10 @@ public static class Dispatcher
         Register("DoeAnalysisCore", "Pareto", (a, k) =>
             DoeAnalysisCore.Pareto(ToDouble2D(a[0]), ToDouble1D(a[1]), (int)ToLong(a[2]), Kwarg(k, "quadratic", false)));
 
-        // ═══════════════════ ArrayCore / StatsCore.CountNumeric（review 2026-08-29：ARR.* 与 COUNT 此前无活体对照）═══════════════
         Register("ArrayCore", "Fill", (a, _) => ArrayCore.Fill(a[0]!, ToLong(a[1])));
         Register("ArrayCore", "Sequence", (a, _) => ArrayCore.Sequence(ToDouble(a[0]), ToDouble(a[1]), ToDouble(a[2])));
         Register("StatsCore", "CountNumeric", (a, _) => StatsCore.CountNumeric(ToObjectArray(a[0])));
 
-        // ═══════════════════ PivotCore / RangeExportCore / DictOperations / Taguchi（review 2026-09-14：CrossVal 盲区补齐）═══════════════════
         Register("PivotCore", "Pivot", (a, _) =>
             PivotCore.Pivot(ToObject2D(a[0]), (int)ToLong(a[1]), (int)ToLong(a[2]), (int)ToLong(a[3]), ToString(a[4])));
         Register("PivotCore", "GroupBy", (a, _) =>
@@ -235,7 +230,7 @@ public static class Dispatcher
         Register("StringCore", "Soundex", (a, _) => StringCore.Soundex(ToString(a[0])));
         Register("StringCore", "CountSubstring", (a, k) => StringCore.CountSubstring(ToString(a[0]), ToString(a[1]), Kwarg(k, "cs", true)));
         Register("StringCore", "CommonPrefix", (a, k) => StringCore.CommonPrefix(ToString(a[0]), ToString(a[1]), Kwarg(k, "cs", true)));
-        // review-2026-08-31（全量审查：Dispatcher 补注册——纯确定性，Python 独立实现）
+        // 纯确定性字符串函数：接通 Python 独立实现对照
         Register("StringCore", "TextJoin", (a, k) => StringCore.TextJoin(ToString(a[0]), Kwarg(k, "skip", false), ToStringArray(a[1])));
         Register("StringCore", "Coalesce", (a, _) => StringCore.Coalesce(ToString(a[0]), ToString(a[1])));
         Register("StringCore", "IsNullOrEmptyStr", (a, _) => StringCore.IsNullOrEmptyStr(ToString(a[0])));
@@ -253,7 +248,7 @@ public static class Dispatcher
         Register("DateTimeCore", "IsLeapYear", (a, _) => DateTimeCore.IsLeapYear(ToLong(a[0])));
         Register("DateTimeCore", "AddWorkdays", (a, _) => DateTimeCore.AddWorkdays(ToDateTime(a[0]), ToLong(a[1])));
         Register("DateTimeCore", "NextWorkday", (a, _) => DateTimeCore.NextWorkday(ToDateTime(a[0])));
-        // review-2026-08-31（Dispatcher 补注册——确定性日期函数）
+        // 确定性日期函数：接入 CrossVal Python 对照
         Register("DateTimeCore", "Weekday", (a, _) => DateTimeCore.Weekday(ToDateTime(a[0])));
         Register("DateTimeCore", "WeekdayISO", (a, _) => DateTimeCore.WeekdayISO(ToDateTime(a[0])));
         Register("DateTimeCore", "IsWeekend", (a, _) => DateTimeCore.IsWeekend(ToDateTime(a[0])));
@@ -268,7 +263,6 @@ public static class Dispatcher
 
         // ═══════════════════ ArrayCore 补注册 ═══════════════════
         Register("ArrayCore", "SortAsc", (a, _) => ArrayCore.Sort(ToObjectArray(a[0]), true, Foundation.ComparerMode.Auto));
-        // R5-P3-40 (review 2026-09-06)：Numeric 比较器路径此前无活体对照（ARR.SORTNUM）。
         Register("ArrayCore", "SortNum", (a, _) => ArrayCore.Sort(ToObjectArray(a[0]), true, Foundation.ComparerMode.Numeric));
         Register("ArrayCore", "Unique", (a, _) => ArrayCore.Unique(ToObjectArray(a[0])));
         Register("ArrayCore", "IndexOf", (a, _) => ArrayCore.IndexOf(ToObjectArray(a[0]), ToClr(a[1])));
@@ -336,8 +330,8 @@ public static class Dispatcher
                 .Select<JsonElement, object?>(x => x.ValueKind == JsonValueKind.String ? x.GetString() : x.GetDouble()).ToArray()).ToArray();
             int h = rows.Length, w = rows.Length > 0 ? rows[0].Length : 0;
             var m2 = new object[h, w];
-            // review 2026-09-05（R10）：JSON 数组元素已解析为 string/double（ValueKind Null
-            // 走不到此处——GetDouble 会响亮抛出），元素不可能为 null，null-forgiving 消除 CS8601。
+            // JSON 数组元素已解析为 string/double（ValueKind Null 走不到此处——GetDouble 会
+            // 响亮抛出），元素不可能为 null，null-forgiving 消除 CS8601。
             for (int i = 0; i < h; i++) for (int j = 0; j < w; j++) m2[i, j] = rows[i][j]!;
             return m2;
         }
@@ -353,8 +347,8 @@ public static class Dispatcher
             return je.ValueKind switch
             {
                 JsonValueKind.Number => je.TryGetInt64(out long l) ? l : je.GetDouble(),
-                // review 2026-09-05（R10）：ValueKind==String 时 GetString() 非 null（JSON 字符串
-                // 节点），null-forgiving 消除 CS8603；Null 节点落入 `_` 分支返回 GetRawText()。
+                // ValueKind==String 时 GetString() 非 null（JSON 字符串节点），null-forgiving
+                // 消除 CS8603；Null 节点落入 `_` 分支返回 GetRawText()。
                 JsonValueKind.String => je.GetString()!,
                 JsonValueKind.True => true,
                 JsonValueKind.False => false,

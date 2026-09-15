@@ -5,8 +5,7 @@ using Xunit;
 
 namespace ExcelFormulaLabs.Foundation.Tests
 {
-    /// <summary>review-2026-08-29 P2-5：ExceptionFilters 此前无专用测试。
-    /// 验证进程致命异常（OOM/StackOverflow/AccessViolation）永远不被 catch 吞掉。</summary>
+    /// <summary>验证进程致命异常（OOM/StackOverflow/AccessViolation）永远不被 catch 吞掉。</summary>
     public class ExceptionFiltersTests
     {
         [Fact] public void IsCatchable_ordinary_exception_true()

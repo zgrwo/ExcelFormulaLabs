@@ -17,13 +17,13 @@ namespace ExcelFormulaLabs.Analytics
         /// <summary>Maximum number of runs a design may produce (safety guard).</summary>
         internal const long MaxRuns = 1_000_000;
 
-        // review 2026-08-29（发行前 max level 复审）：MaxRuns/MaxCells 只量 runs/cells，
-        // 不量因子数。PlanFull 的 `new int[totalFactors]` 与 RsmCcd 的 `new int[k]` 在
-        // qty 超大（如 =DOE.PLAN(1000000000,2,0,1,"FULL")→1e9 因子）时仍可分配数 GB →
+        // MaxRuns/MaxCells 只量 runs/cells，不量因子数：PlanFull 的
+        // `new int[totalFactors]` 与 RsmCcd 的 `new int[k]` 在 qty 超大
+        // （如 =DOE.PLAN(1000000000,2,0,1,"FULL")→1e9 因子）时可分配数 GB →
         // 32 位 Excel OOM 崩溃（OOM 被异常过滤器排除不可捕获）。须在按因子数分配前设上限。
         internal const int MaxFactors = 1000;
-        // review 2026-08-29：cells 上限（runs×k）。原守卫只量 runs——单公式如
-        // =DOE.PLAN(84,2,0,2,"FRAC") 可分配 352MB+、"BB" 可到 5.5GB → 32 位 Excel OOM 崩溃
+        // cells 上限（runs×k）：只量 runs 时单公式如 =DOE.PLAN(84,2,0,2,"FRAC")
+        // 可分配 352MB+、"BB" 可到 5.5GB → 32 位 Excel OOM 崩溃
         // （OOM 被异常过滤器排除不可捕获）。
         internal const long MaxCells = 1_000_000;
 
@@ -262,12 +262,12 @@ namespace ExcelFormulaLabs.Analytics
 
             var (runs, twoCols, threeCols) = SelectOrthogonalArray(n2, n3);
 
-            // review 2026-09-04（reaudit B1）：中间因子数（L16 的 6~8、L32 的 7~16）此前按 P1-7
-            // 重排顺序取前 n 列仍为分辨率 III（主效应与 2 阶交互别名）。这两段区间数学上可达 IV：
+            // 中间因子数（L16 的 6~8、L32 的 7~16）按重排顺序取前 n 列仍为分辨率 III
+            // （主效应与 2 阶交互别名）。这两段区间数学上可达 IV：
             // GF(2)^k 中含最高阶主效应的 2^{k-1} 个列构成 XOR-sum-free 集（两两异或不落入集合，
             // 子集异或为零要求元素个数为偶数且低位抵消），取其中任意 m ≤ 2^{k-1} 列 → 无 ≤3 长
             // 定义字 → 分辨率 ≥ IV。超出 2^{k-1}（L16 9~15、L32 17~31）受 GF(2) 最大 sum-free
-            // 容量限制（分别为 8/16）只能 III，保持原顺序。位置数组相对 Build2Level 重排输出。
+            // 容量限制（分别为 8/16）只能 III，保持顺序。位置数组相对 Build2Level 重排输出。
             int[]? twoPick = TwoLevelResolutionPick(twoCols.Count, n2);
             // Pick columns in factor order (group 1 first) and code to [-1, +1].
             var coded = new double[runs, (int)totalFactors];
@@ -355,9 +355,9 @@ namespace ExcelFormulaLabs.Analytics
 
             double alpha = Math.Pow(Math.Pow(2, k), 0.25); // rotatable: 2^(k/4)
 
-            // review 2026-08-31（深度审查 P2-36）：原 `long total = nf + centerPerBlock + ...` 在
-            // nf=long.MaxValue（k≥31 防回绕分支）时溢出为负 → 守卫失效；且 factorial 分配（2^k×k）
-            // 发生在守卫**之前**——k=25 时 2^25×25×8B≈6.7GB 先 OOM。nf/total 计算与守卫全部提前。
+            // total = nf + centerPerBlock + ... 在 nf=long.MaxValue（k≥31 防回绕分支）
+            // 时会溢出为负 → 守卫失效；且 factorial 分配（2^k×k）若发生在守卫之前——
+            // k=25 时 2^25×25×8B≈6.7GB 先 OOM。故 nf/total 计算与守卫全部提前。
             long nf = k >= 31 ? long.MaxValue : 1L << k; // 防位移回绕（同 FractionalCoded）
             int nAxial = 2 * k;
             const int centerPerBlock = 4;
@@ -519,7 +519,7 @@ namespace ExcelFormulaLabs.Analytics
             throw new ArgumentException(ErrorMsg.Get("DOE_TaguchiMixedUnsupported", n2, n3));
         }
 
-        // review 2026-09-04（reaudit B1）：分辨率 IV 列位序（相对 Build2Level 重排后的列表下标）。
+        // 分辨率 IV 列位序（相对 Build2Level 重排后的列表下标）。
         // 取值 = 含最高阶主效应（D/E）的全部 2^{k-1} 个列在重排顺序中的位置——重排输出为
         // 主效应优先 + 交互按阶数降序，这些列落在位置 [k−1 .. 尾]。取前 m 个即 XOR-sum-free
         // 子集（分辨率 ≥ IV）。若日后重排算法变更，需重新生成（回归测试 L32 16 因子锁分辨率 ≥4）。
@@ -534,9 +534,8 @@ namespace ExcelFormulaLabs.Analytics
         /// </summary>
         private static int[]? TwoLevelResolutionPick(int nCols, int m)
         {
-            // review 2026-09-14（模块审查 P2 PHY-02）：原条件把不可达区间也写进分支
-            // （nCols==15 只可能在 m=8 时出现——m=6/7 走 Build2Level(3) 的 7 列；
-            // nCols==31 只可能在 m=16 时出现），属死代码。收窄为实际可达点。
+            // 分支只用实际可达点（不可达区间是死代码）：nCols==15 只可能在 m=8 时
+            // 出现——m=6/7 走 Build2Level(3) 的 7 列；nCols==31 只可能在 m=16 时出现。
             if (nCols == 15 && m == 8) return L16_RESOLUTION_IV_POS;
             if (nCols == 31 && m == 16) return L32_RESOLUTION_IV_POS;
             return null;
@@ -546,8 +545,8 @@ namespace ExcelFormulaLabs.Analytics
         /// 2-level orthogonal array L_{2^k}(2^{2^k-1}): k main-effect columns plus
         /// all XOR interaction columns, in standard Taguchi order
         /// (A, B, AB, C, AC, BC, ABC, D, ...). Returns level indices 0/1 per column.
-        /// review 2026-08-31（深度审查 P1-7）：**返回前列序重排为主效应优先 + 交互按阶数降序**——
-        /// 原标准序（A,B,AB,C,AC,BC,ABC,…）被 TaguchiCoded 顺序取前 n 列时把因子分配到交互列
+        /// **返回前列序重排为主效应优先 + 交互按阶数降序**：标准序
+        /// （A,B,AB,C,AC,BC,ABC,…）被 TaguchiCoded 顺序取前 n 列时会把因子分配到交互列
         /// （5 因子落 A,B,AB,C,AC → 因子 3 与 1×2 交互完全别名）。重排后：
         /// L8→A,B,C,ABC,AB,AC,BC…（前 3 主效应列干净）；L16 五因子→A,B,C,D,ABCD（分辨率 V，
         /// 与报告建议的列 1,2,4,8,15 一致）；高阶交互先于低阶（ABCD 先于 AB——低阶交互与

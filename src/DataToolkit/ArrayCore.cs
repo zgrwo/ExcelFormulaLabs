@@ -26,7 +26,6 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static long Count(object[] a) => a.Length;
         internal static bool Contains(object[] a, object v) => ArrayOperations.IndexOf(a,v)>=0;
 
-        // review-2026-08-29 P1-2：ARR.FILL / ARR.RANGE 业务逻辑从 UDF 层下沉至 Core（UDF 仅分发）。
         internal static object[] Fill(object value, long count)
         {
             if (count < 0 || count > 100_000)
@@ -37,9 +36,9 @@ namespace ExcelFormulaLabs.DataToolkit
         }
         internal static object[] Sequence(double start, double end, double step)
         {
-            // review 2026-08-29（发行前 max level 复审）：原仅挡 NaN，±Inf 的 start/end/step 未挡，
-            // 会静默产生退化序列（如 step=+Inf 返回 [start]）或 `d` 溢出为 Inf 后错误地落入
-            // `d > 100_000` 抛错（误导性消息）。与 NaN 一致的哨兵契约：非有限输入 → 空数组。
+            // 非有限 start/end/step → 空数组（与 NaN 一致的哨兵契约）：仅挡 NaN 会静默产生
+            // 退化序列（如 step=+Inf 返回 [start]），或 `d` 溢出为 Inf 后错误地落入
+            // `d > 100_000` 抛错（误导性消息）。
             if (double.IsNaN(start) || double.IsNaN(end) || double.IsNaN(step)
                 || double.IsInfinity(start) || double.IsInfinity(end) || double.IsInfinity(step))
                 return Array.Empty<object>();
@@ -49,15 +48,14 @@ namespace ExcelFormulaLabs.DataToolkit
             if ((asc && start > end) || (!asc && start < end))
                 return Array.Empty<object>();
             double d = Math.Abs((end - start) / step);
-            // review 2026-08-29（max level 复审）：(int)d 对 d≥2³¹ 或 ±Inf 在 unchecked 下回绕为
-            // int.MinValue（如 SEQUENCE(0,1e10,1) 或有限极端值 end-start 溢出为 Inf）→
-            // 消息「-2147483648 elements」误导。非有限 d 与超限 d 统一抛错，消息计数用可表示值。
+            // (int)d 对 d≥2³¹ 或 ±Inf 在 unchecked 下回绕为 int.MinValue
+            // （如 SEQUENCE(0,1e10,1) 或有限极端值 end-start 溢出为 Inf）→ 消息「-2147483648
+            // elements」误导。非有限 d 与超限 d 统一抛错，消息计数用可表示值。
             if (double.IsNaN(d) || double.IsInfinity(d) || d > 100_000)
                 throw new ArgumentException(ErrorMsg.Get("ARR_RangeTooLarge",
                     d > 100_000 && d <= int.MaxValue ? (int)d : 100_001, 100_000));
-            // review 2026-09-14（模块审查 P2 ARR-01）：浮点步长丢端点——RANGE(0,0.3,0.1) 的
-            // d=2.9999999999999996 → floor 得 2 → 缺 0.3。计数加相对容差补齐端点；
-            // 末项在容差内吸附到 end（消除 0.30000000000000004），超端项剔除。
+            // 浮点步长丢端点——RANGE(0,0.3,0.1) 的 d=2.9999999999999996 → floor 得 2 → 缺 0.3。
+            // 计数加相对容差补齐端点；末项在容差内吸附到 end（消除 0.30000000000000004），超端项剔除。
             double countTol = 1e-12 * Math.Max(1.0, Math.Abs(d));
             int n = (int)Math.Floor(d + countTol) + 1;
             if (n < 1) n = 1;

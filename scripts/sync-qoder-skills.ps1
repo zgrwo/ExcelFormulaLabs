@@ -22,8 +22,8 @@ $ErrorActionPreference = "Stop"
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 $root = Split-Path -Parent $PSScriptRoot
 
-# review-2026-08-29：改为动态扫描 skills/*.md（排除 README.md），新技能自动纳入同步与检查 13。
-# 旧硬编码列表曾漏掉 project-experience —— 硬编码名单是漂移源（经验库 C4）。
+# 动态扫描 skills/*.md（排除 README.md），新技能自动纳入同步与检查 13。
+# 硬编码列表会漏掉新增技能（如 project-experience）—— 硬编码名单是漂移源（经验库 C4）。
 $skillNames = @(
     Get-ChildItem -Path (Join-Path $root "skills") -Filter "*.md" |
         Where-Object { $_.Name -ne "README.md" } |
@@ -64,7 +64,7 @@ function ConvertTo-QoderLinks {
 
 $mismatches = @()
 foreach ($name in $skillNames) {
-    # P2-30 (review-2026-08-31): 原 "skills$name.md" 反斜杠在 Linux/pwsh 下是字面字符，改用 Join-Path 逐级拼接
+    # "skills$name.md" 反斜杠在 Linux/pwsh 下是字面字符，须用 Join-Path 逐级拼接
     $src = Join-Path (Join-Path $root "skills") "$name.md"
     $dst = Join-Path (Join-Path (Join-Path (Join-Path $root ".qoder") "skills") $name) "SKILL.md"
     if (-not (Test-Path $src)) {
@@ -101,7 +101,7 @@ if ($CheckOnly) {
 if ($mismatches.Count -gt 0) {
     # 非 CheckOnly 模式：直接重写全部镜像（修复漂移）
     foreach ($name in $skillNames) {
-        # P2-30 (review-2026-08-31): 原 "skills$name.md" 反斜杠在 Linux/pwsh 下是字面字符，改用 Join-Path 逐级拼接
+        # "skills$name.md" 反斜杠在 Linux/pwsh 下是字面字符，须用 Join-Path 逐级拼接
         $src = Join-Path (Join-Path $root "skills") "$name.md"
         $dst = Join-Path (Join-Path (Join-Path (Join-Path $root ".qoder") "skills") $name) "SKILL.md"
         $dstDir = Split-Path -Parent $dst

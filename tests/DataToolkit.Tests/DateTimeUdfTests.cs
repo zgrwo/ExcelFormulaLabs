@@ -93,7 +93,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void EOM_null() => DateTimeUdf.UDF_DT_EOM(null!).Should().BeNull();
         [Fact] public void EOM_error() => DateTimeUdf.UDF_DT_EOM(ExcelError.NA).Should().Be(ExcelError.NA);
 
-        // review 2026-09-14（P2 DT-01）：Excel 1900 序列 1–59 统一 +1 对齐显示值；
+        // Excel 1900 序列 1–59 统一 +1 对齐显示值；
         // 60（不存在的 1900-02-29）显式 #VALUE!；61+ 不变。
         [Fact] public void Serial_1_maps_to_1900_01_01()
             => ((double)DateTimeUdf.UDF_DT_EOM(1.0)).Should().Be(32.0);   // 1900-01-31 → OADate 32
@@ -134,16 +134,15 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void AgeYears_null_birth() => DateTimeUdf.UDF_DT_AGEY(null!, OA(2024, 1, 1)).Should().Be(ExcelError.Value);
         [Fact] public void AgeYears_null_ref() 
         {
-            // 测试治理（review 2026-09-14）：改用「今天 − 30 年」出生日期 → 期望恒为 30，
-            // 不再随运行日漂移（原 >= 0 弱断言）。
+            // 「今天 − 30 年」出生日期 → 期望恒为 30，不随运行日漂移（>= 0 属弱断言）。
             double birth = System.DateTime.Today.AddYears(-30).ToOADate();
             ((long)DateTimeUdf.UDF_DT_AGEY(birth, null!)).Should().Be(30);
         }
-        // R5-P3-04 (review 2026-09-06)：序列号 0（1899-12-30）是合法日期，不再是「未提供→今天」；
-        // 文本输入与必选参数同语义 → #VALUE!（原先静默按今天计算）。
+        // 序列号 0（1899-12-30）是合法日期，不是「未提供→今天」；
+        // 文本输入与必选参数同语义 → #VALUE!（不得静默按今天计算）。
         [Fact] public void AgeDays_serial_zero_end_is_valid_date()
         {
-            // DT-01（review 2026-09-14）：Excel 序列 5 现按显示值 1900-01-05 解释（+1 修正），
+            // Excel 序列 5 按显示值 1900-01-05 解释（+1 修正），
             // 序列 0 保持 OADate 语义（1899-12-30）→ 相差 -6 天。
             ((long)DateTimeUdf.UDF_DT_AGED(5.0, 0.0)).Should().Be(-6);
         }
@@ -301,14 +300,13 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void DateDiff_null_unit() => DateTimeUdf.UDF_DT_DDIFF(null!, OA(2024,1,1), OA(2024,1,10)).Should().Be(ExcelError.Value);
         [Fact] public void AddWkd_zero() => ((double)DateTimeUdf.UDF_DT_AWKD(OA(2024,6,17), 0)).Should().Be(OA(2024,6,17));
 
-        // ── Release-review regression guards ────────────────────────────────
         // start_day outside 0-6 must surface as #VALUE!, not silently wrong dates.
         [Fact] public void Sow_start_day_out_of_range_returns_error() => DateTimeUdf.UDF_DT_SOW(OA(2024,6,17), 7).Should().Be(ExcelError.Value);
         [Fact] public void Eow_start_day_negative_returns_error() => DateTimeUdf.UDF_DT_EOW(OA(2024,6,17), -1).Should().Be(ExcelError.Value);
         [Fact] public void Wom_start_day_out_of_range_returns_error() => DateTimeUdf.UDF_DT_WOM(OA(2024,6,17), 9).Should().Be(ExcelError.Value);
         [Fact] public void Sow_start_day_sunday_ok() => DateTimeUdf.UDF_DT_SOW(OA(2024,6,17), 0).Should().Be(OA(2024,6,16));
 
-        // review 2026-09-14（P1 UDF-01）：start_day 省略（Blank/Missing/DBNull）→ 1=Mon（非 0=Sun）。
+        // start_day 省略（Blank/Missing/DBNull）→ 1=Mon（非 0=Sun）。
         [Theory]
         [MemberData(nameof(OmittedSentinelData.All), MemberType = typeof(OmittedSentinelData))]
         public void Sow_omitted_start_day_defaults_to_monday(object? sentinel)

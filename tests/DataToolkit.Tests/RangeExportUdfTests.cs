@@ -6,13 +6,13 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
 {
     public class RangeExportUdfTests
     {
-        // P1-4 (pre-release review): api-reference documents RANGE.TOCSV as
+        // api-reference documents RANGE.TOCSV as
         // (source_range, [delimiter], [quote_fields]) — delimiter optional, comma default.
-        // Previously a missing delimiter silently produced concatenated fields.
+        // A missing delimiter must not silently produce concatenated fields.
         [Fact] public void ToCsv_default_delimiter_when_omitted()
         {
             var csv = (string)RangeExportUdf.UDF_RANGE_CSV(Data, null!, true);
-            // RNG-02：quote=true → 全字段引号。
+            // quote=true → 全字段引号。
             csv.Should().Contain("\"Name\",\"Age\"").And.Contain("\"Alice\",\"30\"");
         }
         private static readonly object[,] Data = new object[,] { { "Name", "Age" }, { "Alice", 30 }, { "Bob", 25 } };

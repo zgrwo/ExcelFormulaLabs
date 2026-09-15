@@ -36,7 +36,7 @@ param(
     [Parameter(Mandatory = $true)] [string] $XllPath,
     [Parameter(Mandatory = $true)] [string] $FileDescription,
     [Parameter(Mandatory = $true)] [string] $ProductName,
-    # R6-F2 (review 2026-09-06)：治理自测用测试开关——首调模拟瞬时文件锁（exit 5），
+    # 治理自测用测试开关——首调模拟瞬时文件锁（exit 5），
     # 验证重试路径能收敛到成功；生产构建不传此开关。
     [switch] $SimulateTransientLock
 )
@@ -45,8 +45,8 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 if (-not (Test-Path $XllPath)) {
-    # N-D (review 2026-09-06)：文件缺失曾 exit 0 软跳过——与"参数 Mandatory"的严格
-    # 姿态矛盾，路径笔误会被静默吞掉。改 exit 1（真要跳过请先自行判存在）。
+    # 文件缺失须 exit 1：软跳过 exit 0 与"参数 Mandatory"的严格
+    # 姿态矛盾，路径笔误会静默吞掉（真要跳过请先自行判存在）。
     Write-Host "ERROR: VERSIONINFO patch aborted - XllPath not found: $XllPath"
     exit 1
 }

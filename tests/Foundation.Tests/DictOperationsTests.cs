@@ -51,8 +51,8 @@ public class FromKeysTests
     [Fact] public void All_invalid_keys_returns_empty()
         => DictOperations.FromKeys(new object[] { ExcelError.Value, null!, ExcelError.NA }).Count.Should().Be(0);
 
-    // review 2026-09-14（P3 FND-11）：文档契约「Object 键跳过」——两个无意义对象此前经
-    // Convert.ToString 塌缩为同一 "System.Object" 键（静默合并）。
+    // 文档契约「Object 键跳过」——两个无意义对象经 Convert.ToString 会塌缩为同一
+    // "System.Object" 键（静默合并），必须跳过。
     [Fact] public void Custom_objects_are_skipped_per_doc_contract()
     {
         var dict = DictOperations.FromKeys(new object[] { new object(), new object(), "keep" });

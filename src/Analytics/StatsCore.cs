@@ -12,12 +12,10 @@ namespace ExcelFormulaLabs.Analytics
     /// </summary>
     internal static class StatsCore
     {
-        // review 2026-09-05（R22）：均值累加对 1e308 级输入可溢出 ±Inf → NaN 封顶
-        // （对齐 Sum/Range 的既有封顶约定）。
-        // review 2026-09-14（模块审查 P1 STA-01）：MathNet 增量均值在跨符号极值
-        // （{-1e308,1e308}）上中间差 2e308 → +Inf。改为 maxAbs 预缩放（缩放后 |x|≤1，
-        // 求和永不溢出），再乘回尺度——与 numpy 真值 0 对齐；常规数据保持原路径
-        // （仅当主路径非有限时才走缩放路径，避免扰动既有逐位结果）。
+        // 均值累加对 1e308 级输入可溢出 ±Inf → NaN 封顶（对齐 Sum/Range 的既有封顶约定）。
+        // MathNet 增量均值在跨符号极值（{-1e308,1e308}）上中间差 2e308 → +Inf；
+        // maxAbs 预缩放（缩放后 |x|≤1，求和永不溢出）再乘回尺度——与 numpy 真值 0 对齐。
+        // 仅当主路径非有限时才走缩放路径，常规数据保持原路径以避免扰动既有逐位结果。
         internal static double Mean(double[] d)
         {
             if (d.Length == 0) return double.NaN;
@@ -38,7 +36,7 @@ namespace ExcelFormulaLabs.Analytics
         internal static double HarmonicMean(double[] d)
         {
             if (d.Length == 0) return double.NaN;
-            // P1-5: harmonic mean is undefined for negative input (scipy → nan, Excel → #NUM!).
+            // Harmonic mean is undefined for negative input (scipy → nan, Excel → #NUM!).
             // MathNet returns +Inf for [-1,1] (2/0) and a meaningless value for [1,-2,3].
             for (int i = 0; i < d.Length; i++)
                 if (d[i] < 0) return double.NaN;
@@ -50,15 +48,15 @@ namespace ExcelFormulaLabs.Analytics
         {
             if (d.Length == 0) return double.NaN;
             var r = Statistics.Median(d);
-            // F-07 (review 2026-09-06)：MathNet 中位数为 (lo+hi)/2，1e308 级数据求和溢出 → +Inf
-            // （SUMMARY median 列曾泄漏）。凸组合回退（≡R7 τ=0.5，与 R8 中位数同值）。
+            // MathNet 中位数为 (lo+hi)/2，1e308 级数据求和溢出 → +Inf（SUMMARY median 列
+            // 会泄漏）。凸组合回退（≡R7 τ=0.5，与 R8 中位数同值）。
             return !double.IsNaN(r) && !double.IsInfinity(r) ? r : QuantileSafe(d, 0.5);
         }
 
-        // F-08 (review 2026-09-06)：两遍平方和（Σx²）对 |x| > 1e154 级输入溢出 ±Inf → NaN 封顶
-        // （R22 语义保留）；但大规模常数数组真方差 = 0，溢出路径曾误报 NaN → 改两遍中心化
-        // （先均值后 Σ(x−mean)²，与 numpy.var 同构、CrossVal 对照更贴），真值不可表示的大尺度
-        // 方差仍封顶 NaN。
+        // 两遍平方和（Σx²）对 |x| > 1e154 级输入溢出 ±Inf → NaN 封顶（封顶语义保留）；
+        // 但大规模常数数组真方差 = 0，溢出路径会误报 NaN → 用两遍中心化（先均值后
+        // Σ(x−mean)²，与 numpy.var 同构、CrossVal 对照更贴）；真值不可表示的大尺度方差
+        // 仍封顶 NaN。
         internal static double VarianceP(double[] d)
         {
             if (d.Length < 1) return double.NaN;
@@ -81,9 +79,9 @@ namespace ExcelFormulaLabs.Analytics
             return double.IsInfinity(ss) ? double.NaN : ss;
         }
 
-        // F-07 (review 2026-09-06)：R7 安全分位数回退。MathNet R7 插值 x_lo + f*(x_hi−x_lo)
-        // 在跨符号 1e308 级数据上 hi−lo 溢出 → PERCENTILE({-1e308,1e308},50) 曾返回 +Inf
-        // （真值 0）。lo*(1−f)+hi*f 数学等价且凸组合不超 [lo,hi]，有限输入必得有限结果。
+        // R7 安全分位数回退。MathNet R7 插值 x_lo + f*(x_hi−x_lo) 在跨符号 1e308 级数据上
+        // hi−lo 溢出 → PERCENTILE({-1e308,1e308},50) 会返回 +Inf（真值 0）。
+        // lo*(1−f)+hi*f 数学等价且凸组合不超 [lo,hi]，有限输入必得有限结果。
         // 仅在主路径返回非有限时启用（见 QuantileCapped），常规量纲与 MathNet/scipy 逐位一致。
         private static double QuantileSafe(double[] d, double tau)
         {
@@ -100,9 +98,9 @@ namespace ExcelFormulaLabs.Analytics
         {
             var r = Statistics.QuantileCustom(d, tau, qd);
             if (!double.IsNaN(r) && !double.IsInfinity(r)) return r;
-            // R5-P3-02 (review 2026-09-06)：非 R7 定义无可移植凸组合等价式（各定义 h 公式不同，
-            // 不凭记忆重实现），主路径非有限时按输出保洁约定（D5：结果无 Inf）封顶 NaN，
-            // 不再泄漏 ±Inf；R7 保留 QuantileSafe 凸组合回退（有限输入必得有限真值）。
+            // 非 R7 定义无可移植凸组合等价式（各定义 h 公式不同，不凭记忆重实现），主路径非
+            // 有限时按输出保洁约定（D5：结果无 Inf）封顶 NaN，不泄漏 ±Inf；R7 保留
+            // QuantileSafe 凸组合回退（有限输入必得有限真值）。
             return qd == QuantileDefinition.R7 ? QuantileSafe(d, tau) : double.NaN;
         }
 
@@ -118,7 +116,6 @@ namespace ExcelFormulaLabs.Analytics
         internal static double Kurtosis(double[] d) =>
             d.Length < 4 ? double.NaN : Statistics.Kurtosis(d); // 无偏样本超额峰度（type 2，对应 Excel KURT / scipy fisher=True, bias=False）
 
-        // review 2026-08-29：逐元素数学函数下沉（原 L1 守卫写在 UDF lambda，红线① UDF 仅分发）
         internal static double SqrtSafe(double x) => x < 0 ? double.NaN : Math.Sqrt(x);
         internal static double LogSafe(double x) => x <= 0 ? double.NaN : Math.Log(x);
         internal static double Log10Safe(double x) => x <= 0 ? double.NaN : Math.Log10(x);
@@ -146,9 +143,9 @@ namespace ExcelFormulaLabs.Analytics
         /// <summary>
         /// Product of array elements. NaN/Inf input is guarded upstream by <see cref="AnalyticsHelpers.PrepV"/>.
         /// Infinity result is capped to NaN.
-        /// review 2026-08-31（深度审查 P2-11）：朴素左折叠顺序依赖——Product(1e300,1e300,1e-300) →
-        /// 1e300×1e300=1e600 溢出 → Inf → NaN（真值 1e300 可表示）。按 |x| 升序相乘，先消掉
-        /// 小量避免中间溢出（极端下溢场景如 1e-320² 仍可能，属 double 极限，接受）。
+        /// 按 |x| 升序相乘避免中间溢出：朴素左折叠顺序依赖——Product(1e300,1e300,1e-300) →
+        /// 1e300×1e300=1e600 溢出 → Inf → NaN（真值 1e300 可表示），先消掉小量可避免。
+        /// 极端下溢场景（如 1e-320²）仍可能，属 double 极限，接受。
         /// </summary>
         internal static double Product(double[] d)
         {
@@ -185,8 +182,8 @@ namespace ExcelFormulaLabs.Analytics
             return mode;
         }
 
-        // review 2026-09-05（R22）+ F-08：协方差与方差同族——改两遍中心化（与 np.cov 同构），
-        // 大规模常数数组真协方差 = 0 不再误报 NaN；真值不可表示仍封顶 NaN。
+        // 协方差与方差同族：两遍中心化（与 np.cov 同构），大规模常数数组真协方差 = 0
+        // 不误报 NaN；真值不可表示仍封顶 NaN。
         internal static double CovarianceP(double[] a, double[] b)
         {
             if (a.Length != b.Length || a.Length < 1) return double.NaN;
@@ -223,13 +220,13 @@ namespace ExcelFormulaLabs.Analytics
             if (d.Length == 0) return Array.Empty<double>();
             if (d.Length == 1) return new[] { 1.0, d[0], double.NaN, d[0], d[0], d[0], d[0], d[0], 0.0 };
             var qd = def ?? DefaultQuantileDefinition;
-            // F-07 (review 2026-09-06)：q1/median/q3 经 QuantileCapped（非有限 → R7 凸组合回退），
-            // 大尺度跨符号数据不再泄漏 +Inf；iqr = q3−q1 均为有限时精确。
+            // q1/median/q3 经 QuantileCapped（非有限 → R7 凸组合回退），大尺度跨符号数据
+            // 不泄漏 +Inf；iqr = q3−q1 均为有限时精确。
             double q1 = QuantileCapped(d, 0.25, qd);
             double q3 = QuantileCapped(d, 0.75, qd);
             double iqr = q3 - q1;
-            // review 2026-09-14（模块审查 P1 STA-01）：原直调 Statistics.Mean 绕过封顶
-            // → {-1e308,1e308} 的 mean 列泄漏 +Inf。统一走 StatsCore.Mean（maxAbs 缩放）。
+            // mean 列须走 StatsCore.Mean（maxAbs 缩放）：直调 Statistics.Mean 会绕过封顶
+            // → {-1e308,1e308} 的 mean 列泄漏 +Inf。
             return new[] { (double)d.Length, Mean(d), Math.Sqrt(Variance(d)),
                 Statistics.Minimum(d), q1, Median(d), q3,
                 Statistics.Maximum(d), double.IsInfinity(iqr) ? double.NaN : iqr };
@@ -240,7 +237,7 @@ namespace ExcelFormulaLabs.Analytics
         internal static double Percentile(double[] d, double p, QuantileDefinition? def = null)
         {
             if (d.Length == 0 || p < 0 || p > 100 || double.IsNaN(p)) return double.NaN;
-            // F-07：非有限结果 → R7 凸组合安全回退（常规量纲逐位一致）。
+            // 非有限结果 → R7 凸组合安全回退（常规量纲逐位一致）。
             return QuantileCapped(d, p / 100.0, def ?? DefaultQuantileDefinition);
         }
 
@@ -254,16 +251,16 @@ namespace ExcelFormulaLabs.Analytics
             return double.IsInfinity(r) ? double.NaN : r;
         }
 
-        // review 2026-09-05（R22）：MathNet 两遍平方和（Σx²、Σxy）在序列量纲 > 1e154 时
-        // 溢出 → 尺度不变量输出 NaN/Inf（真值有限）。相关系数对每条序列的正缩放不变 →
-        // 先按 1/maxAbs 预缩放（逐序列，不改变 r）；maxAbs==0（全零序列）保持既有 NaN 路径。
+        // MathNet 两遍平方和（Σx²、Σxy）在序列量纲 > 1e154 时溢出 → 尺度不变量输出
+        // NaN/Inf（真值有限）。相关系数对每条序列的正缩放不变 → 先按 1/maxAbs 预缩放
+        // （逐序列，不改变 r）；maxAbs==0（全零序列）保持既有 NaN 路径。
         internal static double Pearson(double[] a, double[] b)
         {
             if (a.Length != b.Length || a.Length < 2) return double.NaN;
             return Correlation.Pearson(PreScaled(a), PreScaled(b));
         }
 
-        /// <summary>R22 复制型预缩放：v/maxAbs（不改输入数组）；全零序列原样返回。</summary>
+        /// <summary>复制型预缩放：v/maxAbs（不改输入数组）；全零序列原样返回。</summary>
         private static double[] PreScaled(double[] v)
         {
             double max = 0;
@@ -284,11 +281,11 @@ namespace ExcelFormulaLabs.Analytics
         {
             NumericGuard.AgainstNonFinite(data);
             int rows = data.GetLength(0), cols = data.GetLength(1);
-            // review 2026-09-05（R22）：均值/协方差两遍平方和在列量纲 > 1e154 时溢出 →
-            // 尺度不变量输出 NaN/Inf。相关系数对列的正缩放不变 → 先按各列 1/maxAbs 预缩放
-            // （写入新矩阵，不改输入）。maxAbs==0（全零列）保持原值 → 既有常量列 NaN 路径
-            // 不变；常量列 c>0 缩放后各元素 = c/c = 1.0（IEEE 精确）→ sd=0 精确 → 常量分支
-            // 结果与修复前逐位一致（verify-manual CORRMATRIX_CONST 用 tol=0）。
+            // 均值/协方差两遍平方和在列量纲 > 1e154 时溢出 → 尺度不变量输出 NaN/Inf。
+            // 相关系数对列的正缩放不变 → 先按各列 1/maxAbs 预缩放（写入新矩阵，不改输入）。
+            // maxAbs==0（全零列）保持原值 → 既有常量列 NaN 路径不变；常量列 c>0 缩放后
+            // 各元素 = c/c = 1.0（IEEE 精确）→ sd=0 精确 → 常量分支结果逐位一致
+            // （verify-manual CORRMATRIX_CONST 用 tol=0）。
             var scaled = new double[rows, cols];
             for (int j = 0; j < cols; j++)
             {
@@ -320,11 +317,11 @@ namespace ExcelFormulaLabs.Analytics
                 for (int i = 0; i < rows; i++) { double d = data[i, j] - means[j]; ss += d * d; }
                 sds[j] = Math.Sqrt(ss / (rows - 1));  // sample stddev
             }
-            // review 2026-08-31（深度审查 P1-4）：原 `sds[i] < 1e-15` 绝对阈值在两个方向都错——
-            // ① 溢出/NaN 路径：sd=Inf 或 NaN 时 `Inf < 1e-15`/`NaN < 1e-15` 恒为 false → 走 else 分支
-            //    产生"对角线 1.0、非对角 NaN"的自相矛盾矩阵（{1e308,1} 列实测 r[0,0]=1 而 r[0,1]=NaN）；
-            // ② 小量纲路径：相关系数是尺度不变量，列数据在 1e-16 量级时 sd 恒 < 1e-15 → 整行被误判常量。
-            // 判据改为"非有限或非正"（NaN/Inf/0 都进常量分支）。
+            // 常量判据须为"非有限或非正"（NaN/Inf/0 都进常量分支）：`sds[i] < 1e-15` 绝对阈值
+            // 在两个方向都错——① 溢出/NaN 路径：sd=Inf 或 NaN 时 `Inf < 1e-15`/`NaN < 1e-15` 恒为
+            // false → 走 else 分支产生"对角线 1.0、非对角 NaN"的自相矛盾矩阵（{1e308,1} 列实测
+            // r[0,0]=1 而 r[0,1]=NaN）；② 小量纲路径：相关系数是尺度不变量，列数据在 1e-16 量级时
+            // sd 恒 < 1e-15 → 整行被误判常量。
             for (int i = 0; i < cols; i++)
             {
                 if (double.IsNaN(sds[i]) || double.IsInfinity(sds[i]) || sds[i] <= 0)
@@ -352,18 +349,18 @@ namespace ExcelFormulaLabs.Analytics
         {
             if (d.Length < 2) return double.NaN;
             double va = Variance(d);
-            // review 2026-08-31（深度审查 P1-5）：原 `va < 1e-15` 绝对阈值把 1e-9 量纲样本
-            // （va~1e-18）误判为常量 → 返回 NaN（真值 t=0.866, p=0.478）。t 检验是尺度不变量，
-            // 常量判据应为精确零方差；NaN/Inf 防御性返回 NaN（哨兵）。
+            // 常量判据须为精确零方差：`va < 1e-15` 绝对阈值把 1e-9 量纲样本（va~1e-18）
+            // 误判为常量 → 返回 NaN（真值 t=0.866, p=0.478）。t 检验是尺度不变量；
+            // NaN/Inf 防御性返回 NaN（哨兵）。
             if (double.IsNaN(va) || double.IsInfinity(va)) return double.NaN;
             if (va == 0)
             {
                 // Zero variance: all values equal. If the mean is exactly mu0, no
                 // evidence against H0 → p=1.0; otherwise undefined → NaN.
-                // review 2026-09-05（R03）：原 `Abs(mean−mu0) < 1e-15` 是绝对阈值——
-                // 小量纲数据（{1e-16}×4 vs mu0=2e-16，均值差 1e-16）被误判"均值相等"
-                // → 错误 p=1。t 检验零方差分支是尺度不变判据，改为精确相等（跨量纲一致）。
-                // Mirrors TTestTwoSample zero-variance guard (M4 fix).
+                // 零方差均值判据须精确相等（跨量纲一致）：`Abs(mean−mu0) < 1e-15` 绝对阈值
+                // 会把小量纲均值差（{1e-16}×4 vs mu0=2e-16，差 1e-16）误判"均值相等"
+                // → 错误 p=1。
+                // Mirrors TTestTwoSample zero-variance guard.
                 return Statistics.Mean(d) == mu0 ? 1.0 : double.NaN;
             }
             double se = Math.Sqrt(va) / Math.Sqrt(d.Length);
@@ -374,9 +371,9 @@ namespace ExcelFormulaLabs.Analytics
         internal static double TTestTwoSample(double[] a, double[] b)
         {
             if (a.Length < 2 || b.Length < 2) return double.NaN;
-            // review 2026-09-14（模块审查 P1 STA-03）：Welch df 的中间量对 wᵢ² 求平方——
-            // 跨符号/大量纲（1e150 级）平方溢出，小量纲（1e-160 级）下溢为 0 → p=NaN。
-            // t 与 df 对两组数据的共同正缩放不变：先按 max(|a|,|b|) 预缩放（公共尺度）。
+            // Welch df 的中间量对 wᵢ² 求平方——跨符号/大量纲（1e150 级）平方溢出，小量纲
+            // （1e-160 级）下溢为 0 → p=NaN。t 与 df 对两组数据的共同正缩放不变：
+            // 先按 max(|a|,|b|) 预缩放（公共尺度）。
             double maxA = 0, maxB = 0;
             foreach (double x in a) { double t0 = Math.Abs(x); if (t0 > maxA) maxA = t0; }
             foreach (double x in b) { double t0 = Math.Abs(x); if (t0 > maxB) maxB = t0; }
@@ -391,12 +388,12 @@ namespace ExcelFormulaLabs.Analytics
             }
             double ma = Statistics.Mean(a), mb = Statistics.Mean(b);
             double va = Variance(a), vb = Variance(b);
-            // review 2026-08-31（深度审查 P1-5）：绝对阈值 → 精确零判据（同 TTestOneSample）。
+            // 须用精确零判据（同 TTestOneSample）：绝对阈值会误判小量纲方差。
             double vab = va + vb;
             if (double.IsNaN(vab) || double.IsInfinity(vab)) return double.NaN;
-            // review 2026-09-05（R03）：零方差分支均值判据改精确相等（同 TTestOneSample）——
-            // 原 `Abs(ma−mb) < 1e-15` 绝对阈值把小量纲均值差（如 {1e-16}×4 vs {2e-16}×4，
-            // 差 1e-16）误判"相等"→ 错误 p=1；{1}×4 vs {2}×4（差 1）反而 NaN，量纲不一致。
+            // 零方差分支均值判据须精确相等（同 TTestOneSample）：`Abs(ma−mb) < 1e-15` 绝对
+            // 阈值把小量纲均值差（如 {1e-16}×4 vs {2e-16}×4，差 1e-16）误判"相等"→ 错误 p=1；
+            // {1}×4 vs {2}×4（差 1）反而 NaN，量纲不一致。
             if (vab == 0) return ma == mb ? 1.0 : double.NaN;
             double se = Math.Sqrt(va / a.Length + vb / b.Length);
             double t = (ma - mb) / se;
@@ -413,10 +410,10 @@ namespace ExcelFormulaLabs.Analytics
         internal static double[] ZScore(double[] d)
         {
             if (d.Length == 0) return Array.Empty<double>();
-            // review 2026-09-14（模块审查 P1 STA-02）：原实现直接对原尺度算 mean/var——
-            // ① 小量纲（1e-200 级）方差平方下溢为 0 → 误报"常量数据 #VALUE!"；
-            // ② 跨符号极值（{-1e300,1e300}）均值中间量溢出 → NaN。Z-score 对正缩放不变，
-            // 先按 maxAbs 预缩放（尺度归一化），再在缩放域计算并输出（与 scipy 真值一致）。
+            // 直接对原尺度算 mean/var 的两条失效路径：① 小量纲（1e-200 级）方差平方下溢
+            // 为 0 → 误报"常量数据 #VALUE!"；② 跨符号极值（{-1e300,1e300}）均值中间量溢出
+            // → NaN。Z-score 对正缩放不变：先按 maxAbs 预缩放（尺度归一化），再在缩放域
+            // 计算并输出（与 scipy 真值一致）。
             double max = 0;
             foreach (double x in d) { double a = Math.Abs(x); if (a > max) max = a; }
             double[] s = d;
@@ -427,7 +424,7 @@ namespace ExcelFormulaLabs.Analytics
             }
             double m = Mean(s);
             double sd = Math.Sqrt(VarianceP(s));
-            // review 2026-08-31（深度审查 P1-5）：绝对阈值 → 精确零判据（小量纲数据 sd 与数据同尺度）。
+            // 须用精确零判据：绝对阈值会误判小量纲数据（sd 与数据同尺度）。
             if (double.IsNaN(sd) || double.IsInfinity(sd) || sd == 0) throw new ArgumentException(ErrorMsg.Get("STATS_ZeroVariance"));
             return s.Select(x => (x - m) / sd).ToArray();
         }
@@ -445,8 +442,7 @@ namespace ExcelFormulaLabs.Analytics
 
         /// <summary>Count of numeric elements (Excel COUNT semantics): values convertible to
         /// a finite double are counted; text/empty/error cells are skipped, never thrown.
-        /// review-2026-08-29 P2-3：原实现经 PrepV（遇 NaN/Inf 抛异常），含文本区域返回 #VALUE!
-        /// 而非文档所述的“元素个数”。</summary>
+        /// 不能经 PrepV：遇 NaN/Inf 会抛异常，含文本区域返回 #VALUE! 而非文档所述的“元素个数”。</summary>
         internal static long CountNumeric(object data)
         {
             var raw = InputNormalizer.NormalizeTo1D(data);

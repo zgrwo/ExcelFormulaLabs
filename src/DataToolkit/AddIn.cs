@@ -57,9 +57,8 @@ namespace ExcelFormulaLabs.DataToolkit
                 }
 
                 // 1) 文件系统优先（非打包模式）
-                // review 2026-09-14（模块审查 P3 SEC-08）：原实现无条件信任同目录文件——
-                // 打包发行时 x86\x64\ 旁路的篡改 DLL 会被直接加载，绕过嵌入资源 SHA-256。
-                // 现在有嵌入基线时逐次重验，不一致则落回内容寻址提取（fail-safe）。
+                // 有嵌入基线时逐次重验防篡改：打包发行时 x86\x64\ 旁路的篡改 DLL 会被直接
+                // 加载，绕过嵌入资源 SHA-256；不一致则落回内容寻址提取（fail-safe）。
                 if (File.Exists(dllPath)
                     && (embedded == null || NativeDllStore.FileHashEquals(dllPath, embedded)))
                 {
@@ -72,8 +71,8 @@ namespace ExcelFormulaLabs.DataToolkit
                 {
                     // 内容寻址提取（NativeDllStore）：目标路径由嵌入字节的 SHA-256 派生，
                     // 且每次调用重新比对盘上文件哈希与嵌入字节，不一致即原子替换。
-                    // review-2026-08-29 B1 修复 v2.2.1 失效的同目录覆写方案
-                    // （stream 不复位写 0 字节 + File.Move 无法覆写 → 完整性检查是空转）。
+                    // 仅靠内容寻址不足——路径是确定性的，本地攻击者可预写；覆写方案若 stream
+                    // 不复位（写 0 字节）或 File.Move 无法覆写，完整性检查即成空转。
                     string localDir = Path.Combine(
                         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                         "ExcelFormulaLabs", "DataToolkit");
@@ -105,12 +104,12 @@ namespace ExcelFormulaLabs.DataToolkit
         public void AutoOpen()
         {
             PreLoadNativeDependencies();
-            // review-2026-08-29 P1-1：沙箱默认未启用（SandboxConfig(null)，FS.* 不受限）。
+            // 沙箱默认未启用（SandboxConfig(null)，FS.* 不受限）。
             // 产品决策点：如需默认受限，改为在此调用
             //   FileSystemCore.Initialize(new SandboxConfig(Path.Combine(
             //       Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             //       "ExcelFormulaLabs", "sandbox")));
-            // 未启用时输出警告。注意（2026-08-29 发行前审查）：Trace.WriteLine 默认无 TraceListener，
+            // 未启用时输出警告。注意：Trace.WriteLine 默认无 TraceListener，
             // 仅调试器/ETW 可见，对 Excel 终端用户不可见——用户警示由 README § 文件系统沙箱 与 SECURITY.md 承担。
             if (FileSystemCore.SandboxRoot == null)
             {

@@ -282,7 +282,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void B64Enc_empty() => StringUdf.UDF_STR_B64ENC("").Should().Be("");
         [Fact] public void B64Enc_null() => StringUdf.UDF_STR_B64ENC(null!).Should().BeNull();
         [Fact] public void B64Enc_error() => StringUdf.UDF_STR_B64ENC(ExcelError.NA).Should().Be(ExcelError.NA);
-        // R5-P3-10 (review 2026-09-06)：长输入原仅 NotBeNull（编码正确性零验证）——改 roundtrip。
+        // 长输入用 roundtrip 验证编码正确性（仅 NotBeNull 零验证）。
         [Fact] public void B64Enc_long_string()
         {
             var s = new string('x', 200);
@@ -351,7 +351,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
 
         // ══════════════════════════════════════════════════════════════════
         //  STR.COALESCE  (MapOverMulti<string,string,string>)
-        //  review 2026-09-05（R09）：语义以文档契约为准——null 或空串 → fallback
+        //  语义以文档契约为准——null 或空串 → fallback
         //  （StringUdf.cs:40 "not null or empty" / api-reference / user-manual）。
         //  纯空白串不属于空串，仍原样返回。
         // ══════════════════════════════════════════════════════════════════
@@ -412,7 +412,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Fmt_array() { var r=(object[])StringUdf.UDF_STR_FMT(new object[]{"42","100"}, "D4"); ((string)r[0]).Should().Be("42"); ((string)r[1]).Should().Be("100"); }
         // Numeric format specifiers now work with actual numeric types (double/int)
         [Fact] public void Fmt_double_N2() => StringUdf.UDF_STR_FMT(123.456, "N2").Should().Be("123.46");
-        [Fact] public void Fmt_double_P0() => StringUdf.UDF_STR_FMT(0.25, "P0").Should().Be("25 %"); // review-2026-08-31: InvariantCulture 的 .NET P0 标准输出（原 zh-CN locale 恰好为 "25%"）
+        [Fact] public void Fmt_double_P0() => StringUdf.UDF_STR_FMT(0.25, "P0").Should().Be("25 %"); // InvariantCulture 的 .NET P0 标准输出（zh-CN locale 为 "25%"）
         [Fact] public void Fmt_double_C() => ((string)StringUdf.UDF_STR_FMT(1234.5, "C")).Should().Contain("1,234.50");
         [Fact] public void Fmt_int_D4() => StringUdf.UDF_STR_FMT(42, "D4").Should().Be("0042");
         [Fact] public void Fmt_composite_format() => StringUdf.UDF_STR_FMT("world", "{0} hello").Should().Be("world hello");
@@ -428,7 +428,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Default_match_case_EndsWith() => ((bool)StringUdf.UDF_STR_EW("Hello.World", "world")).Should().BeFalse();
         [Fact] public void Default_match_case_CommonPrefix() => StringUdf.UDF_STR_CPFX("Hello", "hello").Should().Be("");
 
-        // review 2026-09-14（P1 UDF-01）：suffix 省略（Blank/Missing/DBNull）→ "..."。
+        // suffix 省略（Blank/Missing/DBNull）→ "..."。
         [Theory]
         [MemberData(nameof(OmittedSentinelData.All), MemberType = typeof(OmittedSentinelData))]
         public void Trunc_omitted_suffix_defaults_to_ellipsis(object? sentinel)
@@ -436,7 +436,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             StringUdf.UDF_STR_TRUNC("abcdefgh", 5, sentinel!).Should().Be("ab...");
         }
 
-        // review 2026-09-14（P2 STR-02 / FND-03）：真空白单元格 = 空值（回退/命中），
+        // 真空白单元格 = 空值（回退/命中），
         // ExcelMissing 不得泄漏类型全名。
         [Fact] public void Coalesce_blank_cell_falls_back()
             => StringUdf.UDF_STR_COAL(ExcelEmpty.Value, "fb").Should().Be("fb");

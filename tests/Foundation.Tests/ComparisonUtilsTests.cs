@@ -37,8 +37,8 @@ public class ValuesEqualTests
     [Fact] public void Infinity_not_equal_to_finite() => ComparisonUtils.ValuesEqual(double.PositiveInfinity, 1e300).Should().BeFalse();
     [Fact] public void NaN_not_equal_to_Infinity() => ComparisonUtils.ValuesEqual(double.NaN, double.PositiveInfinity).Should().BeFalse();
 
-    // ── R04（review-2026-09-05）：相对容差——量纲无关，期望全部硬编码 ──
-    // 复现反例（旧绝对 1e-12 判 True，相对判据必须 False）：小量纲 100% 相对差
+    // ── 相对容差——量纲无关，期望全部硬编码 ──
+    // 反例（绝对 1e-12 判 True，相对判据必须 False）：小量纲 100% 相对差
     [Fact] public void Small_scale_relative_difference_is_not_equal() => ComparisonUtils.ValuesEqual(1.5e-16, 2.5e-16).Should().BeFalse();
     // 复现反例：0 与小量纲值不再假命中（相对窗口随 |b| 下溢）
     [Fact] public void Zero_and_small_value_are_not_equal() => ComparisonUtils.ValuesEqual(0.0, 3e-13).Should().BeFalse();
@@ -80,7 +80,7 @@ public class SafeKeyTests
     [Fact] public void Date_key() => ComparisonUtils.SafeKey(new System.DateTime(2025, 6, 15, 10, 30, 0)).Should().Be("Date:2025-06-15 10:30:00");
     [Fact] public void SafeKey_null_element_in_1D_array() => ComparisonUtils.SafeKey(new object?[] { "a", null, "c" }).Should().Be("Array(3):8:String:a|13:Null:##NULL##|8:String:c");
     [Fact] public void SafeKey_empty_1D_array() => ComparisonUtils.SafeKey(System.Array.Empty<object>()).Should().Be("Array(0):##EMPTY##");
-    // R5-P3-01 (review 2026-09-06)：长度前缀编码下，元素内嵌 "String:" 的分隔点伪造不再同键。
+    // 长度前缀编码下，元素内嵌 "String:" 的分隔点伪造不再同键。
     [Fact] public void SafeKey_array_segment_injection_not_colliding()
     {
         var a = ComparisonUtils.SafeKey(new object?[] { "a", "b|String:c" });
@@ -95,8 +95,8 @@ public class SafeKeyTests
         key.Should().Contain("String:a").And.Contain("Numeric:1").And.Contain("String:b").And.Contain("Numeric:2");
     }
 
-    // review 2026-09-14（P3 FND-06）：DateTime 键格式必须 InvariantCulture——
-    // th-TH 佛历会把 2025 显示为 2568，同一时刻产生不同键。
+    // DateTime 键格式必须 InvariantCulture——th-TH 佛历会把 2025 显示为 2568，
+    // 同一时刻产生不同键。
     [Fact]
     public void SafeKey_DateTime_is_invariant_under_thai_culture()
     {
@@ -111,7 +111,7 @@ public class SafeKeyTests
         finally { System.Globalization.CultureInfo.CurrentCulture = previous; }
     }
 
-    // review 2026-09-14（P3 FND-06）：typed 数组原先塌缩为同一 Object 键，内容丢失。
+    // typed 数组不得塌缩为同一 Object 键（键须内容敏感）。
     [Fact]
     public void SafeKey_typed_arrays_are_content_sensitive()
     {

@@ -206,8 +206,8 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             SqlCore.SqlQuery(data, "/* note */ SELECT * FROM data")![1, 0].Should().Be("Alice");
         }
 
-        // review 2026-09-14（模块审查 P0 SEC-01）：注释拆分关键字的绕过向量——黑名单
-        // 必须在注释剥离后的归一化文本上匹配，且拼接处恢复为独立 token。
+        // 注释拆分关键字的绕过向量：黑名单必须在注释剥离后的归一化文本上匹配，
+        // 且拼接处恢复为独立 token。
         [Fact]
         public void Comment_split_forbidden_keywords_are_rejected()
         {
@@ -231,7 +231,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             after!.GetLength(0).Should().Be(2);
         }
 
-        // review 2026-09-14（模块审查 P0 SEC-01）：注释剥离器不得误伤字符串字面量。
+        // 注释剥离器不得误伤字符串字面量。
         [Fact]
         public void Comment_stripping_preserves_string_literals()
         {
@@ -244,7 +244,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             r3![1, 0].Should().Be("it's -- not a comment");
         }
 
-        // review 2026-09-14（模块审查 P2 SEC-02）：单值 10MB 上限必须覆盖文本型巨值。
+        // 单值 10MB 上限必须覆盖文本型巨值。
         [Theory]
         [InlineData("SELECT hex(randomblob(11000000))")]
         [InlineData("SELECT quote(randomblob(11000000))")]
@@ -509,10 +509,6 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             r![2, 1].Should().BeNull(); // no match → DBNull → ExcelEmpty
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // RELEASE-REVIEW REGRESSION GUARDS
-        // ─────────────────────────────────────────────────────────────
-
         [Fact]
         public void With_cte_delete_is_rejected()
         {
@@ -551,7 +547,6 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             r[2, 1].Should().Be(25.0);
         }
 
-    // ── review-2026-08-31（max-level 全量审查）：P0-2 守卫正式回归测试 ──
     [Fact] public void Recursive_cte_blocked()
     {
         // 无限递归 CTE 原可通过全部过滤（无 RECURSIVE 关键字拦截）→ 输出无界 → OOM。

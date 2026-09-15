@@ -7,14 +7,14 @@
 # 场景 E：api-reference UDF 计数漂移 → 检查 1 FAIL
 # 场景 F：csproj 描述函数计数漂移 → 检查 11 FAIL
 # 场景 G：散文式 UDF 计数漂移（AGENTS.md）→ 检查 16 FAIL
-#   G2/G3/G4：中文变体负向注入（R13 词表化 review-2026-09-05）：
+#   G2/G3/G4：中文变体负向注入：
 #     G2 `N 项 UDF`（模式 1a 量词扩 项）/ G3 `UDF 数量 N`（模式 1b 倒装）/
 #     G4 `N 个函数（UDF）`（模式 1c）——注入后检查 16 必须 FAIL
-# 场景 H：CHANGELOG 幽灵条目（无 tag）→ 检查 10 反向 FAIL（F-23/N11 review-2026-09-06）
-# 场景 I：残留 .dna 扫描域（F-06）——I1 Analytics 根残留 → FAIL；I2 bin/ 下 → PASS
-# 场景 J：MathNet 版本双解析失败 → 检查 5 FAIL（F-05，双 "?" 曾恒真 PASS）
+# 场景 H：CHANGELOG 幽灵条目（无 tag）→ 检查 10 反向 FAIL
+# 场景 I：残留 .dna 扫描域——I1 Analytics 根残留 → FAIL；I2 bin/ 下 → PASS
+# 场景 J：MathNet 版本双解析失败 → 检查 5 FAIL（双 "?" 恒真 PASS，须注入版本使其失败）
 # 用法：pwsh 或 powershell 均可 -NoProfile -ExecutionPolicy Bypass -File tests/scripts/test_verify_docs.ps1
-# F-24 (review-2026-09-06)：被测门禁经 $hostCmd 优先 pwsh7（原恒 powershell）。
+# 被测门禁经 $hostCmd 优先 pwsh7 调用（恒用 powershell 会使 pwsh7 语义差异永不暴露）。
 # 注意：本测试复制仓库（排除 bin/obj/.git 等），耗时数秒，仅在 CI windows job 与本地运行。
 # ============================================================================
 $ErrorActionPreference = "Stop"
@@ -29,9 +29,8 @@ $hostCmd = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else {
 $script:fixtureSeq = 0
 function Copy-RepoFixture {
     # 复制仓库（排除生成目录），返回 fixture 路径。
-    # F-23 (review 2026-09-06)：原实现固定返回 $tmpRoot\fixture——所有场景共享同一目录，
-    # 注入状态跨场景累积（场景 B 的徽章文本残留进 C/D/…；要求"干净全绿"的场景 A 之后的
-    # I2 被 I1 的残留污染而假失败）。改为按序号隔离。
+    # 按序号隔离：固定目录会让所有场景共享同一目录，注入状态跨场景累积
+    #（场景 B 的徽章文本残留进 C/D/…；要求"干净全绿"的 I2 被 I1 的残留污染而假失败）。
     $script:fixtureSeq++
     $dst = Join-Path $tmpRoot ("fixture-" + $script:fixtureSeq)
     robocopy $repo $dst /E /XD bin obj .git BenchmarkDotNet.Artifacts logs better-harness __pycache__ /XF *.pyc /NFL /NDL /NJH /NJS /NP | Out-Null
@@ -89,8 +88,7 @@ if (Test-Path (Join-Path $repo ".qoder\skills")) {
     Run-VerifyDocs $fixture3 "mirror" $true
 } else {
     Write-Host "[D] .qoder 本地镜像不存在，场景跳过（CI 环境）"
-    # R5-P3-28 (review 2026-09-06)：SKIP 计入 passCount 与 verify-docs 自身 P2-29
-    # "SKIP 不计入 pass" 语义相悖——分账记录，不计入 pass。
+    # SKIP 分账记录，不计入 pass：计入 passCount 与 "SKIP 不计入 pass" 语义相悖。
     $script:skipCount++
 }
 
@@ -111,15 +109,14 @@ $content = $content -replace '144 个数据处理函数', '143 个数据处理�
 Run-VerifyDocs $fixtureF "DataToolkit csproj description count" $true
 
 # --- 场景 G：散文式 UDF 计数漂移（检查 16）---
-# F12（review-2026-09-12）：原实现 `-replace '236 UDF','999 UDF'` 在计数升至 240 后
-# 替换目标不存在 → 注入变 no-op → 场景恒 PASS（回归守卫失效）。改为追加注入，
-# 与 G2/G3/G4 一致，不再绑定当前计数。
+# 注入必须追加而非替换：`-replace '236 UDF','999 UDF'` 在计数变化后替换目标不存在
+# → 注入变 no-op → 场景恒 PASS（回归守卫失效）；追加注入与 G2/G3/G4 一致，不绑定当前计数。
 Write-Host "[G] 散文式 UDF 计数漂移应 FAIL（检查 16）"
 $fixtureG = Copy-RepoFixture
 [System.IO.File]::AppendAllText((Join-Path $fixtureG "AGENTS.md"), "`n999 UDF`n", (New-Object System.Text.UTF8Encoding($false)))
 Run-VerifyDocs $fixtureG "Prose UDF counts" $true
 
-# --- 场景 G2/G3/G4：中文变体负向注入（R13 词表化，review-2026-09-05）---
+# --- 场景 G2/G3/G4：中文变体负向注入 ---
 # 注入文本用码点构造：规避本测试脚本在 PS5.1 无 BOM 环境下的编码歧义（与注入目标无关）。
 $cXiang  = [char]0x9879                                     # 项
 $cShu    = [string][char]0x6570 + [char]0x91CF              # 数量
@@ -142,7 +139,7 @@ $fixtureG4 = Copy-RepoFixture
 [System.IO.File]::AppendAllText((Join-Path $fixtureG4 "AGENTS.md"), "`n999 $cGeFn$cLp UDF $cRp`n", (New-Object System.Text.UTF8Encoding($false)))
 Run-VerifyDocs $fixtureG4 "Prose UDF counts" $true
 
-# --- 场景 H：CHANGELOG 幽灵条目（F-23：N11 反向对账的负向回归守卫）---
+# --- 场景 H：CHANGELOG 幽灵条目（检查 10 反向对账的负向回归守卫）---
 # 检查 10 依赖 git tag——fixture 无 .git 时整体 SKIP（无从验证反向）。此处初始化
 # git 仓库并为既有语义化版本条目打 tag（注入的 9.9.9 除外），使反向对账真正生效。
 Write-Host "[H] CHANGELOG 幽灵条目应 FAIL（检查 10 反向）"
@@ -166,7 +163,7 @@ try {
 } finally { $ErrorActionPreference = $prevEap }
 Run-VerifyDocs $fixtureH "no tag for: 9.9.9" $true
 
-# --- 场景 I：残留 .dna 扫描域（F-06：检查 8 扩至 src 全模块；bin/obj 生成物排除）---
+# --- 场景 I：残留 .dna 扫描域（检查 8 覆盖 src 全模块；bin/obj 生成物排除）---
 Write-Host "[I1] Analytics 根残留 .dna 应 FAIL（检查 8 域扩展）"
 $fixtureI1 = Copy-RepoFixture
 [System.IO.File]::WriteAllText((Join-Path $fixtureI1 "src\Analytics\Analytics-AddIn-net8.0.dna"), "<stale/>", (New-Object System.Text.UTF8Encoding($false)))
@@ -178,7 +175,7 @@ New-Item -ItemType Directory -Path (Join-Path $fixtureI2 "src\Analytics\bin\Debu
 [System.IO.File]::WriteAllText((Join-Path $fixtureI2 "src\Analytics\bin\Debug\Analytics-AddIn-net8.0.dna"), "<transient/>", (New-Object System.Text.UTF8Encoding($false)))
 Run-VerifyDocs $fixtureI2 "全部通过" $false
 
-# --- 场景 J：MathNet 版本双解析失败（F-05：双 "?" 曾恒真 PASS）---
+# --- 场景 J：MathNet 版本双解析失败（双 "?" 恒真 PASS，须注入版本使其失败）---
 Write-Host "[J] MathNet 版本双解析失败应 FAIL（检查 5）"
 $fixtureJ = Copy-RepoFixture
 $ctxJ = Join-Path $fixtureJ "docs\governance\context.md"
@@ -187,8 +184,8 @@ $contentJ = $contentJ -replace 'MathNet\.Numerics\s+[0-9.]+', 'MathNet.Numerics 
 [System.IO.File]::WriteAllText($ctxJ, $contentJ, (New-Object System.Text.UTF8Encoding($false)))
 Run-VerifyDocs $fixtureJ "unparseable" $true
 
-# --- 场景 K：CHANGELOG「UDF 总数 X→Y」区间链（审查 F8；检查 16 模式 2）---
-# 新语义：区间终点 ≤ 当前计数且相邻区间首尾相接（按起点升序排序后校验，R7-1）；不再要求历史区间终点 == 当前计数。
+# --- 场景 K：CHANGELOG「UDF 总数 X→Y」区间链（检查 16 模式 2）---
+# 区间终点 ≤ 当前计数且相邻区间首尾相接（按起点升序排序后校验）；历史区间终点不要求 == 当前计数。
 Write-Host "[K1] CHANGELOG 区间终点超过当前 UDF 数应 FAIL（检查 16 模式 2）"
 $fixtureK1 = Copy-RepoFixture
 [System.IO.File]::AppendAllText((Join-Path $fixtureK1 "CHANGELOG.md"), "`n- 注入：UDF 总数 236→999`n", (New-Object System.Text.UTF8Encoding($false)))
@@ -199,9 +196,9 @@ $fixtureK2 = Copy-RepoFixture
 [System.IO.File]::AppendAllText((Join-Path $fixtureK2 "CHANGELOG.md"), "`n- 注入：UDF 总数 237→240`n", (New-Object System.Text.UTF8Encoding($false)))
 Run-VerifyDocs $fixtureK2 "Prose UDF counts" $true
 
-# K3 (R7-1 review-2026-09-13)：新版本区间天然位于 CHANGELOG 顶部（新→旧文档顺序）。
-# 旧实现按文档顺序比较相邻区间，对合法的新版本条目必然误报（实测注入 `236→240` 假 FAIL）。
-# 回归守卫：移除现有区间后，注入逆序（高区间在前）的连续链 220→240 / 200→220，修复后应全绿。
+# K3：新版本区间天然位于 CHANGELOG 顶部（新→旧文档顺序）。
+# 按文档顺序比较相邻区间，对合法的新版本条目必然误报（实测注入 `236→240` 假 FAIL）。
+# 回归守卫：移除现有区间后，注入逆序（高区间在前）的连续链 220→240 / 200→220，应全绿。
 Write-Host "[K3] CHANGELOG 顶部新版本区间（新→旧顺序）应 PASS（R7-1 方向修复）"
 $fixtureK3 = Copy-RepoFixture
 $clK3 = Join-Path $fixtureK3 "CHANGELOG.md"
@@ -210,13 +207,12 @@ $k3Text = [regex]::Replace($k3Text, 'UDF\s*总数\s*\d+\s*→\s*\d+', 'UDF 总�
 [System.IO.File]::WriteAllText($clK3, ($k3Text + "`n- K3：UDF 总数 220→240`n- K3：UDF 总数 200→220`n"), (New-Object System.Text.UTF8Encoding($false)))
 Run-VerifyDocs $fixtureK3 "全部通过" $false
 
-# --- 场景 L：[Fact]/[Theory] 计数声明漂移（审查 2026-09-13 2.2 / R7-2；检查 20）---
 Write-Host "[L] [Fact] 计数声明漂移应 FAIL（检查 20）"
 $fixtureL = Copy-RepoFixture
 [System.IO.File]::AppendAllText((Join-Path $fixtureL "AGENTS.md"), "`n- 999 个 [Fact]（注入）`n", (New-Object System.Text.UTF8Encoding($false)))
 Run-VerifyDocs $fixtureL "Fact count claims" $true
 
-# L2 (R7-2 review-2026-09-13)：旧检查只统计 [Fact]，[Theory] 声明即使错误也无门禁。
+# L2：按 [Fact]/[Theory] 分型统计——只统计 [Fact] 时 [Theory] 声明即使错误也无门禁。
 Write-Host "[L2] [Theory] 计数声明漂移应 FAIL（检查 20 分型统计）"
 $fixtureL2 = Copy-RepoFixture
 [System.IO.File]::AppendAllText((Join-Path $fixtureL2 "AGENTS.md"), "`n- 999 个 [Theory]（注入）`n", (New-Object System.Text.UTF8Encoding($false)))

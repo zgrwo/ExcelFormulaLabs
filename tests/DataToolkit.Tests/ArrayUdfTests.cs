@@ -87,7 +87,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Slice_empty() { var r=(object[])ArrayUdf.UDF_ARR_SLICE(new object[0],0,1); r.Should().BeEmpty(); }
         [Fact] public void Slice_strings() { var r=(object[])ArrayUdf.UDF_ARR_SLICE(new object[]{"a","b","c","d"},1,2); r.Should().Equal("b","c"); }
         [Fact] public void Slice_whole_array() { var r=(object[])ArrayUdf.UDF_ARR_SLICE(new object[]{1,2,3},0,3); r.Should().Equal(1,2,3); }
-        // review 2026-09-14（模块审查 P0 FND-01）：UDF 端 int.MaxValue 长度按 n-start 钳制，不触发 OOM。
+        // UDF 端 int.MaxValue 长度按 n-start 钳制，不触发 OOM。
         [Fact] public void Slice_intMaxValue_length_clamped() { var r=(object[])ArrayUdf.UDF_ARR_SLICE(new object[]{1,2,3},2,int.MaxValue); r.Should().Equal(3); }
 
         // ══════════════════════════════════════════════════════════════════

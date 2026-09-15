@@ -103,9 +103,9 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void Solve_singular_inconsistent_throws()
         {
             // Singular 2×2 with inconsistent RHS (x1+x2=1, x1+x2=2) has no solution.
-            // P2 (pre-release review): MathNet Solve silently returned ±∞ components;
-            // the api-reference contract says singular → #VALUE!, so the Core guard
-            // must throw instead of silently propagating non-finite values.
+            // MathNet Solve silently returns ±∞ components; the api-reference contract
+            // says singular → #VALUE!, so the Core guard must throw instead of
+            // silently propagating non-finite values.
             var act = () => LinalgCore.Solve(
                 new double[,] { { 1, 1 }, { 1, 1 } },
                 new[] { 1.0, 2.0 });
@@ -129,8 +129,8 @@ namespace ExcelFormulaLabs.Analytics.Tests
 
         [Fact] public void ConditionNumber_singular_returns_NaN()
         {
-            // review 2026-09-05（N05）：奇异矩阵 cond=+∞ 原样返回违反模块 Inf→NaN 约定。
-            // 原断言 BeGreaterThan(1e10) 隐式接受 +Inf，按新语义更新为 NaN（封顶后）。
+            // 奇异矩阵 cond=+∞ 原样返回违反模块 Inf→NaN 约定。
+            // 断言须为 NaN（封顶后），BeGreaterThan(1e10) 会隐式接受 +Inf。
             var cond = LinalgCore.ConditionNumber(
                 new double[,] { { 1, 2 }, { 2, 4 } });
             double.IsNaN(cond).Should().BeTrue();
@@ -365,18 +365,17 @@ namespace ExcelFormulaLabs.Analytics.Tests
         private static readonly double[,] InfM = { { 1.0, 1 }, { 1, double.PositiveInfinity } };
         private static readonly double[,] I2 = { { 1, 0 }, { 0, 1 } };
 
-    // ── review-2026-08-31：P1-6 / P1-1 回归守卫 ──
     [Fact] public void Rank_relative_tolerance_small_scale()
     {
-        // P1-6：diag(1e-11,1e-11) 真秩 2。UDF 默认容差改为 0（相对，numpy 约定）后应返回 2；
-        // 修复前默认绝对 1e-10 → 0（错）。
+        // diag(1e-11,1e-11) 真秩 2。UDF 默认容差为 0（相对，numpy 约定）时应返回 2；
+        // 绝对容差 1e-10 会误判为 0。
         var m = new double[,] { { 1e-11, 0.0 }, { 0.0, 1e-11 } };
         LinalgCore.Rank(m, tol: 0).Should().Be(2);
     }
 
     [Fact] public void Lu_docs_convention_A_equals_PLU()
     {
-        // P1-1：锁死实现约定 A = P·L·U（文档已同步为 A = P*L*U）。
+        // 锁死实现约定 A = P·L·U（文档为 A = P*L*U）。
         // 若实现漂移到 PA=LU（置换非对合时），正向后向断言同时锁定。
         var M = new double[,] { { 0, 2, 1 }, { 1, 0, 3 }, { 4, 5, 6 } };
         var (L, U, P) = LinalgCore.Lu(M);
@@ -387,13 +386,13 @@ namespace ExcelFormulaLabs.Analytics.Tests
 
     [Fact] public void NormFrobenius_large_scale_no_overflow()
     {
-        // P2-35：MathNet FrobeniusNorm 朴素平方和溢出（[[1e200,1e200]] → Inf）；
+        // MathNet FrobeniusNorm 朴素平方和溢出（[[1e200,1e200]] → Inf）；
         // 尺度化实现应返回 1.4142135623730951e200。
         var m = new double[,] { { 1e200, 1e200 } };
         LinalgCore.NormFrobenius(m).Should().BeApproximately(1.4142135623730951e200, 1e185);
     }
 
-    // ── F-09 (review 2026-09-06)：输出侧 Inf 封顶（模块约定，对齐 COND/Solve）──
+    // ── 输出侧 Inf 封顶（模块约定，对齐 COND/Solve）──
     [Fact] public void MatMul_overflow_capped_to_NaN()
     {
         var r = LinalgCore.MatMul(new double[,] { { 1e300 } }, new double[,] { { 1e300 } });
@@ -404,7 +403,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
     [Fact] public void Trace_overflow_capped_to_NaN() =>
         double.IsNaN(LinalgCore.Trace(new double[,] { { 1e308, 0 }, { 0, 1e308 } })).Should().BeTrue();
 
-    // ── review-2026-09-05（R05）：EnsureSymmetric 纯相对判据 ──
+    // ── EnsureSymmetric 纯相对判据 ──
     [Fact] public void Eigenvalues_small_scale_asymmetric_rejected()
     {
         // [[0,0],[1e-9,0]]：相对 100% 非对称。修复前 scale 下限 1.0 → 阈值 1e-8 →
@@ -423,14 +422,14 @@ namespace ExcelFormulaLabs.Analytics.Tests
 
     [Fact] public void Eigenvalues_large_scale_rounding_asymmetry_tolerated()
     {
-        // P1-5 既有行为锁定：1e9 量纲 ULP≈2.4e-7，理论对称矩阵因舍入差 1 ULP 仍判对称
-        // （阈值 = 1e-8×scale，scale 由 Math.Max(1.0,·) 改 maxAbs 后在大量纲下不变）。
+        // 1e9 量纲 ULP≈2.4e-7，理论对称矩阵因舍入差 1 ULP 仍判对称
+        // （阈值 = 1e-8×scale，scale 取 maxAbs 后在大量纲下不变）。
         double ulp = BitConverter.Int64BitsToDouble(BitConverter.DoubleToInt64Bits(1e9) + 1) - 1e9;
         var m = new double[,] { { 1e9, 1e9 }, { 1e9 + ulp, 1e9 } };
         LinalgCore.Eigenvalues(m).Length.Should().Be(2);
     }
 
-    // ── review-2026-09-05（N04）：Cholesky 非对称拒绝（与 Eigen 同族对齐）──
+    // ── Cholesky 非对称拒绝（与 Eigen 同族对齐）──
     [Fact] public void Cholesky_non_symmetric_throws()
     {
         // 非对称 {1,0.5;0,1} 原先被 MathNet 静默按 {1,0;0.5,1} 分解（只读三角）。
@@ -441,7 +440,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
 
     [Fact] public void Cholesky_small_scale_symmetric_ok()
     {
-        // R05 联动：小量纲对称矩阵（scale < 1）不再被下限干扰，正常分解。
+        // 小量纲对称矩阵（scale < 1）：相对判据无下限干扰，正常分解。
         // SPD：[[1e-9,0],[0,1e-9]] → L = diag(√1e-9)=diag(3.1622776601683795e-5)。
         var l = LinalgCore.Cholesky(new double[,] { { 1e-9, 0.0 }, { 0.0, 1e-9 } });
         l[0, 0].Should().BeApproximately(3.1622776601683795e-5, 1e-20);
@@ -450,7 +449,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         l[1, 0].Should().Be(0.0);
     }
 
-    // ── review-2026-09-05（R21）：求解前条件数守卫 ──
+    // ── 求解前条件数守卫 ──
     private static double[,] Hilbert(int n)
     {
         var h = new double[n, n];
@@ -496,7 +495,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         act.Should().Throw<ArgumentException>().WithMessage("*singular*condition number*");
     }
 
-    // ── review-2026-09-05（R24）：128 位内容哈希（async topic key / 分解缓存共用）──
+    // ── 128 位内容哈希（async topic key / 分解缓存共用）──
     [Fact] public void MatrixHash_is_128bit_and_content_sensitive()
     {
         var k1 = LinalgCore.MatrixHash(new double[,] { { 1, 2 }, { 3, 4 } });
@@ -520,7 +519,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
     }
 }
 
-    // ── review-2026-09-14（P1 LIN-01）：DecompCache 元素预算与 LRU 逐出 ──
+    // ── DecompCache 元素预算与 LRU 逐出 ──
     // 该组测试修改全局预算/缓存状态，必须与其它测试类串行（DisableParallelization），
     // 否则并发访问 DecompCache 的测试会使 Count/预算断言不稳定。
     [CollectionDefinition("DecompCache", DisableParallelization = true)]
@@ -600,7 +599,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         }
     }
 
-    // review 2026-09-14（P3 REG 系列）：空矩阵族原先落 MathNet IndexOutOfRange（裸 CLR 异常）。
+    // 空矩阵族必须抛 ArgumentException，不得落 MathNet IndexOutOfRange（裸 CLR 异常）。
     public class LinalgEmptyMatrixTests
     {
         [Fact]

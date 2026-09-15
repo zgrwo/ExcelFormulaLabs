@@ -11,7 +11,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void CO2() => PhyChemCore.MolecularWeight("CO2").Should().BeApproximately(44.01,0.01);
         [Fact] public void CaOH2_paren() => PhyChemCore.MolecularWeight("Ca(OH)2").Should().BeApproximately(74.094,0.01);
         [Fact] public void Fe4FeCN6_3_bracket() => PhyChemCore.MolecularWeight("Fe4[Fe(CN)6]3").Should().BeApproximately(859.239, 1e-3);
-        // P3 (review): exact golden values — the bracket/paren parsing correctness currently
+        // exact golden values — the bracket/paren parsing correctness currently
         // depends on fragile regex intermediate states; exact assertions guard regressions
         // (a >500 sanity check would let a wrong 679 pass).
         [Fact] public void H2SO4_exact() => PhyChemCore.MolecularWeight("H2SO4").Should().BeApproximately(98.078, 1e-3);
@@ -28,16 +28,16 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void GasToSTP() => PhyChemCore.GasToSTP(22.4,0,1,"C","atm").Should().BeApproximately(22.4,0.01);
         [Fact] public void MolecularWeight_hydrate() => PhyChemCore.MolecularWeight("CuSO4.5H2O").Should().BeApproximately(249.69, 0.1);
         [Fact] public void MolecularWeight_overflow_count_throws() { var act = ()=>PhyChemCore.MolecularWeight("C9999999999H2"); act.Should().Throw<ArgumentException>().WithMessage("*9999999999*"); }
-        // review 2026-08-29（发行前 max level 复审）：水合物系数原用裸 int 逐位累积，unchecked 下
-        // 超 int.MaxValue 静默回绕为负数 → 错误的分子量。现与 ParseCount 对齐显式抛错。
+        // 水合物系数须与 ParseCount 对齐显式抛错：裸 int 逐位累积在 unchecked 下
+        // 超 int.MaxValue 会静默回绕为负数 → 错误的分子量。
         [Fact] public void MolecularWeight_hydrate_coefficient_overflow_throws() { var act = () => PhyChemCore.MolecularWeight("H2O.10000000000H2O"); act.Should().Throw<ArgumentException>().WithMessage("*coefficient*"); }
-        // F-01 (review 2026-09-05)：ExpandGroup 的 ParseCount×mult 乘法曾 unchecked int 回绕——
-        // "(H2)1073741824"（恰 2^31）静默按 H1 计算返回 1.008。现 long 相乘 + 超限显式抛错。
+        // ExpandGroup 的 ParseCount×mult 乘法 unchecked int 回绕时——
+        // "(H2)1073741824"（恰 2^31）会静默按 H1 计算返回 1.008。须 long 相乘 + 超限显式抛错。
         [Fact] public void MolecularWeight_group_product_wraparound_throws() { var act = () => PhyChemCore.MolecularWeight("(H2)1073741824"); act.Should().Throw<ArgumentException>().WithMessage("*product*"); }
         [Fact] public void MolecularWeight_group_product_boundary_ok() => PhyChemCore.MolecularWeight("(H2)1073741823").Should().BeApproximately(2164663515.168, 1e-3);
-        // F-10 (review 2026-09-06)：Density m/v 溢出 ±Inf → NaN 封顶（N08a 同族收尾）。
+        // Density m/v 溢出 ±Inf → NaN 封顶。
         [Fact] public void Density_overflow_capped_to_NaN() => double.IsNaN(PhyChemCore.Density(1e308, 1e-308)).Should().BeTrue();
-        // F-11 (review 2026-09-06)：IdealGasLaw t 为 K 温标，t≤0 物理无意义（曾算出负压）——对齐 TEMP/GASSTP。
+        // IdealGasLaw t 为 K 温标，t≤0 物理无意义（会算出负压）——对齐 TEMP/GASSTP。
         [Fact] public void IdealGasLaw_negative_kelvin_NaN() => PhyChemCore.IdealGasLaw(v: 1.0, n: 1.0, t: -300.0).Should().Be(double.NaN);
         [Fact] public void GasToSTP_no_vUnit() => PhyChemCore.GasToSTP(22.4, 0, 1).Should().BeApproximately(22.4, 0.01);
         [Fact] public void GasToSTP_invalid_unit_returns_NaN() => PhyChemCore.GasToSTP(22.4, 0, 1, "XX").Should().Be(double.NaN);
@@ -156,11 +156,10 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void IdealGasLaw_NaN_pressure_returns_NaN() => PhyChemCore.IdealGasLaw(p: double.NaN, v: 22.4, n: 1).Should().Be(double.NaN);
         [Fact] public void IdealGasLaw_Infinity_volume_returns_NaN() => PhyChemCore.IdealGasLaw(p: 1, v: double.PositiveInfinity, n: 1).Should().Be(double.NaN);
 
-        // ── Release-review regression guards ────────────────────────────────
         [Fact] public void GasToSTP_negative_pressure_returns_NaN() => PhyChemCore.GasToSTP(10.0, 25.0, -1.0).Should().Be(double.NaN);
         [Fact] public void GasToSTP_zero_pressure_returns_NaN() => PhyChemCore.GasToSTP(10.0, 25.0, 0.0).Should().Be(double.NaN);
 
-        // ── review-2026-09-05（N06）：残留字符拒收一致化 ──
+        // ── 残留字符拒收一致化 ──
         [Fact] public void MOLWT_trailing_garbage_returns_NaN()
         {
             // "H2Oxyz"：元素匹配后残留 "xyz" 原实现静默按已匹配部分计算（=18.015），
@@ -177,17 +176,16 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void MOLWT_H2O_exact_value()
         {
             // 按现有 AtomicWeights 精度：H=1.008, O=15.999 → 2×1.008+15.999 = 18.015。
-            // 拒收规则收紧（N06）后正常式不受影响。
             PhyChemCore.MolecularWeight("H2O").Should().BeApproximately(18.015, 1e-3);
         }
 
         [Fact] public void MOLWT_CO2_exact_value()
         {
-            // C=12.011, O=15.999 → 12.011+2×15.999 = 44.009（N06 收紧后正常式不变）。
+            // C=12.011, O=15.999 → 12.011+2×15.999 = 44.009。
             PhyChemCore.MolecularWeight("CO2").Should().BeApproximately(44.009, 1e-3);
         }
 
-        // ── review-2026-09-05（N08）：Convert* 输出封顶 + 绝对零守卫 ──
+        // ── Convert* 输出封顶 + 绝对零守卫 ──
         [Fact] public void ConvertTemperature_overflow_returns_NaN()
         {
             // 有限大输入 1e308 ℃ → F：×1.8 溢出 ±Inf → NaN 封顶（原 Inf 直通）。

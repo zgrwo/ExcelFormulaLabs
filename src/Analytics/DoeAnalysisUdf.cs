@@ -56,9 +56,9 @@ namespace ExcelFormulaLabs.Analytics
                 return DoeAnalysisCore.Pareto(X, y, maxOrder, quadratic);
             });
 
-        /// <summary>review 2026-09-14（P3 PHY 系列）：饱和设计（扩展项数+截距 ≥ n）时
-        /// 自动降阶（quadratic → 2way → main），使默认 terms 在 2×2 等最小示例上可用；
-        /// 降阶到 main 仍不足时才交由 FitOLS 显式报错。</summary>
+        /// <summary>饱和设计（扩展项数+截距 ≥ n）时自动降阶（quadratic → 2way →
+        /// main），使默认 terms 在 2×2 等最小示例上可用；降阶到 main 仍不足时才
+        /// 交由 FitOLS 显式报错。</summary>
         private static (int maxOrder, bool quadratic) EffectiveTerms(double[,] design, object terms)
         {
             var (maxOrder, quadratic) = DoeAnalysisCore.ParseTerms(terms);

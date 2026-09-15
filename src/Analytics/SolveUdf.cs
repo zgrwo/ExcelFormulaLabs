@@ -25,7 +25,7 @@ namespace ExcelFormulaLabs.Analytics
                 OptionalTable(request),
                 OptionalTable(bounds),
                 InputNormalizer.ToString(model),
-                // review 2026-09-14（P1 UDF-01）：空白单元格（ExcelEmpty）与省略同语义回退默认值。
+                // 空白单元格（ExcelEmpty）与省略同语义回退默认值。
                 InputNormalizer.IsOmitted(seed) ? 42L : InputNormalizer.ToLong(seed),
                 InputNormalizer.IsOmitted(maxStarts) ? 10 : InputNormalizer.ToInt32(maxStarts)));
 

@@ -123,9 +123,9 @@ namespace ExcelFormulaLabs.Analytics.Tests
             a.GetLength(1).Should().Be(b.GetLength(1));
         }
 
-        // review 2026-08-29（发行前 max level 复审）：MaxRuns/MaxCells 只量 runs/cells，
-        // 不量因子数。此前 `PlanFull(巨大 qty, ...)` 在 `new int[totalFactors]` 处分配数 GB
-        // → 32 位 Excel OOM 崩溃。以下各守卫回归：必须在按因子数分配数组之前抛异常。
+        // MaxRuns/MaxCells 只量 runs/cells，不量因子数：`PlanFull(巨大 qty, ...)` 会在
+        // `new int[totalFactors]` 处分配数 GB → 32 位 Excel OOM 崩溃。
+        // 以下各守卫须在按因子数分配数组之前抛异常。
         // 测试用 MaxFactors+1 而非 10 亿——守卫对任何超限值都在分配前抛错，且避免回归时
         // 真实 4GB 分配 OOM 测试宿主。
         [Fact] public void Full_huge_factor_count_throws_before_allocation()
@@ -152,17 +152,16 @@ namespace ExcelFormulaLabs.Analytics.Tests
             => new Action(() => DoeCore.PlanBb(DoeCore.MaxFactors + 1, 2, 0, 2, false, null))
                 .Should().Throw<ArgumentException>().WithMessage("*factor*");
 
-        // review 2026-08-29（max level 复审）：qty1+qty2 求和改 long——原 int 回绕恒为负
-        // （最大和 2³²-2 回绕后 ∈ [-2³¹,-2]），错误落回 DOE_NoFactors 误导消息；long 后正确报 TooManyFactors。
+        // qty1+qty2 求和须用 long——int 回绕时最大和 2³²-2 变为 ∈ [-2³¹,-2] 的负数，
+        // 会错误落回 DOE_NoFactors 误导消息；long 后正确报 TooManyFactors。
         [Fact] public void Full_qty_sum_overflow_reports_too_many_factors()
             => new Action(() => DoeCore.PlanFull(int.MaxValue, 2, int.MaxValue, 2, false, null))
                 .Should().Throw<ArgumentException>().WithMessage("*maximum supported*");
 
-    // ── review-2026-08-31：P1-7 回归守卫 ──
     [Fact] public void Taguchi_2level_main_effect_columns_clean()
     {
-        // P1-7：2 水平田口因子必须优先落在主效应列。L8（5 因子）列序应为 A,B,C,ABC,AB,…——
-        // 前 3 列（主效应）不得是任何两列的 ±乘积（修复前第 3 列即 AB 交互列，因子 3 与 1×2 完全别名）。
+        // 2 水平田口因子必须优先落在主效应列。L8（5 因子）列序应为 A,B,C,ABC,AB,…——
+        // 前 3 列（主效应）不得是任何两列的 ±乘积；若第 3 列为 AB 交互列，因子 3 与 1×2 完全别名。
         var plan = DoeCore.PlanTaguchi(5, 2, 0, 2, false, null);
         int runs = plan.GetLength(0) - 1, cols = plan.GetLength(1);
         var f = new double[runs, cols - 2];

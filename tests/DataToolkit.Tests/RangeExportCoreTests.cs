@@ -290,7 +290,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact]
         public void ToCsv_basic_comma()
         {
-            // review 2026-09-14（RNG-02）：默认 quote=true = 全字段引号（手册语义）。
+            // 默认 quote=true = 全字段引号（手册语义）。
             var csv = RangeExportCore.RangeToCsv(BasicData);
             csv.Should().Contain(",");
             csv.Should().Contain("\"Name\",\"Age\"");
@@ -330,7 +330,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact]
         public void ToCsv_quote_false_escapes_delimiter_quote_and_crlf()
         {
-            // RNG-02：CR 此前漏引号（只查 \n），且 quote=false 连 delimiter 也不转义。
+            // CR 也须引号（只查 \n 会漏），且 quote=false 时 delimiter 同样须转义。
             var data = new object[,] { { "A,B" }, { "x\"y" }, { "l1\rl2" }, { "l3\nl4" } };
             var csv = RangeExportCore.RangeToCsv(data, quote: false);
             csv.Should().Contain("\"A,B\"");
@@ -342,7 +342,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact]
         public void ToCsv_tsv_escapes_tab_and_newlines()
         {
-            // RNG-03：TOCSVTAB 的 quote=false 路径必须转义 tab/CR/LF，否则列行错位。
+            // 制表符导出（TOCSVTAB）的 quote=false 路径必须转义 tab/CR/LF，否则列行错位。
             var data = new object[,] { { "a\tb" }, { "l1\nl2" } };
             var csv = RangeExportCore.RangeToCsv(data, delim: "\t", quote: false);
             csv.Should().Contain("\"a\tb\"");
@@ -613,7 +613,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             csv.Should().Contain("'@REF");
         }
 
-        // review 2026-09-14（P2 RNG-04）：BOM 前缀不得绕过 defang；+/- 数值对称（不再只放行 -42）。
+        // BOM 前缀不得绕过 defang；+/- 数值对称（+42 与 -42 均须放行）。
         [Fact]
         public void ToCsv_bom_prefix_still_defanged()
         {
@@ -629,7 +629,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             csv.Should().NotContain("'");
         }
 
-        // review 2026-09-14（P2 RNG-01）：JSON 数字用最短往返格式（R），无 G17 噪声。
+        // JSON 数字用最短往返格式（R），无 G17 噪声。
         [Fact]
         public void ToJson_double_uses_round_trip_format()
         {
@@ -657,7 +657,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             json.Should().Contain("\"X_3\": 3");
         }
 
-        // ── review 2026-09-05（N02）：输出规模守卫——1001×1001 = 1,002,001 cells > 1e6 上限，
+        // 输出规模守卫——1001×1001 = 1,002,001 cells > 1e6 上限，
         // 四个导出函数必须在分配 StringBuilder 前拒绝（对齐 PivotCore maxCells 纪律）。
         private static readonly object[,] OversizedData = new object[1001, 1001];
 
@@ -687,7 +687,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             // 1000×1000 = 1,000,000 cells == 上限（除法形式边界：不超限）——正常导出
             var atLimit = new object[1000, 1000];
             atLimit[0, 0] = "ok";
-            // 默认 quote=true → 首字段为 "\"ok\""（RNG-02 新语义）。
+            // 默认 quote=true → 首字段为 "\"ok\""。
             RangeExportCore.RangeToCsv(atLimit).Should().StartWith("\"ok\"");
         }
     }

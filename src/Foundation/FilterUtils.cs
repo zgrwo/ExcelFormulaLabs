@@ -49,8 +49,8 @@ namespace ExcelFormulaLabs.Foundation
         /// </summary>
         public static bool FilterPasses(object? element, object? matchValue, string op)
         {
-            // P2 (pre-release review): a null operator previously produced an NRE that was
-            // swallowed by WrapError into a misleading #VALUE!; reject it explicitly.
+            // a null operator would produce an NRE swallowed by WrapError into a misleading
+            // #VALUE!; reject it explicitly.
             if (string.IsNullOrEmpty(op))
                 throw new ArgumentException("Filter operator must not be null or empty.");
             string opLower = op.ToLowerInvariant();
@@ -59,9 +59,9 @@ namespace ExcelFormulaLabs.Foundation
                 case "isblank": return IsBlank(element);
                 case "isnotblank": return !IsBlank(element);
             }
-            // review 2026-09-14（模块审查 P3 FND-09）：未知 operator 原先静默返回 false
-            // （整列被过滤光，用户无法区分"无匹配"与"参数错误"）。与 null operator 的
-            // 显式拒绝保持一致：未知 op → ArgumentException → UDF #VALUE!。
+            // 未知 operator 须显式报错（不得静默返回 false——整列被过滤光，用户无法
+            // 区分"无匹配"与"参数错误"）。与 null operator 的显式拒绝保持一致：
+            // 未知 op → ArgumentException → UDF #VALUE!。
             if (!KnownOperators.Contains(opLower))
                 throw new ArgumentException(
                     $"Unknown filter operator '{op}'. Supported: =, <>, <, <=, >, >=, " +
@@ -142,11 +142,11 @@ namespace ExcelFormulaLabs.Foundation
                 var regex = RegexCache.GetOrAdd(pattern, p =>
                     new Regex(p, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
                         RegexTimeout));
-                // P2 (pre-release review): evict OUTSIDE the GetOrAdd factory — eviction
-                // inside the factory raced other threads (non-deterministic victim, possible
-                // eviction of a pattern another thread just cached).
-                // F-32 (review 2026-09-06)：单条驱逐在高并发独特模式下可短暂超上限 → 循环清至
-                // 预算内（受害选择保持 first、永不驱逐本次 pattern，防自逐与死循环）。
+                // evict OUTSIDE the GetOrAdd factory — eviction inside the factory races
+                // other threads (non-deterministic victim, possible eviction of a pattern
+                // another thread just cached).
+                // 单条驱逐在高并发独特模式下可短暂超上限 → 循环清至预算内
+                // （受害选择保持 first、永不驱逐本次 pattern，防自逐与死循环）。
                 while (RegexCache.Count > MaxCachedRegex)
                 {
                     var first = RegexCache.Keys.FirstOrDefault();

@@ -8,14 +8,13 @@ namespace ExcelFormulaLabs.DataToolkit
     /// <summary>
     /// 打包模式下的原生 DLL 提取 / 完整性维护。
     ///
-    /// review-2026-08-29 B1：v2.2.1 的同目录覆写提取有两个致命缺陷，导致 P2-13
-    /// 的 SHA-256 完整性加固完全失效：
+    /// 同目录覆写提取有两个致命缺陷，会使 SHA-256 完整性加固完全失效：
     ///   ① Sha256Equals 把资源流读到末尾且不复位 → CopyTo 写出 0 字节；
     ///   ② File.Move(src,dst) 在 dst 已存在时抛 IOException（net48/net8 皆然），
     ///      被误判为"另一实例已完成提取" → 同尺寸篡改 DLL 仍被加载、升级换版本
     ///      时旧 DLL 永远无法替换。
     ///
-    /// 本实现修复原则：
+    /// 实现原则：
     ///   - 目标路径由嵌入字节的 SHA-256 派生（内容寻址），并**每次调用都重新比对**
     ///     盘上文件的哈希与嵌入字节，不一致即以原子方式替换。仅靠内容寻址不够——
     ///     路径是确定性的，本地攻击者仍可预写该路径，故必须依赖逐次重验。
@@ -25,10 +24,9 @@ namespace ExcelFormulaLabs.DataToolkit
     /// </summary>
     internal static class NativeDllStore
     {
-        /// <summary>同目标路径的进程内互斥。review 2026-09-15：SEC-05 的 GUID 临时名只
-        /// 解决了临时文件互踩，最终 File.Move/File.Replace 的检查-后-行动竞态仍会让并发
-        /// 提取抛"当文件已存在时，无法创建该文件"（24 路复测必现）。跨进程竞争继续由
-        /// catch + 重验兜底。</summary>
+        /// <summary>同目标路径的进程内互斥：GUID 临时名只解决临时文件互踩，最终
+        /// File.Move/File.Replace 的检查-后-行动竞态仍会让并发提取抛"当文件已存在时，无法创建
+        /// 该文件"。跨进程竞争由 catch + 重验兜底。</summary>
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, object> TargetLocks
             = new System.Collections.Concurrent.ConcurrentDictionary<string, object>(StringComparer.Ordinal);
 
@@ -49,8 +47,8 @@ namespace ExcelFormulaLabs.DataToolkit
                     return target; // 盘上内容与嵌入一致，无需写入
 
                 Directory.CreateDirectory(targetDir);
-                // review 2026-09-14（模块审查 P2 SEC-05）：临时名原仅含 PID——同进程并发提取
-                // （24 路实测 7~19 次伪失败）互相踩踏。追加进程内唯一 GUID，互不共享临时路径。
+                // 临时名仅含 PID 时同进程并发提取会互相踩踏；追加进程内唯一 GUID，
+                // 互不共享临时路径。
                 string temp = Path.Combine(targetDir,
                     fileName + $".tmp.{System.Diagnostics.Process.GetCurrentProcess().Id}.{Guid.NewGuid():N}");
                 try
@@ -88,7 +86,7 @@ namespace ExcelFormulaLabs.DataToolkit
         }
 
         /// <summary>True when the file on disk hashes to the expected embedded bytes.
-        /// review 2026-09-14（SEC-08）：AddIn 的「文件优先」分支复用本方法做逐次重验。</summary>
+        /// AddIn 的「文件优先」分支复用本方法做逐次重验。</summary>
         internal static bool FileHashEquals(string path, byte[] expected)
         {
             try

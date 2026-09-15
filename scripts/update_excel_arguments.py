@@ -84,7 +84,7 @@ PARAM_DESC = {
     "k":"Percentile value between 0 and 100","x":"Hypothesized population mean for one-sample t-test",
 }
 
-_signatures_seen = 0  # R5-P3-25: 扫描到的 UDF 签名总数（含已现代注解的）
+_signatures_seen = 0  # 扫描到的 UDF 签名总数（含已现代注解的）
 
 
 def sync_udf_arguments():
@@ -105,7 +105,7 @@ def sync_udf_arguments():
             raw_params = m.group(2).strip()
             if not raw_params:
                 continue
-            # N-A (review 2026-09-06)：现代签名参数段内已含 [ExcelArgument(Name=...)]——
+            # 现代签名参数段内已含 [ExcelArgument(Name=...)]——
             # 其内部 ")" 会让上面 [^)]* 捕获截断，split 计数偶合命中后 replace 会产生
             # 双属性注入损坏源码。凡参数段已含注解的签名一律跳过（本工具只服务旧式
             # [ExcelArgument("name")] 位置风格的一次性迁移）。
@@ -133,10 +133,10 @@ def sync_udf_arguments():
     return total
 
 
-# P2-27 (review-2026-08-31): 原脚本无 main()/无 except/无 sys.exit——正则不匹配时静默 no-op，
-# 调用方无法区分"全部同步成功"与"什么都没匹配"。加改动计数 + 零改动时 exit 1。
-# R5-P3-25 (review 2026-09-06)："迁移已完成"（有 UDF 签名但全部已是现代注解风格）是正常
-# 终态 → exit 0；仅"连签名都没匹配到"（正则与代码库漂移）才 exit 1。原实现一律 exit 1。
+# 脚本无 main()/无 except/无 sys.exit 时正则不匹配会静默 no-op，
+# 调用方无法区分"全部同步成功"与"什么都没匹配"——须加改动计数：
+# "迁移已完成"（有 UDF 签名但全部已是现代注解风格）是正常终态 → exit 0；
+# 仅"连签名都没匹配到"（正则与代码库漂移）才 exit 1。
 def main():
     total = sync_udf_arguments()
     if total == 0:

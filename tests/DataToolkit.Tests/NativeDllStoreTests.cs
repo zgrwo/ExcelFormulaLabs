@@ -6,10 +6,8 @@ using Xunit;
 
 namespace ExcelFormulaLabs.DataToolkit.Tests
 {
-    // review-2026-08-29 B1 回归守卫：
-    //   v2.2.1 的 NativeDllStore 前身（AddIn.Sha256Equals + 同目录覆写）有两大缺陷——
-    //   stream 不复位写 0 字节 + File.Move 无法覆写。本套测试锁定"每次重验 + 原子替换"
-    //   的正确语义：篡改盘上文件后再次提取必须变回真实内容，版本升级必须落到新路径。
+    // 锁定"每次重验 + 原子替换"语义：篡改盘上文件后再次提取必须变回真实内容，
+    //   版本升级必须落到新路径；否则会退化到写 0 字节 / File.Move 无法覆写。
     // [Collection("Sandbox")] 不需要——本类不触碰共享的 SandboxConfig 静态字段。
     public class NativeDllStoreTests : IDisposable
     {
@@ -60,8 +58,8 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact]
         public void Tampered_file_is_replaced_on_next_extract()
         {
-            // B1 核心回归守卫：篡改盘上已提取文件后，再次提取必须还原为真实内容。
-            // v2.2.1 在这里失效（File.Move 无法覆写 → 加载被篡改 DLL）。
+            // 篡改盘上已提取文件后，再次提取必须还原为真实内容。
+            // 提取必须原子替换：File.Move 无法覆写会加载被篡改 DLL。
             byte[] content = Gen(3);
             string p = NativeDllStore.GetOrExtract(_root, "native", content, "interop.dll");
 
@@ -101,8 +99,8 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             File.ReadAllBytes(b).Should().Equal(newe);
         }
 
-        // review 2026-09-14（P2 SEC-05）：同进程并发提取——临时名仅含 PID 时互相踩踏
-        // （24 路实测 7~19 次伪失败）；GUID 后缀后必须全部成功且内容正确。
+        // 同进程并发提取——临时名仅含 PID 会互相踩踏（24 路实测 7~19 次伪失败）；
+        // GUID 后缀保证全部成功且内容正确。
         [Fact]
         public async System.Threading.Tasks.Task Parallel_same_process_extraction_all_succeed()
         {

@@ -9,7 +9,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
     // Python ref: encoding→base64/urllib.parse/html, uuid→uuid, lev→python-Levenshtein, soundex→jellyfish
     public class StringCoreTests
     {
-        // P2 (pre-release review): unbounded padding/alignment lengths allowed ~GB
+        // Unbounded padding/alignment lengths allow ~GB
         // allocations → OutOfMemoryException (not catchable) → Excel crash.
         [Fact] public void PadLeft_excessive_length_throws()
         {
@@ -36,7 +36,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             act.Should().Throw<ArgumentException>();
         }
 
-        // R5-01 (review 2026-09-06)：负对齐宽度绕过守卫——.NET 对 align 取绝对值填充，
+        // 负对齐宽度同样须守卫：.NET 对 align 取绝对值填充，
         // {0,-N} 与 {0,N} 分配同量级；多 spec 叠加可放大到 ~GB（32 位 Excel 不可捕获 OOM）。
         [Fact] public void FormatValue_negative_alignment_throws()
         {
@@ -101,8 +101,8 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void HtmlDecode() => StringCore.HtmlDecode("&lt;tag&gt;").Should().Be("<tag>");
         [Fact] public void HtmlEncode_roundtrip() => StringCore.HtmlDecode(StringCore.HtmlEncode("<tag>")).Should().Be("<tag>");
         [Fact] public void IsNullOrWhitespaceStr() { StringCore.IsNullOrWhitespaceStr("   ").Should().BeTrue(); StringCore.IsNullOrWhitespaceStr(" a ").Should().BeFalse(); StringCore.IsNullOrWhitespaceStr("").Should().BeTrue(); }
-        // review 2026-09-05（R09）：STR.COALESCE 语义改为「null 或空串 → fallback」
-        // （与 StringUdf.cs:40 / api-reference.md / user-manual 文档契约一致），期望全部硬编码。
+        // STR.COALESCE 契约：「null 或空串 → fallback」
+        // （与 StringUdf.cs:40 / api-reference.md / user-manual 一致），期望全部硬编码。
         [Fact] public void Coalesce_first() => StringCore.Coalesce("hello","world").Should().Be("hello");
         [Fact] public void Coalesce_null() => StringCore.Coalesce(null!,"fallback").Should().Be("fallback");
         [Fact] public void Coalesce_empty() => StringCore.Coalesce("","fallback").Should().Be("fallback");
@@ -189,8 +189,8 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Levenshtein_insertion() => StringCore.LevenshteinDistance("abc", "abcd").Should().Be(1);
         [Fact] public void Soundex_same_sounding()
         {
-            // review 2026-09-05（N14）：原断言 Be(Soundex("Rupert")) 为自引用（两参均来自被测实现）。
-            // 改硬编码经典参考值 R163（与下方 CrossVal_Soundex_Robert/Rupert 及 jellyfish 锚定一致）。
+            // 期望硬编码经典参考值 R163（与下方 CrossVal_Soundex_Robert/Rupert 及 jellyfish 锚定一致），
+            // 不得自引用被测实现（Be(Soundex("Rupert")) 两参均来自被测实现）。
             StringCore.Soundex("Robert").Should().Be("R163");
             StringCore.Soundex("Rupert").Should().Be("R163");
         }
@@ -280,7 +280,6 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void CrossVal_HtmlEncode_normal() => StringCore.HtmlEncode("normal text").Should().Be("normal text");
         [Fact] public void CrossVal_HtmlEncode_empty() => StringCore.HtmlEncode("").Should().Be("");
 
-        // ── Release-review regression guards ────────────────────────────────
         // NthIdx negative branch: |n| exceeding occurrence count must return the
         // original string (no ArgumentOutOfRangeException), symmetric with positive n.
         [Fact] public void LeftOf_negative_n_exceeds_no_throw() => StringCore.LeftOf("aa", "a", -3).Should().Be("aa");
@@ -295,14 +294,14 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
 
     [Fact] public void Soundex_hardcoded_expected()
     {
-        // P2-19：原 Soundex_same_sounding 是自校验（两参都来自被测实现）——硬编码期望值兜底。
+        // 硬编码期望值：自校验（两参都来自被测实现）无法验证 Soundex 正确性。
         StringCore.Soundex("Rupert").Should().Be("R163");
         StringCore.Soundex("Robert").Should().Be("R163");
     }
 
     [Fact] public void FormatValue_invariant_culture()
     {
-        // P1-19：STR.FMT 必须与 locale 无关（de-DE 下 "N2" 原为 "123,46"）。切 culture 断言不变。
+        // STR.FMT 必须与 locale 无关（de-DE 下 "N2" 不得输出 "123,46"）。切 culture 断言不变。
         var prev = System.Threading.Thread.CurrentThread.CurrentCulture;
         try
         {
@@ -313,9 +312,9 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         finally { System.Threading.Thread.CurrentThread.CurrentCulture = prev; }
     }
 
-    // review 2026-09-04（reaudit D2）：空格式串快路径与 catch 回退此前是 CurrentCulture
-    // `value?.ToString()`——de-DE 下 STR.FMT(1234.5,"") 输出 "1234,5" 而带格式串输出
-    // "1,234.50"（同一函数双文化）。统一 InvariantCulture 后跨文化输出一致。
+    // 空格式串快路径与 catch 回退必须用 InvariantCulture 而非 CurrentCulture
+    // `value?.ToString()`——否则 de-DE 下 STR.FMT(1234.5,"") 输出 "1234,5" 而带格式串输出
+    // "1,234.50"（同一函数双文化）。契约：跨文化输出一致。
     [Fact] public void FormatValue_empty_format_invariant_under_de_DE()
     {
         var prev = System.Threading.Thread.CurrentThread.CurrentCulture;
@@ -343,11 +342,11 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
     [Fact]
     public void NthIdx_empty_separator_no_throw()
     {
-        // P2-18：空分隔符 + n > len+1 原抛 ArgumentOutOfRangeException（IndexOutOfRange）。
+        // 空分隔符 + n > len+1 不得抛 ArgumentOutOfRangeException（IndexOutOfRange）。
         StringCore.LeftOf("abc", "", 5).Should().Be("abc");
     }
 
-    // review 2026-09-14（P2 STR-01）：代理对（emoji）必须按文本元素处理，不得截半。
+    // 代理对（emoji）必须按文本元素处理，不得截半。
     [Fact]
     public void Truncate_counts_text_elements_not_utf16_units()
     {

@@ -6,10 +6,9 @@ namespace ExcelFormulaLabs.DataToolkit
 {
     public static class DateTimeUdf
     {
-        // review 2026-09-14（模块审查 P2 DT-01）：Excel 序列 1–59 经 OADate 比真实 Excel
-        // 显示值早一天（1900 假闰年），且 60 与 59 同值。按产品决策：1–59 统一 +1 对齐
-        // Excel 显示；60（不存在的 1900-02-29）显式 #VALUE! 而非静默给 1900-02-28。
-        // 序列 ≤0 / ≥61 保持 OADate 语义不变。
+        // Excel 序列 1–59 经 OADate 比真实 Excel 显示值早一天（1900 假闰年），且 60 与 59 同值。
+        // 按产品决策：1–59 统一 +1 对齐 Excel 显示；60（不存在的 1900-02-29）显式 #VALUE!
+        // 而非静默给 1900-02-28。序列 ≤0 / ≥61 保持 OADate 语义不变。
         private static DateTime D(object d)
         {
             double v = InputNormalizer.ToDouble(d);
@@ -21,8 +20,8 @@ namespace ExcelFormulaLabs.DataToolkit
         // Week start-day adapter: default 1=Monday; validates 0-6 range so out-of-range
         // values surface as #VALUE! instead of silently producing wrong dates.
         private static DayOfWeek SD(object sd){long v=InputNormalizer.IsOmitted(sd)?1L:InputNormalizer.ToLong(sd);if(v<0||v>6)throw new ArgumentException("start_day must be between 0 (Sunday) and 6 (Saturday).");return (DayOfWeek)(int)v;}
-        // R5-P3-04 (review 2026-09-06)：可选日期参数「未提供」只认 null/ExcelMissing/DBNull/ExcelEmpty。
-        // 原 `ToDouble(r)>0?D(r):null` 把合法序列号 0（1899-12-30）与 NaN（文本/区域输入）都
+        // 可选日期参数「未提供」只认 null/ExcelMissing/DBNull/ExcelEmpty。
+        // `ToDouble(r)>0?D(r):null` 会把合法序列号 0（1899-12-30）与 NaN（文本/区域输入）都
         // 吞成「默认今天」——静默错值。已提供但不可转换 → D() 抛错 → #VALUE!（与必选参数同语义）。
         private static DateTime? OptD(object d)=>d==null||d is ExcelDna.Integration.ExcelMissing||d is DBNull||InputNormalizer.IsExcelEmptyValue(d)?(DateTime?)null:D(d);
         [ExcelFunction(Name="DT.ISOWEEK", Description="ISO 8601 week number (1-53) from an Excel date")] public static object UDF_DT_ISOW([ExcelArgument(Name="serial_number", Description="An Excel date serial number")] object d)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOver<double,long>(d,x=>DateTimeCore.IsoWeekNum(D(x))));
@@ -43,9 +42,9 @@ namespace ExcelFormulaLabs.DataToolkit
         [ExcelFunction(Name="DT.WKDBTWN", Description="Count workdays (Mon-Fri) between two dates, exclusive of start")] public static object UDF_DT_WKDB([ExcelArgument(Name="start_date", Description="Start date as Excel serial number")] object s, [ExcelArgument(Name="end_date", Description="End date as Excel serial number (required)")] object e)=>OutputWrapper.WrapError(()=>(long)DateTimeCore.WorkdaysBetween(D(s),D(e)));
         [ExcelFunction(Name="DT.NEXTWKD", Description="Next workday on or after given date (skips weekends)")] public static object UDF_DT_NWKD([ExcelArgument(Name="serial_number", Description="An Excel date serial number")] object d)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOver<double,double>(d,x=>DateTimeCore.NextWorkday(D(x)).ToOADate()));
         [ExcelFunction(Name="DT.EASTER", Description="Easter Sunday date for given year (Gregorian computus)")] public static object UDF_DT_EASTER([ExcelArgument(Name="year", Description="A year number, e.g. 2024")] object y)=>OutputWrapper.WrapError(()=>ElementWiseMapper.MapOver<long,double>(y,EasterOADate));
-        // review 2026-09-14（模块审查 P3 DT-02）：Core Easter 支持 1–9999，但 UDF 输出 OADate
-        // 无法表示 100 年以前（DateTime.ToOADate 抛错）→ 1–99 曾静默 #VALUE!，与文档矛盾。
-        // 显式限定 100–9999 并给出原因（Excel OLE 日期可表示范围）。
+        // Core Easter 支持 1–9999，但 UDF 输出 OADate 无法表示 100 年以前（DateTime.ToOADate
+        // 抛错）→ 1–99 会静默 #VALUE!，与文档矛盾。显式限定 100–9999 并给出原因
+        // （Excel OLE 日期可表示范围）。
         private static double EasterOADate(long yr)
         {
             if (yr < 100 || yr > 9999)

@@ -7,10 +7,9 @@ using Xunit;
 namespace ExcelFormulaLabs.Foundation.Tests
 {
     /// <summary>
-    /// Regression tests for P0-1 (pre-release review): real Excel error cells
-    /// arrive as ExcelDna.Integration.ExcelError (an enum), which Foundation
-    /// previously treated as an unknown object — silently converting
-    /// #VALUE!→15.0, #DIV/0!→7.0, #N/A→42.0 and feeding those numbers into
+    /// Real Excel error cells arrive as ExcelDna.Integration.ExcelError (an enum);
+    /// treating it as an unknown object would silently convert
+    /// #VALUE!→15.0, #DIV/0!→7.0, #N/A→42.0 and feed those numbers into
     /// computations. Per L3 sentinel contract, error signals must never be
     /// silently assigned; they are rejected by converters and passed through
     /// by MapOver.

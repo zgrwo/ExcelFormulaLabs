@@ -179,8 +179,8 @@ namespace ExcelFormulaLabs.Foundation.Tests
             result[1, 1].Should().BeNull();
         }
 
-        // review 2026-09-14（P3 FND-10）：object[,] 原先被压进 [0,0]（且 0×0 目标越界、
-        // targetCols=0 整数除零）；现在按目标尺寸逐格拷贝/裁剪，零尺寸安全返回。
+        // object[,] 须按目标尺寸逐格拷贝/裁剪：压进 [0,0] 会致 0×0 目标越界、
+        // targetCols=0 整数除零；零尺寸安全返回。
         [Fact]
         public void Grid_input_is_copied_cellwise()
         {

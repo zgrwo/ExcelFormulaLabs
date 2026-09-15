@@ -14,10 +14,9 @@ namespace ExcelFormulaLabs.Analytics
     /// </summary>
     internal static class DoeAnalysisCore
     {
-        // F-32 (review 2026-09-06)：terms 参数解析从 UDF 层下沉（红线：UDF 仅分发适配）。
         internal static (int maxOrder, bool quadratic) ParseTerms(object terms)
         {
-            // review 2026-09-14（P1 UDF-01）：空白单元格（ExcelEmpty）与省略同语义 → 默认 2way。
+            // 空白单元格（ExcelEmpty）与省略同语义 → 默认 2way。
             if (InputNormalizer.IsOmitted(terms))
                 return (2, false); // default: main + 2-way interactions
             string t = InputNormalizer.ToString(terms).Trim().ToUpperInvariant();
@@ -32,8 +31,8 @@ namespace ExcelFormulaLabs.Analytics
         }
 
         /// <summary>Expanded term count (excluding intercept) for a coded design with
-        /// <paramref name="k"/> factors. review 2026-09-14（P3 PHY 系列）：供 UDF 层自动
-        /// 降阶使用（饱和设计 p ≥ n 时 FitOLS 自由度不足 → 默认 terms 曾直接 #VALUE!）。</summary>
+        /// <paramref name="k"/> factors. 供 UDF 层自动降阶使用：饱和设计 p ≥ n 时
+        /// FitOLS 自由度不足 → #VALUE!。</summary>
         internal static int ExpandedTermCount(int k, int maxOrder, bool quadratic)
         {
             int count = maxOrder >= 1 ? k : 0;
@@ -96,9 +95,9 @@ namespace ExcelFormulaLabs.Analytics
             for (int j = 0; j < nTerms; j++)
             {
                 double t = ts[j + 1];
-                // review 2026-09-05（N07）：原守卫只挡输入侧 t（NaN/Inf）——|t| ≤ 1e154 的
-                // 有限大 t 仍可能使 mse·t² / t² 溢出 ±Inf 直漏。结果侧补非有限→NaN 封顶
-                // （CapNaN，与 PhyChemCore 同一模块约定）。
+                // 结果侧非有限→NaN 封顶（CapNaN，与 PhyChemCore 同一模块约定）：输入侧
+                // t（NaN/Inf）之外，|t| ≤ 1e154 的有限大 t 仍可能使 mse·t² / t² 溢出
+                // ±Inf 直漏。
                 // 静态依据（无法经公共输入触发，封顶为纵深防御）：上游 FitOLSCore 已守卫
                 // tss/sse 非有限；含截距时 x̃_j ⊥ 1 → SS_j = mse·t² ≤ tss（有限），且残差
                 // 量化下限 sse ≳ (ULP·‖y‖)² 使 |t| ≲ √(n·df)/eps ≈ 1e16（实测 y=4e153·±1
@@ -121,8 +120,8 @@ namespace ExcelFormulaLabs.Analytics
 
             // Total SS = Σ(y - ȳ)² (the true total sum of squares; Type-III effect SS
             // are not additive, so this is computed directly rather than summed).
-            // R5-P3-03 (review 2026-09-06)：tss 与同函数上方 ssJ/fJ 同族，补 CapNaN 封顶
-            // （N07 约定一致；公开路径上游 FitOLSCore 先行抛错，此处为纵深防御）。
+            // tss 与同函数上方 ssJ/fJ 同族，须同样 CapNaN 封顶（与上方约定一致；
+            // 公开路径上游 FitOLSCore 先行抛错，此处为纵深防御）。
             double mean = y.Average();
             double tss = 0;
             for (int i = 0; i < y.Length; i++) { double d = y[i] - mean; tss += d * d; }
@@ -170,10 +169,10 @@ namespace ExcelFormulaLabs.Analytics
                 throw new ArgumentException(ErrorMsg.Get("DOE_NoFactors"));
             if (maxOrder < 1 || maxOrder > 3)
                 throw new ArgumentException($"Interaction order must be 1, 2, or 3 (got {maxOrder}).");
-            // review 2026-08-31（深度审查 P1-8）：展开项数无守卫——k=100、maxOrder=3 时
-            // p=166,750，Xe（n=1000）即 1.33GB → 不可捕获 OOM → Excel 崩溃。
-            // DOE.PLAN 允许 MaxFactors=1000，因此这条调用链合法。先算 p（long 防乘法溢出）
-            // 再分配：超过 5,000 项（≈ n×p 数千万元素）直接拒绝。
+            // 展开项数须守卫：k=100、maxOrder=3 时 p=166,750，Xe（n=1000）即 1.33GB
+            // → 不可捕获 OOM → Excel 崩溃。DOE.PLAN 允许 MaxFactors=1000，因此这条
+            // 调用链合法。先算 p（long 防乘法溢出）再分配：超过 5,000 项
+            // （≈ n×p 数千万元素）直接拒绝。
             long termCount = k; // main effects
             if (maxOrder >= 2) termCount += (long)k * (k - 1) / 2;
             if (maxOrder >= 3) termCount += (long)k * (k - 1) * (k - 2) / 6;
@@ -182,10 +181,10 @@ namespace ExcelFormulaLabs.Analytics
                 throw new ArgumentException(
                     $"DOE analysis would expand to {termCount:N0} terms — exceeds the 5,000-term limit. " +
                     "Reduce factor count or interaction order.");
-            // review 2026-09-04（reaudit B2）：原守卫只量 p（termCount），n 无上限——
-            // k=45（2way p=1035 < 5000 放行）、n=200,000 时 Xe = 2.07e8 doubles ≈ 1.66 GB，
-            // 且 Column() 先物化同尺寸 cols 副本 → 不可捕获 OOM → Excel 进程崩溃。
-            // 补二维守卫 n·p ≤ 2e6（≈16 MB，含中间副本峰值 < 64 MB），放在任何列物化之前。
+            // 一维守卫（p）之外还须二维守卫：k=45（2way p=1035 < 5000 放行）、
+            // n=200,000 时 Xe = 2.07e8 doubles ≈ 1.66 GB，且 Column() 先物化同尺寸
+            // cols 副本 → 不可捕获 OOM → Excel 进程崩溃。故加 n·p ≤ 2e6
+            // （≈16 MB，含中间副本峰值 < 64 MB），放在任何列物化之前。
             if ((long)n * termCount > 2_000_000)
                 throw new ArgumentException(
                     $"DOE analysis would expand to {n:N0} observations × {termCount:N0} terms " +

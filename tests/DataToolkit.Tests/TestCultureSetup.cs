@@ -1,4 +1,4 @@
-// R5-P3-13 (review 2026-09-06)：测试宿主线程 culture 固定为 Invariant（与
+// 测试宿主线程 culture 固定为 Invariant（与
 // Foundation.Tests/TestCultureSetup.cs 同款）。net48 用同名 shim 属性。
 using System.Globalization;
 using System.Runtime.CompilerServices;

@@ -13,10 +13,9 @@ namespace ExcelFormulaLabs.DataToolkit
     /// <summary>String manipulation: encoding, validation, distance, UUID, URL, formatting. Ported from StringUtils.bas.</summary>
     internal static class StringCore
     {
-        // F-32 (review 2026-09-06)：补 CultureInvariant——与 RegexCore/SqlCore 约定一致。
         private static readonly Regex WhitespaceRx = new(@"\s+", RegexOptions.Compiled | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(5));
         private static readonly Regex HtmlTagRx = new(@"<[^>]+>", RegexOptions.Compiled | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(5));
-        // R5-01 (review 2026-09-06)：捕获组必须含负号（-?\d+），且逗号前允许空白（{0 ,-8} 为
+        // 捕获组必须含负号（-?\d+），且逗号前允许空白（{0 ,-8} 为
         // .NET 合法写法）——否则负对齐宽度经 [^}]* 吞掉、守卫放行，多 spec 叠加可放大到 ~GB 分配。
         private static readonly Regex AlignmentWidthRx = new(
             @"\{\d+\s*(?:,\s*(-?\d+))?[^}]*\}", RegexOptions.Compiled | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(5));
@@ -38,9 +37,9 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static string RemoveChars(string t, string chars) { t ??= ""; chars ??= ""; var set = new System.Collections.Generic.HashSet<char>(chars); var sb = new System.Text.StringBuilder(t.Length); foreach (char c in t) if (!set.Contains(c)) sb.Append(c); return sb.ToString(); }
         internal static string KeepChars(string t, string keep) { t ??= ""; keep ??= ""; var set = new System.Collections.Generic.HashSet<char>(keep); var sb = new StringBuilder(t.Length); foreach (char c in t) if (set.Contains(c)) sb.Append(c); return sb.ToString(); }
 
-        // review 2026-09-14（模块审查 P2 STR-01）：Pad/Truncate/RandomString 原按 UTF-16
-        // 单元（char）计数/切分，代理对（emoji、CJK Ext-B）会被截半产出孤立代理项。
-        // 统一按文本元素（StringInfo）计数与切分；长度 = 用户可见字符数。
+        // Pad/Truncate/RandomString 统一按文本元素（StringInfo）计数与切分：
+        // 按 UTF-16 单元（char）计数会使代理对（emoji、CJK Ext-B）被截半产出孤立代理项；
+        // 长度 = 用户可见字符数。
         private static int TextElementCount(string s)
         {
             var e = StringInfo.GetTextElementEnumerator(s);
@@ -73,7 +72,7 @@ namespace ExcelFormulaLabs.DataToolkit
             return t + new string(pad, len - count);
         }
 
-        /// <summary>P2 (pre-release review): unbounded padding allocated ~GB → uncatchable OOM.
+        /// <summary>Unbounded padding allocated ~GB → uncatchable OOM.
         /// Mirror RandomString's 0–100,000 contract.</summary>
         private static void GuardPadLength(int len)
         {
@@ -87,7 +86,7 @@ namespace ExcelFormulaLabs.DataToolkit
             if (max <= 0) return "";
             var elements = TextElements(t);
             if (elements.Count <= max) return t;
-            // 后缀参与预算（按文本元素计），与旧 UTF-16 语义的比例含义一致。
+            // 后缀参与预算（按文本元素计）。
             int keep = max - TextElementCount(suffix);
             if (keep <= 0) return string.Concat(elements.Take(max));
             return string.Concat(elements.Take(keep)) + suffix;
@@ -138,8 +137,8 @@ namespace ExcelFormulaLabs.DataToolkit
         { return string.Join(d, skip?v.Where(x=>!string.IsNullOrEmpty(x)):v); }
 
         internal static long LevenshteinDistance(string a, string b)
-        { a ??= ""; b ??= ""; // review 2026-08-31（深度审查 P1-13）：无长度守卫时 32767×32767
-            // （Excel 单元格上限）≈ 1.07e9 次内层循环 → 秒级冻结。上限 2500 万次字符对运算。
+        { a ??= ""; b ??= ""; // 无长度守卫时 32767×32767（Excel 单元格上限）≈ 1.07e9
+            // 次内层循环 → 秒级冻结。上限 2500 万次字符对运算。
             if ((long)a.Length * b.Length > 25_000_000)
                 throw new ArgumentException(
                     $"Levenshtein distance is limited to 25,000,000 character-pair operations (got {a.Length}×{b.Length}).");
@@ -169,12 +168,12 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static string FormatValue(object? value, string fmt)
         {
             if (string.IsNullOrEmpty(fmt)) return RawInvariant(value);
-            // P2 (pre-release review): alignment specifiers like {0,999999999} attempt
+            // alignment specifiers like {0,999999999} attempt
             // ~GB allocations → OutOfMemoryException (excluded by ExceptionFilters) → Excel
             // crash. Reject overlong format strings and huge alignment widths up front.
             if (fmt.Length > 1000)
                 throw new ArgumentException("Format string too long (max 1000 chars).");
-            // R5-01 (review 2026-09-06)：逐 spec 检查对齐宽度（.NET 对 align 取绝对值填充，
+            // 逐 spec 检查对齐宽度（.NET 对 align 取绝对值填充，
             // 负宽度 -N 与 N 分配同量级；TryParse 失败 = 宽度超出 long 量级，同样拒绝）。
             foreach (var m in AlignmentWidthRx.Matches(fmt).Cast<System.Text.RegularExpressions.Match>())
             {
@@ -186,9 +185,8 @@ namespace ExcelFormulaLabs.DataToolkit
             string fs = fmt.Contains('{') ? fmt : $"{{0:{fmt}}}";
             try
             {
-                // review 2026-08-31（深度审查 P1-19）：原实现 `string.Format(fs, d)` 依赖 CurrentCulture——
-                // de-DE 下 "N2"→"123,46"、"P0"→"25 %"，测试套件无固定 CultureInfo，结果取决于机器 locale。
-                // UDF 输出必须可移植：统一 InvariantCulture。
+                // 统一 InvariantCulture，UDF 输出必须可移植：若依赖 CurrentCulture，
+                // de-DE 下 "N2"→"123,46"、"P0"→"25 %"，结果随机器 locale 漂移。
                 if (value is double d) return string.Format(CultureInfo.InvariantCulture, fs, d);
                 if (value is int i) return string.Format(CultureInfo.InvariantCulture, fs, i);
                 if (value is long l) return string.Format(CultureInfo.InvariantCulture, fs, l);
@@ -207,9 +205,9 @@ namespace ExcelFormulaLabs.DataToolkit
             }
         }
 
-        // review 2026-09-04（reaudit D2）：空格式串快路径与异常回退此前都是 `value?.ToString()`
-        // （CurrentCulture）——同一函数两种文化行为：de-DE 下 STR.FMT(1234.5,"") 输出 "1234,5" 而
-        // STR.FMT(1234.5,"N2") 输出 "1,234.50"。统一 InvariantCulture。null → ""（哨兵契约 L2）。
+        // 空格式串快路径与异常回退都统一 InvariantCulture：若走 CurrentCulture，
+        // 同一函数会出现两种文化行为——de-DE 下 STR.FMT(1234.5,"") 输出 "1234,5" 而
+        // STR.FMT(1234.5,"N2") 输出 "1,234.50"。null → ""（哨兵契约 L2）。
         private static string RawInvariant(object? value)
             => value == null ? ""
                 : Convert.ToString(value, CultureInfo.InvariantCulture) ?? value.ToString() ?? "";
@@ -223,7 +221,7 @@ namespace ExcelFormulaLabs.DataToolkit
             if (len < 0 || len > 100_000) throw new ArgumentOutOfRangeException(nameof(len), $"Length must be 0–100,000 (got {len}).");
             string charset = string.IsNullOrEmpty(cs) ? DefaultCharset : cs!;
             int n = (int)len;
-            // STR-01：按文本元素抽取，避免从字符集里单独选中高/低代理项产出孤立代理。
+            // 按文本元素抽取，避免从字符集里单独选中高/低代理项产出孤立代理。
             var elements = TextElements(charset);
             if (elements.Count == 0) elements = TextElements(DefaultCharset);
             var sb = new StringBuilder(n);
@@ -248,17 +246,16 @@ namespace ExcelFormulaLabs.DataToolkit
 
         internal static bool IsNullOrEmptyStr(string? t)=>string.IsNullOrEmpty(t);
         internal static bool IsNullOrWhitespaceStr(string? t)=>string.IsNullOrWhiteSpace(t);
-        // review 2026-09-05（R09）：原 `p ?? f` 仅 null 兜底，与三处文档契约矛盾
-        // （StringUdf.cs:40 "not null or empty"、docs/specification/api-reference.md:199、
-        // docs/user-manual/user-manual.md:1995 均声称空串兜底）。以文档契约为准：
-        // 空串也取 fallback（verify-manual.py 期望由另一代理按 ""→"default" 同步）。
+        // 空串也取 fallback：三处文档契约（StringUdf.cs:40 "not null or empty"、
+        // docs/specification/api-reference.md:199、docs/user-manual/user-manual.md:1995）
+        // 均声称空串兜底。
         internal static string Coalesce(string? p,string f)=>string.IsNullOrEmpty(p)?f:p;
 
         private static int NthIdx(string t, string s, long n)
         {
             if (string.IsNullOrEmpty(t)) return -1;    // empty string → no match
             if (n == 0) n = 1;                         // default → first occurrence
-            // review 2026-08-31（深度审查 P2-18）：空分隔符 + n > len+1 时
+            // 空分隔符 + n > len+1 时
             // `t.IndexOf("", idx+1)` 的 startIndex 超过 Length → ArgumentOutOfRangeException。
             // 空分隔符的第 n 次"出现"即位置 n−1（0-based），越界时饱和到末尾（不抛）。
             if (s.Length == 0)

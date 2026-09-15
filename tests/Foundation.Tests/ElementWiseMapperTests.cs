@@ -87,8 +87,8 @@ public class MapOverTests
         ((object[])result).Length.Should().Be(1);
     }
 
-    // R5-P3-10 (review 2026-09-06)：null 数组按 [null] 定形广播（长度=另一侧），但 null 作为
-    // 单元格值走 L3 透传（mapper 不被调用，每格 null）。断言形状 + 透传语义，替代零信息 NotBeNull。
+    // null 数组按 [null] 定形广播（长度=另一侧），但 null 作为单元格值走 L3 透传
+    // （mapper 不被调用，每格 null）。断言形状 + 透传语义，替代零信息 NotBeNull。
     [Fact] public void MapOverMulti_first_null_array()
         {
             var valid = new object[] { "a", "b" };
@@ -171,16 +171,15 @@ public class MapOverTests
             (string a, string b) => a + b)
             .Should().Be(ExcelError.Value);
 
-    // review 2026-09-14（P2 FND-05）：等元素数但形状不同（[2,3] vs [3,2]）原先在
-    // ReshapeFlatToOriginal2D 抛 InvalidOperationException；契约要求 ExcelError.Value。
+    // 等元素数但形状不同（[2,3] vs [3,2]）不得抛 InvalidOperationException；
+    // 契约要求返回 ExcelError.Value。
     [Fact] public void MapOverMulti_same_length_mismatched_2D_shapes_returns_ExcelError()
         => ElementWiseMapper.MapOverMulti(
             new object[2, 3], new object[3, 2],
             (int a, int b) => a + b)
             .Should().Be(ExcelError.Value);
 
-    // review 2026-09-14（P2 FND-03）：ExcelMissing（公式栏省略）不得泄漏类型全名，
-    // 按省略语义返回 null 哨兵。
+    // ExcelMissing（公式栏省略）不得泄漏类型全名，按省略语义返回 null 哨兵。
     [Fact] public void MapOver_excel_missing_returns_null()
         => ElementWiseMapper.MapOver<object, string>(
             ExcelDna.Integration.ExcelMissing.Value, x => "mapped:" + x)
@@ -224,8 +223,8 @@ public class MapOverMultiThreeArgTests
             (int a, int b, int c) => a + b + c)
             .Should().Be(ExcelError.Value);
 
-    // P2 (pre-release review): typed arrays (double[]) were treated as a scalar cell,
-    // producing a single NaN; must map element-wise like NormalizeTo1D does.
+    // typed arrays (double[]) treated as a scalar cell would produce a single NaN;
+    // must map element-wise like NormalizeTo1D does.
     [Fact] public void MapOver_double_array_maps_elementwise()
     {
         var result = (object[])ElementWiseMapper.MapOver<double, double>(

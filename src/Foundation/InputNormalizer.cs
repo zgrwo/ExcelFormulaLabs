@@ -183,10 +183,10 @@ namespace ExcelFormulaLabs.Foundation
         // Safe type coercion
         // ─────────────────────────────────────────────────────────────────
 
-        // review 2026-09-05（R23）：Excel-DNA 哨兵类型全名由"魔法字符串"收敛为 const。
-        // Foundation 不直接引用 ExcelDna.Integration（零依赖红线），只能按类型全名识别；
-        // 字面量由 Foundation.Tests 的 InputNormalizerSentinelTypeNames 测试锁定——若 Excel-DNA
-        // 升级改型名，测试会失败并提示同步。
+        // Excel-DNA 哨兵类型全名收敛为 const。Foundation 不直接引用 ExcelDna.Integration
+        // （零依赖红线），只能按类型全名识别；字面量由 Foundation.Tests 的
+        // InputNormalizerSentinelTypeNames 测试锁定——若 Excel-DNA 升级改型名，
+        // 测试会失败并提示同步。
         private const string ExcelDnaMissingTypeName = "ExcelDna.Integration.ExcelMissing";
         private const string ExcelDnaEmptyTypeName = "ExcelDna.Integration.ExcelEmpty";
         private const string ExcelDnaErrorTypeName = "ExcelDna.Integration.ExcelError";
@@ -223,9 +223,8 @@ namespace ExcelFormulaLabs.Foundation
         /// True when an optional argument carries no value: <c>null</c>, <see cref="DBNull"/>,
         /// <c>ExcelMissing</c> (omitted in the formula bar) or empty cell
         /// (<c>ExcelEmpty</c> / <see cref="ExcelEmpty.Value"/>).
-        /// review 2026-09-14（模块审查 P1 UDF-01）：可选参数守卫此前只识别 null/Missing，
-        /// 引用空白单元格（ExcelEmpty）时 9 处静默错值或误抛 #VALUE!——统一走本判定，
-        /// 使空白与省略同语义回退文档默认值。
+        /// 可选参数守卫必须包含 ExcelEmpty：只识别 null/Missing 时引用空白单元格会静默错值
+        /// 或误抛 #VALUE!——统一走本判定，使空白与省略同语义回退文档默认值。
         /// </summary>
         public static bool IsOmitted(object? value)
         {
@@ -295,15 +294,15 @@ namespace ExcelFormulaLabs.Foundation
             if (value is double d)
             {
                 if (double.IsNaN(d) || double.IsInfinity(d)) return 0; // L1 NaN/Inf guard
-                // review 2026-09-05（R26 修正）：Math.Round 默认 ToEven（中点取偶）为有意行为——
-                // 与移植源 VBA CLng 的银行家舍入一致（保真）。真实影响面 = 所有经 ToLong/ToInt32
-                // 的半整数参数（如 STR.SUBSTITUTE 的 instance_num），与 Excel INT 截断的分歧仅限
+                // Math.Round 默认 ToEven（中点取偶）为有意行为——与移植源 VBA CLng 的
+                // 银行家舍入一致（保真）。真实影响面 = 所有经 ToLong/ToInt32 的半整数参数
+                // （如 STR.SUBSTITUTE 的 instance_num），与 Excel INT 截断的分歧仅限
                 // 奇数半整数且多被后续 clamp 掩盖。
                 double rd = Math.Round(d);
-                // review 2026-08-31（深度审查 P2-8）：`rd > long.MaxValue` 有 2⁶³ 漏洞——
+                // 须用 2⁶³ 字面量严格小于比较：`rd > long.MaxValue` 有 2⁶³ 漏洞——
                 // (double)long.MaxValue 不可精确表示，舍入为 2⁶³ = 9.223372036854776E18，
                 // 于是 `2⁶³ > 2⁶³` 恒 false → 守卫绕过 → (long)rd 得 long.MinValue（net8 回绕/
-                // net48 未定义，双 TFM 行为不一致）。用 2⁶³ 字面量严格小于比较。
+                // net48 未定义，双 TFM 行为不一致）。
                 if (rd < long.MinValue || rd >= 9.223372036854776E18) return 0; // L2 range guard
                 return (long)rd;
             }
@@ -317,7 +316,7 @@ namespace ExcelFormulaLabs.Foundation
                 {
                     if (double.IsNaN(dVal) || double.IsInfinity(dVal)) return 0; // L1 NaN/Inf guard
                     double rd = Math.Round(dVal);
-                    // review 2026-08-31（深度审查 P2-8）：同 double 分支，2⁶³ 字面量严格比较。
+                    // 同 double 分支，2⁶³ 字面量严格比较。
                     if (rd < long.MinValue || rd >= 9.223372036854776E18) return 0; // L2 range guard
                     return (long)rd;
                 }
@@ -332,7 +331,7 @@ namespace ExcelFormulaLabs.Foundation
         /// Safe conversion to int. Error/Null/Empty → 0 (L4 sentinel).
         /// Values outside the int range throw instead of silently truncating —
         /// a raw <c>(int)</c> cast of a long beyond int.MaxValue wraps to a
-        /// negative/incorrect index (review-2026-08-29 P2-2).
+        /// negative/incorrect index.
         /// </summary>
         public static int ToInt32(object? value)
         {
@@ -353,8 +352,8 @@ namespace ExcelFormulaLabs.Foundation
             if (IsExcelErrorValue(value)) return false;
             if (value is bool b) return b;
             if (value is double d) return double.IsNaN(d) ? false : d != 0.0; // L1 NaN guard
-            // review 2026-09-14（模块审查 P2 FND-02）：原 float 落 Convert.ToBoolean 兜底 →
-            // float.NaN 被 Convert 判为 true，与 double 分支的 NaN→false 哨兵契约相悖。
+            // float 分支须显式处理 NaN：落 Convert.ToBoolean 兜底时 float.NaN 被判为 true，
+            // 与 double 分支的 NaN→false 哨兵契约相悖。
             if (value is float f) return float.IsNaN(f) ? false : f != 0f;
             if (value is int i) return i != 0;
             if (value is long l) return l != 0;
@@ -451,8 +450,8 @@ namespace ExcelFormulaLabs.Foundation
             {
                 int rows = arr2D.GetLength(0);
                 int cols = arr2D.GetLength(1);
-                // R5-P3-07 (review 2026-09-06)：rows*cols 必须 long 域相乘——int 回绕为负时
-                // new object[n] 抛 OverflowException（非静默但诊断失真）；显式检查给出可读错误。
+                // rows*cols 必须在 long 域相乘：int 回绕为负时 new object[n] 抛
+                // OverflowException（非静默但诊断失真）；显式检查给出可读错误。
                 // 下游 r*cols+c 索引在 total ≤ int.MaxValue 时不可能回绕。
                 long total = (long)rows * cols;
                 if (total > int.MaxValue)
@@ -489,10 +488,10 @@ namespace ExcelFormulaLabs.Foundation
                         result[i] = typedArr.GetValue(i)!;
                     return result;
                 }
-                // review 2026-08-31（深度审查 P2-17）：Rank≥2 强类型数组（如 double[,]）原落入
-                // scalar 分支被包装成单元素数组 → 下游塌缩成单个 NaN 或 "Cannot reshape" 报错。
-                // 按行优先展平：Array.GetValue(int) 只支持 1D，多维必须用 GetValue(int[])
-                // 逐维索引转换（最右维最快变化，与 object[,] 分支一致）。
+                // Rank≥2 强类型数组（如 double[,]）须按行优先展平：否则落 scalar 分支被包装成
+                // 单元素数组 → 下游塌缩成单个 NaN 或 "Cannot reshape" 报错。
+                // Array.GetValue(int) 只支持 1D，多维必须用 GetValue(int[]) 逐维索引转换
+                // （最右维最快变化，与 object[,] 分支一致）。
                 var flat = new object[typedArr.Length];
                 var idxArr = new int[typedArr.Rank];
                 for (int i = 0; i < typedArr.Length; i++)
@@ -562,10 +561,10 @@ namespace ExcelFormulaLabs.Foundation
                 return result;
             }
 
-            // review 2026-09-05（N13）：Rank≥3 数组原落入 Rank≥2 分支，GetValue(int,int) 按 CLR
-            // 契约抛未捕获 ArgumentException（且只读 dim 0/1）。与 P2-17（NormalizeTo1D 多维
-            // 展平，2026-08-31）同法但保留 2D 形状：按行优先展平为 [n,1] 列向量（最右维最快
-            // 变化，与 object[,] 分支一致），不丢数据、不抛裸异常。
+            // Rank≥3 数组不能在 Rank≥2 分支处理：GetValue(int,int) 按 CLR 契约抛未捕获
+            // ArgumentException（且只读 dim 0/1）。与 NormalizeTo1D 的多维展平同法但保留 2D
+            // 形状：按行优先展平为 [n,1] 列向量（最右维最快变化，与 object[,] 分支一致），
+            // 不丢数据、不抛裸异常。
             if (input is Array highRankArr && highRankArr.Rank >= 3)
             {
                 var result = new object[highRankArr.Length, 1];

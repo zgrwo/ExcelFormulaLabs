@@ -7,9 +7,9 @@ namespace ExcelFormulaLabs.Foundation.Tests;
 
 public class SortTests
 {
-    // P2 (pre-release review): ArrayOperations.CompareElements sorted null LAST while
-    // ComparisonUtils.Compare (documented VBA VariantKit order) sorts null FIRST
-    // (Null → Empty → values → Error). Unify on the documented order.
+    // ArrayOperations.CompareElements must follow the documented VBA VariantKit order
+    // (Null → Empty → values → Error): sorting null LAST would diverge from
+    // ComparisonUtils.Compare, which sorts null FIRST.
     [Fact] public void Sorted_with_null_sorts_null_first()
     {
         var result = ArrayOperations.Sorted<object>(new object[] { 2.0, null!, 1.0 });
@@ -47,13 +47,13 @@ public class SortTests
         original.Should().Equal(new[] { 3, 1, 2 });
     }
 
-    // P2-21 (review-2026-08-31): 原零断言测试（仅调用不验证）——补 NotThrow。
+    // 零断言测试（仅调用不验证）→ 断言 NotThrow。
     [Fact] public void Sort_empty_noop() { var act = () => ArrayOperations.Sort(System.Array.Empty<int>()); act.Should().NotThrow(); }
     [Fact] public void Sort_null_noop() { int[]? n = null; var act = () => ArrayOperations.Sort(n!); act.Should().NotThrow(); }
     [Fact] public void Sorted_null_input_returns_empty() => ArrayOperations.Sorted<int>(null!).Should().BeEmpty();
 
-    // review 2026-09-14（P2 FND-04）：CompareText 键生成原用 CurrentCulture（de-DE 下
-    // 1.5→"1,5"），排序顺序随 locale 翻转；必须与 Invariant 结果一致。
+    // CompareText 键生成须用 InvariantCulture：CurrentCulture（de-DE 下 1.5→"1,5"）
+    // 会随 locale 翻转排序顺序，必须与 Invariant 结果一致。
     [Fact]
     public void Sorted_text_mode_invariant_key_generation_is_locale_independent()
     {
@@ -100,8 +100,8 @@ public class SliceTests
         => ArrayOperations.Slice(new[] { 1, 2, 3 }, 0, -1).Should().Equal(1, 2, 3);
     [Fact] public void Slice_null_input_returns_empty() => ArrayOperations.Slice<int>(null!, 0).Length.Should().Be(0);
 
-    // review 2026-09-14（模块审查 P0 FND-01）：length=int.MaxValue 与 start 相加溢出绕过钳制
-    // → new T[int.MaxValue] 不可捕获 OOM。修复后按 n-start 钳制且不分配巨数组。
+    // length=int.MaxValue 与 start 相加会溢出绕过钳制 → new T[int.MaxValue] 不可捕获 OOM；
+    // 须按 n-start 钳制且不分配巨数组。
     [Theory]
     [InlineData(0, 4)]
     [InlineData(1, 3)]
@@ -180,7 +180,7 @@ public class CollectNumericColumnsTests
         cols.Should().Equal(0, 2);
     }
 
-    // review 2026-09-14（P3 FND-12）：维度参数越界原先裸 IndexOutOfRangeException。
+    // 维度参数越界须抛契约异常，而非裸 IndexOutOfRangeException。
     [Fact]
     public void Out_of_range_dimensions_throw()
     {
@@ -233,8 +233,6 @@ public class SortIndicesTests
         indices.Should().Equal(0);
     }
 
-
-    // -- review-2026-08-31: P1-2 / P1-3 regression guards --
     [Fact] public void Sort_all_equal_correct_and_fast()
     {
         var a = new int[200_000];
@@ -254,9 +252,9 @@ public class SortIndicesTests
         ArrayOperations.IndexOf(new object[] { 1.0, 2.0 }, 1).Should().Be(0);
     }
 
-    // review 2026-09-04（reaudit D1）：绝对容差 1e-12 对小量纲数据恒命中首个元素（假阳性：
-    // {1e-16;2e-16;3e-16} 查 3e-16 → 0）。改纯相对容差 |a−b| < tol·max(|a|,|b|) 后，
-    // 量纲 < 1 的数据退化为精确比较；O(1) 量级浮点累差（0.1+0.2≈0.3）仍可桥接。
+    // 绝对容差 1e-12 会对小量纲数据恒命中首个元素（假阳性：{1e-16;2e-16;3e-16} 查 3e-16 → 0）；
+    // 须用纯相对容差 |a−b| < tol·max(|a|,|b|)：量纲 < 1 的数据退化为精确比较，O(1) 量级浮点
+    // 累差（0.1+0.2≈0.3）仍可桥接。
     [Fact] public void IndexOf_tiny_scale_exact_index()
         => ArrayOperations.IndexOf(new[] { 1e-16, 2e-16, 3e-16 }, 3e-16).Should().Be(2);
 

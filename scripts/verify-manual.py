@@ -36,8 +36,8 @@ EPS = 1e-10; EPS_LOOSE = 1e-6
 RTOL_ULP = 1e-12
 
 def _count_udfs_from_api_reference():
-    """R5-P3-16 (review-2026-09-06)：UDF 总数从 api-reference.md（数字唯一信源）解析，
-    禁硬编码——原 3 处字面量 236 在 UDF 数变更后会静默漂移（检查 16 扫描域不含 .py）。
+    """UDF 总数从 api-reference.md（数字唯一信源）解析，禁硬编码——字面量 236 在 UDF 数
+    变更后会静默漂移（检查 16 扫描域不含 .py）。
     解析失败时兜底 236 并显式告警（仅影响覆盖率打印，不影响判定）。"""
     p = Path(__file__).resolve().parent.parent / "docs" / "specification" / "api-reference.md"
     try:
@@ -50,14 +50,14 @@ def _count_udfs_from_api_reference():
         return 236
 
 UDF_TOTAL = _count_udfs_from_api_reference()
-PASS = 0; FAIL = 0; SKIP = 0  # P1-9 (review): missing C# reference is now a hard-fail signal
-MANUAL_PASS = 0  # P0-3b (review-2026-08-31): check() 纯 Python 自校验通过数
-CROSS_PASS = 0   # P0-3b: cross_check() 与 C# 对照通过数
-SECTION_TOTAL = 0  # P1-16 (review-2026-08-31): UDF 覆盖率由 section() 声明累加派生，禁硬编码
+PASS = 0; FAIL = 0; SKIP = 0  # missing C# reference is a hard-fail signal
+MANUAL_PASS = 0  # check() 纯 Python 自校验通过数
+CROSS_PASS = 0   # cross_check() 与 C# 对照通过数
+SECTION_TOTAL = 0  # UDF 覆盖率由 section() 声明累加派生，禁硬编码
 TOTAL_UDF = 0  # track unique UDFs verified
 
-REFERENCED = set()  # P1-16 (review-2026-08-31): 实际引用的 UDF 名集合（覆盖数推导用）
-CROSS_REFERENCED = set()  # F2 (review-2026-09-04): 真正调用 C# 的 cross_* 用例名集合——
+REFERENCED = set()  # 实际引用的 UDF 名集合（覆盖数推导用）
+CROSS_REFERENCED = set()  # 真正调用 C# 的 cross_* 用例名集合——
 # 覆盖率宣称必须区分：REFERENCED（含纯 Python 自校验）推导的是“手册示例覆盖”，
 # CROSS_REFERENCED 推导的才是“与 C# 交叉验证覆盖”。
 
@@ -74,7 +74,7 @@ def check(name, actual, expected, tol=EPS, manual=True):
             FAIL += 1; print(f"  FAIL {name}: got {actual}, expected {expected} (diff={abs(float(actual)-float(expected)):.2e})")
     elif isinstance(expected, np.ndarray) or isinstance(actual, np.ndarray):
         a = np.asarray(actual, dtype=float); e = np.asarray(expected, dtype=float)
-        # R5-P3-02：rtol 显式取 RTOL_ULP（默认 1e-5 曾稀释 manifest atol 预算 4~6 个数量级）
+        # rtol 显式取 RTOL_ULP：默认 1e-5 会稀释 manifest atol 预算 4~6 个数量级
         ok = a.shape == e.shape and np.allclose(a, e, atol=tol, rtol=RTOL_ULP, equal_nan=True)
         if ok: print(f"  OK {name}: shape={a.shape}")
         else: FAIL += 1; print(f"  FAIL {name}: mismatch\ngot={actual}\nexp={expected}")
@@ -92,7 +92,7 @@ def check(name, actual, expected, tol=EPS, manual=True):
 
 def section(title, count):
     global SECTION_TOTAL
-    SECTION_TOTAL += count  # P1-16: 累计声明数，避免硬编码与声明漂移
+    SECTION_TOTAL += count  # 累计声明数，避免硬编码与声明漂移
     print(f"\n{'='*60}\n  {title} ({count} UDFs)\n{'='*60}")
 
 # ── CrossValRunner integration ──────────────────────────────────────
@@ -116,8 +116,8 @@ def load_csharp_results():
             print(f"  SKIP cross-check: CrossValRunner failed:\n{proc.stderr}")
             return {}
         data = json.loads(proc.stdout)
-        # P0-3c (review-2026-08-31): manifest 的 summary 字段此前无人消费——C# 侧任何一条
-        # 执行错误（如 manifest 与 Dispatcher 失配）都会静默漏过，脚本照样 exit 0。
+        # manifest 的 summary 字段必须被消费——否则 C# 侧任何一条执行错误
+        #（如 manifest 与 Dispatcher 失配）都会静默漏过，脚本照样 exit 0。
         err_count = data.get("summary", {}).get("error", 0)
         if err_count > 0:
             print(f"  [WARN] CrossValRunner reported {err_count} C# execution error(s) — "
@@ -137,7 +137,7 @@ def csharp_results():
     return _csharp
 
 def unwrap(v):
-    """P0-3a (review-2026-08-31): 将 C# 序列化中的 NaN/Inf 标签（{"__nan__":true}/{"__inf__":±1}）
+    """将 C# 序列化中的 NaN/Inf 标签（{"__nan__":true}/{"__inf__":±1}）
     还原为 Python 的 nan/inf，便于 numpy 比较。C# 侧 +Inf 与 Python NaN 不再能互相冒充。"""
     if isinstance(v, dict):
         if "__nan__" in v: return float("nan")
@@ -154,7 +154,7 @@ def cross_check(name, python_computed, tol=None):
     CROSS_REFERENCED.add(name)
     ref = csharp_results().get(name)
     if ref is None:
-        # P1-9 (review): a missing C# reference must fail the run, not silently degrade
+        # a missing C# reference must fail the run, not silently degrade
         # the cross-validation loop into Python-only self-checks.
         SKIP += 1
         print(f"  SKIP {name}: no C# reference (manifest may need update)")
@@ -173,11 +173,11 @@ def cross_check(name, python_computed, tol=None):
     # 旧 max 语义下 0 实际生效值也是 max(EPS,0)=1e-10，行为对齐。
     tol_eff = tol if tol is not None else (
         float(ref.get("tolerance")) if ref.get("tolerance") else EPS)
-    # F-34 (review 2026-09-06)：显式 tol 放宽 manifest 预算时打印审计提示（收紧是 N01 预期
-    # 语义；放宽属断言级声明，须可见——FitRidge R² 1e-3 vs manifest 1e-10 曾放宽 7 个数量级）。
+    # 显式 tol 放宽 manifest 预算时打印审计提示（收紧符合 tol 优先级链；
+    # 放宽属断言级声明，须可见——FitRidge R² 1e-3 vs manifest 1e-10 放宽 7 个数量级）。
     if tol is not None and ref.get("tolerance") and float(ref["tolerance"]) > 0 and tol > float(ref["tolerance"]):
         print(f"  [note] {name}: explicit tol {tol:g} 放宽 manifest {float(ref['tolerance']):g}")
-    # C# 特殊值（NaN/±Inf）：必须与 Python 同类型同符号才算 PASS（P0-3a 修复）
+    # C# 特殊值（NaN/±Inf）：必须与 Python 同类型同符号才算 PASS
     if isinstance(cs_val, float) and (np.isnan(cs_val) or np.isinf(cs_val)):
         if isinstance(python_computed, (float, np.floating)) and \
            ((np.isnan(cs_val) and np.isnan(float(python_computed))) or
@@ -204,15 +204,15 @@ def _pick_field(cs, field):
     return cs
 
 def cross_vs_csharp(name, py_value, manifest_id, tol=None, field=None, xform=None):
-    """R02 (review-2026-09-05)：所有「* vs C#」bespoke 对照的单一入口，统一四件事：
-    ① tolerance 消费与 N01 同语义（调用方显式 tol 优先，manifest 兜底）；
-    ② {"__nan__":true}/{"__inf__":±1} 标签经 unwrap 解包（旧 bespoke 落 check() else 分支
-       会被 FAIL 误分类而非识别特殊值）；
+    """所有「* vs C#」bespoke 对照的单一入口，统一四件事：
+    ① tolerance 消费与 cross_check 同语义（调用方显式 tol 优先，manifest 兜底）；
+    ② {"__nan__":true}/{"__inf__":±1} 标签经 unwrap 解包（否则会落 check() else 分支
+       被 FAIL 误分类而非识别特殊值）；
     ③ 通道计数：真 C# 对照计入 CROSS_PASS，并把 manifest_id 记入 CROSS_REFERENCED
-       （旧 manual=True 使真 C# 覆盖率被低估，如 25 处 bespoke 全部漏计）；
-    ④ C# 引用缺失 → SKIP（P1-9 致命语义，与 cross_check 一致；不再回落纯 Python 自校验）。
+       （manual=True 会使真 C# 覆盖率被低估）；
+    ④ C# 引用缺失 → SKIP（致命语义，与 cross_check 一致；不回落纯 Python 自校验）。
     xform：对 C# 标量值的变换（如 abs——numpy 与 C# 的 QR 对角符号约定可逐元素不同，
-    旧 bespoke 即用 |a|−|b| 比较，此处保留该语义）。"""
+    该场景按 |a|−|b| 比较语义处理）。"""
     global PASS, FAIL, SKIP, CROSS_PASS
     REFERENCED.add(name)
     REFERENCED.add(manifest_id)
@@ -232,8 +232,8 @@ def cross_vs_csharp(name, py_value, manifest_id, tol=None, field=None, xform=Non
         cs = xform(cs)
     tol_eff = tol if tol is not None else (
         float(ref.get("tolerance")) if ref.get("tolerance") else EPS)
-    # F-34 (review 2026-09-06)：显式 tol 放宽 manifest 预算时打印审计提示（收紧是 N01 预期
-    # 语义；放宽属断言级声明，须可见——FitRidge R² 1e-3 vs manifest 1e-10 曾放宽 7 个数量级）。
+    # 显式 tol 放宽 manifest 预算时打印审计提示（收紧符合 tol 优先级链；
+    # 放宽属断言级声明，须可见——FitRidge R² 1e-3 vs manifest 1e-10 放宽 7 个数量级）。
     if tol is not None and ref.get("tolerance") and float(ref["tolerance"]) > 0 and tol > float(ref["tolerance"]):
         print(f"  [note] {name}: explicit tol {tol:g} 放宽 manifest {float(ref['tolerance']):g}")
     # 特殊值（NaN/±Inf/null）：与 cross_check 同款语义——同型同符号才 PASS
@@ -267,7 +267,7 @@ cross_check("STATS.VARP", np.var(data, ddof=0))
 cross_check("STATS.VAR", np.var(data, ddof=1))
 cross_check("STATS.STDEVP", np.std(data, ddof=0))
 cross_check("STATS.STDEV", np.std(data, ddof=1))
-cross_check("STATS.SKEW", float(stats.skew(data, bias=False)), tol=1e-4)  # review 2026-08-29: 原布尔阈值无活体对照
+cross_check("STATS.SKEW", float(stats.skew(data, bias=False)), tol=1e-4)  # SKEW 活体对照 tol=1e-4
 cross_check("STATS.KURT", float(stats.kurtosis(data, fisher=True, bias=False)), tol=1e-4)
 cross_check("STATS.MIN", np.min(data))
 cross_check("STATS.MAX", np.max(data))
@@ -283,7 +283,7 @@ summary=[len(data),np.mean(data),np.std(data,ddof=1),np.min(data),q25,q50,q75,np
 cross_check("STATS.SUMMARY", summary, tol=1e-8)
 check("STATS.SUMMARY[n]", summary[0], 20); check("STATS.SUMMARY[mean]", summary[1], 28.8)
 check("STATS.COUNT", len(data), 20)
-# review 2026-08-29：CountNumeric 独立语义对照（混类型输入，Excel COUNT 语义：跳过文本/空，bool 计入）
+# CountNumeric 独立语义对照（混类型输入，Excel COUNT 语义：跳过文本/空，bool 计入）
 def csharp_count_semantics(items):
     n = 0
     for x in items:
@@ -312,19 +312,18 @@ zs=np.array([10.0,20,30,40,50])
 X_cm=np.array([[4.0,1.0,2.0,3.0],[3.0,5.0,1.0,2.0],[2.0,3.0,6.0,1.0],[1.0,2.0,3.0,7.0]])  # A_4x4: rows=obs, cols=var
 cross_check("STATS.ZSCORE", stats.zscore(zs, ddof=0), tol=1e-5)
 cross_check("STATS.CORRMATRIX", np.corrcoef(X_cm, rowvar=False), tol=1e-10)
-# P0-3a 标签路径回归守卫（review-2026-08-31）：常量列 → 全 NaN 行列——
-# C# 序列化为 {"__nan__":true} 标签，unwrap 后须与 Python NaN 匹配（防标签被改回 null 的回归）。
+# 标签路径回归守卫：常量列 → 全 NaN 行列——C# 序列化为 {"__nan__":true} 标签，
+# unwrap 后须与 Python NaN 匹配（防标签被改回 null 的回归）。
 cross_check("STATS.CORRMATRIX_CONST", np.array([[np.nan, np.nan], [np.nan, 1.0]]), tol=0)
-# R5-P3-40 (review-2026-09-06)：初等函数由 manual 升级为 cross_check（此前无 C# 活体对照；
-# numpy 即独立实现，manifest 条目经 Dispatcher 新注册的 SqrtSafe/LogSafe/Log10Safe/ExpSafe/Sign/Abs）。
+# 初等函数对照走 cross_check：numpy 即独立实现，
+# manifest 条目经 Dispatcher 注册的 SqrtSafe/LogSafe/Log10Safe/ExpSafe/Sign/Abs。
 cross_check("STATS.ABS", np.abs([-10,20,-30,40,-50]).tolist())
 cross_check("STATS.SQRT", np.sqrt([4,9,16,25,36]).tolist())
 cross_check("STATS.LN", np.log([1,math.e,math.e**2,math.e**3,math.e**4]).tolist())
 cross_check("STATS.LOG10", np.log10([1,10,100,1000,10000]).tolist())
 cross_check("STATS.EXP", np.exp([0,1,2,3,4]).tolist())
 cross_check("STATS.SIGN", np.sign([-10,0,30,-0.5,100]).tolist())
-# R5-03 (review-2026-09-06)：退化输入的活体对照（此前 manifest 零退化条目——历史 P0/P1 全部
-# 源于退化输入而 cross 通道未覆盖）。空/单元素/精确抵消路径，NaN 走标签通道。
+# 退化输入的活体对照：空/单元素/精确抵消路径，NaN 走标签通道。
 cross_check("STATS.MEAN_SINGLE", float(np.mean([7.5])))
 cross_check("STATS.MEAN_EMPTY", float(np.mean(np.array([]))))  # 双方 NaN（哨兵契约）
 cross_check("STATS.VAR_SINGLE", float(np.var([5.0], ddof=1)))  # 单元素 ddof=1 → NaN
@@ -337,12 +336,11 @@ section("LINALG — Linear Algebra", 19)
 A = np.array([[4,1,2,3],[3,5,1,2],[2,3,6,1],[1,2,3,7]], dtype=float)
 cross_check("LINALG.DET", np.linalg.det(A))
 b=np.array([10,12,14,16],dtype=float); xs=np.linalg.solve(A,b)
-# review 2026-09-05（R02）：bespoke 对照收敛 cross_vs_csharp——C# 缺失 → SKIP（P1-9 致命），
-# 不再回落纯 Python 自校验分支；field 下标取值取代旧 cs[0] 整列表硬编码访问。
+# bespoke 对照统一走 cross_vs_csharp——C# 缺失 → SKIP（致命），不回落纯 Python 自校验分支；
+# field 下标取值，避免整列表硬编码访问。
 for _i in range(4):
     cross_vs_csharp(f"LINALG.SOLVE[{_i}] vs C#", xs[_i], "LINALG.SOLVE", tol=1e-8, field=_i)
-# review 2026-09-05（N09）：MATMUL 此前 Python 侧仅对照硬编码（manual 通道），manifest 条目
-# 的 C# 结果零消费（孤儿条目）——补真 cross_check 消费。
+# MATMUL manifest 条目的 C# 结果由 cross_check 真实消费，不经 manual 通道（防孤儿条目）。
 cross_check("LINALG.MATMUL", np.array([[1,2],[3,4],[5,6]])@np.array([[7,8,9],[10,11,12]]))
 cross_check("LINALG.TRANSPOSE", np.array([[1,2],[3,4]]).T)
 cross_check("LINALG.TRACE", np.trace(A))
@@ -355,15 +353,15 @@ for _i in range(2):
     cross_vs_csharp(f"LINALG.SVD_S[{_i}] vs C#", S_svd[_i], "LINALG.SVD", tol=1e-3, field=("S", _i))
 check("LINALG.SVD_U[0,0]", abs(U_svd[0,0]+0.4287)<0.001, True)
 check("LINALG.SVD_VT[0,0]", abs(Vt_svd[0,0]+0.3863)<0.001, True)
-# R5-P3-40 (review-2026-09-06)：SVD Vt 全元素对照（此前仅 [0,0] 单点烟测）。右奇异向量
-# 逐行符号约定两侧可不同——先按 C# 侧对齐每行符号，再整矩阵比对（对齐是规范化，非改值）。
+# SVD Vt 全元素对照。右奇异向量逐行符号约定两侧可不同——
+# 先按 C# 侧对齐每行符号，再整矩阵比对（对齐是规范化，非改值）。
 Vt_cs_full = unwrap(_pick_field(csharp_results()["LINALG.SVD_VT"]["result"], "Vt"))
 Vt_aligned = Vt_svd.copy()
 for _ri in range(Vt_aligned.shape[0]):
     if float(np.dot(Vt_cs_full[_ri], Vt_aligned[_ri])) < 0:
         Vt_aligned[_ri] = -Vt_aligned[_ri]
 cross_vs_csharp("LINALG.SVD_VT vs C#", Vt_aligned, "LINALG.SVD_VT", tol=1e-6, field="Vt")
-# R5-03：病态矩阵对照（Hilbert：cond(H6)≈1.5e7 两侧均应精确到 ~1e-9；
+# 病态矩阵对照（Hilbert：cond(H6)≈1.5e7 两侧均应精确到 ~1e-9；
 # cond(H8)≈1.5e10 的行列式为 ~1e-33 量级，绝对容差 1e-10 天然覆盖）。
 H6 = np.array([[1.0/(i+j+1) for j in range(6)] for i in range(6)])
 H8 = np.array([[1.0/(i+j+1) for j in range(8)] for i in range(8)])
@@ -393,13 +391,13 @@ if cs_qr and cs_qr["status"]=="ok":
     for _i in range(3):
         cross_vs_csharp(f"LINALG.QR_R[{_i},{_i}] vs C#", abs(Rr[_i,_i]), "LINALG.QR",
                         tol=0.01, field=("R", _i, _i), xform=abs)
-    # review 2026-09-05（N03）：原 numpy Q@R≈A 是两侧同源 numpy 的恒等式（自校验）——
-    # 改为验证 C# 分解满足重构恒等式 ‖Q_c@R_c − A‖，这才是对 C# 输出的真校验。
+    # 验证 C# 分解满足重构恒等式 ‖Q_c@R_c − A‖——numpy Q@R≈A 是两侧同源自校验，
+    # 不约束 C# 输出。
     Qc=np.array(_cs_qr["Q"],dtype=float); Rc=np.array(_cs_qr["R"],dtype=float)
     check("LINALG.QR reconstruction vs C#", Qc@Rc, A_qr, tol=1e-8, manual=False)
     CROSS_REFERENCED.add("LINALG.QR")
 else:
-    # R02：C# 缺失/出错 → SKIP/FAIL 由 cross_vs_csharp 语义接管，不再回落 numpy 自校验
+    # C# 缺失/出错 → SKIP/FAIL 由 cross_vs_csharp 语义接管，不回落 numpy 自校验
     cross_vs_csharp("LINALG.QR_R[0,0] vs C#", abs(Rr[0,0]), "LINALG.QR", tol=0.01, field=("R", 0, 0))
 check("LINALG.QR_Q[0,0]", abs(Qr[0,0]+0.8571)<0.001, True)
 # LU
@@ -407,25 +405,25 @@ cs_lu=csharp_results().get("LINALG.LU")
 P_lu,L_lu,U_lu=la.lu(A)
 if cs_lu and cs_lu["status"]=="ok":
     cross_vs_csharp("LINALG.LU_U[0,0] vs C#", U_lu[0,0], "LINALG.LU", tol=0.01, field=("U", 0, 0))
-    # review 2026-09-05（N03）：原 numpy P@A vs L@U 恒等式自校验——改为验证 C# 分解满足
-    # P_c@A = L_c@U_c（A 是固定输入常量，C# 的 L/U/P 全部被该恒等式约束）。
+    # 验证 C# 分解满足 P_c@A = L_c@U_c（A 是固定输入常量，C# 的 L/U/P 全部被该恒等式约束）；
+    # numpy P@A vs L@U 是两侧同源自校验。
     _cs_lu = unwrap(cs_lu["result"])
     Lc=np.array(_cs_lu["L"],dtype=float); Uc=np.array(_cs_lu["U"],dtype=float); Pc=np.array(_cs_lu["P"],dtype=float)
     check("LINALG.LU reconstruction vs C#", Pc@A, Lc@Uc, tol=1e-8, manual=False)
     CROSS_REFERENCED.add("LINALG.LU")
 else:
     cross_vs_csharp("LINALG.LU_U[0,0] vs C#", U_lu[0,0], "LINALG.LU", tol=0.01, field=("U", 0, 0))
-# ── LINALG.LU_U / LU_P 独立验证（review-2026-08-31，Dispatcher 补注册）──
-# scipy 与 C# 主元策略可能不同，无法逐元素对照——改为性质检查（U 上三角、P 为置换矩阵）。
-# review 2026-09-05（R02）：np.array(...,dtype=float) 遇 {"__nan__":true} 标签会 TypeError ——
+# ── LINALG.LU_U / LU_P 独立验证 ──
+# scipy 与 C# 主元策略可能不同，无法逐元素对照——性质检查（U 上三角、P 为置换矩阵）。
+# np.array(...,dtype=float) 遇 {"__nan__":true} 标签会 TypeError ——
 # 先 unwrap 解包（矩阵/property 通道纳入标签支持）。
 _cs_luu = csharp_results().get("LINALG.LU_U")
 if _cs_luu and _cs_luu["status"] == "ok":
     _U = np.array(unwrap(_cs_luu["result"]), dtype=float)
     check("LINALG.LU_U upper-triangular", bool(np.allclose(_U, np.triu(_U), atol=1e-9)), True)
 else:
-    # F-03 (review 2026-09-06)：C# 缺失/出错不得静默零计数（P1-9 语义）——
-    # SKIP 致命化保证显式暴露（与 QR/LU 主块的 else 兜底口径一致）。
+    # C# 缺失/出错不得静默零计数——SKIP 致命化保证显式暴露
+    #（与 QR/LU 主块的 else 兜底口径一致）。
     SKIP += 1; print("  SKIP LINALG.LU_U upper-triangular: no C# reference")
 _cs_lup = csharp_results().get("LINALG.LU_P")
 if _cs_lup and _cs_lup["status"] == "ok":
@@ -453,8 +451,8 @@ section("REGRESS - Regression Analysis", 7)
 Xr=np.array([[1,3],[2,1],[3,4],[4,2],[5,5]],dtype=float); yr=np.array([6,6,11,11,16],dtype=float)
 lr=LR(fit_intercept=True); lr.fit(Xr,yr)
 # Cross-validate OLS via FitOLS dispatch — compare Python vs C# dict keys
-# review 2026-09-05（R02）：bespoke 收敛 cross_vs_csharp——field 路径取值取代 .get 默认值
-# （旧 cs.get("coefficients",[0])[0] 的默认值会静默错配）；C# 缺失 → SKIP（不再回落自校验）。
+# bespoke 走 cross_vs_csharp——field 路径取值取代 .get 默认值
+# （cs.get("coefficients",[0])[0] 的默认值会静默错配）；C# 缺失 → SKIP，不回落自校验。
 REFERENCED.add("REGRESS.OLS")  # 覆盖映射（REGRESS.COEF/R²/SSE 名不直接命中 UDF 名）
 cross_vs_csharp("REGRESS.COEF[0] vs C#", lr.intercept_, "REGRESS.FitOLS", tol=1e-8, field=("coefficients", 0))
 cross_vs_csharp("REGRESS.COEF[1] vs C#", lr.coef_[0], "REGRESS.FitOLS", tol=1e-8, field=("coefficients", 1))
@@ -462,8 +460,8 @@ cross_vs_csharp("REGRESS.COEF[2] vs C#", lr.coef_[1], "REGRESS.FitOLS", tol=1e-8
 cross_vs_csharp("REGRESS.R² vs C#", lr.score(Xr,yr), "REGRESS.FitOLS", tol=1e-10, field="r_squared")
 cross_vs_csharp("REGRESS.SSE vs C#", 0.0, "REGRESS.FitOLS", tol=1e-10, field="sse")
 check("REGRESS.RSQ", lr.score(Xr,yr), 1.0)
-# R5-P3-40 (review-2026-09-06)：RSQ 全对照——完美拟合数据 r²≡1 对实现错误零区分度，
-# 补非完美拟合数据（r²<1）经 FitOLS r_squared 字段与 sklearn 独立实现对照。
+# RSQ 全对照——完美拟合数据 r²≡1 对实现错误零区分度，非完美拟合数据（r²<1）经
+# FitOLS r_squared 字段与 sklearn 独立实现对照。
 X_rq=np.array([[1,1],[2,4],[3,3],[4,7],[5,5]],dtype=float); y_rq=np.array([1.1,3.9,3.2,7.4,5.6])
 lr_rq=LR(fit_intercept=True); lr_rq.fit(X_rq,y_rq)
 cross_vs_csharp("REGRESS.RSQ vs C#", lr_rq.score(X_rq,y_rq), "REGRESS.RSQ", tol=1e-10, field="r_squared")
@@ -476,8 +474,8 @@ cross_vs_csharp("REGRESS.RIDGE(R²) vs C#", ridge.score(Xr,yr), "REGRESS.FitRidg
 # FACTORIMP — cross-validate
 cross_vs_csharp("REGRESS.FACTORIMP vs C#", list(np.argsort(-np.abs(lr.coef_))), "REGRESS.FACTORIMP", tol=1e-10)
 # ANOVA1 — cross-validate
-# review 2026-09-05（N01）：p_value 的 1e-6 现在真正生效（旧 max(1e-6, manifest 1e-2) 被放大
-# 4 个数量级）；f_stat 沿用 1e-2（用例级预算，与 manifest 一致）。
+# p_value 的 1e-6 为断言级声明（max(tol, manifest) 并集语义会放大 4 个数量级）；
+# f_stat 用 1e-2（用例级预算，与 manifest 一致）。
 fs,pv=stats.f_oneway([10,12,14,11,13],[20,22,24,21,23],[15,17,16,18,14])
 cross_vs_csharp("REGRESS.ANOVA1 f vs C#", fs, "REGRESS.ANOVA1", tol=1e-2, field="f_stat")
 cross_vs_csharp("REGRESS.ANOVA1 p vs C#", pv, "REGRESS.ANOVA1", tol=1e-6, field="p_value")
@@ -488,7 +486,7 @@ cross_vs_csharp("REGRESS.ANOVA1 p vs C#", pv, "REGRESS.ANOVA1", tol=1e-6, field=
 section("PHYCHEM — Physical Chemistry", 16)
 cross_check("PHYCHEM.MOLWT_H2SO4", 2*1.008+32.066+4*15.999, tol=1e-3)
 cross_check("PHYCHEM.MOLWT_NaCl", 22.990+35.453, tol=1e-3)
-# review 2026-09-05（N09）：MOLWT_CaCO3 manifest 条目此前 Python 零消费（孤儿）——补真对照。
+# MOLWT_CaCO3 manifest 条目由 cross_check 真实消费（防孤儿条目）。
 cross_check("PHYCHEM.MOLWT_CaCO3", 40.078+12.011+3*15.999, tol=1e-3)
 check("PHYCHEM.MOLWT(CaCO3)", 40.078+12.011+3*15.999, 100.086, tol=1e-3)  # 40.078+12.011+47.997=100.086
 cross_check("PHYCHEM.TEMP_CtoF_100", 100*9/5+32)
@@ -505,8 +503,8 @@ check("PHYCHEM.VOL(M3→L 1)", 1*1000, 1000); check("PHYCHEM.VOL(ML→L 500)", 5
 cross_check("PHYCHEM.MASS_KGtoLB_1", 1*2.20462, tol=1e-3)
 check("PHYCHEM.MASS(TON→KG 1)", 1*1000, 1000); check("PHYCHEM.MASS(G→KG 100)", 100/1000, 0.1)
 check("PHYCHEM.MASS(OZ→LB 16)", 16/16.0, 1.0)
-# R5-P3-40 (review-2026-09-06)：DENSITY 补活体对照（正常路径 + 除零哨兵 NaN 标签路径；
-# v==0 → NaN 为 api-reference 文档化契约，独立实现按契约给出哨兵）。
+# DENSITY 活体对照（正常路径 + 除零哨兵 NaN 标签路径）：
+# v==0 → NaN 为 api-reference 文档化契约，独立实现按契约给出哨兵。
 cross_check("PHYCHEM.DENSITY_OK", 2.5/1.25)
 _m5, _v5 = 5.0, 0.0
 cross_check("PHYCHEM.DENSITY_ZERO_VOL", _m5/_v5 if _v5 != 0 else float("nan"))
@@ -518,14 +516,14 @@ check("PHYCHEM.L_TO_GAL(10)", 10/3.78541, 2.64172, tol=1e-3)
 check("PHYCHEM.GAL_TO_L(10)", 10*3.78541, 37.8541, tol=1e-3)
 check("PHYCHEM.ATM_TO_PSI(2)", 2*14.6959, 29.3918, tol=1e-3)
 check("PHYCHEM.PSI_TO_ATM(30)", 30/14.6959, 2.04139, tol=1e-3)
-# review 2026-09-14（P3 PHY-03）：R 与 C# 同为精确值 8.31446261815324/101.325（原 0.082057 约数）。
+# R 与 C# 同为精确值 8.31446261815324/101.325（0.082057 是约数）。
 Rg=8.31446261815324/101.325; Vstp=1*Rg*273.15/1.0
 cross_vs_csharp("PHYCHEM.IDEALGAS(V) vs C#", Vstp, "PHYCHEM.IDEALGAS_V", tol=1e-12)
-# P1-10 (review): removed PHYCHEM.IDEALGAS(P≈1) — it was an algebraic identity
+# PHYCHEM.IDEALGAS(P≈1) is not cross-checked — it is an algebraic identity
 # (Vstp ≡ Rg*273.15 so actual ≡ 1.0 unconditionally). Real cross-validation is
 # covered by the PHYCHEM.IDEALGAS_V cross_check above.
 cross_check("PHYCHEM.GASSTP_Kelvin", 10*1.5/1.0*273.15/300.0, tol=1e-3)
-# P1-10 (review): literal-vs-literal checks verified nothing — use the formula.
+# literal-vs-literal checks verify nothing — use the formula.
 # C# behaviour is covered by PhyChemUdfTests.Density_* (DENSITY is inline in the UDF layer).
 check("PHYCHEM.DENSITY(100,2)", 100.0/2.0, 50.0, tol=1e-10)
 check("PHYCHEM.DENSITY(50,0.5)", 50.0/0.5, 100.0, tol=1e-10)
@@ -597,14 +595,13 @@ check("STR.HTMLENCODE", html.escape("<div class='x'>", quote=False), "&lt;div cl
 check("STR.HTMLDECODE", html.unescape("&lt;div&gt;"), "<div>")
 check("STR.BASE64ENC", base64.b64encode(b"Hello World").decode(), "SGVsbG8gV29ybGQ=")
 check("STR.BASE64DEC", base64.b64decode("SGVsbG8=").decode(), "Hello")
-# review 2026-09-05（N03）：原 len(uuid4)==36 是恒真（uuid4 自身恒 36）——改为可证伪的
-# 契约性质断言：UUIDv4 格式（version=4、variant=[89ab]）+ 两次采样不重复（ randomness 性质）。
+# 可证伪的契约性质断言：UUIDv4 格式（version=4、variant=[89ab]）+
+# 两次采样不重复（randomness 性质）；len(uuid4)==36 对 uuid4 恒真，无区分度。
 _UUID_RE = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$')
 _u1, _u2 = str(uuid.uuid4()), str(uuid.uuid4())
 check("STR.UUID format", bool(_UUID_RE.match(_u1)) and bool(_UUID_RE.match(_u2)), True)
 check("STR.UUID uniqueness", _u1 != _u2, True)
-# review 2026-09-05（N03）：原用 uuid4().hex 长度恒真占位（与 UDF 逻辑无关）——改为按
-# C# 契约（StringCore.RandomString：长度 0–100k + 字符集约束）的独立模拟性质断言。
+# 按 C# 契约（StringCore.RandomString：长度 0–100k + 字符集约束）的独立模拟性质断言。
 # 随机输出无法对照确定值，真值守护在 C# 单测；此处锁定「长度==请求 且 字符集⊆允许集」契约。
 import random as _rnd
 _RND_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
@@ -616,8 +613,8 @@ _rn = ''.join(_rnd.choice('0123456789') for _ in range(6))
 check("STR.RNDNUM contract", len(_rn) == 6 and _rn.isdigit() and set(_rn) <= set('0123456789'), True)
 check("STR.ISNULLEMPTY", bool(""), False)
 check("STR.ISNULLWS('   ')", "   ".strip()=="", True)
-# review 2026-09-05（R09）：C# 已修为 IsNullOrEmpty 语义（空串→fallback，与文档三方一致）；
-# 此行锁定手册示例的期望（真值守护在下方 :cross_check 通道）。
+# C# 为 IsNullOrEmpty 语义（空串→fallback，与文档三方一致）；
+# 此行锁定手册示例的期望（真值守护在下方 cross_check 通道）。
 check("STR.COALESCE", "" or "default", "default")
 # FORMAT — .NET style format
 check("STR.FORMAT(1234.567)", f"{1234.567:.2f}", "1234.57")
@@ -635,13 +632,11 @@ def _common_prefix(a,b):
     while i<len(a) and i<len(b) and a[i]==b[i]: i+=1
     return a[:i]
 cross_check("STR.COMMONPFX", _common_prefix("abcdef","abcxyz"))
-# ── Dispatcher 补注册（review-2026-08-31，全量审查第 1 项）──
 import urllib.parse as _up
 import html as _html
 cross_check("STR.TEXTJOIN", "-".join(["a","b","c"]))
-# review 2026-09-05（R09）：C# Coalesce 已修为 IsNullOrEmpty 语义（null 或空串→fallback），
-# 期望对齐 manifest 入参 ("","fallback") 的 Python 独立真值性计算——旧期望 "" 锁定的是被
-# 修复前的缺陷行为（正是 R09 三方矛盾为何无人发现的原因）。
+# C# Coalesce 为 IsNullOrEmpty 语义（null 或空串→fallback）；期望对齐 manifest 入参
+# ("","fallback") 的 Python 独立真值性计算——期望 "" 会锁定缺陷行为，使三方矛盾无人发现。
 cross_check("STR.COALESCE", "" or "fallback")
 cross_check("STR.ISNULLEMPTY", len("") == 0)
 cross_check("STR.ISNULLWS", "  ".strip() == "")
@@ -739,7 +734,6 @@ check("DT.FROMUNIX(1704067200)", from_unix, date(2024,1,1))
 check("DT.DATEDIFF(d)", (date(2024,12,31)-d1).days, 365)
 check("DT.DATEDIFF(m)", (date(2024,12,31).year - d1.year) * 12 + date(2024,12,31).month - d1.month, 11)  # Jan→Dec = 11 months
 check("DT.DATEDIFF(y)", date(2024,12,31).year - d1.year, 0)
-# ── Dispatcher 补注册（review-2026-08-31）──
 from datetime import timezone as _tz
 import calendar as _cal
 cross_check("DT.WEEKDAY", (date(2024,1,8).isoweekday() % 7) + 1)
@@ -783,7 +777,7 @@ check("ARR.SORT", sorted([5,2,8,1,9]), [1,2,5,8,9])
 check("ARR.SORTASC", sorted([5,2,8,1,9]), [1,2,5,8,9])
 check("ARR.SORTDESC", sorted([5,2,8,1,9],reverse=True), [9,8,5,2,1])
 check("ARR.SORTNUM", sorted(["10","2","1","20"],key=float), ["1","2","10","20"])
-# R5-P3-40：Numeric 比较器路径补活体对照（此前 SORT 仅 cross 了 Auto 模式）
+# Numeric 比较器路径活体对照（Auto 模式另测）。
 cross_check("ARR.SORTNUM", sorted([3,-1,2.5,10,0]))
 check("ARR.SORTTEXT", sorted(["Banana","apple","Carrot"],key=str.lower), ["apple","Banana","Carrot"])
 check("ARR.UNIQUE", sorted(set([1,2,2,3,3,3,4,5,5])), [1,2,3,4,5])
@@ -803,10 +797,9 @@ check("ARR.COUNT", len(a5), 5)
 check("ARR.CONTAINS", "Banana" in ["Apple","Banana","Carrot"], True)
 check("ARR.FILL", ["Hello"]*5, ["Hello","Hello","Hello","Hello","Hello"])
 check("ARR.RANGE", list(range(1,11,2)), [1,3,5,7,9])
-# review 2026-08-29：ARR.RANGE/ARR.FILL（下沉 ArrayCore 后）接入活体对照
+# ARR.RANGE/ARR.FILL（ArrayCore 实现）活体对照
 cross_check("ARR.RANGE", [1.0, 2.0, 3.0, 4.0, 5.0])
 cross_check("ARR.FILL", ["x", "x", "x"])
-# ── Dispatcher 补注册（review-2026-08-31）──
 cross_check("ARR.SORT", sorted([3,1,2]))
 cross_check("ARR.UNIQUE", list(dict.fromkeys([1,2,1,3,2])))
 cross_check("ARR.INDEXOF", [1,2,3].index(2))
@@ -816,8 +809,8 @@ cross_check("ARR.COUNT", len([1,2,3]))
 cross_check("ARR.CONCAT", [1,2] + [3,4])
 cross_check("ARR.FLATTEN", [1,2,3,4])
 # SHUFFLE — Fisher-Yates format check
-# review 2026-09-05（N03）：原仅验证保长恒真（shuffle 本身恒保长）——改为多重集不变断言
-# （乱序不得丢元素/重复元素；Fisher-Yates 契约）。
+# 多重集不变断言（乱序不得丢元素/重复元素；Fisher-Yates 契约）；
+# 仅验证保长恒真（shuffle 本身恒保长）无区分度。
 import random; shuffled=list(a5); random.shuffle(shuffled)
 check("ARR.SHUFFLE multiset preserved", sorted(map(float, shuffled)) == sorted(map(float, a5)), True)
 
@@ -838,7 +831,7 @@ check("DICT.DICT[0]", dk[0], "A"); check("DICT.DICT value[0]", dv[0], 1)
 check("DICT.COUNT", len(dk), 3)
 check("DICT.KEYS[0]", dk[0], "A")
 check("DICT.VALUES[0]", dv[0], 1)
-# review 2026-09-14（测试治理）：DICT.FromKeys 此前零 C# CrossVal——补活体对照。
+# DICT.FromKeys 活体对照。
 # 键契约：字符串原样、数值 InvariantCulture、bool→TRUE；null 跳过。
 for _k in ["Apple", "Banana", "42", "TRUE"]:
     cross_vs_csharp(f"DICT.FromKeys[{_k}] vs C#", "X", "DICT.FromKeys", tol=1e-12, field=_k)
@@ -852,11 +845,11 @@ dj=json.loads(js)
 check("JSON.PARSE", len(dj), 5)  # 5 objects parsed
 check("JSON.QUERY(0.Name)", dj[0]["Name"], "Alice")
 check("JSON.QUERY(1.Age)", dj[1]["Age"], 25)
-# review 2026-09-05（N03）：round-trip 恒真（json.loads(json.dumps(x)) 对合法对象恒成立）——
-# 改为对样本结构契约的实质断言（JSON 数组 of 对象、键集合精确）。
+# 样本结构契约的实质断言（JSON 数组 of 对象、键集合精确）；
+# round-trip（json.loads(json.dumps(x))）对合法对象恒真。
 check("JSON.VALIDATE structure", isinstance(dj, list) and len(dj) == 5
       and all(isinstance(o, dict) and set(o.keys()) == {"Name", "Age", "City"} for o in dj), True)
-# review 2026-09-05（N03）：indent=2 恒有换行（恒真）——改为验证 prettify 输出的缩进结构。
+# 验证 prettify 输出的缩进结构；indent=2 恒有换行（恒真）。
 _pretty = json.dumps(dj[0], indent=2)
 check("JSON.PRETTIFY format", _pretty.startswith("{") and '\n  "Name"' in _pretty
       and '\n  "Age"' in _pretty, True)
@@ -867,8 +860,8 @@ check("JSON.TOTABLE[0].Name", jt_rows[0][0], "Alice")
 xs='<employees><employee><name>Alice</name><dept>Sales</dept><salary>50000</salary></employee><employee><name>Bob</name><dept>R&amp;D</dept><salary>75000</salary></employee><employee><name>Carol</name><dept>Support</dept><salary>45000</salary></employee><employee><name>David</name><dept>Engineering</dept><salary>90000</salary></employee><employee><name>Eva</name><dept>HR</dept><salary>60000</salary></employee></employees>'
 root=ET.fromstring(xs)
 check("XML.XPATH(//name)", [e.find('name').text for e in root], ["Alice","Bob","Carol","David","Eva"])
-# review 2026-09-05（N03）：ET.fromstring(x) is not None 恒真（非法 XML 直接抛异常）——
-# 改为验证解析出的树结构符合契约（5 个 employee 子节点）。
+# 验证解析出的树结构符合契约（5 个 employee 子节点）；
+# ET.fromstring(x) is not None 恒真（非法 XML 直接抛异常）。
 check("XML.VALIDATE structure", len(root.findall('employee')) == 5, True)
 # XML.TOTABLE
 xt_rows=[]
@@ -906,7 +899,7 @@ for r1 in cj1:
         cj_result.append(r1+r2)
 check("PIVOT.CROSSJOIN count", len(cj_result), 4)  # 2×2=4
 check("PIVOT.CROSSJOIN[0]", cj_result[0], ["A","B","X"])
-# review 2026-09-14（测试治理）：PIVOT 此前零 C# CrossVal——补活体对照（同上数据源）。
+# PIVOT 活体对照（同上数据源）。
 cross_vs_csharp("PIVOT.Pivot(Alpha,N) vs C#", 1380.0, "PIVOT.Pivot_SUM", tol=1e-9, field=[1, 1])
 cross_vs_csharp("PIVOT.Pivot(Alpha,S) vs C#", 600.0, "PIVOT.Pivot_SUM", tol=1e-9, field=[1, 2])
 cross_vs_csharp("PIVOT.Pivot(Beta,N) vs C#", 720.0, "PIVOT.Pivot_SUM", tol=1e-9, field=[2, 1])
@@ -926,15 +919,14 @@ check("SQL.QUERY high[0]", filtered[0][0], "David")
 check("SQL.QUERY high[1]", filtered[1][0], "Bob")
 check("SQL.QUERY GROUPBY", len(set(r[1] for r in sql_data[1:])), 5)  # 5 depts
 # JOIN — simulate dual-table
-# review 2026-09-05（R06）：原 actual/expected 同源构造（f"{dr[0]}-{er[1]}" vs 拼接）恒真、
-# 零信息量。改为独立期望字面量（从输入常量手工推导：Alice∈Sales→200000、Bob∈R&D→500000，
-# 其余部门无预算行不匹配）。
+# 独立期望字面量（从输入常量手工推导：Alice∈Sales→200000、Bob∈R&D→500000，
+# 其余部门无预算行不匹配）；actual/expected 同源构造（f"{dr[0]}-{er[1]}" vs 拼接）恒真、零信息量。
 extra=[["Dept","Budget"],["Sales",200000],["R&D",500000]]
 _joins = {er[0]: er[1] for er in extra[1:]}
 _joined = [f"{dr[0]}-{_joins[dr[1]]}" for dr in sql_data[1:] if dr[1] in _joins]
 check("SQL.JOIN match", _joined, ["Alice-200000", "Bob-500000"])
 # QUERY3 — 3-table format
-# review 2026-09-05（N03）：len(sql_data)>0 恒真——改为样本结构契约（表头 4 列 + 6 数据行）。
+# 样本结构契约（表头 4 列 + 6 数据行）；len(sql_data)>0 恒真。
 check("SQL.QUERY3 structure", len(sql_data[0]) == 4 and len(sql_data) == 6, True)
 
 # ========================================================================
@@ -950,8 +942,8 @@ check("FS.BNAME", os.path.splitext(os.path.basename("C:\\Users\\Alice\\report.xl
 check("FS.EXT(.xlsx)", os.path.splitext("report.xlsx")[1], ".xlsx")
 check("FS.EXT(Makefile)", os.path.splitext("Makefile")[1], "")
 check("FS.FOLDER", os.path.dirname("C:\\Users\\Alice\\report.xlsx"), "C:\\Users\\Alice")
-# FEXISTS / FDEXISTS — test on known system paths（review 2026-08-29：notepad.exe 在精简 Windows 镜像缺失，
-# 改 kernel32.dll——任何 Windows 必有）
+# FEXISTS / FDEXISTS — test on known system paths（kernel32.dll：任何 Windows 必有；
+# notepad.exe 在精简 Windows 镜像可能缺失）
 _k32 = os.path.join(os.environ.get("WINDIR", "C:\\Windows"), "System32", "kernel32.dll")
 check("FS.FEXISTS(kernel32)", os.path.exists(_k32), True)
 check("FS.FEXISTS(missing)", os.path.exists("C:\\nonexistent\\file.txt"), False)
@@ -1001,7 +993,7 @@ try:
 except Exception as e:
     print(f"  FAIL FS IO: {e}")
     check("FS IO (temp dir)", False, True)  # exception during FS ops → fail
-# review 2026-09-05（N03）：三个环境恒真改为与 UDF 契约对应的实质断言
+# 三个环境断言与 UDF 契约对应
 #（DRIVES 返回盘符列表非空、PWD 返回存在的目录、TEMP 返回存在的目录）。
 check("FS.DRIVES", os.path.exists("C:\\"), True)
 check("FS.PWD", os.path.isdir(os.getcwd()), True)
@@ -1015,8 +1007,8 @@ rd=[["Name","Age","City","Score"],["Alice",30,"NYC",95.5],["Bob",25,"LA",88.0],
     ["Carol",35,"SF",92.3],["David",28,"TX",76.5],["Eva",32,"FL",89.0]]
 # TOHTML
 html_table="<table><thead><tr><th>Name</th><th>Age</th><th>City</th><th>Score</th></tr></thead><tbody>"
-# review 2026-09-05（N03）：原"<table" in html_table 是自查 Python 拼接产物（恒真）——
-# 改为对照数据样本的表头契约（全部列名以 <th> 呈现 + 结构标记齐全）。
+# 对照数据样本的表头契约（全部列名以 <th> 呈现 + 结构标记齐全）；
+# "<table" in html_table 是自查拼接产物（恒真）。
 check("RANGE.TOHTML contract", html_table.startswith("<table>") and "<thead>" in html_table
       and "<tbody>" in html_table and all(f"<th>{h}</th>" in html_table for h in rd[0]), True)
 # TOJSON
@@ -1024,7 +1016,7 @@ jo=json.dumps([dict(zip(rd[0],r)) for r in rd[1:]])
 check("RANGE.TOJSON[0].Name", json.loads(jo)[0]["Name"], "Alice")
 check("RANGE.TOJSON[2].City", json.loads(jo)[2]["City"], "SF")
 # TOMD
-# review 2026-09-05（N03）：原字面量==字面量恒真——改为由数据样本构造实际值对照硬编码期望。
+# 由数据样本构造实际值对照硬编码期望；字面量==字面量恒真。
 md_h = "| " + " | ".join(str(h) for h in rd[0]) + " |"
 check("RANGE.TOMD header", md_h, "| Name | Age | City | Score |")
 # TOCSV
@@ -1043,7 +1035,7 @@ check("RANGE.SELCOLS[0]", sel[0], ["Name","City"])
 # SELROWS
 selr=[rd[1],rd[3]]
 check("RANGE.SELROWS[0]", selr[0][0], "Alice")
-# review 2026-09-14（测试治理）：RANGE 此前零 C# CrossVal——补 TOJSON/TOCSV(最小引号) 活体对照。
+# RANGE TOJSON/TOCSV(最小引号) 活体对照。
 cross_vs_csharp("RANGE.TOJSON minimal vs C#",
                 '[{"Name": "Alice", "Age": 30},{"Name": "Bob", "Age": 25}]',
                 "RANGE.ToJson", tol=1e-12)
@@ -1052,9 +1044,9 @@ cross_vs_csharp("RANGE.TOCSV minimal vs C#",
                 "RANGE.ToCsvMinimal", tol=1e-12)
 
 # ========================================================================
-# DOE (1 UDF)
+# DOE (4 UDFs)
 # ========================================================================
-section("DOE — Design of Experiments", 4)  # review-2026-08-31: 原声明 1 手写错误——覆盖 PLAN+ANALYZE/ANOVA/PARETO 共 4 UDF
+section("DOE — Design of Experiments", 4)  # 覆盖 PLAN+ANALYZE/ANOVA/PARETO 共 4 UDF
 if HAS_PYDOE2:
     def doe_coded(levels):
         idx = fullfact(levels)
@@ -1082,8 +1074,8 @@ else:
     SKIP += 1
     print("  SKIP DOE cross-check: pyDOE2 not installed (pip install pyDOE2)")
 
-# review 2026-09-14（测试治理）：Taguchi 此前零 C# CrossVal——标准 L8 编码矩阵（A,B,C,ABC 列序）
-# 为硬编码参考（主效应按二进制位降序，交互列=乘积），与 C# TaguchiCoded 活体对照。
+# 标准 L8 编码矩阵（A,B,C,ABC 列序）为硬编码参考——主效应按二进制位降序，交互列=乘积；
+# 与 C# TaguchiCoded 活体对照。
 _taguchi_l8 = [
     [-1, -1, -1, -1],
     [-1, -1,  1,  1],
@@ -1097,7 +1089,6 @@ _taguchi_l8 = [
 cross_vs_csharp("DOE.TAGUCHI_L8 vs C#", _taguchi_l8, "DOE.TaguchiL8", tol=1e-12)
 
 # DOE.ANALYZE / DOE.ANOVA / DOE.PARETO — 分析函数 cross_check
-# review-2026-08-29 P2-4：此前分析函数仅 scipy golden 常量，无 Python 独立实现对照。
 # 独立实现：ExpandTerms（主效应+2-way 交互）+ 正规方程 OLS（与 C# FitOLS 同算法）+ t/p 统计。
 X_doe = np.array([[-1,-1],[1,-1],[-1,1],[1,1],[0,0],[0,0],[0,0],[0,0]], dtype=float)
 y_doe = np.array([3.1,5.9,5.2,8.4,5.0,5.1,4.9,5.0], dtype=float)
@@ -1132,13 +1123,13 @@ def doe_ols(Xe, y):
 def cross_check_matrix(name, py_rows, tol=None):
     """对比 C# 返回的 object[][]（行 0 = 表头，后续为数值行，首列为 Term 字符串）
     与 Python 数值行（不含表头/Term 列）。None/NaN 视为相等。
-    review 2026-09-05（R02）：先 unwrap 解包 {"__nan__":true}/{"__inf__":±1} 标签——
-    原直接 float(cv) 遇标签抛未捕获 TypeError 导致脚本 abort。
-    review 2026-09-05（N01）：tol 显式声明优先；未声明时用 manifest per-test tolerance，
-    再兜底通道基线 1e-6。（matrix 通道无 per-assertion 调用方，故未声明时取
-    max(基线, manifest) 的并集语义不变——与 R02/N01 的断言级收紧语义不冲突。）"""
-    REFERENCED.add(name)  # review-2026-08-31: 与 check/cross_check 一致收集覆盖名
-    CROSS_REFERENCED.add(name)  # F2 (review-2026-09-04): cross_* 族都计入 C# 对照集合
+    unwrap 先解包 {"__nan__":true}/{"__inf__":±1} 标签——直接 float(cv) 遇标签
+    会抛未捕获 TypeError 导致脚本 abort。
+    tol 显式声明优先；未声明时用 manifest per-test tolerance，再兜底通道基线 1e-6。
+    （matrix 通道无 per-assertion 调用方，故未声明时取 max(基线, manifest) 的
+    并集语义——与断言级收紧语义不冲突。）"""
+    REFERENCED.add(name)  # 与 check/cross_check 一致收集覆盖名
+    CROSS_REFERENCED.add(name)  # cross_* 族都计入 C# 对照集合
     ref = csharp_results().get(name)
     if ref is None or ref["status"] != "ok":
         global PASS, FAIL, SKIP, CROSS_PASS
@@ -1148,10 +1139,9 @@ def cross_check_matrix(name, py_rows, tol=None):
     if len(cs) != len(py_rows) + 1:
         FAIL += 1; print(f"  FAIL {name}: row count mismatch C#={len(cs)} py={len(py_rows)+1}")
         return
-    # F2 (review-2026-09-04): 消费 per-test tolerance；N01：显式 tol 声明优先。
-    # R5-P3-08 (review-2026-09-06)：原 max(tol, _m_tol) 取松并集语义与 N01「显式声明收紧」
-    # 矛盾（注释自称不冲突失实）——当前 3 个调用未传 tol 属死分支，但一旦传 tol 即静默放大
-    # 预算且无 F-34 审计。改为与标量/property 通道一致的 tol ?? manifest ?? 基线 优先级链。
+    # 消费 per-test tolerance；显式 tol 声明优先。
+    # tol ?? manifest ?? 基线 优先级链与标量/property 通道一致——max(tol, manifest) 取松并集
+    # 会静默放大预算且无审计提示（当前调用未传 tol，传入即触发）。
     _m_tol = float(ref.get("tolerance")) if ref.get("tolerance") is not None else None
     tol_eff = tol if tol is not None else (_m_tol if _m_tol is not None else 1e-6)
     ok = True; maxdiff = 0.0
@@ -1168,8 +1158,8 @@ def cross_check_matrix(name, py_rows, tol=None):
                 ok = False
                 maxdiff = max(maxdiff, abs(float(cv) - float(pv)) if cv is not None and pv is not None else 1e9)
     if ok:
-        # F-02 (review 2026-09-06)：矩阵通道曾只计总 PASS、不入 CROSS_PASS——
-        # "manual-only + cross-validated" 汇报口径漏掉 DOE 三条真 C# 对照（364 ≠ 223+138）。
+        # 矩阵通道计入 CROSS_PASS——只计总 PASS 会使 "manual-only + cross-validated"
+        # 汇报口径漏掉 DOE 的真 C# 对照。
         PASS += 1; CROSS_PASS += 1; print(f"  OK {name}: matrix match ({len(py_rows)} rows)")
     else:
         FAIL += 1; print(f"  FAIL {name}: max diff {maxdiff:.2e}")
@@ -1350,8 +1340,8 @@ _x_poly = _pf_poly.transform(np.array([[4.0]]))
 _g_poly = float(_rp_poly.predict((_x_poly - _mu_p) / _sd_p)[0])
 _predict_ratepoly_py = 10.0 - 90.0 * _g_poly  # t=90 外推
 check("SOLVE.PREDICT_RATE_POLY", _predict_ratepoly_py, 5.86, tol=1e-5)
-# SOL-01（review-2026-09-14）：排除维度错配修复——泄漏项曾使 t=9000 外推 -2037.34（正确 -404）。
-# 反例条目在修复前必 FAIL（diff 1633），修复后与独立 Python 同口径一致。
+# 排除维度错配守卫：泄漏项会使 t=9000 外推 -2037.34（正确 -404）；
+# 该反例条目与独立 Python 同口径一致。
 _predict_ratepoly_extrap_py = 10.0 - 9000.0 * _g_poly
 check("SOLVE.PREDICT_RATE_POLY_EXTRAP", _predict_ratepoly_extrap_py, -404.0, tol=1e-2)
 cross_vs_csharp("SOLVE.PREDICT_RATE_POLY_CS", _predict_ratepoly_py, "SOLVE.PredictRatePoly", tol=1e-6)
@@ -1484,7 +1474,7 @@ for _name in REFERENCED:
         if _mapped == _u or _mapped.startswith(_u + ".") or _u.startswith(_mapped + "."):
             _covered.add(_u)
 udf_count = len(_covered)
-# F2 (review-2026-09-04): 同一映射算法作用于 CROSS_REFERENCED，得到真正与 C# 交叉对照的 UDF 数
+# 同一映射算法作用于 CROSS_REFERENCED，得到真正与 C# 交叉对照的 UDF 数
 _cross_covered = set()
 for _name in CROSS_REFERENCED:
     _base = _norm_ref(_name)
@@ -1494,10 +1484,10 @@ for _name in CROSS_REFERENCED:
             _cross_covered.add(_u)
 print(f"\n{'='*60}")
 print(f"  RESULTS: {PASS} passed, {FAIL} failed, {SKIP} skipped ({(PASS+FAIL)} checks)")
-# P0-3b (review-2026-08-31): 双通道分别汇报——check() 纯 Python 自校验不再混入"已验证"假象
+# 双通道分别汇报——check() 纯 Python 自校验不混入"已验证"假象
 print(f"    └ manual-only (Python self-verify): {MANUAL_PASS}")
 print(f"    └ cross-validated (vs C#):         {CROSS_PASS}")
-# E2/F1 (review-2026-09-04): “UDF coverage” 是手册示例覆盖（含纯 Python 自校验），
+# “UDF coverage” 是手册示例覆盖（含纯 Python 自校验）——
 # 必须同时打印真正与 C# 对照的 cross 覆盖数，防止 README/报告宣称口径虚高。
 print(f"  UDF coverage: {udf_count} of {UDF_TOTAL} UDFs covered (sync variants)")
 print(f"    └ of which cross-validated vs C#: {len(_cross_covered)} of {UDF_TOTAL} ({len(_cross_covered)/UDF_TOTAL*100:.1f}%)")

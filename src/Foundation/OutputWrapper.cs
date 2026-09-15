@@ -50,12 +50,10 @@ namespace ExcelFormulaLabs.Foundation
         /// Reshape a flat result into a 2D array matching target dimensions.
         /// Pads with <c>null</c> (empty cell) if result is too short;
         /// truncates if too long.
-        /// review 2026-08-31（深度审查 P2-9）：原用 Foundation.ExcelEmpty.Value 填充——该自定义
-        /// 类不在 Excel-DNA 封送白名单内，真实 Excel 渲染为 #NUM!（ElementWiseMapper 注释自证）。
-        /// 改为 null：Excel-DNA 对 object[,] 中的 null 渲染为空单元格。
-        /// review 2026-09-14（模块审查 P3 FND-10）：原实现对 object[,] 等非 object[] 结果
-        /// 直接写 output[0,0]（0×0 目标越界），targetCols=0 时整数除零；且 2D 结果被压成单格。
-        /// 现在：负数尺寸显式拒绝、零尺寸安全返回空网格、object[,] 按目标尺寸逐格拷贝/裁剪。
+        /// null 填充（替代 Foundation.ExcelEmpty.Value）：后者不在 Excel-DNA 封送白名单内，
+        /// 真实 Excel 渲染为 #NUM!；Excel-DNA 对 object[,] 中的 null 渲染为空单元格。
+        /// 负数尺寸显式拒绝、零尺寸返回空网格；object[,] 按目标尺寸逐格拷贝/裁剪
+        /// （直接写 output[0,0] 会在 0×0 目标越界且 targetCols=0 时整数除零）。
         /// </summary>
         /// <exception cref="ArgumentException">targetRows/targetCols 为负。</exception>
         public static object[,] ReshapeOutput(object result, int targetRows, int targetCols)

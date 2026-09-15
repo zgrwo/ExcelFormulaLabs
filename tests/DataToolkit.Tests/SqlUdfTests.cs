@@ -107,7 +107,6 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             r.GetLength(0).Should().Be(2);
         }
 
-        // ── Release-review regression guards ────────────────────────────────
         [Fact] public void Query_replace_scalar_function_allowed()
         {
             // SQLite built-in REPLACE(X,Y,Z) must NOT be blocked by the DML blacklist
@@ -118,7 +117,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Query_replace_into_rejected() =>
             SqlUdf.UDF_SQL_QUERY(Data, "REPLACE INTO data VALUES ('x', 1)").Should().Be(ExcelError.Value);
 
-        // review 2026-09-14（模块审查 P0 SEC-01）：UDF 端注释拆分绕过全部 #VALUE!。
+        // UDF 端注释拆分绕过必须全部 #VALUE!。
         [Theory]
         [InlineData("REPLACE/**/INTO data VALUES ('X',1)")]
         [InlineData("REPLACE--x\nINTO data VALUES ('X',1)")]

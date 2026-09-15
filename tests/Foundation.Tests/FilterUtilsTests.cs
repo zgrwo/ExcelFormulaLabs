@@ -7,16 +7,15 @@ namespace ExcelFormulaLabs.Foundation.Tests;
 
 public class FilterPassesTests
 {
-    // P2 (pre-release review): null operator previously caused an NRE that was
-    // swallowed by WrapError into #VALUE!; the public API should reject it explicitly.
+    // null operator must be rejected explicitly: an NRE would be swallowed by
+    // WrapError into #VALUE!.
     [Fact] public void FilterPasses_null_operator_throws()
     {
         var act = () => FilterUtils.FilterPasses(5.0, 5.0, null!);
         act.Should().Throw<ArgumentException>();
     }
 
-    // review 2026-09-14（P3 FND-09）：未知 operator 原先静默 false（整列被过滤光）；
-    // 与 null operator 一致改为显式拒绝。
+    // 未知 operator 须显式拒绝（与 null operator 一致）：静默 false 会把整列过滤光。
     [Fact] public void FilterPasses_unknown_operator_throws()
     {
         var act = () => FilterUtils.FilterPasses("x", "x", "bogus");

@@ -32,22 +32,22 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void Plan_unknown_method_returns_error()
             => DoeUdf.UDF_DOE_PLAN(1, 2, 0, 2, "nope", false, null!).Should().Be(ExcelError.Value);
 
-        // review 2026-08-29：DOE 上限守卫（位移回绕 + cells）UDF 级验证——84 因子 FRAC 原会分配 352MB+，
-        // 修复后应返回 #VALUE! 而非 OOM 崩溃。
+        // DOE 上限守卫（位移回绕 + cells）UDF 级验证——84 因子 FRAC 会分配 352MB+，
+        // 必须返回 #VALUE! 而非 OOM 崩溃。
         [Fact] public void Plan_fractional_shift_wrap_returns_error()
             => DoeUdf.UDF_DOE_PLAN(84, 2, 0, 2, "fractional", false, null!).Should().Be(ExcelError.Value);
 
         [Fact] public void Plan_bb_cells_guard_returns_error()
             => DoeUdf.UDF_DOE_PLAN(700, 2, 0, 2, "bb", false, null!).Should().Be(ExcelError.Value);
 
-        // review 2026-08-29（发行前 max level 复审）：超因子数在按因子分配数组前抛异常 → UDF 返回 #VALUE!
-        // 而非 32 位 Excel OOM 崩溃。此前 =DOE.PLAN(1000000000,2,0,1,"FULL") 会尝试 4GB 分配；
+        // 超因子数在按因子分配数组前抛异常 → UDF 返回 #VALUE! 而非 32 位 Excel OOM 崩溃。
+        // 例：=DOE.PLAN(1000000000,2,0,1,"FULL") 会尝试 4GB 分配；
         // 测试用 MaxFactors+1 避免回归时真实 4GB 分配。
         [Fact] public void Plan_huge_factor_count_returns_error()
             => DoeUdf.UDF_DOE_PLAN(DoeCore.MaxFactors + 1, 2, 0, 2, "full", false, null!).Should().Be(ExcelError.Value);
 
-        // review 2026-09-14（P1 UDF-01）：seed 省略 = 随机（null 语义），不是固定种子 0。
-        // 修复前 ExcelEmpty/DBNull 被 ToLong 转成 0 → 两次调用同序列（静默可复现）。
+        // seed 省略 = 随机（null 语义），不是固定种子 0。
+        // 若 ExcelEmpty/DBNull 被 ToLong 转成 0 → 两次调用同序列（静默可复现）。
         [Theory]
         [MemberData(nameof(OmittedSentinelData.All), MemberType = typeof(OmittedSentinelData))]
         public void Plan_omitted_seed_is_random_not_seed_zero(object? sentinel)

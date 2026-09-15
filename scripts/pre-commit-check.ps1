@@ -20,7 +20,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $violations = @()
-$script:skipped = 0   # N19 (review-2026-09-05)：SKIP 计数，与 violations 对账用
+$script:skipped = 0
 
 function Read-Utf8Text {
     param([string]$Path)
@@ -29,9 +29,9 @@ function Read-Utf8Text {
 }
 
 # 从文本中提取 check( 调用的顶层参数列表（括号/引号平衡，支持嵌套调用与跨行参数）
-# R15 (review-2026-09-05)：原仅按单行传入；改为可传入全文，逐字符深度计数跨行提取。
-# R15：深度计数扩 [ ] { }——否则 f([1,2]) 这类数组参数内的逗号被误当参数分隔符，
-# 自校验 arg2==arg3 对比会被切碎而漏检（test_precommit 场景 3 第二行曾空转）。
+# 传入全文并逐字符深度计数跨行提取（仅按单行传入会漏跨行参数）。
+# 深度计数须含 [ ] { }——否则 f([1,2]) 这类数组参数内的逗号被误当参数分隔符，
+# 自校验 arg2==arg3 对比会被切碎而漏检（test_precommit 场景 3 第二行覆盖此情形）。
 function Split-TopLevelArgs {
     param([string]$Line, [int]$StartIndex)
     $args = New-Object System.Collections.Generic.List[string]
@@ -104,8 +104,8 @@ if (Test-Path $verifyScript) {
     # arg2==arg3 即自校验（期望值硬编码铁律下，同源对照无论长短都是假阴性）。
     $verifyText = [System.IO.File]::ReadAllText($verifyScript, [System.Text.Encoding]::UTF8)
     $selfHits = @()
-    # R5-P3-20 (review 2026-09-06)：词边界定位（cross_check( 等尾缀不再被误提取）；
-    # 行首 # 注释跳过（注释里的 check(name, X, X) 示例不再假阳）。
+    # 词边界定位（cross_check( 等尾缀不被误提取）；
+    # 行首 # 注释跳过（注释里的 check(name, X, X) 示例不会假阳）。
     $lineStarts = @()  # 每行起始偏移，用于定位 idx 所在行
     $pos = 0
     foreach ($ln in ($verifyText -split "`n")) { $lineStarts += $pos; $pos += $ln.Length + 1 }
@@ -189,8 +189,8 @@ if ($leaked.Count -gt 0) {
 Write-Host ""
 Write-Host "[4/6] Checking Core layer isolation ..."
 
-# F-19 (review 2026-09-06)：补 bin/obj 排除（与检查 5 口径一致）。名字通配 *Core.cs 的
-# 局限（Core 逻辑放非 *Core.cs 文件会漏网）为已知边界，审查提示见 ai-review-prompt §G2。
+# bin/obj 排除（与检查 5 口径一致）。名字通配 *Core.cs 的
+# 局限（Core 逻辑放非 *Core.cs 文件会漏网）为已知边界。
 $coreFiles = Get-ChildItem -Path "$RepoRoot/src" -Recurse -Filter "*Core.cs" -ErrorAction SilentlyContinue |
     Where-Object { $_.FullName -notmatch "[/\\](obj|bin)[/\\]" }
 $coreHits = $coreFiles | Select-String -Pattern "ExcelDna"
@@ -208,8 +208,8 @@ if ($coreHits) {
 Write-Host ""
 Write-Host "[5/6] Checking NaN/Inf guards in Core files ..."
 
-# review-2026-08-29 P2-6：原硬编码 $coreModules 名单缺 DoeCore/DoeAnalysisCore（DOE 新增后未扩展）
-# → 改为动态发现全部 *Core.cs，名单漂移自愈。
+# 动态发现全部 *Core.cs，名单漂移自愈——硬编码 $coreModules 名单会漏掉新增 Core
+#（如 DoeCore/DoeAnalysisCore）。
 $coreFiles = Get-ChildItem -Path "$RepoRoot/src" -Recurse -Filter "*Core.cs" -ErrorAction SilentlyContinue |
     Where-Object { $_.FullName -notmatch "[/\\](obj|bin)[/\\]" }
 # P2-1 (review-2026-08-31)：显式 int-除法豁免清单（替代已被移除的"任一 ArgumentException"过宽豁免）——
@@ -220,14 +220,14 @@ $nanInfMissing = @()
 
 foreach ($f in $coreFiles) {
     $content = Read-Utf8Text $f.FullName
-    # N19 (review-2026-09-05)：读文件失败原为静默 continue——改为 SKIP 计数输出，
+    # 读文件失败须 SKIP 计数输出而非静默 continue，
     # 防止文件不可读时守卫检查静默空转（对齐 verify-docs Check-Skip 语义）。
     if (-not $content) { $script:skipped++; Write-Host "  [SKIP] $($f.Name) unreadable, guard check skipped" -ForegroundColor DarkYellow; continue }
     # 剥离 // 与 /* */ 注释后再检测除法表达式：原正则会把 `/// <summary>` 等 XML 注释
     # 误判为除法，导致所有文件 hasDivision=true，守卫检查退化为「任一 ArgumentException 即豁免”。
     $code = [regex]::Replace($content, '/\*.*?\*/', '', [System.Text.RegularExpressions.RegexOptions]::Singleline)
     $code = [regex]::Replace($code, '(?m)//.*$', '')
-    # P2-1：剥离字符串字面量——SqlCore 的 "DDL/DML" 等字符串里的斜杠被误判为除法。
+    # 剥离字符串字面量——SqlCore 的 "DDL/DML" 等字符串里的斜杠会被误判为除法。
     $code = [regex]::Replace($code, '"[^"]*"', '""')
     # F-20 (review 2026-09-06)：补 '/=' 复合赋值——原正则 '/' 后必须跟标识符，
     # 仅用 x /= y 的 Core 文件曾可绕过 NaN/Inf 守卫检查（当前全库 0 现症，防患）。
@@ -235,7 +235,7 @@ foreach ($f in $coreFiles) {
     # 常量零/小常量恰恰必产或放大 Inf/NaN，更需守卫。当前全库无该形态（已 grep 实测），
     # 移除豁免属防患（引入 `/ 0.5` 类除法的 Core 文件现在会正确要求守卫）。
     $hasDivision = ($code -match '/\s*\w+') -or ($code -match '/=')
-    # P2-1：int 除法豁免（显式名单，非"任一 ArgumentException"）
+    # int 除法豁免（显式名单，非"任一 ArgumentException"）
     if ($intDivOnlyFiles -contains $f.Name) { continue }
     if ($hasDivision) {
         # P2-1 (review-2026-08-31)：守卫判定改用已剥离注释的 $code——原用 $content，文件头写
@@ -262,23 +262,21 @@ if ($nanInfMissing.Count -gt 0) {
 Write-Host ""
 Write-Host "[6/6] Checking hasHeaders contract ..."
 
-# P1-18 (review-2026-08-31)：原 `-Filter "*Core.cs"` 只扫 *Core.cs，AnalyticsHelpers.cs（含
-# ToDoubleMatrix(object[,])）等 Helper 漏网。改为排除 bin/obj 的全部 .cs——Udf 层方法接收
+# 扫排除 bin/obj 的全部 .cs，而非 `-Filter "*Core.cs"`——只扫 *Core.cs 会漏掉
+# AnalyticsHelpers.cs（含 ToDoubleMatrix(object[,])）等 Helper。Udf 层方法接收
 # object 单参（非 object[,] 直接参数），不会误匹配。
 $allCoreCs = Get-ChildItem -Path "$RepoRoot/src" -Recurse -Filter "*.cs" -ErrorAction SilentlyContinue |
     Where-Object { $_.FullName -notmatch "[/\\](obj|bin)[/\\]" }
 $hasHeaderViolations = @()
 # Structural transformation exemptions (don't interpret header semantics)
-# review-2026-08-29 P2-7：原 11 项冗余成员收缩至 AGENTS.md §4 契约核心；后续三次补充
-#（2026-08-29 Keys/Values、2026-08-31 ToDoubleMatrix）形成当前 9 项（与 ai-review-prompt §3.4 一致）。
-# R5-P3-35 (2026-09-06)：原注释「收缩为…6 项」与下方 9 项数组读感矛盾，改按现状表述。
-# 2026-08-29 发行前审查补充：DictSetCore.Keys/Values 为列提取（与 SelectColumns 同类结构变换）→ 豁免。
-# P1-18 (review-2026-08-31)：AnalyticsHelpers.ToDoubleMatrix 是纯类型转换（无表头语义），登记豁免。
+# 共 9 项：AGENTS.md §4 契约核心，与 ai-review-prompt §3.4 一致。
+# DictSetCore.Keys/Values 为列提取（与 SelectColumns 同类结构变换）→ 豁免。
+# AnalyticsHelpers.ToDoubleMatrix 是纯类型转换（无表头语义）→ 豁免。
 $structuralExempt = @('Transpose','SelectColumns','SelectRows','CrossJoin','Flatten2D','Count','Keys','Values','ToDoubleMatrix')
 
 foreach ($f in $allCoreCs) {
     $content = Read-Utf8Text $f.FullName
-    # F-22 (review 2026-09-06)：不可读文件 → SKIP 计数，不静默空转（对齐检查 5 的 N19 语义）。
+    # 不可读文件 → SKIP 计数，不静默空转（对齐检查 5 的读失败 SKIP 语义）。
     if (-not $content) { $script:skipped++; Write-Host "  [SKIP] $($f.Name) unreadable, hasHeaders check skipped" -ForegroundColor DarkYellow; continue }
     # Match method signatures with object[,] as PARAMETER (not return type)
     # R18 (review-2026-09-05)：原 `\([^)]*object...[^)]*\)` 对参数段含嵌套括号的签名漏报
@@ -313,7 +311,7 @@ if ($hasHeaderViolations.Count -gt 0) {
 # -- Summary --
 Write-Host ""
 Write-Host "============================================================"
-# N19 (review-2026-09-05)：SKIP 计数入账展示（不可读文件跳过不静默）
+# SKIP 计数入账展示（不可读文件跳过不静默）
 if ($script:skipped -gt 0) { Write-Host "  [INFO] $($script:skipped) file(s) skipped (unreadable)" -ForegroundColor DarkYellow }
 if ($violations.Count -gt 0) {
     Write-Host "  [BLOCKED] $($violations.Count) violation(s) found:" -ForegroundColor Red

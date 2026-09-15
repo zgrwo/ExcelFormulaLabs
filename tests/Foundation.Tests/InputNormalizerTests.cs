@@ -60,14 +60,14 @@ public class CoercionTests
     [Fact] public void ToBool_nan_input_returns_false() => InputNormalizer.ToBool(double.NaN).Should().BeFalse();
     [Fact] public void ToBool_infinity_input_returns_true() => InputNormalizer.ToBool(double.PositiveInfinity).Should().BeTrue();
 
-    // review 2026-09-14（P2 FND-02）：float 必须与 double 对称——NaN → false 哨兵，
-    // 修复前 float.NaN 落 Convert.ToBoolean 兜底被判 true。
+    // float 必须与 double 对称——NaN → false 哨兵；float.NaN 落 Convert.ToBoolean
+    // 兜底会被判 true。
     [Fact] public void ToBool_float_nan_returns_false() => InputNormalizer.ToBool(float.NaN).Should().BeFalse();
     [Fact] public void ToBool_float_zero_false() => InputNormalizer.ToBool(0f).Should().BeFalse();
     [Fact] public void ToBool_float_infinity_returns_true() => InputNormalizer.ToBool(float.PositiveInfinity).Should().BeTrue();
     [Fact] public void ToDateTime_nan_input_returns_minvalue() => InputNormalizer.ToDateTime(double.NaN).Should().Be(DateTime.MinValue);
     [Fact] public void ToDateTime_zero_returns_epoch() => InputNormalizer.ToDateTime(0.0).Should().Be(new DateTime(1899,12,30));
-    // P2 (pre-release review): bool is NOT a date (IsNumericCell rejects bool with the
+    // bool is NOT a date (IsNumericCell rejects bool with the
     // "VBA: Boolean is not numeric" rationale); ToDateTime must not silently convert
     // TRUE → 1899-12-31. Sentinel MinValue instead.
     [Fact] public void ToDateTime_bool_returns_min_value() => InputNormalizer.ToDateTime(true).Should().Be(DateTime.MinValue);
@@ -166,7 +166,7 @@ public class ExcelSentinelTests
     [Fact] public void IsExcelMissing_DBNull_returns_false()
         => InputNormalizer.IsExcelMissing(DBNull.Value).Should().BeFalse();
 
-    // review 2026-09-14（P1 UDF-01）：可选参数「未提供」统一判定。
+    // 可选参数「未提供」统一判定。
     [Fact] public void IsOmitted_null_true()
         => InputNormalizer.IsOmitted(null).Should().BeTrue();
 
@@ -213,12 +213,10 @@ public class ComRangeExtractionTests
         value.Should().Be(42);
     }
 
-    // ── Release-review regression guards ──────────────────────────────────
     // ToBool numeric-string fallback must use InvariantCulture (like ToDouble).
     [Fact] public void ToBool_numeric_string_invariant_true() => InputNormalizer.ToBool("1.5").Should().BeTrue();
     [Fact] public void ToBool_numeric_string_invariant_false() => InputNormalizer.ToBool("0.0").Should().BeFalse();
 
-    // ── ToInt32（review-2026-08-29 P2-2 新增，此前零测试覆盖）──
     [Fact] public void ToInt32_normal() => InputNormalizer.ToInt32(42).Should().Be(42);
     [Fact] public void ToInt32_long_rounds() => InputNormalizer.ToInt32(3.7).Should().Be(4);
     [Fact] public void ToInt32_string() => InputNormalizer.ToInt32("3.5").Should().Be(4);
@@ -234,8 +232,6 @@ public class ComRangeExtractionTests
     [Fact] public void ToInt32_double_above_int_range_throws()
         => new Action(() => InputNormalizer.ToInt32(3e9)).Should().Throw<ArgumentException>();
 
-
-    // -- review-2026-08-31: P2-8 / P2-17 regression guards --
     [Fact] public void ToLong_2pow63_boundary_returns_zero()
     {
         InputNormalizer.ToLong(9.223372036854776E18).Should().Be(0L);
@@ -252,7 +248,6 @@ public class ComRangeExtractionTests
         flat[3].Should().Be(4.0);
     }
 
-    // -- review-2026-08-31: P2-37 jagged-array (object[][]) NormalizeTo2D behavior --
     [Fact] public void NormalizeTo2D_jagged_array_column_vector()
     {
         // 锯齿数组（object[][]）在 .NET 中是 Rank-1 object[]（协变）——NormalizeTo2D 按
@@ -268,8 +263,7 @@ public class ComRangeExtractionTests
         result[1, 0].Should().BeEquivalentTo(new object[] { "c" });
     }
 
-    // -- review-2026-09-05: N13 Rank≥3 数组展平为列向量（原 GetValue(int,int) 抛未捕获
-    //    ArgumentException，与 P2-17 NormalizeTo1D 多维展平未同步）--
+    // -- Rank≥3 数组展平为列向量（GetValue(int,int) 会抛未捕获 ArgumentException）--
     [Fact] public void NormalizeTo2D_rank3_typed_array_flattens_to_column()
     {
         var cube = new double[2, 3, 2];
@@ -299,7 +293,7 @@ public class ComRangeExtractionTests
     }
 }
 
-// -- review-2026-09-05: R23 哨兵类型名 const 字面量锁定（Excel-DNA 升级改型名时在此报警）--
+// -- 哨兵类型名 const 字面量锁定（Excel-DNA 升级改型名时在此报警）--
 public class SentinelTypeNameLockTests
 {
     private static object? Const(string name)

@@ -60,9 +60,9 @@ namespace ExcelFormulaLabs.Foundation
                     InsertionSort(arr, lo, hi, ascending, mode);
                     return;
                 }
-                // review 2026-08-31（深度审查 P1-2）：Lomuto 分区在全等值/高重复输入下
-                // 退化为 O(n²)——全等值 20 万实测 152 秒（复刻计时）。改为 3-way（Dutch
-                // national flag）分区，把与 pivot 相等的元素集中到中间段一次跳过。
+                // Lomuto 分区在全等值/高重复输入下退化为 O(n²)（全等值 20 万实测
+                // 152 秒）。用 3-way（Dutch national flag）分区，把与 pivot 相等的元素
+                // 集中到中间段一次跳过。
                 var (lt, gt) = Partition3(arr, lo, hi, ascending, mode);
                 // Tail-recursion: recurse into smaller side first, skip the equal band [lt, gt]
                 if (lt - lo < hi - gt)
@@ -120,8 +120,8 @@ namespace ExcelFormulaLabs.Foundation
         private static int CompareElements<T>(T a, T b, ComparerMode mode)
         {
             if (a == null && b == null) return 0;
-            // P2 (pre-release review): null sorts FIRST — consistent with the documented
-            // VBA VariantKit order in ComparisonUtils.Compare (Null → Empty → values → Error).
+            // null sorts FIRST — consistent with the documented VBA VariantKit order in
+            // ComparisonUtils.Compare (Null → Empty → values → Error).
             if (a == null) return -1;
             if (b == null) return 1;
             return mode switch
@@ -155,13 +155,13 @@ namespace ExcelFormulaLabs.Foundation
 
         private static int CompareText<T>(T a, T b)
         {
-            // review 2026-09-14（模块审查 P2 FND-04）：原 `a?.ToString()` 按 CurrentCulture
-            // 格式化数值（de-DE 的 1.5 → "1,5"），ARR.SORTTEXT 顺序随用户 locale 翻转。
-            // 键生成改 InvariantCulture，再按不区分大小写的固定文化比较。
+            // 键生成须用 InvariantCulture：`a?.ToString()` 按 CurrentCulture 格式化数值
+            // （de-DE 的 1.5 → "1,5"），ARR.SORTTEXT 顺序随用户 locale 翻转；
+            // 再按不区分大小写的固定文化比较。
             string sA = Convert.ToString(a, CultureInfo.InvariantCulture) ?? "";
             string sB = Convert.ToString(b, CultureInfo.InvariantCulture) ?? "";
-            // F-13 (review 2026-09-06)：CurrentCulture 随用户 locale 漂移（tr-TR 的 i/İ 等），
-            // ARR.SORTTEXT 结果不确定；与全库 InvariantCulture/Ordinal 纪律对齐。
+            // 比较须用 InvariantCultureIgnoreCase：CurrentCulture 随用户 locale 漂移
+            // （tr-TR 的 i/İ 等），ARR.SORTTEXT 结果不确定；与全库 InvariantCulture/Ordinal 纪律对齐。
             return string.Compare(sA, sB, StringComparison.InvariantCultureIgnoreCase);
         }
 
@@ -184,10 +184,9 @@ namespace ExcelFormulaLabs.Foundation
             if (start >= n) return Array.Empty<T>();
             if (length == -1) length = n - start;
             if (length <= 0) return Array.Empty<T>();
-            // review 2026-09-14（模块审查 P0 FND-01）：原 `start + length > n` 在
+            // 钳制须用无溢出形式 `length > n - start`：`start + length > n` 在
             // length=int.MaxValue、start>0 时 int 加法回绕为负 → 钳制恒 false →
-            // new T[int.MaxValue] 触发不可捕获 OOM。改为无溢出形式（start < n 已保证
-            // n - start ≥ 1，不会下溢）。
+            // new T[int.MaxValue] 触发不可捕获 OOM。start < n 已保证 n - start ≥ 1，不会下溢。
             if (length > n - start) length = n - start;
             var result = new T[length];
             Array.Copy(array, start, result, 0, length);
@@ -202,23 +201,22 @@ namespace ExcelFormulaLabs.Foundation
         /// Linear search. Returns 0-based index or -1.
         /// For floating-point values, matches within a relative tolerance (default 1e-12):
         /// |a−b| &lt; tolerance·max(|a|,|b|). Exact floating-point equality always matches.
-        /// review 2026-09-04（reaudit D1）：原绝对容差 |a−b| &lt; 1e-12 在数据量纲小于容差时
-        /// 任何查值都命中第一个元素（假阳性：{1e-16;2e-16;3e-16} 查 3e-16 返回 0），且
-        /// P1-5 已论证绝对阈值对小量纲失效——同一认知未跨函数复用。改纯相对：量纲 &lt; 1 的
-        /// 数据（ppm/ppb/µA/nm…）退化为精确比较；O(1) 量级仍能桥接浮点累差（0.1+0.2≈0.3）。
+        /// 须用纯相对容差：绝对容差 |a−b| &lt; 1e-12 在数据量纲小于容差时任何查值都命中
+        /// 第一个元素（假阳性：{1e-16;2e-16;3e-16} 查 3e-16 返回 0）。量纲 &lt; 1 的数据
+        /// （ppm/ppb/µA/nm…）退化为精确比较；O(1) 量级仍能桥接浮点累差（0.1+0.2≈0.3）。
         /// 注意相对窗口随量级增长，超大值（1e12 级）相邻数据不再有 1e-12 的绝对安全区。
         /// </summary>
         public static int IndexOf<T>(T[] array, T value, double tolerance = 1e-12)
         {
             if (array == null) return -1;
-            // review 2026-08-31（深度审查 P1-3）：原 `typeof(T) == typeof(double)` 判断在
-            // T=object（ARR.INDEXOF / ARR.CONTAINS 的实际调用路径，ArrayCore.IndexOf 传 object[]）
-            // 下恒为 false → 1e-12 容差分支是死代码，退化为装箱 Equals 精确比较：
-            // {0.1+0.2} 查 0.3 → -1；整型 1 查浮点 1.0 → 找不到。改为运行时逐元素探测——
-            // 元素与目标值均为数值类型时走容差路径（文本 "2" 不匹配数值 2，保持原 Equals 语义）。
-            // review 2026-09-05（N18）：容差路径类型面有意收窄为 double/float/int/long——
-            // decimal/short/byte 等元素落 :237 装箱 Equals 精确路径（如 JSON 反序列化产物
-            // decimal 0.1+0.2≠0.3 不桥接）。Excel 场景数值以 double 到达，此为已知取舍。
+            // `typeof(T) == typeof(double)` 判断在 T=object（ARR.INDEXOF / ARR.CONTAINS 的
+            // 实际调用路径，ArrayCore.IndexOf 传 object[]）下恒为 false → 容差分支是死代码，
+            // 退化为装箱 Equals 精确比较：{0.1+0.2} 查 0.3 → -1；整型 1 查浮点 1.0 → 找不到。
+            // 故采用运行时逐元素探测——元素与目标值均为数值类型时走容差路径
+            // （文本 "2" 不匹配数值 2，保持 Equals 语义）。
+            // 容差路径类型面有意收窄为 double/float/int/long：decimal/short/byte 等元素落
+            // :237 装箱 Equals 精确路径（如 JSON 反序列化产物 decimal 0.1+0.2≠0.3 不桥接）。
+            // Excel 场景数值以 double 到达，此为已知取舍。
             bool valueIsNumeric = value is double or float or int or long;
             for (int i = 0; i < array.Length; i++)
             {
@@ -232,7 +230,7 @@ namespace ExcelFormulaLabs.Foundation
                     // otherwise Math.Abs(NaN - NaN) = NaN < tolerance = false → never found.
                     if (double.IsNaN(dA) && double.IsNaN(dB)) return i;
                     if (double.IsNaN(dA) || double.IsNaN(dB)) continue;
-                    // P2-13 (review-2026-08-31): same-sign Infinity equals itself —
+                    // same-sign Infinity equals itself —
                     // Math.Abs(Inf − Inf) = NaN < tolerance is false → would never match.
                     // Cross-sign Infinity is not equal. Mirrors ComparisonUtils.ValuesEqual.
                     if (double.IsInfinity(dA) || double.IsInfinity(dB))
@@ -298,8 +296,8 @@ namespace ExcelFormulaLabs.Foundation
                     InsertionSortIndices(values, idx, lo, hi, ascending, mode);
                     return;
                 }
-                // review-2026-08-31（深度审查 P1-2）：Lomuto 分区在全等值输入下 O(n²)——
-                // argsort 路径（ARR.ARGSORT）与值排序同模式，一并改为 3-way 分区。
+                // Lomuto 分区在全等值输入下退化为 O(n²)——argsort 路径（ARR.ARGSORT）
+                // 与值排序同模式，采用 3-way 分区。
                 var (lt, gt) = PartitionIndices3(values, idx, lo, hi, ascending, mode);
                 if (lt - lo < hi - gt)
                 {
@@ -374,8 +372,8 @@ namespace ExcelFormulaLabs.Foundation
             object[,] data, int numRows, int numCols,
             out string[] colNames, bool hasHeaders = true)
         {
-            // review 2026-09-14（模块审查 P3 FND-12）：维度参数原先未校验——越界直接
-            // IndexOutOfRangeException（裸 CLR 异常）。分配/循环前显式拒绝。
+            // 维度参数须在分配/循环前显式拒绝：越界直接索引会抛裸
+            // IndexOutOfRangeException（未经 Wrapper 处理的 CLR 异常）。
             if (data == null)
                 throw new ArgumentException("data must not be null.");
             int maxRows = data.GetLength(0), maxCols = data.GetLength(1);

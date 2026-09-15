@@ -43,8 +43,8 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void Escape() => RegexCore.RegexEscape("a.b(c)").Should().Be(@"a\.b\(c\)");             // Python re: escape
 
         // =====================================================================
-        // review 2026-09-14（P2 SEC-03）：F() 移除 ExplicitCapture 后，无名组反向引用
-        // (\w)\1 必须在全函数可用（修复前 #VALUE!：无名组不捕获 → 反向引用非法）。
+        // 无名组反向引用 (\w)\1 必须在全函数可用：F() 若启用 ExplicitCapture，
+        // 无名组不被捕获 → 反向引用非法（#VALUE!）。
         // =====================================================================
         [Fact] public void Backreference_test() => RegexCore.RegexTest("aabb", @"(\w)\1").Should().BeTrue();
         [Fact] public void Backreference_test_nomatch() => RegexCore.RegexTest("abab", @"(\w)\1").Should().BeFalse();
@@ -208,7 +208,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
             {
                 // Timeout is the expected path for this evil pattern on 5s timeout.
-                // P2 (review): removed the elapsed>1000ms lower-bound assertion — it depends
+                // No elapsed>1000ms lower-bound assertion: it depends
                 // on engine internals (fast-reject paths in newer .NET can fail earlier) and
                 // machine speed; the only contract is: bounded wall-clock time (below).
             }
@@ -230,16 +230,14 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             act.Should().NotThrow();
         }
 
-        // ── Release-review regression guards ────────────────────────────────
         // Literal replacement semantics: '$' patterns are NOT interpreted, for every n.
         [Fact] public void Replace_all_dollar_is_literal() => RegexCore.RegexReplace("a1b2", @"\d", "$1").Should().Be("a$1b$1");
         [Fact] public void Replace_first_dollar_is_literal() => RegexCore.RegexReplace("a1b2", @"\d", "$1", n: 1).Should().Be("a$1b2");
         [Fact] public void Replace_nth_dollar_is_literal() => RegexCore.RegexReplace("a1b2", @"\d", "$&", n: -1).Should().Be("a1b$&");
 
-        // ── R01 回归守卫（review 2026-09-05）─────────────────────────────────
-        // 原实现 `new List<string>((int)n + 1)` 在任何 regex 求值前执行：巨型 n →
+        // `new List<string>((int)n + 1)` 在任何 regex 求值前执行：巨型 n →
         // 8.6–17.2GB 预分配（OOM 不可捕获）或 (int) 回绕负容量（ArgumentOutOfRangeException）。
-        // 现契约：n 饱和到 100_000、不抛异常；对纪律内输入等价于全拆分。期望硬编码。
+        // 契约：n 饱和到 100_000、不抛异常；对纪律内输入等价于全拆分。期望硬编码。
         [Fact] public void Split_n2_normal_unchanged() => RegexCore.RegexSplit("a,b,c,d", ",", n: 2).Should().Equal("a", "b", "c,d");
         [Fact] public void Split_int_max_n_full_split_no_throw()
             => RegexCore.RegexSplit("a,b,c,d", ",", n: 2147483647L).Should().Equal("a", "b", "c", "d");

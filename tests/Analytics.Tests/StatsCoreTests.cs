@@ -117,9 +117,9 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void StdevP_of_1_to_5() =>
             StatsCore.StdevP(D).Should().BeApproximately(1.4142135623730951, 1e-10);
 
-        // review 2026-08-29：MathNet Statistics.Kurtosis 为**无偏**超额峰度（Bessel 修正，type 2）。
+        // MathNet Statistics.Kurtosis 为**无偏**超额峰度（Bessel 修正，type 2）。
         // 对应 scipy kurtosis(x, fisher=True, bias=False) 与 Excel KURT——注意 scipy 默认 bias=True（有偏），
-        // 小样本 n<30 时两者差异显著。断言值 2.6750983101285986 已按无偏公式逐项验证。
+        // 小样本 n<30 时两者差异显著。断言值 2.6750983101285986 按无偏公式逐项验证。
         [Fact] public void Kurtosis_skewed() =>
             StatsCore.Kurtosis(D5).Should().BeApproximately(2.6750983101285986, 1e-10);
 
@@ -182,16 +182,16 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void Sum_overflow_returns_NaN() { var d = new[] { double.MaxValue, double.MaxValue }; double.IsNaN(StatsCore.Sum(d)).Should().BeTrue(); }
         [Fact] public void Product_overflow_returns_NaN() { var d = new[] { double.MaxValue, 2.0 }; double.IsNaN(StatsCore.Product(d)).Should().BeTrue(); }
 
-        // ── F-07/F-08 (review 2026-09-06)：极端量纲下尺度不变量输出保洁 ──
+        // ── 极端量纲下尺度不变量输出保洁 ──
         [Fact] public void Percentile_cross_sign_extreme_finite()
         {
             // MathNet R7 插值 hi−lo 溢出 → 曾返回 +Inf；凸组合回退真值 0（运行时探针实测复现）。
             var p = StatsCore.Percentile(new[] { -1e308, 1e308 }, 50);
             (!double.IsNaN(p) && !double.IsInfinity(p)).Should().BeTrue();
-            // R5-P3-14 (review 2026-09-06)：真值精确 0（凸组合），收紧到 1e-10（原 1e-290 放行一切有限插值）。
+            // 真值精确 0（凸组合），容差须 1e-10（1e-290 会放行一切有限插值）。
             p.Should().BeApproximately(0.0, 1e-10);
         }
-        // R5-P3-02 (review 2026-09-06)：非 R7 定义主路径溢出时封顶 NaN，不再泄漏 ±Inf。
+        // 非 R7 定义主路径溢出时封顶 NaN，不得泄漏 ±Inf。
         [Fact] public void Percentile_non_R7_extreme_caps_to_NaN()
         {
             var r4 = StatsCore.Percentile(new[] { -1e308, 1e308 }, 50, MathNet.Numerics.Statistics.QuantileDefinition.R4);
@@ -208,17 +208,17 @@ namespace ExcelFormulaLabs.Analytics.Tests
         }
         [Fact] public void VarianceP_constant_extreme_is_zero()
         {
-            // F-08：常数数组真方差恒 0，与尺度无关（溢出路径曾误报 NaN）。
+            // 常数数组真方差恒 0，与尺度无关（溢出路径不得误报 NaN）。
             StatsCore.VarianceP(new[] { 1.5e308, 1.5e308 }).Should().Be(0.0);
             StatsCore.Variance(new[] { 1.5e308, 1.5e308 }).Should().Be(0.0);
         }
         [Fact] public void VarianceP_spread_extreme_still_NaN()
         {
-            // R22 语义保留：真值不可表示的大尺度方差仍封顶 NaN。
+            // 真值不可表示的大尺度方差仍封顶 NaN。
             double.IsNaN(StatsCore.VarianceP(new[] { 1e200, -1e200 })).Should().BeTrue();
         }
 
-        // ── review-2026-09-14：STA-01/02/03 极端量纲回归守卫 ──
+        // ── 极端量纲回归守卫 ──
         // 参考值独立来源：numpy.mean([-1e308,1e308]) = 0.0；
         // Welch t 检验对两组共同缩放不变（t=-0.4472135954999579, df=1.4705882352941178），
         // p = 2·scipy.t.sf(|t|, df) = 0.7117227912336697（scipy 1.17.1 实测）。
@@ -376,8 +376,8 @@ namespace ExcelFormulaLabs.Analytics.Tests
         private const double PyPct75     = 119.136157628341;
         private const double PyIQR       = 37.4866353148077;
         private const double PySkewness  = -0.0982409368961175;
-        // review 2026-09-14（测试治理）：原 0.0818960710244716 是 scipy 默认 bias=True（有偏）值，
-        // 与 StatsCore.Kurtosis（无偏，type 2）错配且用 tol=0.05 掩盖。改 bias=False 精确值。
+        // scipy 默认 bias=True（有偏）的 0.0818960710244716 与 StatsCore.Kurtosis（无偏，type 2）
+        // 错配；参考值取 bias=False 精确值（容差 1e-10）。
         private const double PyKurtosis  = 0.10494906881821642;
         // ReSharper restore InconsistentNaming
 
@@ -442,7 +442,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void GeometricMean_with_zero() => StatsCore.GeometricMean(new[]{1.0,0,3}).Should().Be(0.0);
         [Fact] public void GeometricMean_with_negative() => StatsCore.GeometricMean(new[]{1.0,-2,3}).Should().Be(double.NaN);
         [Fact] public void HarmonicMean_with_zero() => StatsCore.HarmonicMean(new[]{1.0,0,3}).Should().Be(0.0);
-        // P1-5 (pre-release review): harmonic mean of non-positive input must be NaN,
+        // harmonic mean of non-positive input must be NaN,
         // not +Inf ([-1,1] → 2/0) or a meaningless positive value ([1,-2,3] → 3.6).
         [Fact] public void HarmonicMean_mixed_sign_returns_NaN() => StatsCore.HarmonicMean(new[]{1.0,-2,3}).Should().Be(double.NaN);
         [Fact] public void HarmonicMean_opposite_plus_minus_returns_NaN() => StatsCore.HarmonicMean(new[]{-1.0,1}).Should().Be(double.NaN);
@@ -542,7 +542,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
             => double.IsNaN(StatsCore.Spearman(Two, new[] { 1.0 })).Should().BeTrue();
 
         // =====================================================================
-        // TStatPValue DEFENCE-IN-DEPTH (H3: guard degenerate df/t before BetaRegularized)
+        // TStatPValue DEFENCE-IN-DEPTH (guard degenerate df/t before BetaRegularized)
         // =====================================================================
 
         [Fact] public void TStatPValue_df_zero_returns_NaN()
@@ -596,8 +596,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
         private const double UPct75     = 75.25;
         private const double UIQR       = 49.5;
         private const double USkewness  = 0.0;
-        // review 2026-09-14（测试治理）：UKurtosis 原 -1.2002400240024002 为 bias=True 值；
-        // 无偏超额峰度（scipy bias=False）= -1.2，tol 由 0.1 收紧到 1e-10。
+        // 无偏超额峰度（scipy bias=False）= -1.2；断言容差 1e-10（bias=True 值不适用）。
         private const double UKurtosis  = -1.1999999999999997;
 
         [Fact] public void CrossVal_U_Mean()     => StatsCore.Mean(DsUniform).Should().BeApproximately(UMean, 1e-10);
@@ -693,14 +692,12 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void CrossVal_Bi_Skew() => StatsCore.Skewness(DsBimodal).Should().BeApproximately(BiSkew, 1e-8);
         [Fact] public void CrossVal_Bi_Pct50() => StatsCore.Percentile(DsBimodal, 50).Should().BeApproximately(BiPct50, 1e-10);
 
-        // ── Release-review regression guards ──────────────────────────────────
         [Fact] public void CovarianceP_single_element_returns_zero() => StatsCore.CovarianceP(new[] { 5.0 }, new[] { 3.0 }).Should().Be(0.0);
         [Fact] public void Range_extreme_values_overflow_returns_NaN() => StatsCore.Range(new[] { -double.MaxValue, double.MaxValue }).Should().Be(double.NaN);
 
-    // ── review-2026-08-31：P1-4 / P1-5 回归守卫 ──
     [Fact] public void CorrelationMatrix_overflow_column_diagonal_is_NaN()
     {
-        // P1-4：{1e308,1} 列溢出 → sd=Inf → 对角线必须 NaN。修复前 r[0,0]=1 而 r[0,1]=NaN
+        // {1e308,1} 列溢出 → sd=Inf → 对角线必须 NaN；否则 r[0,0]=1 而 r[0,1]=NaN
         // （自相矛盾矩阵，下游无法察觉）。
         var d = new double[,] { { 1e308, 1 }, { 1e308, 2 }, { 1e308, 3 } };
         var r = StatsCore.CorrelationMatrix(d);
@@ -711,8 +708,8 @@ namespace ExcelFormulaLabs.Analytics.Tests
 
     [Fact] public void TTestOneSample_small_scale_scale_invariant()
     {
-        // P1-5：t 检验是尺度不变量——1e-9 量纲数据 p 值应与 1 量纲相同。修复前绝对阈值
-        // `va < 1e-15` 把 va=1e-18 误判常量 → 返回 NaN（真值 p≈0.478）。
+        // t 检验是尺度不变量——1e-9 量纲数据 p 值应与 1 量纲相同；绝对阈值
+        // `va < 1e-15` 会把 va=1e-18 误判常量 → 返回 NaN（真值 p≈0.478）。
         double pSmall = StatsCore.TTestOneSample(new[] { 1e-9, 2e-9, 3e-9 }, 1.5e-9);
         double pLarge = StatsCore.TTestOneSample(new[] { 1.0, 2.0, 3.0 }, 1.5);
         double.IsNaN(pSmall).Should().BeFalse();
@@ -721,12 +718,12 @@ namespace ExcelFormulaLabs.Analytics.Tests
 
     [Fact] public void Product_overflow_safe_ordering()
     {
-        // P2-11：朴素左折叠顺序依赖——Product(1e300,1e300,1e-300) → Inf→NaN（真值 1e300）。
-        // 按 |x| 升序相乘后应返回 1e300。
+        // 朴素左折叠顺序依赖——Product(1e300,1e300,1e-300) → Inf→NaN（真值 1e300）；
+        // 按 |x| 升序相乘应返回 1e300。
         StatsCore.Product(new[] { 1e300, 1e300, 1e-300 }).Should().BeApproximately(1e300, 1e285);
     }
 
-    // ── review-2026-09-05（R03）：零方差分支均值判据改精确相等 ──
+    // ── 零方差分支均值判据精确相等 ──
     [Fact] public void TTestTwoSample_small_scale_zero_variance_NaN()
     {
         // {1e-16}×4 vs {2e-16}×4：均值差 1e-16 < 1e-15 曾被绝对阈值误判"均值相等"→ 错误 p=1。
@@ -760,7 +757,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
             new[] { 1e-16, 1e-16, 1e-16, 1e-16 }, 1e-16).Should().Be(1.0);
     }
 
-    // ── review-2026-09-05（R22）：预缩放防两遍平方和溢出 + 非有限结果封顶 ──
+    // ── 预缩放防两遍平方和溢出 + 非有限结果封顶 ──
     [Fact] public void Pearson_overflow_scale_returns_finite()
     {
         // Pearson({1e200,-1e200},{1,2})：两遍平方和 Σx²=2e400 溢出曾返回 NaN（真值 -1，
@@ -792,9 +789,9 @@ namespace ExcelFormulaLabs.Analytics.Tests
 
     [Fact] public void Mean_huge_values_stay_finite()
     {
-        // R22b：Mean 的真值 {1e308,1e308} = 1e308 本身可表示——MathNet 用增量均值算法
-        // 不经朴素累加（Σ=2e308 溢出），返回精确 1e308。封顶守卫保留为纵深防御
-        // （Mean 对有限输入实测不产生 Inf，无公共触发路径，同 N07 静态依据模式）。
+        // Mean 的真值 {1e308,1e308} = 1e308 本身可表示——MathNet 增量均值算法
+        // 不经朴素累加（Σ=2e308 溢出），返回精确 1e308。封顶守卫为纵深防御
+        // （Mean 对有限输入不产生 Inf，无公共触发路径）。
         StatsCore.Mean(new[] { 1e308, 1e308 }).Should().BeApproximately(1e308, 1e300);
     }
 

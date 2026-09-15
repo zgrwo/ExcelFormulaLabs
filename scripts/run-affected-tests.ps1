@@ -50,8 +50,8 @@ if (-not $ChangedFiles -or $ChangedFiles.Count -eq 0) {
     if (-not $gitFiles) {
         $gitFiles = git -C $repoRoot diff --name-only 2>$null
     }
-    # R5-P3-26 (review 2026-09-06)：补未跟踪新文件——git diff 不含 untracked，
-    # 新增的 src/*.cs 原先路由不到任何测试（新模块场景恰是路由缺口高发处）。
+    # 补未跟踪新文件——git diff 不含 untracked，
+    # 新增的 src/*.cs 否则路由不到任何测试（新模块场景恰是路由缺口高发处）。
     $untracked = git -C $repoRoot ls-files --others --exclude-standard -- 'src/*.cs' 2>$null
     if ($untracked) { $gitFiles = @($gitFiles) + @($untracked) }
     if (-not $gitFiles) {
@@ -76,15 +76,15 @@ $affectedFilters = @()
 foreach ($file in $ChangedFiles) {
     $normalized = $file -replace '\\', '/'
 
-    # R5-P3-26 (review 2026-09-06)：① 模块路由放宽为「src/<Module>/任意 .cs」——原先仅认
-    # (Core|Udf|Helpers|AsyncUdf) 四类后缀的顶层文件，其他命名的 src 文件落入 "(no affected
-    # tests)" 静默分支；② 未跟踪新文件补入检测（git diff HEAD 不含 untracked）。
+    # ① 模块路由为「src/<Module>/任意 .cs」——仅认 (Core|Udf|Helpers|AsyncUdf)
+    # 四类后缀的顶层文件会让其他命名的 src 文件落入 "(no affected tests)" 静默分支；
+    # ② 未跟踪新文件补入检测（git diff HEAD 不含 untracked）。
     if ($normalized -match '^src/([^/]+)/[^/]+\.cs$') {
         $module = $Matches[1]
 
         $testProject = $moduleMap[$module]
-        # N-G (review 2026-09-06)：新模块未进 $moduleMap 时曾静默 continue → "Nothing to run"
-        # exit 0——测试路由缺口的假绿。改为显式告警（不失败：映射缺失非变更错误）。
+        # 新模块未进 $moduleMap 时须显式告警：静默 continue → "Nothing to run"
+        # exit 0 会造成测试路由缺口的假绿（不失败：映射缺失非变更错误）。
         if (-not $testProject) {
             Write-Host "  [WARN] no test project mapped for module '$module' - update \$moduleMap in run-affected-tests.ps1" -ForegroundColor Yellow
             continue
@@ -179,7 +179,7 @@ foreach ($project in $uniqueProjects) {
     if ($classes.Count -gt 0) {
         $filterExpr = $classes -join '|'
         Write-Host "  dotnet test tests/$project --filter `"FullyQualifiedName~$filterExpr`"" -ForegroundColor DarkGray
-        # F-26 (review 2026-09-06)：绝对路径——原相对路径依赖 CWD，从仓库外调用时 Test-Path 过、dotnet 炸。
+        # 绝对路径——相对路径依赖 CWD，从仓库外调用时 Test-Path 过、dotnet 炸。
         dotnet test "$repoRoot\tests\$project" --filter "FullyQualifiedName~$filterExpr" --no-restore
         if ($LASTEXITCODE -ne 0) { $exitCode = 1 }
     } else {

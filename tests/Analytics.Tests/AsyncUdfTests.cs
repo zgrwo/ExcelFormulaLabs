@@ -13,10 +13,10 @@ using Xunit;
 namespace ExcelFormulaLabs.Analytics.Tests
 {
     /// <summary>
-    /// P1-8 (pre-release review): the 12 *_ASYNC UDFs had zero coverage. Their wrappers
+    /// The 12 *_ASYNC UDF wrappers
     /// call ExcelAsyncUtil.Run, which requires a live Excel host (throws
     /// InvalidOperationException otherwise) - so the wrapper itself is not unit-testable.
-    /// What IS testable and previously untested:
+    /// What IS testable:
     ///   1. AnalyticsHelpers.DictToReport - the report-table conversion used by the
     ///      async REGRESS UDFs (and nowhere else in tests).
     ///   2. The [ExcelFunction] registration contract of all 12 async UDFs.
@@ -24,7 +24,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
     /// </summary>
     public class AsyncUdfTests
     {
-        // -- 1. DictToReport (async REGRESS path, previously 0% covered) --
+        // -- 1. DictToReport (async REGRESS path) --
 
         [Fact]
         public void DictToReport_builds_row_major_report()
@@ -153,9 +153,9 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact]
         public void Async_udf_failure_outside_excel_host_returns_value_error()
         {
-            // UDF-03（review 2026-09-14）：参数转换与 Run 均在 WrapError 之内——无 Excel 宿主时
-            // ExcelAsyncUtil.Run 抛 InvalidOperationException，现与同步 UDF 一致转为 #VALUE!
-            //（原异常穿出，同步/异步失败语义分叉）。
+            // 参数转换与 Run 均在 WrapError 之内——无 Excel 宿主时
+            // ExcelAsyncUtil.Run 抛 InvalidOperationException，与同步 UDF 一致转为 #VALUE!
+            //（否则异常穿出，同步/异步失败语义分叉）。
             LinalgAsyncUdf.UDF_LINALG_SVD_U_ASYNC(new double[,] { { 1 } })
                 .Should().Be(ExcelFormulaLabs.Foundation.ExcelError.Value);
         }

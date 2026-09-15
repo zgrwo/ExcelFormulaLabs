@@ -32,9 +32,9 @@ namespace ExcelFormulaLabs.Analytics
             ["Bk"]=247.0,["Cf"]=251.0,["Es"]=252.0,["Fm"]=257.0,
         };
 
-        // F-32 (review 2026-09-06)：补 CultureInvariant——元素/括号记号与文化无关，与全库约定一致。
+        // CultureInvariant：元素/括号记号与文化无关，与全库约定一致。
         private static readonly Regex ElemRx = new(@"([A-Z][a-z]?)(\d*)", RegexOptions.Compiled | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(5));
-        // review 2026-09-05（N06）：整串消费校验——元素记号必须覆盖全部输入（与 ElemRx 同构）。
+        // 整串消费校验——元素记号必须覆盖全部输入（与 ElemRx 同构）。
         private static readonly Regex ElemFullRx = new(@"^([A-Z][a-z]?\d*)+$", RegexOptions.Compiled | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(5));
         private static readonly Regex ParenRx = new(@"\(([^()]+)\)(\d*)", RegexOptions.Compiled | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(5));
         private static readonly Regex BrackRx = new(@"\[([^\[\]]+)\](\d*)", RegexOptions.Compiled | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(5));
@@ -64,9 +64,9 @@ namespace ExcelFormulaLabs.Analytics
                 for (int i = 1; i < parts.Length; i++)
                 {
                     string p = parts[i];
-                    // review 2026-08-29（发行前 max level 复审）：水合物系数用裸 int 逐位累积，
-                    // 编译未开 CheckForOverflowUnderflow → 超 int.MaxValue（≥10 位）时静默回绕为负数，
-                    // 产生错误的（可能负的）分子量。与 ParseCount 的溢出防护对齐，改为显式抛错。
+                    // 水合物系数用裸 int 逐位累积，编译未开 CheckForOverflowUnderflow →
+                    // 超 int.MaxValue（≥10 位）时静默回绕为负数，产生错误的（可能负的）分子量。
+                    // 与 ParseCount 的溢出防护对齐，此处显式抛错。
                     int coeff = 0, j = 0;
                     while (j < p.Length && char.IsDigit(p[j]))
                     {
@@ -77,8 +77,8 @@ namespace ExcelFormulaLabs.Analytics
                         coeff = coeff * 10 + digit;
                         j++;
                     }
-                    // review 2026-09-14（P3 PHY-03）：0 系数原先被改成 1（".0H2O" 当 1 个水）。
-                    // 只有空段（如末尾句点 "H2O."）才回退 1；显式 0 保留为 0（与下标 0 语义一致）。
+                    // 0 系数保留为 0（".0H2O" 不得当 1 个水）：只有空段（如末尾句点 "H2O."）
+                    // 才回退 1，与下标 0 语义一致。
                     if (coeff == 0 && j == 0) coeff = 1;
                     string sub = p.Substring(j);
                     double pm = MolecularWeight(sub, depth + 1);
@@ -91,9 +91,8 @@ namespace ExcelFormulaLabs.Analytics
                 ExpandGroup(m.Groups[1].Value, ParseCount(m.Groups[2].Value)));
             formula = ParenRx.Replace(formula, m =>
                 ExpandGroup(m.Groups[1].Value, ParseCount(m.Groups[2].Value)));
-            // review 2026-09-05（N06）：元素扫描后若残留未消费字符（如 "H2Oxyz"），原实现
-            // 静默按已匹配部分计算（= 18.015），而全小写 "h2o"（零匹配）却返回 NaN——拒收
-            // 不一致。改为整串必须被元素记号完全消费，残留 → NaN（拒收口径一致化）。
+            // 整串必须被元素记号完全消费，残留 → NaN：否则 "H2Oxyz" 会静默按已匹配部分
+            // 计算（= 18.015），与全小写 "h2o"（零匹配）返回 NaN 的拒收口径不一致。
             if (!ElemFullRx.IsMatch(formula)) return double.NaN;
             double mw = 0;
             bool matched = false;
@@ -114,16 +113,16 @@ namespace ExcelFormulaLabs.Analytics
             ElemRx.Replace(inner, m =>
             {
                 string el = m.Groups[1].Value;
-                // review 2026-09-06（F-01）：ParseCount ≤ int.MaxValue 与倍数 mult ≤ int.MaxValue 的
-                // 乘积在 unchecked int 乘法下回绕为负（"(H2)1073741824" 曾静默按 H1 计算返回 1.008）。
-                // 改 long 相乘；展开后的下标还要经外层 ParseCount 复析（上限 int.MaxValue），
-                // 故乘积超限与同族 ParseCount/水合物系数一致显式抛错。
+                // ParseCount ≤ int.MaxValue 与倍数 mult ≤ int.MaxValue 的乘积在 unchecked int
+                // 乘法下会回绕为负（"(H2)1073741824" 静默按 H1 计算返回 1.008）。故用 long 相乘；
+                // 展开后的下标还要经外层 ParseCount 复析（上限 int.MaxValue），乘积超限与同族
+                // ParseCount/水合物系数一致显式抛错。
                 long c = (long)ParseCount(m.Groups[2].Value) * mult;
                 if (c > int.MaxValue)
                     throw new ArgumentException(
                         $"Group subscript product is too large ({el}×{mult} → {c}). The maximum supported atom count is {int.MaxValue}.");
-                // review 2026-09-14（P3 PHY-03）：c==0 原被折叠为省略下标（隐式 1）——
-                // "(H2O)0" 曾得 HO=17.007，与 H0=0 / H2O0=2.016 自相矛盾。0 必须显式保留。
+                // c==0 必须显式保留：折叠为省略下标（隐式 1）时 "(H2O)0" 得 HO=17.007，
+                // 与 H0=0 / H2O0=2.016 自相矛盾。
                 return c == 1 ? el : $"{el}{c}";
             });
 
@@ -132,8 +131,8 @@ namespace ExcelFormulaLabs.Analytics
             if (string.IsNullOrEmpty(s)) return 1;
             // Try int first for the common case; fall back to long for overflow detection
             if (int.TryParse(s, out int n)) return n;
-            // review 2026-08-29：long.TryParse 也失败（如超 19 位数字）时原实现静默返回 1
-            // （H99999999999999999999 → 1.008 按 H1 解析）——违反防错原则，改为显式抛错。
+            // long.TryParse 也失败（如超 19 位数字）时不得静默返回 1（H99999999999999999999 →
+            // 1.008 按 H1 解析）——违反防错原则，此处显式抛错。
             if (long.TryParse(s, out long big))
                 throw new ArgumentException(
                     $"Subscript '{s}' is too large. The maximum supported subscript is {int.MaxValue}.");
@@ -153,11 +152,10 @@ namespace ExcelFormulaLabs.Analytics
                 "K" or "KELVIN" => v,
                 _ => double.NaN,
             };
-            // review 2026-09-05（N08b）：绝对零守卫（对齐 GASSTP 的 tK<=0 拒收）——k 即
-            // 换算中间量/结果所在的 K 温标值，≤ 0 物理无意义（-300℃ → -26.85 K 曾静默返回）。
+            // 绝对零守卫（对齐 GASSTP 的 tK<=0 拒收）——k 即换算中间量/结果所在的 K 温标值，
+            // ≤ 0 物理无意义（-300℃ → -26.85 K 不得静默返回）。
             if (double.IsNaN(k) || k <= 0) return double.NaN;
-            // review 2026-09-05（N08a）：有限大输入（1e308）× 换算常数可溢出 ±Inf → NaN 封顶
-            // （模块约定，见 CapNaN）。
+            // 有限大输入（1e308）× 换算常数可溢出 ±Inf → NaN 封顶（模块约定，见 CapNaN）。
             return CapNaN(to.ToUpperInvariant() switch
             {
                 "C" or "CELSIUS" => k - 273.15,
@@ -174,14 +172,13 @@ namespace ExcelFormulaLabs.Analytics
             {
                 "ATM" => v * 101325, "PA" or "PASCAL" => v, "KPA" => v * 1000,
                 "BAR" => v * 100000, "PSI" => v * 6894.757293168,
-                // review 2026-09-14（模块审查 P3 PHY-03）：MMHG/TORR 原用 133.322387415 约数
-                // （760 MMHG→ATM = 1.000000142）。改用定义式 101325/760（1 atm 恰为 760 mmHg）。
+                // MMHG/TORR 用定义式 101325/760（1 atm 恰为 760 mmHg）：约数 133.322387415
+                // 会使 760 MMHG→ATM = 1.000000142。
                 "MMHG" or "TORR" => v * (101325.0 / 760.0),
                 _ => double.NaN,
             };
             if (double.IsNaN(pa)) return double.NaN;
-            // review 2026-09-05（N08a）：有限大输入 × 换算常数（如 1e308 atm → Pa）可溢出
-            // ±Inf → NaN 封顶（模块约定）。
+            // 有限大输入 × 换算常数（如 1e308 atm → Pa）可溢出 ±Inf → NaN 封顶（模块约定）。
             return CapNaN(to.ToUpperInvariant() switch
             {
                 "ATM" => pa / 101325, "PA" or "PASCAL" => pa, "KPA" => pa / 1000,
@@ -194,16 +191,15 @@ namespace ExcelFormulaLabs.Analytics
         internal static double ConvertVolume(double v, string from, string to)
         {
             if (double.IsNaN(v) || double.IsInfinity(v)) return double.NaN;
-            // review 2026-09-14（模块审查 P3 PHY-03）：GAL/QT/FT3 原为截断约数
-            // （3.78541 / 0.946353 / 28.3168）。改用定义值：1 US gal = 231 in³ = 3.785411784 L，
-            // 1 qt = gal/4，1 ft³ = 28.316846592 L。
+            // GAL/QT/FT3 用定义值：1 US gal = 231 in³ = 3.785411784 L，1 qt = gal/4，
+            // 1 ft³ = 28.316846592 L（非截断约数 3.78541 / 0.946353 / 28.3168）。
             double l = from.ToUpperInvariant() switch
             {
                 "L" or "LITER" => v, "ML" => v / 1000.0, "M3" => v * 1000,
                 "GAL" or "GALLON" => v * 3.785411784, "QT" or "QUART" => v * 0.946352946,
                 "FT3" => v * 28.316846592, _ => double.NaN,
             };
-            // review 2026-09-05（N08a）：有限大输入 × 换算常数可溢出 ±Inf → NaN 封顶（模块约定）。
+            // 有限大输入 × 换算常数可溢出 ±Inf → NaN 封顶（模块约定）。
             return CapNaN(to.ToUpperInvariant() switch
             {
                 "L" or "LITER" => l, "ML" => l * 1000, "M3" => l / 1000,
@@ -215,14 +211,14 @@ namespace ExcelFormulaLabs.Analytics
         internal static double ConvertMass(double v, string from, string to)
         {
             if (double.IsNaN(v) || double.IsInfinity(v)) return double.NaN;
-            // review 2026-09-14（P3 PHY-03）：1 avoirdupois oz = 1/16 lb = 28.349523125 g（原 28.3495 约数）。
+            // 1 avoirdupois oz = 1/16 lb = 28.349523125 g（非 28.3495 约数）。
             double g = from.ToUpperInvariant() switch
             {
                 "KG" => v * 1000, "G" or "GRAM" => v, "MG" => v / 1000.0,
                 "LB" or "LBS" => v * 453.59237, "OZ" => v * 28.349523125, "TON" => v * 1e6,
                 _ => double.NaN,
             };
-            // review 2026-09-05（N08a）：有限大输入 × 换算常数可溢出 ±Inf → NaN 封顶（模块约定）。
+            // 有限大输入 × 换算常数可溢出 ±Inf → NaN 封顶（模块约定）。
             return CapNaN(to.ToUpperInvariant() switch
             {
                 "KG" => g / 1000, "G" or "GRAM" => g, "MG" => g * 1000,
@@ -233,7 +229,7 @@ namespace ExcelFormulaLabs.Analytics
 
         internal static double IdealGasLaw(double? p = null, double? v = null,
             double? n = null, double? t = null,
-            // review 2026-09-14（P3 PHY-03）：R 原 0.082057 约数 → 精确值 8.31446261815324/101.325。
+            // R 取精确值 8.31446261815324/101.325（非 0.082057 约数）。
             double r = 8.31446261815324 / 101.325)
         {
             // Reject NaN/Inf in supplied parameters (防错原则1)
@@ -241,8 +237,8 @@ namespace ExcelFormulaLabs.Analytics
             if (v.HasValue && (double.IsNaN(v.Value) || double.IsInfinity(v.Value))) return double.NaN;
             if (n.HasValue && (double.IsNaN(n.Value) || double.IsInfinity(n.Value))) return double.NaN;
             if (t.HasValue && (double.IsNaN(t.Value) || double.IsInfinity(t.Value))) return double.NaN;
-            // F-11 (review 2026-09-06)：r 为 L·atm/(mol·K)，t 为 K 温标——t≤0 物理无意义
-            // （曾算出负压）。对齐 TEMP/GASSTP 的绝对零拒收。
+            // r 为 L·atm/(mol·K)，t 为 K 温标——t≤0 物理无意义（会算出负压）。
+            // 对齐 TEMP/GASSTP 的绝对零拒收。
             if (t.HasValue && t.Value <= 0) return double.NaN;
             if (r == 0 || double.IsNaN(r) || double.IsInfinity(r)) return double.NaN;
             int missing = (p.HasValue?0:1)+(v.HasValue?0:1)+(n.HasValue?0:1)+(t.HasValue?0:1);
@@ -253,7 +249,7 @@ namespace ExcelFormulaLabs.Analytics
             if (!p.HasValue)
             {
                 if (!v.HasValue || !n.HasValue || !t.HasValue) return double.NaN;
-                // review 2026-08-31（深度审查 P2-12）：溢出 ±Inf → NaN（模块约定）。
+                // 溢出 ±Inf → NaN（模块约定）。
                 return v.Value == 0 ? double.NaN : CapNaN(n.Value * r * t.Value / v.Value);
             }
             if (!v.HasValue)
@@ -279,16 +275,16 @@ namespace ExcelFormulaLabs.Analytics
             double pAtm = ConvertPressure(press, pUnit, "atm");
             if (double.IsNaN(tK) || double.IsNaN(pAtm) || tK <= 0 || pAtm <= 0)
                 return double.NaN;
-            // review 2026-08-31（深度审查 P2-12）：溢出时原样返回 ±Inf，与模块
-            // "Infinity capped to NaN" 约定不一致（防错原则①——Inf 会继续传播进下游计算）。
+            // 溢出 ±Inf → NaN：与模块 "Infinity capped to NaN" 约定一致
+            // （防错原则①——Inf 会继续传播进下游计算）。
             return CapNaN(vol * pAtm * (273.15 / tK));
         }
 
         /// <summary>Non-finite result → NaN（模块约定：不向 Excel 泄漏 ±Inf）。</summary>
         private static double CapNaN(double v) => double.IsInfinity(v) ? double.NaN : v;
 
-        // review 2026-08-29：DENSITY 下沉（原 L2 零分母守卫写在 UDF lambda，红线① UDF 仅分发）
-        // F-10 (review 2026-09-06)：m/v 溢出 ±Inf → NaN 封顶（N08a 同族收尾，1e308/1e-308 曾直漏）。
+        // 零分母守卫在 Core 层（红线① UDF 仅分发）；m/v 溢出 ±Inf → NaN 封顶
+        // （1e308/1e-308 不得直漏）。
         internal static double Density(double m, double v) => v == 0 ? double.NaN : CapNaN(m / v);
     }
 }

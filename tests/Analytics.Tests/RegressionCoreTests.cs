@@ -20,14 +20,14 @@ namespace ExcelFormulaLabs.Analytics.Tests
             foreach (var v in t) double.IsInfinity(v).Should().BeFalse();
         }
 
-        // P2 (pre-release review): negative lambda must be rejected (documented as >= 0);
-        // previously it silently produced a non-positive-definite ridge matrix.
+        // negative lambda must be rejected (documented as >= 0);
+        // otherwise it would silently produce a non-positive-definite ridge matrix.
         [Fact] public void FitRidge_negative_lambda_throws()
         {
             var act = () => RegressionCore.FitRidge(X, y, -1000.0);
             act.Should().Throw<ArgumentException>().WithMessage("*lambda*");
         }
-        // review 2026-09-14（P3 REG 系列）：Ridge 补 y/X 维度校验（原 MathNet 裸异常）。
+        // Ridge y/X 维度校验：显式 ArgumentException 替代 MathNet 裸异常。
         [Fact] public void FitRidge_y_length_mismatch_throws()
         {
             var act = () => RegressionCore.FitRidge(X, new[] { 1.0, 2.0 });
@@ -73,22 +73,20 @@ namespace ExcelFormulaLabs.Analytics.Tests
         // CROSS-VALIDATION: WLS & Ridge vs Python statsmodels/sklearn
         // =====================================================================
         // statsmodels.WLS（加权尺度）: coef=[0.34075, 1.70377], ssr=0.078415094339623
-        // r2=0.998473285807803（review 2026-09-14 REG-07：SSE/R² 由未加权改为加权尺度）。
+        // r2=0.998473285807803（SSE/R² 按加权尺度计算）。
         private static readonly double[,] Xwls = {{1},{2},{3},{4},{5}};
         private static readonly double[] ywls_cv = {2.1,3.8,5.2,7.1,8.9};
         private static readonly double[] wwls_cv = {1.0,2.0,1.0,0.5,3.0};
         [Fact] public void CrossVal_WLS_Py_coef() { var c=(double[])RegressionCore.FitWLS(Xwls,ywls_cv,wwls_cv)["coefficients"]; c[0].Should().BeApproximately(0.340754716981135,1e-8); c[1].Should().BeApproximately(1.703773584905660,1e-8); }
         [Fact] public void CrossVal_WLS_Py_sse() => ((double)RegressionCore.FitWLS(Xwls,ywls_cv,wwls_cv)["sse"]).Should().BeApproximately(0.078415094339623,1e-10);
         [Fact] public void CrossVal_WLS_Py_r2() => ((double)RegressionCore.FitWLS(Xwls,ywls_cv,wwls_cv)["r_squared"]).Should().BeApproximately(0.998473285807803,1e-10);
-        // sklearn.linear_model.Ridge(alpha=1.0) 参考实现下逐位吻合的闭式解金值（下方断言值）；
-        // 旧注释 [-0.04742, 1.85676] 为历史运行残留，R5-P3-11 (2026-09-06) 修正。
+        // sklearn.linear_model.Ridge(alpha=1.0) 参考实现下逐位吻合的闭式解金值（下方断言值）。
         private static readonly double[,] Xridge = {{1},{2},{3},{4},{5},{6},{7},{8},{9},{10}};
         private static readonly double[] yridge = {2.1,3.8,5.2,7.1,8.9,10.8,13.1,14.9,16.8,18.9};
         [Fact] public void CrossVal_Ridge_sklearn_coef() { var c=(double[])RegressionCore.FitRidge(Xridge,yridge,1.0)["coefficients"]; c[0].Should().BeApproximately(-0.069341317365270,1e-8); c[1].Should().BeApproximately(1.859880239520958,1e-8); }
 
         // =====================================================================
         // EDGE CASE & INPUT VALIDATION TESTS
-        // (systematic coverage following H3/M4 pattern)
         // =====================================================================
 
         [Fact] public void FitWLS_negative_weight_throws()
@@ -126,14 +124,14 @@ namespace ExcelFormulaLabs.Analytics.Tests
 
         [Fact] public void AnovaOneWay_single_group()
         {
-            // Single group → df_between=0 → now throws (guard added in P0 audit)
+            // Single group → df_between=0 → throws
             var act = () => RegressionCore.AnovaOneWay(new[] { new[] { 1.0, 2, 3, 4 } });
             act.Should().Throw<ArgumentException>().WithMessage("*at least 2 groups*");
         }
 
 
-        // P1-6 (pre-release review): numerically unstable tss (Inf-Inf=NaN under the
-        // unstable form) must throw, not silently leak NaN into r_squared.
+        // numerically unstable tss (Inf-Inf=NaN under the unstable form) must throw,
+        // not silently leak NaN into r_squared.
         [Fact] public void FitOLS_extreme_y_throws_numerically_unstable()
         {
             var extX = new double[3, 1] { { 1.0 }, { 2.0 }, { 3.0 } };
@@ -143,13 +141,13 @@ namespace ExcelFormulaLabs.Analytics.Tests
         }
         [Fact] public void FitOLS_constant_y_throws()
         {
-            // tss=0 → constant response → R² undefined (P0 guard)
+            // tss=0 → constant response → R² undefined
             var constY = new double[] { 5, 5, 5 };
             var act = () => RegressionCore.FitOLS(X, constY);
             act.Should().Throw<ArgumentException>().WithMessage("*constant*");
         }
-        // R5-P3-06 (review 2026-09-06)：常量 y≈1e308 时 Sum()/n 溢出 +Inf → tss 含 NaN →
-        // 误报 "unstable"；增量均值下 dev 精确为 0 → 正确报 "constant"。
+        // 常量 y≈1e308 时 Sum()/n 溢出 +Inf → tss 含 NaN → 误报 "unstable"；
+        // 增量均值下 dev 精确为 0 → 正确报 "constant"。
         [Fact] public void FitOLS_constant_huge_y_reports_constant_not_unstable()
         {
             var hugeX = new double[3, 1] { { 1.0 }, { 2.0 }, { 3.0 } };
@@ -160,7 +158,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
 
         [Fact] public void FitOLS_saturated_throws()
         {
-            // n=p → df=0 → SE undefined (P0 guard)
+            // n=p → df=0 → SE undefined
             var satX = new double[,] { { 1, 2 }, { 3, 4 } };
             var satY = new double[] { 5, 6 };
             var act = () => RegressionCore.FitOLS(satX, satY);
@@ -169,14 +167,14 @@ namespace ExcelFormulaLabs.Analytics.Tests
 
         [Fact] public void AnovaOneWay_single_obs_per_group_throws()
         {
-            // dfW=0 when each group has exactly 1 observation (P1 guard)
+            // dfW=0 when each group has exactly 1 observation
             var act = () => RegressionCore.AnovaOneWay(new[] { new[] { 1.0 }, new[] { 2.0 } });
             act.Should().Throw<ArgumentException>().WithMessage("*observations per group*");
         }
 
         [Fact] public void FitRidge_constant_y_throws()
         {
-            // tss=0 → constant response (P0 guard)
+            // tss=0 → constant response
             var constY = new double[] { 5, 5, 5 };
             var act = () => RegressionCore.FitRidge(X, constY, 0.1);
             act.Should().Throw<ArgumentException>().WithMessage("*constant*");
@@ -184,7 +182,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
 
         [Fact] public void FactorImportance_single_observation_throws()
         {
-            // n=1 → sd undefined → can't standardize (P0 guard)
+            // n=1 → sd undefined → can't standardize
             var singleX = new double[,] { { 1, 5 } };
             var singleY = new double[] { 7 };
             var act = () => RegressionCore.FactorImportance(singleX, singleY);
@@ -243,12 +241,12 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact]
         public void FitWLS_all_zero_weights_throws()
         {
-            // review 2026-09-14（P3 REG-04）：全零权重显式报"权重全零"，不再误报 constant y。
+            // 全零权重须显式报"权重全零"，而非误报 constant y。
             var a = () => RegressionCore.FitWLS(X, y, new[] { 0.0, 0.0, 0.0 });
             a.Should().Throw<ArgumentException>().WithMessage("*all weights are zero*");
         }
 
-        // review 2026-09-14（P2 REG-05）：1e308 级列求和溢出曾被误判常量并排最后。
+        // 1e308 级列求和溢出不得误判为常量并排最后。
         [Fact]
         public void FactorImportance_huge_scale_column_not_treated_as_constant()
         {
@@ -266,9 +264,8 @@ namespace ExcelFormulaLabs.Analytics.Tests
             act.Should().Throw<ArgumentException>().WithMessage("*within-group sum of squares*");
         }
 
-        // review 2026-08-29（发行前 max level 复审）：输入虽拒绝 NaN/Inf，但有限极大值平方后
-        // 溢出为 Inf 可绕过后置守卫（Abs(Inf)<1e-15 == false）→ f=Inf/Inf=NaN 静默泄漏。
-        // 现对非有限平方和显式抛错。
+        // 输入虽拒绝 NaN/Inf，但有限极大值平方后溢出为 Inf 可绕过后置守卫
+        // （Abs(Inf)<1e-15 == false）→ f=Inf/Inf=NaN 静默泄漏；非有限平方和必须显式抛错。
         [Fact] public void AnovaOneWay_ss_overflow_throws()
         {
             var act = () => RegressionCore.AnovaOneWay(new[] { new[] { 1e200, 2e200 }, new[] { 3e200, 4e200 } });
@@ -319,7 +316,6 @@ namespace ExcelFormulaLabs.Analytics.Tests
             ((double)r["r_squared"]).Should().BeGreaterThan(0.99);
         }
 
-    // ── review-2026-08-31：P0-1 回归守卫 ──
     [Fact] public void FitOLS_Hilbert_nGtP_coefficients_accurate()
     {
         // Hilbert 10×8（cond≈1.6e13）：正规方程（X'X 条件数平方）下系数误差 ~1e2+ 且报表
@@ -350,7 +346,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
             .Should().Throw<ArgumentException>().WithMessage("*Need n > p*");
     }
 
-    // ── review-2026-09-14：P0 REG-01 共线漏检 / P1 REG-02 条件数守卫 / P2 REG-03 大 λ ──
+    // ── 共线漏检 / 条件数 / 大 λ 三守卫 ──
     private static readonly double[,] CollinearX = { { 1, 2 }, { 2, 4 }, { 3, 6 }, { 4, 8 }, { 5, 10 } };
     private static readonly double[] CollinearY = { 1, 2, 3, 4, 5 };
 
@@ -419,7 +415,7 @@ namespace ExcelFormulaLabs.Analytics.Tests
             double.IsNaN(c).Should().BeFalse();
     }
 
-    // ── review-2026-08-31（max-level 全量审查）：P1-5 修复遗漏——TSS 绝对阈值误判小量纲 y ──
+    // ── TSS 绝对阈值误判小量纲 y ──
     [Fact] public void FitOLS_small_scale_y_not_constant()
     {
         // 原 Math.Abs(tss) < 1e-15 把 y={1e-9,2e-9,3e-9}（tss=2e-18）误判为常量响应抛错。
@@ -447,9 +443,9 @@ namespace ExcelFormulaLabs.Analytics.Tests
         ((double)r["r_squared"]).Should().BeApproximately(1.0, 1e-6);
     }
 
-    // ── review 2026-09-04（reaudit P0 A1 回归守卫）：Ridge 增广 Thin QR ──
+    // ── Ridge 增广 Thin QR ──
     // 近共线设计 cond(X)=8.8e6：正规方程 cond(X'X)=8.2e13 下系数相对误差 ~2e-3
-    // （全部有限 → 旧 NaN/Inf 守卫放行 = 静默错误结果）；Thin QR 后误差 < 1e-9。
+    // （结果全部有限，NaN/Inf 守卫无法察觉 = 静默错误结果）；Thin QR 后误差 < 1e-9。
     // 期望系数由 Python lstsq 硬编码（λ=0 时 Ridge == OLS，两路都精确解）。
     [Fact] public void FitRidge_lambda0_on_ill_conditioned_matches_exact()
     {

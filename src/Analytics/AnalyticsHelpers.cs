@@ -69,9 +69,8 @@ namespace ExcelFormulaLabs.Analytics
                 for (int r = 0; r < rows; r++)
                 {
                     object raw = m[r, c];
-                    // review 2026-09-14（P3 REG-04）：原实现把文本也静默丢弃——与文档
-                    // （只跳过空/错误）及 OLS/WLS 同输入 #VALUE! 的口径矛盾。现仅跳过
-                    // 空/错误单元格；非数值文本显式报错。
+                    // 仅跳过空/错误单元格；非数值文本显式报错——与文档（只跳过空/错误）
+                    // 及 OLS/WLS 同输入 #VALUE! 的口径一致；静默丢弃文本会与该口径矛盾。
                     if (raw == null || raw is DBNull
                         || InputNormalizer.IsExcelEmptyValue(raw)
                         || InputNormalizer.IsExcelErrorValue(raw))
@@ -137,9 +136,9 @@ namespace ExcelFormulaLabs.Analytics
                 }
                 else if (val is System.Array arr)
                 {
-                    // review 2026-09-05（R10/CS8601）：Array.GetValue 返回 object?——数组元素
-                    // 允许为 null，且 null 是合法值（Excel 空单元格语义，与下方 padding 的
-                    // 显式 null 一致），此处为有意的 null 透传；分支写法同时满足可空流分析。
+                    // Array.GetValue 返回 object?——数组元素允许为 null，且 null 是合法值
+                    // （Excel 空单元格语义，与下方 padding 的显式 null 一致），此处为有意的
+                    // null 透传；分支写法同时满足可空流分析。
                     for (int j = 0; j < arr.Length; j++)
                     {
                         var cell = arr.GetValue(j);
