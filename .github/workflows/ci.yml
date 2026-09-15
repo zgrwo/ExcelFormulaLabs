@@ -46,6 +46,8 @@ jobs:
               echo "❌ 提交 ${sha:0:7} 不符合 Conventional Commits 规范："
               git show -s --format='   %s' "$sha"
               echo "   规则见 scripts/validate-commit-msg.sh 与 CONTRIBUTING「提交规范」"
+              # 重跑一次让具体原因（如标题超长）进入 CI 日志，避免只报「不符合」无从定位
+              git show -s --format=%B "$sha" | bash scripts/validate-commit-msg.sh 2>&1 || true
               exit 1
             fi
           done
@@ -57,8 +59,16 @@ jobs:
         if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
         shell: bash
         run: |
+          before="${{ github.event.before }}"
+          # force-push 后旧基线提交在 runner 不可达（fetch-depth:0 只取 refs）——原样会让
+          # git rev-list 报 bad revision、循环取空并静默放行 0 个提交（实测 -e 不捕获）。
+          # 退化为仅校验本次推送 tip，保持门禁不空转。
+          if ! git cat-file -e "${before}^{commit}" 2>/dev/null; then
+            echo "⚠️ 基线 ${before:0:7} 不可达（force-push？）——退化为仅校验 tip 提交"
+            before="$(git rev-parse "${GITHUB_SHA}^")"
+          fi
           count=0
-          for sha in $(git rev-list --no-merges "${{ github.event.before }}..${{ github.sha }}"); do
+          for sha in $(git rev-list --no-merges "${before}..${{ github.sha }}"); do
             author=$(git show -s --format=%an "$sha")
             if [ "$author" = "dependabot[bot]" ]; then
               continue
@@ -67,6 +77,8 @@ jobs:
             if ! git show -s --format=%B "$sha" | bash scripts/validate-commit-msg.sh >/dev/null 2>&1; then
               echo "❌ 直推提交 ${sha:0:7} 不符合 Conventional Commits 规范："
               git show -s --format='   %s' "$sha"
+              # 重跑一次让具体原因（如标题超长）进入 CI 日志，避免只报「不符合」无从定位
+              git show -s --format=%B "$sha" | bash scripts/validate-commit-msg.sh 2>&1 || true
               exit 1
             fi
           done

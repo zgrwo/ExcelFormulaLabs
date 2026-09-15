@@ -1,6 +1,9 @@
 # Python 交叉验证依赖（CI 与贡献者统一引用，见 CONTRIBUTING.md / docs/governance/project-structure.md）
-# 版本由 dependabot 维护（.github/dependabot.yml pip ecosystem）；下限保证 CI 解析到可工作版本，
-# 上限是 CI Python 3.11 的硬兼容约束（numpy 2.5+/scipy 1.18+ 要求 Python >=3.12，2026-08-29 实证）。
+# 版本由 dependabot 维护（.github/dependabot.yml pip ecosystem，numpy/scipy minor+major 已 ignore）；
+# 下限保证 CI 解析到可工作版本，上限是 CI Python 3.11 的硬兼容约束（numpy 2.5+/scipy 1.18+ 要求 Python >=3.12）。
+# Python 3.12+ 双重阻断（2026-09-15 本地实证，PR#23）：pyDOE2 1.3.0（最终版）import 3.12 已移除的
+# imp 模块 → DOE 交叉校验静默 SKIP；numpy 2.5 使 eigvals 返回 complex128 → LINALG.EIGEN 断言失败。
+# 升级 Python 前须先替换 pyDOE2 并适配断言，再移除 dependabot ignore。
 # pyDOE2 最新发布为 1.3.0（PyPI 无 1.9+，2026-08-29 CrossVal CI 曾因 >=1.9 无法满足而失败）。
 numpy>=1.26,<2.5
 scipy>=1.11,<1.18
