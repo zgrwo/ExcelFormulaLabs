@@ -6,6 +6,38 @@
 
 > 版本一致性：每个 `v*` git tag 必须在本文档有对应条目（`verify-docs.ps1` 强制检查，见规则 [documentation.md](docs/governance/documentation.md)）。
 
+## [2.3.1] - 2026-09-16
+
+### Fixed（2026-09-14/15 两轮深度审计 + 发行前全量审查处置：R0/R1/R2/R3 + P3；报告归档 logs/reports/ 不入库）
+
+**数值正确性 / 静默错值**
+
+- **QR/SVD/LU 族极端量纲尺度守卫**：`LINALG.QR/SVD/PINV/COND/RANK/SOLVE/EIGEN`、`Cholesky`、`LU` 统一 maxAbs 预缩放 + 输出非有限 NaN 化（1e155/1e308 输入不再静默错值）；`TTestOneSample`、`SKEW`/`KURT` 非有限触发按 maxAbs 归一化重算；WLS 权重归一化（1e-300/1e308 与单位权重结果一致）
+- **回归共线判据改逐列相对容差（`StableColumnNorm`）**：近共线（amp=1e13/1e16）不再误拒、精确共线仍拒绝；`FitExpanded` 常量列改位级判定（0.1 常量列不再整表 `#VALUE!`）、小量纲下溢丢列与 poly 最小样本差一修复（SOL-02/03）；合并池化 CV（`CrossValidateShared`）补非有限守卫；`FactorImportance` 首分支改 `ss>0`，退化输入走归一化回退
+- **RANGE 端点吸附容差与 start 解耦**（1.7e9 大 start 不再误吸附、计数容差并入 start 的 ulp 粒度）；`Sum` 溢出回退；ANOVA 表头识别（首行文本列名按表头跳过）
+
+**安全 / 资源预算**
+
+- **SQL 墙钟执行预算**：首行返回前完成计算的失控查询（500³ 交叉连接 / 递归 CTE）按调用级预算中止——net8 `SQLitePCL.raw.sqlite3_progress_handler`（查询线程内每 1000 条 VM 指令检查、返回非 0 中止）、net48 `Progress` 事件 + `ReturnCode=Interrupt`；SQL 注释拆分绕过与文本巨值预算修复（SEC-01/02）
+- **`Foundation.RegexBudget` 调用级 deadline**：RegexUdf 9 个入口与 `ARR.FILTER` 病态模式总耗时受控（旧 25s → <8s）；Regex 无名组反向引用恢复（SEC-03）
+- **XML/JSON**：深度预扫防栈溢出、DTD 禁止；重复键统一「后者覆盖」（SEC-04/06）；NativeDllStore 内容寻址 + 逐次哈希 + 同目标并发串行化（SEC-05/07/08）；FS EndSession 守卫 / Append 累计上限（SEC-07/08/09）
+
+**契约与错误传播**
+
+- 可选参数 `ExcelEmpty` 统一回退文档默认值（UDF-01）；异步转换入 `WrapError`（UDF-03）；`MapOverMulti` 空输入返回 `ExcelEmpty`（R2-6）；`ToDateTime(char)` 哨兵化、`ToInt32` 超 int 范围显式抛错（R2-7/R2-8）；`ToLong`/int 域与 `Invariant` 文化修复；DICT.VALUES 形状校验（R3-10）
+
+**构建 / 门禁 / 工程**
+
+- **`.dna` 按 TFM 隔离**消除并发内建跨 TFM 污染（Release 构建竞态）；CI 提交信息失败原因进日志 + force-push 基线不可达守卫；dependabot numpy/scipy minor+major ignore（Python 3.12 双重阻断实证：pyDOE2 `imp` 移除 / numpy 2.5 `eigvals` 返回 complex128）
+- **SQL 预算追加修复**：net8 看门狗 Timer 回调走线程池，CI 并行测试下调度延迟致 500³ 查询照常返回、门禁空转 → 改查询线程内进度回调（`c3e458f`）
+- verify-docs 检查 16 词表与 `.cs` 扫描域扩展、tolerance 放宽白名单与上限（R2-9/R2-11/R2-15）；按审计剥离 review/审查 过程元数据 613 条；测试弱断言收紧与 CrossVal 对照补齐
+
+### 验证
+
+- verify-all 6/6 ALL PASS；双 TFM 2,866 用例 ×2 全绿（Foundation 393 / Analytics 947 / DataToolkit 1,526）；Release 构建 0 警告 0 错误
+- CrossVal 432/432（manual 235 / cross 197，真 C# 对照 124/240 = 51.7%）；verify-docs 25 PASS / 0 FAIL / 1 SKIP；pre-commit 6/6
+- 8 个 Release `.xll` FileVersion/ProductVersion 实测 = 2.3.1
+
 ## [2.3.0] - 2026-09-13
 
 ### Added（2026-09-12/13 SOLVE.* 模块 + rate 演进）
@@ -376,6 +408,7 @@
 [2.2.4]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.3...v2.2.4
 [2.2.3]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.2...v2.2.3
 [2.2.5]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.4...v2.2.5
+[2.3.1]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.6...v2.3.0
 [2.2.6]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.5...v2.2.6
 [Unreleased]: https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.2.6...HEAD
