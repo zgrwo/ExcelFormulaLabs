@@ -1,8 +1,10 @@
 <Project>
   <PropertyGroup>
     <Version>2.3.1</Version>
-    <AssemblyVersion>2.3.1.0</AssemblyVersion>
-    <FileVersion>2.3.1.0</FileVersion>
+    <!-- 2026-09-23：AV/FV 从 <Version> 派生（release-please 只 bump Version，
+         消除三值手工同步漂移；verify-docs G1 校验派生形式）。 -->
+    <AssemblyVersion>$(Version).0</AssemblyVersion>
+    <FileVersion>$(Version).0</FileVersion>
     <Authors>ExcelFormulaLabs Contributors</Authors>
     <Product>ExcelFormulaLabs</Product>
     <RepositoryUrl>https://github.com/zgrwo/ExcelFormulaLabs</RepositoryUrl>
@@ -12,5 +14,9 @@
     <!-- review 2026-09-05（R10）：警告不进红线 → 静默回潮（实测 23 警告曾在门禁全绿下合入）。
          src/ 全部警告清零后启用；tests 侧警告已同步清零但暂不强制（CrossValRunner 等工具工程独立演进）。 -->
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- 依赖可复现（2026-09-23）：提交 packages.lock.json；CI（CI=true）强制锁定模式，
+         依赖漂移在 restore 阶段即失败。本地开发不加锁，便于显式更新 lock 后提交。 -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RestoreLockedMode Condition="'$(CI)' == 'true'">true</RestoreLockedMode>
   </PropertyGroup>
 </Project>

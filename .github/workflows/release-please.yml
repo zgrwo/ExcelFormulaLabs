@@ -1,0 +1,58 @@
+name: Release Please
+
+# 发版自动化（2026-09-23）：
+#   1. push main → release-please 依据 Conventional Commits 维护 Release PR
+#      （bump version.txt + src/Directory.Build.props <Version> + CHANGELOG.md）；
+#   2. Release PR 合并后 → 本 workflow 打 tag + 建 GitHub Release；
+#   3. GITHUB_TOKEN 创建的 tag 不会触发 release.yml 的 push 事件（反递归规则），
+#      因此同 token 显式 dispatch release.yml（workflow_dispatch 是反递归豁免事件）。
+# 依赖仓库设置：Settings → Actions → General → "Allow GitHub Actions to create and approve pull requests"
+# 必须启用，否则 GITHUB_TOKEN 无法创建 Release PR（README/CONTRIBUTING 已记录）。
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # 发版不可中途取消（与 release.yml 同策略）：排队串行。
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  # gh workflow run 需要 actions: write（dispatch 是反递归豁免事件，不构成递归触发）。
+  actions: write
+
+jobs:
+  release-please:
+    name: Release PR & Tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Release Please
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      # 新 tag 已由 release-please 创建；显式触发打包发布（含重试：tag 刚创建时
+      # API 短暂不可见可能让 dispatch 报 404）。
+      - name: Dispatch tag-triggered release build
+        if: steps.release.outputs.release_created == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.release.outputs.tag_name }}
+        run: |
+          for attempt in 1 2 3 4 5; do
+            if gh workflow run release.yml --ref "$TAG"; then
+              echo "Dispatched release.yml for $TAG"
+              exit 0
+            fi
+            echo "dispatch attempt $attempt failed; retrying in 5s..."
+            sleep 5
+          done
+          echo "::error::Failed to dispatch release.yml for $TAG"
+          exit 1

@@ -126,13 +126,19 @@ git config core.hooksPath scripts/git-hooks
 
 ## 版本发布
 
-1. 版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)
-2. bump 版本：`src/Directory.Build.props` 的 `<Version>`（最新 tag 必须等于此值，verify-docs 检查 10 强制）
-3. 更新 [CHANGELOG.md](CHANGELOG.md)：新增 `## [x.y.z] - 日期` 条目 + 底部 compare 链接（每个 v* tag 必须有条目，同门禁强制）
-4. 提交并推送（提交信息建议 `release: vX.Y.Z`）
-5. 打 tag 并推送：`git tag vX.Y.Z && git push origin vX.Y.Z` → release.yml 自动构建、打包 xll、推送 NuGet、创建 GitHub Release
+发版由 [release-please](https://github.com/googleapis/release-please) 自动化（2026-09-23 起）：
 
+1. 版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)
+2. 日常只需合并符合 Conventional Commits 的 PR；push main 后 release-please 自动维护 Release PR
+   （bump `version.txt` + `src/Directory.Build.props` 的 `<Version>` + `CHANGELOG.md`）
+3. 合并 Release PR → 自动打 `vX.Y.Z` tag、创建 GitHub Release，并触发 release.yml 构建/测试/打包/推送 NuGet
+4. 版本一致性由 `verify-docs.ps1` 强制：最新 tag == `<Version>` == `version.txt`，CHANGELOG 必有对应条目
+
+> **紧急手工发版**：bump `version.txt` 与 `src/Directory.Build.props` 的 `<Version>` + 更新 CHANGELOG → 提交 →
+> `git tag vX.Y.Z && git push origin vX.Y.Z`（tag 触发 release.yml 同流程）。
 > 发布前本地运行 `scripts/verify-all.ps1`（6 步门）+ `scripts/verify-docs.ps1` 确认全绿。
+> **前置设置**：仓库 Settings → Actions → General → "Allow GitHub Actions to create and approve pull requests" 必须启用
+> （GITHUB_TOKEN 创建 Release PR 所需，2026-09-23 已启用）。
 
 ## 许可证
 

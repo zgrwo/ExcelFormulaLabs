@@ -1,5 +1,5 @@
 ﻿# ============================================================================
-# test_verify_docs.ps1 — verify-docs.ps1 回归守卫（15 场景 A–L；G 含 3 个中文变体子用例，K 含 3 个，L 含 2 个子用例）
+# test_verify_docs.ps1 — verify-docs.ps1 回归守卫（16 场景 A–M；G 含 3 个中文变体子用例，K 含 3 个，L 含 2 个子用例）
 # 场景 A：真实仓库副本 → 全部检查通过（基线，防门禁自身回归）
 # 场景 B：README 硬编码徽章 → 检查 9 FAIL
 # 场景 C：README 断链 → 检查 12 FAIL
@@ -157,7 +157,9 @@ Write-Host "[G7] CrossVal 计数算术失配（N+M != K）应 FAIL（检查 16 �
 $fixtureG7 = Copy-RepoFixture
 $readmeG7 = Join-Path $fixtureG7 "README.md"
 $g7 = [System.IO.File]::ReadAllText($readmeG7)
-$g7 = [regex]::Replace($g7, '合计\s*432', '合计 999')
+# 通配注入：旧实现硬编码 '合计 432'，README 计数更新（432→461）后注入静默失效、
+# 负向场景假通过——改为匹配任意合计数，测试不再随计数漂移而腐化。
+$g7 = [regex]::Replace($g7, '合计\s*\d+', '合计 999')
 [System.IO.File]::WriteAllText($readmeG7, $g7, (New-Object System.Text.UTF8Encoding($false)))
 Run-VerifyDocs $fixtureG7 "CrossVal" $true
 
@@ -244,6 +246,12 @@ Write-Host "[L2] [Theory] 计数声明漂移应 FAIL（检查 20 分型统计）
 $fixtureL2 = Copy-RepoFixture
 [System.IO.File]::AppendAllText((Join-Path $fixtureL2 "AGENTS.md"), "`n- 999 个 [Theory]（注入）`n", (New-Object System.Text.UTF8Encoding($false)))
 Run-VerifyDocs $fixtureL2 "Fact count claims" $true
+
+# --- 场景 M：version.txt 与 props <Version> 漂移（检查 10b，release-please 版本锚点）---
+Write-Host "[M] version.txt 漂移应 FAIL（检查 10b）"
+$fixtureM = Copy-RepoFixture
+[System.IO.File]::WriteAllText((Join-Path $fixtureM "version.txt"), "9.9.9`n", (New-Object System.Text.UTF8Encoding($false)))
+Run-VerifyDocs $fixtureM "version.txt" $true
 
 # --- 汇总 ---
 Remove-Item -Recurse -Force $tmpRoot

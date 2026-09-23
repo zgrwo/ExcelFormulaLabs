@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <!-- 测试/工具工程同样锁定依赖（与 src/Directory.Build.props 同一策略）：
+         提交 packages.lock.json；CI（CI=true）强制锁定模式，依赖漂移在 restore 阶段失败。 -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RestoreLockedMode Condition="'$(CI)' == 'true'">true</RestoreLockedMode>
+  </PropertyGroup>
+</Project>

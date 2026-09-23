@@ -90,8 +90,10 @@ Step "5/6 Pre-commit Checks" {
 }
 
 # Step 6: Release build (dual TFM packaging verification)
+# -m:1：Release 打包在默认并行下同项目跨 TFM 并发内建会争抢 ExcelDnaPack 资源更新
+# （2026-09-23 实测连续 3 次 Win32Exception 5，-m:1 通过）——串行构建消除竞态。
 Step "6/6 Release Build" -Retries 2 -Block {
-    dotnet build "$root\ExcelFormulaLabs.sln" -c Release --nologo -v q
+    dotnet build "$root\ExcelFormulaLabs.sln" -c Release -m:1 --nologo -v q
 }
 
 # Summary

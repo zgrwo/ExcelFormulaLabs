@@ -1,0 +1,31 @@
+{
+  "release-type": "simple",
+  "include-component-in-tag": false,
+  "bump-patch-for-minor-pre-major": true,
+  "packages": {
+    ".": {
+      "package-name": "ExcelFormulaLabs",
+      "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        {
+          "type": "xml",
+          "path": "src/Directory.Build.props",
+          "xpath": "//Project/PropertyGroup/Version"
+        }
+      ]
+    }
+  },
+  "changelog-sections": [
+    { "type": "feat", "section": "新功能" },
+    { "type": "fix", "section": "修复" },
+    { "type": "perf", "section": "性能" },
+    { "type": "refactor", "section": "重构" },
+    { "type": "revert", "section": "回滚" },
+    { "type": "docs", "section": "文档", "hidden": true },
+    { "type": "test", "section": "测试", "hidden": true },
+    { "type": "chore", "section": "杂项", "hidden": true },
+    { "type": "ci", "section": "CI", "hidden": true },
+    { "type": "build", "section": "构建", "hidden": true },
+    { "type": "style", "section": "风格", "hidden": true }
+  ]
+}

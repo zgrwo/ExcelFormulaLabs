@@ -6,6 +6,10 @@ on:
       # review-2026-08-30：收紧为 semver 三段（GitHub Actions 过滤为 glob 语义，非正则；
       # `+` 不可作量词，用 `[0-9]*` 等价表达）。阻断 vfoo / v2.2 等非标准 tag 触发发布。
       - 'v[0-9]*.[0-9]*.[0-9]*'
+  # 2026-09-23：release-please 打 tag 用的 GITHUB_TOKEN 不触发 push 事件（反递归规则），
+  # 由 release-please.yml 显式 dispatch 本工作流。dispatch 时必须 --ref <tag>：
+  # 版本一致性校验读取 github.ref_name（tag 名）。
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -33,7 +37,10 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           cache: true
-          cache-dependency-path: '**/*.csproj'  # P2-31 修正：无 lock 文件时必须用 csproj 哈希作缓存键
+          # P2-31：csproj 哈希；2026-09-23 起追加 packages.lock.json（依赖锁定后缓存键须含 lock）
+          cache-dependency-path: |
+            **/*.csproj
+            **/packages.lock.json
           dotnet-version: |
             8.0.x
 
@@ -47,7 +54,9 @@ jobs:
           # Defender 扫描刚写出的 .xll）→ 重试 1 次；真实构建错误重试后仍失败。
           # R2-10：外部 HIPS 锁窗口实测 ~4.8s → 3 次尝试 + 10/20s 退避。
           for ($attempt = 1; $attempt -le 3; $attempt++) {
-            dotnet build -c Release --no-restore
+            # 2026-09-23：Release 打包默认并行（-m）下同项目跨 TFM 并发内建争抢资源更新
+            # （实测连续 3 次 Win32Exception 5，-m:1 通过）→ 串行构建消除竞态。
+            dotnet build -c Release --no-restore -m:1
             if ($LASTEXITCODE -eq 0) { break }
             if ($attempt -eq 3) { exit $LASTEXITCODE }
             Write-Host "Build failed (attempt $attempt) - retrying after transient ExcelDnaPack lock..."
@@ -84,7 +93,10 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           cache: true
-          cache-dependency-path: '**/*.csproj'  # P2-31 修正：无 lock 文件时必须用 csproj 哈希作缓存键
+          # P2-31：csproj 哈希；2026-09-23 起追加 packages.lock.json（依赖锁定后缓存键须含 lock）
+          cache-dependency-path: |
+            **/*.csproj
+            **/packages.lock.json
           dotnet-version: 8.0.x
 
       - name: Setup Python
@@ -118,7 +130,10 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           cache: true
-          cache-dependency-path: '**/*.csproj'  # P2-31 修正：无 lock 文件时必须用 csproj 哈希作缓存键
+          # P2-31：csproj 哈希；2026-09-23 起追加 packages.lock.json（依赖锁定后缓存键须含 lock）
+          cache-dependency-path: |
+            **/*.csproj
+            **/packages.lock.json
           dotnet-version: |
             8.0.x
 
@@ -146,7 +161,7 @@ jobs:
         run: |
           # R7-3 (review-2026-09-13)：同 build-test job；R2-10 起 3 次尝试 + 10/20s 退避。
           for ($attempt = 1; $attempt -le 3; $attempt++) {
-            dotnet build -c Release
+            dotnet build -c Release -m:1
             if ($LASTEXITCODE -eq 0) { break }
             if ($attempt -eq 3) { exit $LASTEXITCODE }
             Write-Host "Build failed (attempt $attempt) - retrying after transient ExcelDnaPack lock..."
@@ -199,6 +214,23 @@ jobs:
           }
           Get-ChildItem artifacts/
 
+      - name: Generate SHA256SUMS
+        shell: pwsh
+        run: |
+          # 校验清单随 Release 分发（install.ps1 -ExpectedSha256 可直接对账）。
+          $ErrorActionPreference = 'Stop'
+          $lines = @()
+          foreach ($f in Get-ChildItem artifacts/*.xll | Sort-Object Name) {
+            $h = (Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            $lines += "$h  $($f.Name)"
+          }
+          if ($lines.Count -ne 8) {
+            Write-Error "[SHA256] expected 8 xll entries, got $($lines.Count)"
+            exit 1
+          }
+          $lines | Set-Content -Path artifacts/SHA256SUMS.txt -Encoding ascii
+          Get-Content artifacts/SHA256SUMS.txt
+
       - name: Pack NuGet (Foundation)
         run: dotnet pack src/Foundation/Foundation.csproj -c Release --no-build -o artifacts/nupkg
 
@@ -247,8 +279,21 @@ jobs:
             | DataToolkit-AddIn-net48-packed.xll / DataToolkit-AddIn-net48-64-packed.xll | .NET Framework 4.8 | 免安装运行时（×32/64 位，共 2 个） |
             | DataToolkit-AddIn-net8.0-packed.xll / DataToolkit-AddIn-net8.0-64-packed.xll | .NET 8 | 性能更优（×32/64 位，共 2 个） |
 
+            ### 一键安装
+
+            下载 `.xll` 后运行仓库内脚本（自动解除锁定 + 注册到 Excel）：
+
+            ```powershell
+            powershell -ExecutionPolicy Bypass -File scripts/install.ps1 .\Analytics-AddIn-net48-64-packed.xll
+            ```
+
+            校验下载：`SHA256SUMS.txt`（`install.ps1 -ExpectedSha256 <hash>` 可直接对账）。
+            示例工作簿：仓库 `samples/ExcelFormulaLabs-Samples.xlsx`（各模块公式示例）。
+
             详见 [CHANGELOG](CHANGELOG.md)。
-          files: artifacts/*.xll
+          files: |
+            artifacts/*.xll
+            artifacts/SHA256SUMS.txt
           # H1 (release-audit-2026-08-29)：glob 无匹配即失败，防「Release 无任何 .xll」假成功。
           fail_on_unmatched_files: true
           draft: false

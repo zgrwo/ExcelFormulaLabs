@@ -214,9 +214,13 @@ if ($LASTEXITCODE -ne 0) {
     #（X.Y.Z → X.Y.Z.0）。v2.2.1 曾漏改 AV/FV 漂移到 2.2.0.0。
     # R5-P3-22 (review 2026-09-06)：支持 4 段 Version（AV/FV 须与之一致）；其余形态
     # （prerelease 等）显式 SKIP 计数——原实现 4 段/非 3 段静默跳过且无 SKIP，检查可能空转。
-    $propsAv = if ($props -match '<AssemblyVersion>([0-9.]+)</AssemblyVersion>') { $Matches[1] } else { "?" }
-    $propsFv = if ($props -match '<FileVersion>([0-9.]+)</FileVersion>') { $Matches[1] } else { "?" }
-    if ($propsVer -match '^\d+\.\d+\.\d+$') {
+    # 2026-09-23：AV/FV 改为 $(Version).0 派生形式（release-please 只 bump <Version>）——
+    # 正则放宽为 [^<]+ 以捕获派生表达式，并优先判定派生形式。
+    $propsAv = if ($props -match '<AssemblyVersion>([^<]+)</AssemblyVersion>') { $Matches[1] } else { "?" }
+    $propsFv = if ($props -match '<FileVersion>([^<]+)</FileVersion>') { $Matches[1] } else { "?" }
+    if ($propsAv -eq '$(Version).0' -and $propsFv -eq '$(Version).0') {
+        Check "AssemblyVersion/FileVersion == Version (derived)" "OK"
+    } elseif ($propsVer -match '^\d+\.\d+\.\d+$') {
         $expect = "$propsVer.0"
         if ($propsAv -eq $expect -and $propsFv -eq $expect) {
             Check "AssemblyVersion/FileVersion == Version" "OK"
@@ -232,6 +236,20 @@ if ($LASTEXITCODE -ne 0) {
     } else {
         Check-Skip "AssemblyVersion/FileVersion == Version" "Version '$propsVer' not in comparable X.Y.Z[.W] form"
     }
+}
+
+# ---------- 10b. version.txt == Directory.Build.props <Version>（release-please 版本锚点）----------
+# release-please simple 策略以 version.txt 为版本文件；漂移会让下一个版本从错误基线递增。
+# 与 git tag 无关，无条件执行（fixture 无 git 也可负向验证）。
+$propsForVt = Read-Utf8 (Join-Path $RepoRoot "src/Directory.Build.props")
+$propsVerVt = if ($propsForVt -match '<Version>([0-9.]+)</Version>') { $Matches[1] } else { "?" }
+$versionTxtRaw = Read-Utf8 (Join-Path $RepoRoot "version.txt")
+if (-not $versionTxtRaw) {
+    Check "version.txt == Version" "version.txt missing/unreadable"
+} else {
+    $versionTxt = $versionTxtRaw.Trim()
+    if ($versionTxt -eq $propsVerVt) { Check "version.txt == Version ($propsVerVt)" "OK" }
+    else { Check "version.txt == Version" "version.txt=$versionTxt props=$propsVerVt" }
 }
 
 # ---------- 11. 模块 csproj 描述数量 == [ExcelFunction] 计数 ----------

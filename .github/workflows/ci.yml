@@ -15,6 +15,40 @@ permissions:
   contents: read
 
 jobs:
+  # 变更分类（2026-09-23）：docs-only 变更跳过重 job（构建/测试/覆盖率），
+  # 但 redline / verify-docs / classify 始终运行——文档变更恰是文档门禁最需要的场景。
+  # 分支未设保护规则（skipped job 不阻塞合并）；若未来启用 required checks，
+  # 需把跳过语义改为 job 内早退（否则 required check 显示 skipped）。
+  classify:
+    name: Classify Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      # workflow_dispatch（无 before 基线）视为全量：手动触发必须跑全部重 job。
+      code: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.code }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Detect code changes
+        if: github.event_name != 'workflow_dispatch'
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - 'src/**'
+              - 'tests/**'
+              - 'benchmarks/**'
+              - 'scripts/**'
+              - 'templates/**'
+              - '*.sln'
+              - '*.props'
+              - '**/*.csproj'
+              - '**/packages.lock.json'
+              - 'nuget.config'
+              - 'requirements.txt'
+              - '.github/workflows/**'
+
   redline-check:
     name: Red-line & Governance Checks
     runs-on: windows-latest
@@ -28,6 +62,19 @@ jobs:
 
       - name: Run pre-commit checks
         run: ./scripts/pre-commit-check.ps1
+
+      - name: Run test quality checks
+        run: ./scripts/check-test-quality.ps1
+
+      # 受影响测试映射（信息性，不替代全量测试）：PR 内展示改动源文件 → 测试工程/类路由。
+      - name: Affected test mapping (informational)
+        if: github.event_name == 'pull_request'
+        shell: pwsh
+        run: |
+          $base = "${{ github.event.pull_request.base.sha }}"
+          $files = @(git diff --name-only "$base...HEAD")
+          if ($files.Count -eq 0) { Write-Host "No changed files."; exit 0 }
+          ./scripts/run-affected-tests.ps1 -ChangedFiles $files -DryRun
 
       - name: 提交规范检查（Conventional Commits）
         if: github.event_name == 'pull_request'
@@ -87,10 +134,62 @@ jobs:
       - name: 治理脚本自测（tests/scripts）
         run: powershell -NoProfile -ExecutionPolicy Bypass -File tests/scripts/run-tests.ps1
 
+  dependency-audit:
+    name: NuGet Lock & Vulnerability Audit
+    runs-on: windows-latest
+    needs: [classify, redline-check]
+    if: needs.classify.outputs.code == 'true'
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            **/packages.lock.json
+
+      # 锁定还原：packages.lock.json 与 csproj 不一致时在此失败（NU1004），
+      # 防止依赖在无人察觉下漂移。本地更新 lock 后必须提交。
+      - name: Restore (locked mode)
+        run: dotnet restore --locked-mode
+
+      # 漏洞审计：--format json 输出与语言环境无关，避免本地化文案导致漏判。
+      - name: NuGet vulnerability audit
+        shell: pwsh
+        run: |
+          $raw = dotnet list package --vulnerable --include-transitive --format json 2>&1 | Out-String
+          $data = $raw | ConvertFrom-Json
+          $hits = @()
+          foreach ($p in @($data.projects)) {
+            if (-not $p.frameworks) { continue }
+            foreach ($f in @($p.frameworks)) {
+              foreach ($pkg in @($f.topLevelPackages) + @($f.transitivePackages)) {
+                if ($null -eq $pkg) { continue }
+                if ($pkg.vulnerabilities -and @($pkg.vulnerabilities).Count -gt 0) {
+                  $sev = ($pkg.vulnerabilities | ForEach-Object { $_.severity }) -join ','
+                  $hits += "$($p.path) [$($f.framework)] $($pkg.id) $($pkg.resolvedVersion) ($sev)"
+                }
+              }
+            }
+          }
+          if ($hits.Count -gt 0) {
+            Write-Host "Vulnerable package(s) detected:" -ForegroundColor Red
+            foreach ($h in $hits) { Write-Host "  - $h" -ForegroundColor Red }
+            exit 1
+          }
+          Write-Host "No vulnerable packages found." -ForegroundColor Green
+
   test:
     name: Build & Test (Debug, all TFMs)
     runs-on: windows-latest
-    needs: redline-check
+    needs: [classify, redline-check]
+    if: needs.classify.outputs.code == 'true'
     timeout-minutes: 30
 
     steps:
@@ -103,7 +202,9 @@ jobs:
           dotnet-version: |
             8.0.x
           cache: true
-          cache-dependency-path: '**/*.csproj'
+          cache-dependency-path: |
+            **/*.csproj
+            **/packages.lock.json
 
       - name: Restore
         run: dotnet restore
@@ -114,10 +215,16 @@ jobs:
       - name: Test
         run: dotnet test --no-build --verbosity normal
 
+      # 安全回归子集显式门禁（沙箱越界 / ReDoS / SQL 注入 / XXE / 公式注入 / 原生 DLL 完整性）。
+      # 全量测试已包含这些用例，此步骤提供独立可见的通过/失败信号（--filter Category=Security）。
+      - name: Security regression subset
+        run: dotnet test --no-build --filter "Category=Security" --verbosity normal
+
   test-net48:
     name: Build & Test (Debug, net48)
     runs-on: windows-latest
-    needs: redline-check
+    needs: [classify, redline-check]
+    if: needs.classify.outputs.code == 'true'
     timeout-minutes: 30
 
     steps:
@@ -130,7 +237,9 @@ jobs:
           dotnet-version: |
             8.0.x
           cache: true
-          cache-dependency-path: '**/*.csproj'
+          cache-dependency-path: |
+            **/*.csproj
+            **/packages.lock.json
 
       - name: Restore
         run: dotnet restore
@@ -153,7 +262,8 @@ jobs:
   cross-val:
     name: Cross-Validation (Python ↔ C#)
     runs-on: windows-latest
-    needs: test
+    needs: [classify, test]
+    if: needs.classify.outputs.code == 'true'
     timeout-minutes: 30
 
     steps:
@@ -168,7 +278,9 @@ jobs:
         with:
           dotnet-version: 8.0.x
           cache: true
-          cache-dependency-path: '**/*.csproj'
+          cache-dependency-path: |
+            **/*.csproj
+            **/packages.lock.json
 
       - name: Setup Python
         uses: actions/setup-python@v7
@@ -190,7 +302,8 @@ jobs:
   release-build:
     name: Release Build (packaging)
     runs-on: windows-latest
-    needs: test
+    needs: [classify, test]
+    if: needs.classify.outputs.code == 'true'
     timeout-minutes: 30
 
     steps:
@@ -203,7 +316,9 @@ jobs:
           dotnet-version: |
             8.0.x
           cache: true
-          cache-dependency-path: '**/*.csproj'
+          cache-dependency-path: |
+            **/*.csproj
+            **/packages.lock.json
 
       - name: Restore
         run: dotnet restore
@@ -214,7 +329,10 @@ jobs:
           # R7-3 (review-2026-09-13)：ExcelDnaPack 偶发瞬时文件锁（Win32Exception 110，
           # Defender 扫描刚写出的 .xll）→ 重试 1 次；真实构建错误重试后仍失败。
           for ($attempt = 1; $attempt -le 2; $attempt++) {
-            dotnet build -c Release --no-restore
+            # 2026-09-23：Release 打包在默认并行（-m）下同项目跨 TFM 并发内建会争抢
+            # ExcelDnaPack 资源更新（实测连续 3 次 Win32Exception 5 拒绝访问，-m:1 通过）——
+            # 串行构建消除竞态；重试仅兜底瞬时文件锁。
+            dotnet build -c Release --no-restore -m:1
             if ($LASTEXITCODE -eq 0) { break }
             if ($attempt -eq 2) { exit $LASTEXITCODE }
             Write-Host "Build failed (attempt $attempt) - retrying after transient ExcelDnaPack lock..."
@@ -245,7 +363,9 @@ jobs:
   verify-docs:
     name: Verify Docs
     runs-on: ubuntu-latest
-    needs: test
+    # 文档门禁独立于代码构建（needs redline-check）：docs-only 变更跳过重 job 时
+    # verify-docs 仍必须运行——它正是文档变更的验收门禁。
+    needs: redline-check
     timeout-minutes: 15
 
     steps:
@@ -263,7 +383,8 @@ jobs:
   coverage:
     name: Coverage Gate (net8.0)
     runs-on: windows-latest
-    needs: test
+    needs: [classify, test]
+    if: needs.classify.outputs.code == 'true'
     timeout-minutes: 30
 
     steps:
@@ -275,16 +396,30 @@ jobs:
         with:
           dotnet-version: 8.0.x
           cache: true
-          cache-dependency-path: '**/*.csproj'
+          cache-dependency-path: |
+            **/*.csproj
+            **/packages.lock.json
 
       - name: Restore
         run: dotnet restore
 
+      # 阈值爬坡（2026-09-23 实测 net8.0 CI 口径：Foundation 84.25% / Analytics 89.05% /
+      # DataToolkit 89.22%）。旧阈值 75/50/42 与实际脱节 9~47 个点，长期形同虚设；
+      # 新阈值保留 ≥4 个点余量，防抖动误伤。本地复现用 scripts/coverage.ps1。
       - name: Coverage (Foundation)
-        run: dotnet test tests/Foundation.Tests -f net8.0 --no-restore -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:CoverletOutput=coverage/foundation -p:Threshold=75 -p:ThresholdType=line -p:ThresholdStat=total -p:Include="[Foundation]*"  # P2: gate measures only Foundation
+        run: dotnet test tests/Foundation.Tests -f net8.0 --no-restore -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:CoverletOutput=coverage/foundation -p:Threshold=80 -p:ThresholdType=line -p:ThresholdStat=total -p:Include="[Foundation]*"
 
       - name: Coverage (Analytics)
-        run: dotnet test tests/Analytics.Tests -f net8.0-windows --no-restore -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:CoverletOutput=coverage/analytics -p:Threshold=50 -p:ThresholdType=line -p:ThresholdStat=total -p:Include="[Analytics]*"
+        run: dotnet test tests/Analytics.Tests -f net8.0-windows --no-restore -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:CoverletOutput=coverage/analytics -p:Threshold=85 -p:ThresholdType=line -p:ThresholdStat=total -p:Include="[Analytics]*"
 
       - name: Coverage (DataToolkit)
-        run: dotnet test tests/DataToolkit.Tests -f net8.0-windows --no-restore -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:CoverletOutput=coverage/datatoolkit -p:Threshold=42 -p:ThresholdType=line -p:ThresholdStat=total -p:Include="[DataToolkit]*"
+        run: dotnet test tests/DataToolkit.Tests -f net8.0-windows --no-restore -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:CoverletOutput=coverage/datatoolkit -p:Threshold=85 -p:ThresholdType=line -p:ThresholdStat=total -p:Include="[DataToolkit]*"
+
+      - name: Upload coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-net8.0
+          path: tests/*/coverage/*.cobertura.xml
+          if-no-files-found: warn
+          retention-days: 14
