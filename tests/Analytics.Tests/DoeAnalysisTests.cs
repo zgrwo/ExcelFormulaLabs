@@ -205,4 +205,52 @@ namespace ExcelFormulaLabs.Analytics.Tests
             => new Action(() => DoeAnalysisCore.Analyze(new double[8, 0], y, 1, false))
                 .Should().Throw<ArgumentException>();
     }
+
+    public class DoeAnalysisCoverageGapTests
+    {
+        [Fact] public void Pareto_udf_returns_report()
+        {
+            var design = new object[,] { { -1.0, -1.0 }, { -1.0, 1.0 }, { 1.0, -1.0 }, { 1.0, 1.0 } };
+            var response = new object[] { 1.0, 2.0, 3.0, 4.0 };
+            var r = (object[,])DoeAnalysisUdf.UDF_DOE_PARETO(design, response);
+            r.GetLength(0).Should().BeGreaterThan(1);
+        }
+
+        [Fact] public void Anova_udf_accepts_quadratic_keyword()
+        {
+            var design = new object[,]
+            {
+                { -1.0, -1.0 }, { -1.0, 1.0 }, { 1.0, -1.0 },
+                { 1.0, 1.0 }, { 0.0, 0.0 }, { 0.0, 0.0 },
+            };
+            var response = new object[] { 1.0, 2.0, 3.0, 4.0, 2.5, 2.6 };
+            DoeAnalysisUdf.UDF_DOE_ANOVA(design, response, "quadratic").Should().BeOfType<object[,]>();
+        }
+
+        [Fact] public void Anova_rejects_too_many_expanded_terms()
+        {
+            var X = new double[2, 101];
+            var y = new[] { 1.0, 2.0 };
+            new Action(() => DoeAnalysisCore.Anova(X, y, 2, false)).Should().Throw<ArgumentException>();
+        }
+
+        [Fact] public void Anova_rejects_cells_over_budget()
+        {
+            var X = new double[2000, 45];
+            var y = new double[2000];
+            new Action(() => DoeAnalysisCore.Anova(X, y, 2, false)).Should().Throw<ArgumentException>();
+        }
+
+        [Fact] public void Anova_supports_three_way_interactions()
+        {
+            var rnd = new Random(7);
+            var X = new double[20, 4];
+            for (int i = 0; i < 20; i++)
+                for (int j = 0; j < 4; j++) X[i, j] = (i >> j & 1) == 1 ? 1.0 : -1.0;
+            var y = new double[20];
+            for (int i = 0; i < 20; i++) y[i] = 1.0 + i * 0.1 + rnd.NextDouble() * 0.01;
+            var r = DoeAnalysisCore.Anova(X, y, 3, false);
+            r.GetLength(0).Should().BeGreaterThan(1);
+        }
+    }
 }

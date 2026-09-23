@@ -30,4 +30,40 @@ namespace ExcelFormulaLabs.Analytics.Tests
         [Fact] public void PrepV_null_returns_empty() { var result = AnalyticsHelpers.PrepV(null!); result.Should().BeEmpty(); }
         [Fact] public void PrepM_single_element() { var r = AnalyticsHelpers.PrepM(new object[,] { { 42.0 } }); r[0, 0].Should().Be(42.0); r.GetLength(0).Should().Be(1); }
     }
+
+    public class AnalyticsHelpersCoverageGapTests
+    {
+        [Fact] public void DictToReport_unpacks_object_and_typed_arrays()
+        {
+            var d = new System.Collections.Generic.Dictionary<string, object>
+            {
+                ["obj"] = new object[] { 1, "x", null! },
+                ["ints"] = new[] { 7, 8 },
+                ["scalar"] = 42,
+            };
+            var r = AnalyticsHelpers.DictToReport(d);
+            int RowOf(string key)
+            {
+                for (int i = 0; i < r.GetLength(0); i++)
+                    if ((string)r[i, 0] == key) return i;
+                return -1;
+            }
+            r.GetLength(1).Should().Be(4);
+            var objRow = RowOf("obj");
+            r[objRow, 1].Should().Be(1);
+            r[objRow, 2].Should().Be("x");
+            r[objRow, 3].Should().BeNull();
+            r[RowOf("ints"), 1].Should().Be(7);
+            r[RowOf("ints"), 2].Should().Be(8);
+            r[RowOf("scalar"), 1].Should().Be(42);
+        }
+
+        [Fact] public void ToJaggedColumns_skips_blank_header_cells()
+        {
+            var data = new object[2, 2] { { null!, "h" }, { 1.0, 2.0 } };
+            var g = AnalyticsHelpers.ToJaggedColumns(data);
+            g[0].Should().Equal(1.0);
+            g[1].Should().Equal(2.0);
+        }
+    }
 }

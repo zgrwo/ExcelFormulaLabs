@@ -536,5 +536,11 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             new Action(() => PivotCore.Unpivot(data, new[] { 0 }, System.Array.Empty<int>(), true))
                 .Should().Throw<ArgumentException>();
         }
-}
+    }
+
+    public class JsonCoverageGapTests
+    {
+        [Fact] public void JsonParse_fractional_number_returns_double()
+            => JsonXmlCore.JsonParse("1.5").Should().Be(1.5);
+    }
 }

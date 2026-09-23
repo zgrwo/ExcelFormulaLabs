@@ -412,4 +412,11 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
                 .Should().Throw<ArgumentException>().WithMessage("*width*");
         }
     }
+
+    public class StringCoreCoverageGapTests
+    {
+        [Fact] public void Levenshtein_rejects_oversized_inputs()
+            => new Action(() => StringCore.LevenshteinDistance(new string('a', 5001), new string('b', 5001)))
+                .Should().Throw<ArgumentException>();
+    }
 }

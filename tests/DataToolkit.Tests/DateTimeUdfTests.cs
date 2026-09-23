@@ -320,4 +320,10 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             ((double)DateTimeUdf.UDF_DT_SOW(45000.0, sentinel!)).Should().Be(44998.0);
         }
     }
+
+    public class DateTimeCoverageGapTests
+    {
+        [Fact] public void Easter_year_out_of_range_returns_Value()
+            => DateTimeUdf.UDF_DT_EASTER(50).Should().Be(ExcelError.Value);
+    }
 }

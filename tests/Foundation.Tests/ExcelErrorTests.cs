@@ -40,4 +40,17 @@ namespace ExcelFormulaLabs.Foundation.Tests
             b.ErrorName.Should().Be("#VALUE!");
         }
     }
+
+    public class ExcelErrorOperatorTests
+    {
+        [Fact] public void Equality_operators_compare_codes()
+        {
+            (ExcelError.Value == ExcelError.Value).Should().BeTrue();
+            (ExcelError.Value != ExcelError.NA).Should().BeTrue();
+            (ExcelError.Value != ExcelError.Value).Should().BeFalse();
+        }
+
+        [Fact] public void GetHashCode_is_code_based()
+            => ExcelError.NA.GetHashCode().Should().Be(ExcelError.NA.Code);
+    }
 }

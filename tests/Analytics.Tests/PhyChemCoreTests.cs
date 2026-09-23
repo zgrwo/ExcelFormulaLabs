@@ -228,4 +228,17 @@ namespace ExcelFormulaLabs.Analytics.Tests
             PhyChemCore.ConvertTemperature(1e308, "C", "K").Should().BeApproximately(1e308, 1e300);
         }
     }
+
+    public class PhyChemCoverageGapTests
+    {
+        [Fact] public void MolecularWeight_rejects_subscript_beyond_long_range()
+            => new Action(() => PhyChemCore.MolecularWeight("H99999999999999999999"))
+                .Should().Throw<ArgumentException>();
+
+        [Fact] public void ConvertPressure_pa_to_mmhg()
+            => PhyChemCore.ConvertPressure(101325, "PA", "MMHG").Should().BeApproximately(760.0, 1e-9);
+
+        [Fact] public void GasToSTP_negative_volume_returns_NaN()
+            => double.IsNaN(PhyChemCore.GasToSTP(-1, 25, 1)).Should().BeTrue();
+    }
 }

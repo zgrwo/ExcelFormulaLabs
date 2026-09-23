@@ -10,17 +10,17 @@
     Why this script exists: the checked-in local reports under
     tests/*/coverage-local/ were produced WITHOUT the Include filter and show
     Foundation classes at ~0% inside Analytics reports — misleading numbers
-    (Analytics 53.5% instead of the real 89.05%). Always measure through this
+    (Analytics 53.5% instead of the real 90.2%). Always measure through this
     script (or CI) before comparing against the gate.
 .NOTES
-    Usage: powershell -File scripts/coverage.ps1 [-Foundation 80] [-Analytics 85] [-DataToolkit 85]
+    Usage: powershell -File scripts/coverage.ps1 [-Foundation 92] [-Analytics 86] [-DataToolkit 86]
     默认阈值与 ci.yml 保持一致；调低阈值仅用于本地排查，不得提交降低后的 ci.yml。
 #>
 param(
     [string]$RepoRoot = (Split-Path -Parent $PSScriptRoot),
-    [int]$Foundation = 80,
-    [int]$Analytics = 85,
-    [int]$DataToolkit = 85
+    [int]$Foundation = 92,
+    [int]$Analytics = 86,
+    [int]$DataToolkit = 86
 )
 
 $ErrorActionPreference = "Stop"

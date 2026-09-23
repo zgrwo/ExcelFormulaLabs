@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using ExcelFormulaLabs.Foundation;
 using FluentAssertions;
 using Xunit;
@@ -270,5 +271,65 @@ public class SortIndicesTests
     {
         // 相对容差下小量纲数据间不再互相命中（{2e-16 查 3e-16}：|diff|=1e-16 > 窗口 3e-28）。
         ArrayOperations.IndexOf(new[] { 1e-16, 2e-16, 3e-16 }, 2e-16).Should().Be(1);
+    }
+}
+
+public class ArrayOperationsGapTests
+{
+    [Fact] public void Sort_already_sorted_small_array_keeps_order()
+    {
+        var a = new[] { 1, 2, 3, 4, 5, 6, 7, 8 };
+        ArrayOperations.Sort(a);
+        a.Should().Equal(1, 2, 3, 4, 5, 6, 7, 8);
+    }
+
+    [Fact] public void Sort_large_random_array_is_ordered()
+    {
+        var rnd = new Random(42);
+        var a = Enumerable.Range(0, 500).Select(_ => rnd.Next(-1000, 1000)).ToArray();
+        var expected = a.OrderBy(x => x).ToArray();
+        ArrayOperations.Sort(a);
+        a.Should().Equal(expected);
+    }
+
+    [Fact] public void SortIndices_large_duplicate_heavy_array_is_sorted_and_permuted()
+    {
+        var values = Enumerable.Range(0, 300).Select(i => (double)(i % 3)).ToArray();
+        var idx = Enumerable.Range(0, 300).ToArray();
+        ArrayOperations.SortIndices(values, idx);
+        for (int i = 1; i < idx.Length; i++)
+            values[idx[i - 1]].Should().BeLessThanOrEqualTo(values[idx[i]]);
+        idx.Should().OnlyHaveUniqueItems();
+    }
+
+    [Fact] public void SortIndices_already_sorted_small_array_keeps_order()
+    {
+        var values = new[] { 1, 2, 3, 4, 5 };
+        var idx = Enumerable.Range(0, 5).ToArray();
+        ArrayOperations.SortIndices(values, idx);
+        idx.Should().Equal(0, 1, 2, 3, 4);
+    }
+
+    [Fact] public void IndexOf_matches_same_sign_infinity_and_skips_cross_sign()
+    {
+        var a = new object[] { double.NegativeInfinity, double.PositiveInfinity };
+        ArrayOperations.IndexOf(a, double.PositiveInfinity).Should().Be(1);
+        ArrayOperations.IndexOf(a, double.NegativeInfinity).Should().Be(0);
+    }
+
+    [Fact] public void CollectNumericColumns_rejects_null_data()
+    {
+        Action act = () => ArrayOperations.CollectNumericColumns(null!, 0, 0, out _);
+        act.Should().Throw<ArgumentException>().WithMessage("*null*");
+    }
+
+    [Fact] public void CollectNumericColumns_skips_blank_cells()
+    {
+        var data = new object[3, 1];
+        data[0, 0] = "h";
+        data[1, 0] = ExcelEmpty.Value;
+        data[2, 0] = 1.5;
+        ArrayOperations.CollectNumericColumns(data, 3, 1, out var names).Should().Equal(0);
+        names[0].Should().Be("h");
     }
 }

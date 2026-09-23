@@ -302,7 +302,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         // ══════════════════════════════════════════════════════════════════
         //  STR.UUID  (no args — returns string with dashes)
         // ══════════════════════════════════════════════════════════════════
-        [Fact] public void Uuid_not_null() => StringUdf.UDF_STR_UUID().Should().NotBeNull();
+        [Fact] public void Uuid_dashed_lower_hex() { var s=StringUdf.UDF_STR_UUID().ToString()!; Regex.IsMatch(s, "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$").Should().BeTrue(); }
         [Fact] public void Uuid_has_dashes() => StringUdf.UDF_STR_UUID().ToString().Should().Contain("-");
         [Fact] public void Uuid_length_36() => StringUdf.UDF_STR_UUID().ToString().Should().HaveLength(36);
         [Fact] public void Uuid_unique() { var r1=StringUdf.UDF_STR_UUID(); var r2=StringUdf.UDF_STR_UUID(); r1.Should().NotBe(r2); }
@@ -323,7 +323,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void RndA_length() => StringUdf.UDF_STR_RNDA(15).ToString().Should().HaveLength(15);
         [Fact] public void RndA_zero() => StringUdf.UDF_STR_RNDA(0).ToString().Should().BeEmpty();
         [Fact] public void RndA_alpha_only() { var s=StringUdf.UDF_STR_RNDA(50).ToString()!; Regex.IsMatch(s, "^[A-Za-z]+$").Should().BeTrue(); }
-        [Fact] public void RndA_not_null() => StringUdf.UDF_STR_RNDA(10).Should().NotBeNull();
+        [Fact] public void RndA_10_alphanumeric() { var s=StringUdf.UDF_STR_RNDA(10).ToString()!; Regex.IsMatch(s, "^[A-Za-z]{10}$").Should().BeTrue(); }
         [Fact] public void RndA_long() => StringUdf.UDF_STR_RNDA(500).ToString().Should().HaveLength(500);
 
         // ══════════════════════════════════════════════════════════════════
@@ -332,7 +332,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void RndN_length() => StringUdf.UDF_STR_RNDN(8).ToString().Should().HaveLength(8);
         [Fact] public void RndN_zero() => StringUdf.UDF_STR_RNDN(0).ToString().Should().BeEmpty();
         [Fact] public void RndN_digits_only() { var s=StringUdf.UDF_STR_RNDN(30).ToString()!; Regex.IsMatch(s, "^[0-9]+$").Should().BeTrue(); }
-        [Fact] public void RndN_not_null() => StringUdf.UDF_STR_RNDN(5).Should().NotBeNull();
+        [Fact] public void RndN_5_digits() { var s=StringUdf.UDF_STR_RNDN(5).ToString()!; Regex.IsMatch(s, "^[0-9]{5}$").Should().BeTrue(); }
         [Fact] public void RndN_long() => StringUdf.UDF_STR_RNDN(100).ToString().Should().HaveLength(100);
 
         // ══════════════════════════════════════════════════════════════════
@@ -453,6 +453,16 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         {
             StringUdf.UDF_STR_FMT(ExcelDna.Integration.ExcelMissing.Value, "0.00").Should().BeNull();
             StringUdf.UDF_STR_REV(ExcelDna.Integration.ExcelMissing.Value).Should().BeNull();
+        }
+    }
+
+    public class StringCoverageGapTests
+    {
+        [Fact] public void Isne_2D_array_normalizes_empty_to_true()
+        {
+            var input = new object[,] { { ExcelEmpty.Value } };
+            var r = (object[,])StringUdf.UDF_STR_ISNE(input);
+            r[0, 0].Should().Be(true);
         }
     }
 }

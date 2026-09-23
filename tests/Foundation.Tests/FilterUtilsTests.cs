@@ -65,3 +65,23 @@ public class FilterPassesTests
     [Fact] public void NaN_eq_NaN_true() => FilterUtils.FilterPasses(double.NaN, double.NaN, "=").Should().BeTrue();
     [Fact] public void NaN_ne_NaN_false() => FilterUtils.FilterPasses(double.NaN, double.NaN, "<>").Should().BeFalse();
 }
+
+public class FilterCacheTests
+{
+    [Fact] public void ClearRegexCache_is_safe_and_filter_still_works()
+    {
+        FilterUtils.ClearRegexCache();
+        FilterUtils.FilterPasses("abc", "b", "regex").Should().BeTrue();
+    }
+
+    [Fact] public void Isblank_non_string_is_false()
+        => FilterUtils.FilterPasses(5, null, "isblank").Should().BeFalse();
+
+    [Fact] public void Regex_cache_evicts_beyond_capacity_and_keeps_matching()
+    {
+        for (int i = 0; i < 80; i++)
+            FilterUtils.FilterPasses("x", "p" + i, "regex").Should().BeFalse();
+        FilterUtils.FilterPasses("abc", "abc", "regex").Should().BeTrue();
+        FilterUtils.ClearRegexCache();
+    }
+}

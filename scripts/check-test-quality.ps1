@@ -13,15 +13,15 @@
     CrossValRunner (no xunit tests) and bin/obj are excluded.
 
     Budget semantics: presence-only tests are legitimate for "not null" contract
-    checks but must not grow. -MaxWarn defaults to the measured baseline (3);
-    exceeding the budget fails the gate. Phase 3 goal: budget 0.
+    checks but must not grow. -MaxWarn defaults to 0 (Phase 3 目标达成：预算归零)；
+    exceeding the budget fails the gate.
 .NOTES
-    Usage: powershell -File scripts/check-test-quality.ps1 [-RepoRoot <path>] [-MaxWarn 3]
+    Usage: powershell -File scripts/check-test-quality.ps1 [-RepoRoot <path>] [-MaxWarn 0]
     自测：tests/scripts/test_check_test_quality.ps1（正向全绿 + 负向注入，CI 强制执行）
 #>
 param(
     [string]$RepoRoot = (Split-Path -Parent $PSScriptRoot),
-    [int]$MaxWarn = 3
+    [int]$MaxWarn = 0
 )
 
 $ErrorActionPreference = "Stop"

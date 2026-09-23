@@ -326,3 +326,61 @@ public class SentinelTypeNameLockTests
     [Fact] public void ExcelDna_error_type_name_locked()
         => Const("ExcelDnaErrorTypeName").Should().Be("ExcelDna.Integration.ExcelError");
 }
+
+public class InputNormalizerGapTests
+{
+    [Fact] public void ToLong_rounds_double_parseable_strings()
+    {
+        InputNormalizer.ToLong("2.6").Should().Be(3);
+        InputNormalizer.ToLong("2.4").Should().Be(2);
+        InputNormalizer.ToLong("NaN").Should().Be(0);
+        InputNormalizer.ToLong("1e30").Should().Be(0);
+        InputNormalizer.ToLong("-1e30").Should().Be(0);
+        InputNormalizer.ToLong("abc").Should().Be(0);
+    }
+
+    [Fact] public void ToLong_unconvertible_object_returns_zero()
+        => InputNormalizer.ToLong(new object()).Should().Be(0);
+
+    [Fact] public void ToDouble_unconvertible_object_returns_NaN()
+        => InputNormalizer.ToDouble(new object()).Should().Be(double.NaN);
+
+    [Fact] public void ToString_unconvertible_object_uses_invariant_ToString()
+        => InputNormalizer.ToString(new Version(1, 2)).Should().Be("1.2");
+
+    [Fact] public void ToBool_unconvertible_object_returns_false()
+        => InputNormalizer.ToBool(new object()).Should().BeFalse();
+
+    [Fact] public void ToBool_sentinel_ignored_for_non_signal_values()
+    {
+        InputNormalizer.ToBool(1, false).Should().BeTrue();
+        InputNormalizer.ToBool("abc", true).Should().BeFalse();
+    }
+
+    [Fact] public void ToDateTime_out_of_range_serial_returns_MinValue()
+        => InputNormalizer.ToDateTime(1e20).Should().Be(DateTime.MinValue);
+
+    [Fact] public void ToDateTime_unparseable_string_returns_MinValue()
+        => InputNormalizer.ToDateTime("not-a-date").Should().Be(DateTime.MinValue);
+
+    [Fact] public void NormalizeTo2D_passes_object_2D_through()
+    {
+        var a = new object[1, 2];
+        InputNormalizer.NormalizeTo2D(a).Should().BeSameAs(a);
+    }
+
+    [Fact] public void NormalizeTo2D_typed_1D_becomes_column_vector()
+    {
+        var r = InputNormalizer.NormalizeTo2D(new double[] { 1, 2, 3 })!;
+        r.GetLength(0).Should().Be(3);
+        r.GetLength(1).Should().Be(1);
+        r[2, 0].Should().Be(3.0);
+    }
+
+    [Fact] public void IsNumericCell_non_numeric_string_is_false()
+        => InputNormalizer.IsNumericCell("abc").Should().BeFalse();
+
+    [Fact] public void ToDoubles_filters_NaN_and_Infinity_elements()
+        => InputNormalizer.ToDoubles(new object[] { double.NaN, double.PositiveInfinity, 1.5, 2 })
+            .Should().Equal(1.5, 2.0);
+}

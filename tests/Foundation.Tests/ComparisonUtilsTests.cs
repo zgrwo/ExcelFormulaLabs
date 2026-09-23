@@ -1,3 +1,4 @@
+using System;
 using ExcelFormulaLabs.Foundation;
 using FluentAssertions;
 using Xunit;
@@ -150,3 +151,24 @@ public class SafeKeyPrecisionTests
         public void Foundation_error_key_unchanged()
             => ComparisonUtils.SafeKey(ExcelError.Value).Should().Be("Error:#ERR(2015)");
     }
+
+public class SafeKeyDepthAndShapeTests
+{
+    [Fact] public void Depth_beyond_limit_throws_ArgumentException()
+    {
+        Action act = () => ComparisonUtils.SafeKey(new object(), 99);
+        act.Should().Throw<ArgumentException>().WithMessage("*depth*");
+    }
+
+    [Fact] public void Custom_object_key_uses_type_name_and_ToString()
+        => ComparisonUtils.SafeKey(new Version(1, 2)).Should().Be("Object:Version:1.2");
+
+    [Fact] public void Rank3_array_flattens_in_enumeration_order()
+    {
+        var a = new int[2, 2, 2];
+        a[1, 1, 1] = 7;
+        ComparisonUtils.SafeKey(a).Should().Be(
+            "Array3(8):9:Numeric:0|9:Numeric:0|9:Numeric:0|9:Numeric:0|" +
+            "9:Numeric:0|9:Numeric:0|9:Numeric:0|9:Numeric:7");
+    }
+}

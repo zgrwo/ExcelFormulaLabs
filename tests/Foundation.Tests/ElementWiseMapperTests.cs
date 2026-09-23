@@ -1,3 +1,4 @@
+using System;
 using ExcelFormulaLabs.Foundation;
 using FluentAssertions;
 using Xunit;
@@ -250,5 +251,74 @@ public class MapOverMultiThreeArgTests
         var result = (object[])ElementWiseMapper.MapOver<double, double>(
             new double[] { 1.0, 2.0, 3.0 }, x => x * 10);
         result.Should().Equal(10.0, 20.0, 30.0);
+    }
+}
+
+public class ElementWiseMapperGapTests
+{
+    [Fact] public void MapOver_mapper_exception_returns_Value_per_cell()
+    {
+        var r = (object[])ElementWiseMapper.MapOver<string, string>(
+            new object[] { "a", "b" },
+            _ => throw new InvalidOperationException("boom"));
+        r.Should().Equal(ExcelError.Value, ExcelError.Value);
+    }
+
+    [Fact] public void MapOverMulti_mapper_exception_returns_Value_per_cell()
+    {
+        var r = (object[])ElementWiseMapper.MapOverMulti<string, string, string>(
+            new object[] { "a", "b" }, new object[] { "c", "d" },
+            (x, y) => throw new InvalidOperationException("boom"));
+        r.Should().Equal(ExcelError.Value, ExcelError.Value);
+    }
+
+    [Fact] public void MapOverMulti_three_arg_mapper_exception_returns_Value_per_cell()
+    {
+        var r = (object[])ElementWiseMapper.MapOverMulti<string, string, string, string>(
+            new object[] { "a", "b" }, new object[] { "c", "d" }, new object[] { "e", "f" },
+            (x, y, z) => throw new InvalidOperationException("boom"));
+        r.Should().Equal(ExcelError.Value, ExcelError.Value);
+    }
+
+    [Fact] public void MapOverMulti_three_arg_mismatched_2D_shapes_returns_ExcelError()
+    {
+        var a = new object[2, 3];
+        var b = new object[3, 2];
+        ElementWiseMapper.MapOverMulti<int, int, int, int>(a, b, 1, (x, y, z) => x + y + z)
+            .Should().Be(ExcelError.Value);
+    }
+
+    [Fact] public void MapOverMulti_three_arg_empty_input_returns_ExcelEmpty()
+    {
+        ElementWiseMapper.MapOverMulti<string, string, string, string>(
+            new object[0], "a", "b", (x, y, z) => x + y + z)
+            .Should().BeSameAs(ExcelEmpty.Value);
+    }
+
+    [Fact] public void MapOverMulti_three_arg_2D_inputs_reshape_back_to_2D()
+    {
+        var a = new object[2, 2] { { 1, 2 }, { 3, 4 } };
+        var b = new object[2, 2] { { 10, 20 }, { 30, 40 } };
+        var r = (object[,])ElementWiseMapper.MapOverMulti<int, int, int, int>(
+            a, b, 1, (x, y, z) => x + y + z);
+        r.GetLength(0).Should().Be(2);
+        r.GetLength(1).Should().Be(2);
+        r[1, 1].Should().Be(45);
+    }
+
+    [Fact] public void ConvertValue_supported_scalar_targets()
+    {
+        ElementWiseMapper.MapOver<long, long>(5, x => x).Should().Be(5L);
+        ElementWiseMapper.MapOver<int, int>(5.0, x => x).Should().Be(5);
+        ((bool)ElementWiseMapper.MapOver<bool, bool>(1, x => x)).Should().BeTrue();
+        ((DateTime)ElementWiseMapper.MapOver<DateTime, DateTime>(1, x => x))
+            .Should().Be(new DateTime(1899, 12, 30).AddDays(1));
+    }
+
+    [Fact] public void ConvertValue_unsupported_target_returns_Value_cell()
+    {
+        var r = (object[])ElementWiseMapper.MapOver<Guid, string>(
+            new object[] { "not-a-guid" }, g => g.ToString());
+        r.Should().Equal(ExcelError.Value);
     }
 }

@@ -777,4 +777,19 @@ namespace ExcelFormulaLabs.Analytics.Tests
             LinalgCore.Rank(new double[,] { { 1e155, 2e155 }, { 2e155, 4e155 } }).Should().Be(1);
         }
     }
+
+    public class LinalgCoverageGapTests
+    {
+        [Fact] public void DecompCache_ElementCount_handles_double_matrix()
+            => LinalgCore.DecompCache.ElementCount(new double[2, 3]).Should().Be(6);
+
+        [Fact] public void Identity_rejects_out_of_range_size()
+            => new Action(() => LinalgCore.Identity(2001)).Should().Throw<ArgumentException>();
+
+        [Fact] public void Diagonal_rejects_non_finite()
+            => new Action(() => LinalgCore.Diagonal(new[] { 1.0, double.NaN })).Should().Throw<ArgumentException>();
+
+        [Fact] public void Eigenvalues_rejects_non_square()
+            => new Action(() => LinalgCore.Eigenvalues(new double[2, 3])).Should().Throw<ArgumentException>();
+    }
 }

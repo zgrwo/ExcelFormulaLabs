@@ -122,3 +122,42 @@ public class MergeTests
         merged["b"].Should().Be(2);
     }
 }
+
+public class DictKeyTypeTests
+{
+    [Fact] public void FromKeys_distinguishes_typed_keys()
+    {
+        var dt = new DateTime(2026, 1, 2, 3, 4, 5, 678);
+        var dict = DictOperations.FromKeys(new object[] { 1, 1.5f, 2.5m, 3L, (short)4, (byte)5, true, dt });
+        dict.Count.Should().Be(8);
+        dict.ContainsKey("1").Should().BeTrue();
+        dict.ContainsKey("1.5").Should().BeTrue();
+        dict.ContainsKey("2.5").Should().BeTrue();
+        dict.ContainsKey("3").Should().BeTrue();
+        dict.ContainsKey("4").Should().BeTrue();
+        dict.ContainsKey("5").Should().BeTrue();
+        dict.ContainsKey("TRUE").Should().BeTrue();
+        dict.ContainsKey("2026-01-02 03:04:05.6780000").Should().BeTrue();
+    }
+
+    [Fact] public void Create_supports_every_comparison_mode()
+    {
+        foreach (StringComparison mode in new[]
+        {
+            StringComparison.Ordinal, StringComparison.OrdinalIgnoreCase,
+            StringComparison.CurrentCulture, StringComparison.CurrentCultureIgnoreCase,
+            StringComparison.InvariantCulture, StringComparison.InvariantCultureIgnoreCase,
+            (StringComparison)999,
+        })
+        {
+            DictOperations.FromKeys(new object[] { "Key" }, 1, mode)
+                .ContainsKey("Key").Should().BeTrue($"mode={mode}");
+        }
+        DictOperations.FromKeys(new object[] { "Key" }, 1, StringComparison.Ordinal)
+            .ContainsKey("key").Should().BeFalse();
+        DictOperations.FromKeys(new object[] { "Key" }, 1, StringComparison.OrdinalIgnoreCase)
+            .ContainsKey("key").Should().BeTrue();
+        DictOperations.FromKeys(new object[] { "Key" }, 1, (StringComparison)999)
+            .ContainsKey("key").Should().BeTrue();
+    }
+}
