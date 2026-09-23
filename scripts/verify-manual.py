@@ -1149,7 +1149,17 @@ cross_vs_csharp("FS.BNAME", os.path.splitext(os.path.basename(r"C:\data\report.x
 cross_vs_csharp("FS.EXT", os.path.splitext(r"C:\data\report.xlsx")[1], "FS.EXT")
 cross_vs_csharp("FS.FOLDER", os.path.dirname(r"C:\data\report.xlsx"), "FS.FOLDER")
 cross_vs_csharp("FS.PWD", os.getcwd(), "FS.PWD")
-cross_vs_csharp("FS.TEMP", tempfile.gettempdir().rstrip("\\"), "FS.TEMP")
+# FS.TEMP 不做字符串等值：CI runner 的 %TEMP% 为 8.3 短路径（C:\Users\RUNNER~1\...），
+# Path.GetTempPath 原样返回而 Python 解析为长路径 → 字符串比对在环境间不稳定。
+# 改为等价性检查（samefile）：C# 返回值必须是存在的系统临时目录（与 LU_P 性质检查同口径）。
+_cs_temp = csharp_results().get("FS.TEMP")
+if _cs_temp and _cs_temp["status"] == "ok":
+    check("FS.TEMP same as system temp",
+          os.path.samefile(unwrap(_cs_temp["result"]), tempfile.gettempdir()),
+          True, manual=False)
+    CROSS_REFERENCED.add("FS.TEMP")
+else:
+    SKIP += 1; print("  SKIP FS.TEMP equivalence: no C# reference")
 cross_vs_csharp("FS.DRIVES",
                 sorted(chr(_c) + ":\\" for _c in range(ord("A"), ord("Z") + 1)
                        if os.path.exists(chr(_c) + ":\\")),
