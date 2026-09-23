@@ -2,6 +2,11 @@
   <PropertyGroup>
     <!-- 基准工程同样锁定依赖（与 src/Directory.Build.props 同一策略）。 -->
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <!-- lock 可复现性（2026-09-23 CI 首次运行发现 NU1004）：无 net48 targeting pack 的机器
+         上 SDK 会隐式注入 Microsoft.NETFramework.ReferenceAssemblies 并写入 lock（标记 Direct），
+         而有 targeting pack 的 CI runner 不注入 → locked mode 两侧不一致。显式关闭隐式注入：
+         引用程序集由显式 PackageReference Microsoft.NETFramework.ReferenceAssemblies.net48 提供。 -->
+    <AutomaticallyUseReferenceAssemblyPackages>false</AutomaticallyUseReferenceAssemblyPackages>
     <RestoreLockedMode Condition="'$(CI)' == 'true'">true</RestoreLockedMode>
   </PropertyGroup>
 </Project>
