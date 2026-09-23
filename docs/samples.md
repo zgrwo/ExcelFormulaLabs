@@ -22,9 +22,9 @@
 | DICT | 频率统计 |
 | LINALG | 行列式 / 解方程组 |
 | REGRESS | R² / OLS 报告 |
-| SOLVE | 请求行留空反求可调参数 |
+| SOLVE | 请求行留空反求可调参数 + 模型质量 / 方程 |
 | PHYCHEM | 温度 / 分子量 / 密度 |
-| DOE | 全因子设计矩阵 |
+| DOE | 全因子设计矩阵 + 效应 / ANOVA / Pareto |
 | SQL | GROUP BY 聚合 |
 | PIVOT | 分组求和 |
 | RANGE | Markdown 导出 |

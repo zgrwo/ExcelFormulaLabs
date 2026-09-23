@@ -208,7 +208,12 @@ def build():
     put_examples(ws, 3, [
         ("反解可调参数（请求行留空）", "=SOLVE.INVERSE(A4:C11)"),
     ])
-    autosize(ws, [14, 14, 14, 4, 30, 30])
+    # 进阶：模型质量与方程（放在 INVERSE 溢出区之外，避免 #SPILL 冲突）
+    put_examples(ws, 13, [
+        ("模型质量（交叉验证 R²/MAE）", "=SOLVE.QUALITY(A4:C11)"),
+        ("前向方程 + 闭式反解式", "=SOLVE.EQUATION(A4:C11)"),
+    ])
+    autosize(ws, [14, 14, 14, 4, 30, 34])
 
     # ── PHYCHEM ──────────────────────────────────────────────
     ws = wb.create_sheet("PHYCHEM")
@@ -222,11 +227,20 @@ def build():
 
     # ── DOE ──────────────────────────────────────────────────
     ws = wb.create_sheet("DOE")
-    put_title(ws, "DOE.* — 实验设计（全因子 2 因子 × 2 水平）")
+    put_title(ws, "DOE.* — 实验设计 + 效应分析（2 因子全因子，coded ±1）")
+    put_table(ws, 3, ["x1", "x2", "y"], [
+        [-1, -1, 52], [-1, 1, 60], [1, -1, 58], [1, 1, 66],
+    ])
     put_examples(ws, 3, [
         ("设计矩阵（含 StdOrder/RunOrder）", '=DOE.PLAN(2,2,0,2,"full",FALSE)'),
     ])
-    autosize(ws, [32, 4, 4, 4, 34, 30])
+    # 进阶：效应/方差分析/Pareto（放在 PLAN 溢出区之外，避免 #SPILL 冲突）
+    put_examples(ws, 12, [
+        ("效应分析（ANALYZE）", "=DOE.ANALYZE(A4:B7, C4:C7)"),
+        ("ANOVA 表", "=DOE.ANOVA(A4:B7, C4:C7)"),
+        ("Pareto 效应排序", "=DOE.PARETO(A4:B7, C4:C7)"),
+    ])
+    autosize(ws, [8, 8, 8, 4, 4, 34, 34])
 
     # ── SQL ──────────────────────────────────────────────────
     ws = wb.create_sheet("SQL")

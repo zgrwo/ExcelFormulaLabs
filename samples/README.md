@@ -30,9 +30,9 @@ python scripts/generate-samples.py
 | DICT | 频率统计 | 频次表 |
 | LINALG | 线性代数 | 行列式/解方程组 |
 | REGRESS | 回归 | R²/OLS 报告 |
-| SOLVE | 参数反解 | 请求行留空反求可调参数 |
+| SOLVE | 参数反解 | 请求行留空反求可调参数 + 模型质量/方程 |
 | PHYCHEM | 物化换算 | 温度/分子量/密度 |
-| DOE | 实验设计 | 全因子矩阵 |
+| DOE | 实验设计 | 全因子矩阵 + 效应/ANOVA/Pareto |
 | SQL | SQL 查询 | GROUP BY 聚合 |
 | PIVOT | 分组聚合 | 分组求和 |
 | RANGE | 区域导出 | Markdown |
