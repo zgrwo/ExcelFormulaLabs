@@ -36,7 +36,7 @@
 ## 通用约定
 
 - **数组公式**：多数函数支持数组输入。Excel 365 中数组自动溢出（spill），旧版需 `Ctrl+Shift+Enter`
-- **错误值**：`#VALUE!` = 输入/执行错误；`#NUM!` = 计算结果无定义（详见[错误参考](#16-错误参考)）
+- **错误值**：`#VALUE!` = 输入/执行错误；`#NUM!` = 计算结果无定义（详见[错误参考](#17-错误参考)）
 - **空值处理**：空单元格在数值函数中被转换为 `NaN`（逐元素运算返回 `#NUM!`，聚合运算返回 `#VALUE!`）；在字符串函数中视为空串。建议使用 `IF(ISNUMBER(), ...)` 预处理过滤
 - **表头行**：带 `hasHeaders` 参数的函数默认将第一行视为表头
 
@@ -2880,7 +2880,7 @@ sort_order: TRUE=升序（默认），FALSE=降序。sort_mode: `"auto"/"text"/"
 
 ---
 
-<a id="arr-filter-eq"></a> <a id="arr-ne"></a> <a id="arr-gt"></a> <a id="arr-lt"></a>
+<a id="arr-filter-eq"></a> <a id="arr-filter-ne"></a> <a id="arr-filter-gt"></a> <a id="arr-filter-lt"></a>
 
 ### ARR.FILTER_EQ / NE / GT / LT — 快捷过滤
 

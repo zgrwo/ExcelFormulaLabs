@@ -1,0 +1,66 @@
+site_name: ExcelFormulaLabs 用户文档
+site_description: Excel 函数增强库 — 用户手册、API 参考与示例
+site_url: https://zgrwo.github.io/ExcelFormulaLabs/
+repo_url: https://github.com/zgrwo/ExcelFormulaLabs
+repo_name: zgrwo/ExcelFormulaLabs
+edit_uri: edit/main/docs/
+
+docs_dir: docs
+
+# docs/README.md 是仓库内分类导航，与站点首页 index.md 冲突——显式排除。
+exclude_docs: |
+  README.md
+
+theme:
+  name: material
+  language: zh
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/weather-night
+        name: 切换到深色
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: 切换到浅色
+  features:
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - toc.follow
+
+markdown_extensions:
+  - tables
+  - admonition
+  - attr_list
+  # pymdownx.slugs.slugify（case=lower）与 GitHub 锚点算法一致（保留 CJK、折叠标点），
+  # 否则 CJK 标题被 Python-Markdown 生成 _1/_2 锚点，手册内部跳转全断。
+  - toc:
+      permalink: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify {kwds: {case: lower}}
+
+# 文档站只发布用户向页面；治理/ADR/计划等内部文档不入站。
+# - links.not_found：context/user-manual/api-reference 含指向 docs/ 之外文件
+#   （README/AGENTS/skills）的链接，站点上无法解析（GitHub 上仍可点击）。
+# - anchors：手册使用 211 处显式 <a id="..."></a> 锚点（MkDocs 只校验标题 slug，
+#   无法识别显式锚点）——锚点有效性由人工/浏览器保证，不做站点级校验。
+validation:
+  anchors: ignore
+  links:
+    not_found: ignore
+    unrecognized_links: ignore
+  nav:
+    # docs/ 下内部文档（governance/ADR/plans）有意不入 nav——只发布用户向页面。
+    omitted_files: ignore
+
+nav:
+  - 首页: index.md
+  - 用户手册: user-manual/user-manual.md
+  - API 参考: specification/api-reference.md
+  - 技术规格: specification/specification.md
+  - 术语表: governance/context.md
+  - 示例工作簿: samples.md

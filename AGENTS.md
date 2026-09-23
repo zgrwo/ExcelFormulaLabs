@@ -84,7 +84,8 @@ ExcelFormulaLabs/
 ├── tests/                        # 测试 + CrossVal + 脚本自测（tests/scripts）
 ├── docs/                         # 项目文档（governance / specification / user-manual / adr / plans 五分类）
 ├── skills/                       # Skill 定义（单一信源；.qoder 本地镜像不入库）
-├── scripts/                      # 构建/验证/治理脚本
+├── scripts/                      # 构建/验证/治理脚本（含 install.ps1 一键安装）
+├── samples/                      # 示例工作簿（16 模块公式示例 + 生成脚本说明）
 ├── templates/                    # 模块脚手架（NewModule）
 ├── benchmarks/                   # 性能基准（BenchmarkDotNet）
 ├── build/                        # 构建配置说明
@@ -101,6 +102,10 @@ ExcelFormulaLabs/
 ├── FUNDING.yml                   # 资助信息
 ├── nuget.config                  # NuGet 源
 ├── requirements.txt              # Python 交叉验证依赖固定（verify-manual.py / CrossVal）
+├── version.txt                   # 版本锚点（release-please 维护；verify-docs 检查 10b）
+├── release-please-config.json    # release-please 配置
+├── .release-please-manifest.json # release-please 版本基线
+├── mkdocs.yml                    # 文档站配置（GitHub Pages）
 ├── ExcelFormulaLabs.sln          # 解决方案
 ├── .editorconfig                 # 编辑器统一风格
 ├── .gitattributes                # 换行符/二进制标记
@@ -159,6 +164,8 @@ ExcelFormulaLabs/
 | 全量测试（6 步，同 verify-all.ps1） | ① verify-docs ② Build ③ dotnet test ④ CrossVal（verify-manual.py）⑤ Pre-commit Checks ⑥ Release build |
 | 文档一致性（20 个编号项；运行时 26 条断言，以脚本输出为准） | `powershell -File scripts/verify-docs.ps1` |
 | 提交前红线（6 项） | `powershell -File scripts/pre-commit-check.ps1` |
+| 测试质量（零断言/恒真断言 FAIL，存在性断言预算 3） | `powershell -File scripts/check-test-quality.ps1` |
+| CI 同口径覆盖率门禁（80/85/85） | `powershell -File scripts/coverage.ps1` |
 | 治理脚本自测 | `powershell -File tests/scripts/run-tests.ps1` |
 | 本地 Qoder 技能镜像 | `powershell -File scripts/sync-qoder-skills.ps1`（可选，本地工具用，不入库） |
 
@@ -167,7 +174,7 @@ ExcelFormulaLabs/
 - 所有提交信息必须符合 Conventional Commits：`type(scope): 描述`。
 - 允许类型：`feat fix docs style refactor test chore build ci perf revert release`。
 - 校验脚本：`scripts/validate-commit-msg.sh`（本地 hook：`scripts/git-hooks/commit-msg`；CI 对 PR 内每个提交强制执行）。
-- 发版流程：bump `src/Directory.Build.props` 版本 + 更新 `CHANGELOG.md` + 打 `vX.Y.Z` tag → release.yml 自动构建发布。
+- 发版流程：release-please 自动维护 Release PR（`version.txt` + `src/Directory.Build.props` `<Version>` + `CHANGELOG.md`），合并后自动打 tag 并 dispatch release.yml；紧急手工发版见 CONTRIBUTING。
 - **版本一致性**：最新 `v*` tag 必须等于 `Directory.Build.props` 的 `<Version>`，且 CHANGELOG 必须有对应条目（verify-docs 检查 10 强制）。
 
 ## AGENTS.md 生态兼容
@@ -233,6 +240,7 @@ ExcelFormulaLabs/
 - [ ] 命名空间与文件夹一致
 - [ ] 没动无关文件
 - [ ] `dotnet build` 双 TFM 通过 + `dotnet test` 全绿
+- [ ] `scripts/check-test-quality.ps1` 通过（新测试必须有有效断言）
 
 ## 防幻觉铁律
 

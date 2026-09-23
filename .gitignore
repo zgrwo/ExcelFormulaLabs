@@ -27,3 +27,6 @@ coverage*/
 nupkg/
 .vs/
 artifacts/
+
+# mkdocs 站点产物（docs.yml 构建，不入库）
+site/

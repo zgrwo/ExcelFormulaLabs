@@ -11,8 +11,11 @@ ExcelFormulaLabs/
 │
 ├── .github/                        # GitHub 生态
 │   ├── workflows/
-│   │   ├── ci.yml                  #   CI（7 jobs：红线/测试net8.0/测试net48/CrossVal/Release/文档/覆盖率）
-│   │   ├── release.yml             #   Release（tag → build → pack → publish）
+│   │   ├── ci.yml                  #   CI（9 jobs：变更分类/红线+测试质量/依赖审计/测试net8.0/测试net48/CrossVal/Release/文档/覆盖率）
+│   │   ├── release.yml             #   Release（tag 或 dispatch → build → pack → publish）
+│   │   ├── release-please.yml      #   发版自动化（Release PR → tag → dispatch release.yml）
+│   │   ├── benchmarks.yml          #   性能基准（路径触发 + 周更 + dispatch）
+│   │   ├── docs.yml                #   文档站（mkdocs --strict → GitHub Pages）
 │   │   ├── security.yml            #   CodeQL 安全扫描（定时 + push main）
 │   │   └── stale.yml               #   僵尸 Issue/PR 自动关闭
 │   ├── ISSUE_TEMPLATE/
@@ -26,8 +29,10 @@ ExcelFormulaLabs/
 │   └── dependabot.yml              # 依赖自动更新（nuget + github-actions）
 │
 ├── benchmarks/                     # 性能基准（BenchmarkDotNet）
+│   ├── Directory.Build.props       #   基准工程依赖锁定
 │   └── ExcelFormulaLabs.Benchmarks/
 │       ├── ExcelFormulaLabs.Benchmarks.csproj
+│       ├── packages.lock.json      #   依赖锁定（CI 强制 locked mode）
 │       ├── Program.cs
 │       ├── LinalgBenchmarks.cs
 │       ├── MapOverBenchmarks.cs
@@ -43,6 +48,8 @@ ExcelFormulaLabs/
 │
 ├── docs/                           # 项目文档（按职责分类重组）
 │   ├── README.md                   #   分类导航索引
+│   ├── index.md                    #   文档站首页（mkdocs nav）
+│   ├── samples.md                  #   示例工作簿说明（mkdocs nav）
 │   ├── governance/                 #   治理与基础
 │   │   ├── context.md              #     领域术语表
 │   │   ├── documentation.md        #     文档职责与维护规则
@@ -73,7 +80,11 @@ ExcelFormulaLabs/
 │   ├── verify-manual.py            #   全 UDF 手册示例验证（Python↔C#）
 │   ├── verify-all.ps1              #   一键 6 步验证门（verify-docs/Build/test/CrossVal/pre-commit/Release build）
 │   ├── verify-pack.ps1             #   打包验证
+│   ├── coverage.ps1                #   CI 同口径覆盖率门禁（net8.0，80/85/85）
+│   ├── install.ps1                 #   一键安装/卸载（SHA-256 校验 + 解锁 + HKCU 注册）
+│   ├── generate-samples.py         #   生成 samples/ 示例工作簿（openpyxl）
 │   ├── pre-commit-check.ps1        #   6 项红线检查（裸catch/自校验/IntelliSense/Core隔离/NaN守卫/hasHeaders）
+│   ├── check-test-quality.ps1      #   测试质量守卫（零断言/恒真断言 FAIL，存在性断言预算）
 │   ├── run-affected-tests.ps1      #   受影响测试定向运行
 │   ├── scaffold-udf.ps1            #   UDF 代码生成器（4 文件模板展开）
 │   ├── sync-qoder-skills.ps1       #   skills → .qoder 本地镜像同步/校验（不入库）
@@ -85,6 +96,10 @@ ExcelFormulaLabs/
 │   └── git-hooks/
 │       └── commit-msg              #   git hook（调用 validate-commit-msg.sh）
 │
+├── samples/                        # 示例工作簿（安装加载项后直接打开）
+│   ├── README.md                   #   使用与重新生成说明
+│   └── ExcelFormulaLabs-Samples.xlsx  # 16 模块公式示例（scripts/generate-samples.py 生成）
+│
 ├── skills/                         # AI Skill 定义（单一信源）
 │   ├── README.md
 │   ├── excel-dna-project.md        #   编码规范、架构、MapOver、测试
@@ -95,9 +110,10 @@ ExcelFormulaLabs/
 │   └── project-experience.md       #   经验库（高频陷阱/铁律/证据链）
 │
 ├── src/                            # 源码
-│   ├── Directory.Build.props       #   全局 MSBuild 属性（版本 + 包元数据）
+│   ├── Directory.Build.props       #   全局 MSBuild 属性（版本 + 包元数据 + 依赖锁定）
 │   ├── Foundation/                 #   共享工具层（零 Excel 依赖）
 │   │   ├── Foundation.csproj
+│   │   ├── packages.lock.json      #     依赖锁定（CI 强制 locked mode）
 │   │   ├── ElementWiseMapper.cs    #     MapOver/MapOverFlat/MapOverMulti 调度
 │   │   ├── InputNormalizer.cs      #     类型转换 + 哨兵契约 (L1-L5)
 │   │   ├── OutputWrapper.cs        #     WrapError 异常→#VALUE!
@@ -116,6 +132,7 @@ ExcelFormulaLabs/
 │   │
 │   ├── Analytics/                  # 统计分析模块 → Analytics-AddIn.xll
 │   │   ├── Analytics.csproj
+│   │   ├── packages.lock.json      #     依赖锁定（CI 强制 locked mode）
 │   │   ├── AddIn.cs                #     AutoOpen/AutoClose + IntelliSense
 │   │   ├── AnalyticsHelpers.cs     #     M()/V()/D() 辅助方法
 │   │   ├── StatsCore.cs / StatsUdf.cs          # STATS.*
@@ -132,6 +149,7 @@ ExcelFormulaLabs/
 │   │
 │   ├── DataToolkit/                # 数据处理模块 → DataToolkit-AddIn.xll
 │   │   ├── DataToolkit.csproj
+│   │   ├── packages.lock.json      #     依赖锁定（CI 强制 locked mode）
 │   │   ├── AddIn.cs                #     AutoOpen/AutoClose
 │   │   ├── NativeDllStore.cs        #     原生 DLL 内容寻址提取（SHA-256 + 原子替换）
 │   │   ├── StringCore.cs / StringUdf.cs       # STR.*
@@ -159,6 +177,7 @@ ExcelFormulaLabs/
 │       └── {Name}CrossVal.py.template    # 含 cross_check() 调用
 │
 ├── tests/                          # 测试
+│   ├── Directory.Build.props       #   测试工程依赖锁定（packages.lock.json + CI locked mode）
 │   ├── Foundation.Tests/           #   Foundation 层单元测试（含 csproj 与 14 个测试文件）
 │   ├── Analytics.Tests/            #   Analytics 层单元测试（含 csproj 与 20 个 .cs 文件）
 │   ├── DataToolkit.Tests/          #   DataToolkit 层单元测试（含 csproj 与 20 个测试文件）
@@ -176,11 +195,16 @@ ExcelFormulaLabs/
 │       ├── run-tests.ps1
 │       ├── test_governance_tools.ps1
 │       ├── test_precommit_check.ps1
+│       ├── test_check_test_quality.ps1
 │       └── test_verify_docs.ps1
 │
 ├── ExcelFormulaLabs.sln            # 解决方案
 ├── nuget.config                    # NuGet 源（nuget.org + GitHub Packages）
 ├── requirements.txt                # Python 交叉验证依赖固定（CI + 贡献者）
+├── version.txt                     # 版本锚点（release-please 维护；verify-docs 检查 10b 强制 == <Version>）
+├── release-please-config.json      # release-please 配置（版本文件 / CHANGELOG 分节 / Directory.Build.props xpath）
+├── .release-please-manifest.json   # release-please 版本基线
+├── mkdocs.yml                      # 文档站配置（mkdocs-material，docs.yml 构建）
 ├── AGENTS.md                       # 项目宪法 / AI 行为准则
 ├── README.md                       # 用户向功能指南
 ├── README.en.md                    # 英文入口

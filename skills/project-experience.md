@@ -137,6 +137,8 @@ description: 项目经验库 — 从 v2.0.0 至今全部 commit/审查/CI 事故
 5. Release 工作流：Build/Test → Verify Docs → CrossVal → Pack & Release（8 资产 H1 断言、--no-symbols、fail_on_unmatched_files）。
 6. 发版后确认：GitHub Release 资产 8 个、NuGet Foundation 包推送、CHANGELOG 与 tag 一致。
 7. **CI 事故复盘**：若 release 失败，查工作流 job 日志定位（CI 是唯一真实环境）。
+8. **release-please 反递归**（2026-09-23 接入）：GITHUB_TOKEN 创建的 tag/Release **不触发** `push`/`release` 事件（GitHub 防递归规则）→ release-please.yml 在 `release_created` 后用 `gh workflow run release.yml --ref <tag>` 显式 dispatch（`workflow_dispatch` 是官方豁免事件，不构成递归）；dispatch 需 workflow 权限含 `actions: write`。仓库须启用 Settings → Actions → "Allow GitHub Actions to create and approve pull requests"（已启用）。
+9. **版本锚点三处一致**：`version.txt`（release-please 版本文件）== `Directory.Build.props <Version>` == 最新 tag；AV/FV 已改为 `$(Version).0` 派生（消除手工三值同步），verify-docs 检查 10/10b 强制。
 
 ---
 
@@ -144,6 +146,10 @@ description: 项目经验库 — 从 v2.0.0 至今全部 commit/审查/CI 事故
 
 - **max level 深度审查**：P0（发行阻塞）/P1（高危）/P2（应修复）/P3（门禁增强）分级；实证复现 + 负向测试 + 逐条声称对账；报告归档 `logs/release/release-audit-*.md`——**审查报告一律不入库**（logs/ 在 .gitignore），文档与代码层面的可复现结论（如逃逸模式 E1-E6）才提炼进 skill/AGENTS。
 - **修复验证闭环**：复现测试 FAILS → 修复 → PASSES + 无回归 → **保留复现测试**。
+- **审计"fix 是否带测试"不能只看单 commit diff**：修复与回归测试常分属相邻 commit
+  （如 `c3e458f` 的预算测试在 `454760f`、`b61f468` 的并发测试在 `c45e5bb`）。须用
+  `git log -S "<测试名>" -- <测试文件>` 交叉核对，否则把已覆盖项误报为缺口
+  （2026-09-23 审计实测 3/4 误报）。
 - **跨会话交接**：`✅ 已完成 / 🔜 下一步 / ⚠️ 待决策 / 📄 关键上下文` 四段式。
 - **提交规范**：Conventional Commits；`fix(review)` 是审查修复专用 scope。
 
@@ -180,7 +186,8 @@ description: 项目经验库 — 从 v2.0.0 至今全部 commit/审查/CI 事故
 - **现象**：审计的计时基准（5.3s）未含 ComparisonUtils 分发开销（实测 152s，差 30 倍）；构建竞态"50% 失败率"实为 bin 残留 .dna 污染（BuildInParallel=false 早已修复）。
 - **铁律**：性能/概率声称必须用**与生产代码相同路径**的复刻测量（含全部分发层）；"间歇性失败"先查环境残留（bin/obj 陈旧产物）再归因代码。
 - **证据**：清理 bin 残留 .dna 后 10 次并行构建 0 失败。
-- **补充（2026-09-15 Release 构建竞态）**：`BuildInParallel=false` 只串行化**同一外层**的 inner dispatch——solution 级并行 / `ProjectReference` 直连会产生同一项目的并发内建（`-m:1` 复测可消、默认 `-m` 复现）。`CreateExcelAddIn` 通过 evaluation 期的 `None/Content` 发现 `.dna`：并发下对方 TFM 的 `.dna` 被本 TFM 打包进自己的 publish（实测 net8.0 XLL 落入 net48 目录），通配 Delete 还会删掉对方正在用的 `.dna`（pack Win32Exception 110 / 回退默认模板 → 静默坏 XLL）。**正确设计（已实施）**：① evaluation 期 `None Remove` 对方 TFM 的 `.dna`（`FilesInProject` 只含本 TFM，不存在时走 ExcelDna 默认名回退）；② `GenerateDnaFromTemplate`/`CleanupDnaAfterBuild` 只删本 TFM 的 `.dna`。残留自愈保留：本 TFM 上次 pack 中断残留由本次 Generate 删除；对方残留被 None Remove 屏蔽，不再污染（旧"通配删除 + 串行化"假设已废弃）。
+- **补充（2026-09-15 Release 构建竞态）**：`BuildInParallel=false` 只串行化**同一外层**的 inner dispatch——solution 级并行 / `ProjectReference` 直连会产生同一项目的并发内建（`-m:1` 复测可消、默认 `-m` 复现）。
+- **补充（2026-09-23 Release 打包残留竞态）**：.dna 隔离修复后，默认 `-m` 的 Release 构建仍连续 3 次在 ExcelDnaPack 资源更新报 Win32Exception 5「拒绝访问」（独占打开测试确认无外部进程持锁、文件非只读）；`-m:1` 一次通过。CI / release.yml / verify-all 的 Release 构建已统一 `-m:1`，原 3 次重试仅兜底瞬时文件锁。`CreateExcelAddIn` 通过 evaluation 期的 `None/Content` 发现 `.dna`：并发下对方 TFM 的 `.dna` 被本 TFM 打包进自己的 publish（实测 net8.0 XLL 落入 net48 目录），通配 Delete 还会删掉对方正在用的 `.dna`（pack Win32Exception 110 / 回退默认模板 → 静默坏 XLL）。**正确设计（已实施）**：① evaluation 期 `None Remove` 对方 TFM 的 `.dna`（`FilesInProject` 只含本 TFM，不存在时走 ExcelDna 默认名回退）；② `GenerateDnaFromTemplate`/`CleanupDnaAfterBuild` 只删本 TFM 的 `.dna`。残留自愈保留：本 TFM 上次 pack 中断残留由本次 Generate 删除；对方残留被 None Remove 屏蔽，不再污染（旧"通配删除 + 串行化"假设已废弃）。
 
 ---
 
