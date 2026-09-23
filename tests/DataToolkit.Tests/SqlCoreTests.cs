@@ -208,6 +208,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
 
         // 注释拆分关键字的绕过向量：黑名单必须在注释剥离后的归一化文本上匹配，
         // 且拼接处恢复为独立 token。
+        [Trait("Category", "Security")]
         [Fact]
         public void Comment_split_forbidden_keywords_are_rejected()
         {
@@ -245,6 +246,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         }
 
         // 单值 10MB 上限必须覆盖文本型巨值。
+        [Trait("Category", "Security")]
         [Theory]
         [InlineData("SELECT hex(randomblob(11000000))")]
         [InlineData("SELECT quote(randomblob(11000000))")]
@@ -256,6 +258,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             act.Should().Throw<ArgumentException>().WithMessage("*10 MB*");
         }
 
+        [Trait("Category", "Security")]
         [Fact]
         public void Non_select_prefixes_are_still_rejected()
         {

@@ -11,6 +11,18 @@
 
 ## 安装
 
+### 方式零：一键安装脚本（推荐）
+
+从 [Releases](https://github.com/zgrwo/ExcelFormulaLabs/releases) 下载对应位数的 `.xll` 后：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/install.ps1 .\Analytics-AddIn-net48-64-packed.xll
+```
+
+脚本自动：SHA-256 校验（可选 `-ExpectedSha256`，与 Release 的 `SHA256SUMS.txt` 对账）→ 复制到 `%LOCALAPPDATA%\ExcelFormulaLabs`
+→ 解除「来自其他计算机」锁定 → 注册到 Excel 加载项列表（仅写 HKCU，无需管理员）。
+卸载：`powershell -File scripts/install.ps1 -Uninstall`。
+
 ### 方式一：免安装运行时（推荐）
 
 Win10/11 自带 .NET Framework 4.8，直接加载 net48 版本的 `.xll`：
@@ -69,6 +81,8 @@ Win10/11 自带 .NET Framework 4.8，直接加载 net48 版本的 `.xll`：
 | `PIVOT.*` | 透视表/逆透视/分组聚合/交叉连接 | `=PIVOT.GROUPBY(A1:C100, {1}, 3, "avg")` |
 | `RANGE.*` | 导出 HTML/JSON/Markdown/CSV | `=RANGE.TOMD(A1:D10, TRUE)` |
 | `FS.*` | 读写文件/列目录/复制删除 | `=FS.READ("C:\data.txt")` |
+
+> 快速上手：[示例工作簿](samples/ExcelFormulaLabs-Samples.xlsx)（[说明](samples/README.md)）含 16 个模块的示例数据与公式，安装加载项后直接打开即可看到结果。
 
 ---
 
@@ -152,7 +166,7 @@ FileSystemCore.Initialize(new SandboxConfig(@"C:\Users\Public\Documents"));
 
 - **双 .NET 版本全量测试**，覆盖正常路径和退化输入（零值/空值/单元素/全等值）
 - **Python 交叉验证**：Stats/Regression 与 numpy/scipy 逐项对照，精度 1e-10；DataToolkit 集成管道测试覆盖跨模块组合
-- **手册验证**：228/240 个 UDF 有硬编码期望值的手册示例，由 Python 独立复算逐项对照（防自校验）；`verify-manual.py` 按双通道分报：manual-only 235 / cross-validated 197（合计 432 项检查；基线 2026-09-15，实际计数以脚本输出为准），其中真正与 C# 实现对照的 UDF 为 124/240（51.7%）（其余 12 个无独立示例的 *_ASYNC/共享 Core 变体由 UDF 层测试覆盖）
+- **手册验证**：228/240 个 UDF 有硬编码期望值的手册示例，由 Python 独立复算逐项对照（防自校验）；`verify-manual.py` 按双通道分报：manual-only 235 / cross-validated 226（合计 461 项检查；基线 2026-09-23，实际计数以脚本输出为准），其中真正与 C# 实现对照的 UDF 为 157/240（65.4%）（其余无独立示例的 *_ASYNC/共享 Core 变体由 UDF 层测试覆盖）
 
 ---
 
@@ -223,6 +237,7 @@ dotnet test
 
 | 文档 | 角色 | 内容 |
 |------|------|------|
+| [在线文档站](https://zgrwo.github.io/ExcelFormulaLabs/) | 全部用户文档 | Web 版手册，支持搜索与暗色主题 |
 | [README.en.md](README.en.md) | 英文入口 | English entry for international users |
 | [API 参考](docs/specification/api-reference.md) | 数字唯一信源 | 函数完整签名、参数说明、错误表 |
 | [用户手册](docs/user-manual/user-manual.md) | 学习教程 | 每个函数详细示例 + 结果解读指南 |

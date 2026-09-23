@@ -595,6 +595,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         // CSV formula injection defanging
         // ─────────────────────────────────────────────────────────────
 
+        [Trait("Category", "Security")]
         [Fact]
         public void ToCsv_formula_injection_defanged()
         {

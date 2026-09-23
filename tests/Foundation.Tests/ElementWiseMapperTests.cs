@@ -43,6 +43,26 @@ public class MapOverTests
         => ElementWiseMapper.MapOver(ExcelEmpty.Value, (string s) => s.ToUpper())
             .Should().Be(ExcelEmpty.Value);
 
+    // P1-7 回归（93e1d20）：空单元格必须透传「原始哨兵对象」而非替换为 Foundation.ExcelEmpty——
+    // 真实 Excel-DNA 的 ExcelEmpty 才能被渲染为空单元格；替换类型在真实 Excel 显示 #NUM!。
+    [Fact] public void Empty_passthrough_preserves_original_excel_dna_sentinel()
+    {
+        object excelDnaEmpty = ExcelDna.Integration.ExcelEmpty.Value;
+        var result = ElementWiseMapper.MapOver(excelDnaEmpty, (string s) => s.ToUpper());
+        result.Should().BeSameAs(excelDnaEmpty);
+    }
+
+    [Fact] public void MapOverMulti_empty_passthrough_preserves_original_sentinel()
+    {
+        object excelDnaEmpty = ExcelDna.Integration.ExcelEmpty.Value;
+        // 2 元素数组强制逐元素路径（1 元素会折叠为标量返回）。
+        var result = (object[])ElementWiseMapper.MapOverMulti<string, string, string>(
+            new object[] { excelDnaEmpty, "a" }, new object[] { "x", "y" },
+            (a, b) => a + b);
+        result[0].Should().BeSameAs(excelDnaEmpty);
+        result[1].Should().Be("ay");
+    }
+
     [Fact] public void Null_passthrough()
     {
         var input = new object?[] { null, "text" };

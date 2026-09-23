@@ -9,6 +9,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
     // 锁定"每次重验 + 原子替换"语义：篡改盘上文件后再次提取必须变回真实内容，
     //   版本升级必须落到新路径；否则会退化到写 0 字节 / File.Move 无法覆写。
     // [Collection("Sandbox")] 不需要——本类不触碰共享的 SandboxConfig 静态字段。
+    [Trait("Category", "Security")]
     public class NativeDllStoreTests : IDisposable
     {
         private readonly string _root;

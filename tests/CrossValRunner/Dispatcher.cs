@@ -241,6 +241,19 @@ public static class Dispatcher
         Register("StringCore", "HtmlDecode", (a, _) => StringCore.HtmlDecode(ToString(a[0])));
         Register("StringCore", "PadLeft", (a, _) => StringCore.PadLeft(ToString(a[0]), (int)ToLong(a[1])));
         Register("StringCore", "PadRight", (a, _) => StringCore.PadRight(ToString(a[0]), (int)ToLong(a[1])));
+        // 2026-09-23 覆盖率扩展：以下方法此前无 manifest 对照（UDF 缺口 12 项）
+        Register("StringCore", "NormalizeWhitespace", (a, _) => StringCore.NormalizeWhitespace(ToString(a[0])));
+        Register("StringCore", "ToTitleCase", (a, _) => StringCore.ToTitleCase(ToString(a[0])));
+        Register("StringCore", "RemoveChars", (a, _) => StringCore.RemoveChars(ToString(a[0]), ToString(a[1])));
+        Register("StringCore", "KeepChars", (a, _) => StringCore.KeepChars(ToString(a[0]), ToString(a[1])));
+        Register("StringCore", "Truncate", (a, k) => StringCore.Truncate(ToString(a[0]), (int)ToLong(a[1]), Kwarg(k, "suffix", "...")));
+        Register("StringCore", "StartsWithStr", (a, k) => StringCore.StartsWithStr(ToString(a[0]), ToString(a[1]), Kwarg(k, "cs", true)));
+        Register("StringCore", "EndsWithStr", (a, k) => StringCore.EndsWithStr(ToString(a[0]), ToString(a[1]), Kwarg(k, "cs", true)));
+        Register("StringCore", "LeftOf", (a, k) => StringCore.LeftOf(ToString(a[0]), ToString(a[1]), Kwarg(k, "n", 1L)));
+        Register("StringCore", "RightOf", (a, k) => StringCore.RightOf(ToString(a[0]), ToString(a[1]), Kwarg(k, "n", 1L)));
+        Register("StringCore", "ExtractBetween", (a, k) => StringCore.ExtractBetween(ToString(a[0]), ToString(a[1]), ToString(a[2]), Kwarg(k, "n", 1L), Kwarg(k, "inc", false)));
+        Register("StringCore", "NthWord", (a, k) => StringCore.NthWord(ToString(a[0]), Kwarg(k, "n", 1L)));
+        Register("StringCore", "StripHtml", (a, _) => StringCore.StripHtml(ToString(a[0])));
 
         // ═══════════════════ DateTimeCore ═══════════════════
         Register("DateTimeCore", "IsoWeekNum", (a, _) => DateTimeCore.IsoWeekNum(ToDateTime(a[0])));
@@ -271,6 +284,11 @@ public static class Dispatcher
         Register("ArrayCore", "Count", (a, _) => ArrayCore.Count(ToObjectArray(a[0])));
         Register("ArrayCore", "Concat", (a, _) => ArrayCore.Concat(ToObjectArray(a[0]), ToObjectArray(a[1])));
         Register("ArrayCore", "Flatten2D", (a, _) => ArrayCore.Flatten2D(ToObject2D(a[0]), "R"));
+        // 2026-09-23 覆盖率扩展：排序/切片/过滤子 UDF（ARR.SORTASC/SORTDESC/SORTTEXT/SLICE/FILTER*）
+        Register("ArrayCore", "SortDesc", (a, _) => ArrayCore.Sort(ToObjectArray(a[0]), false, Foundation.ComparerMode.Auto));
+        Register("ArrayCore", "SortText", (a, _) => ArrayCore.Sort(ToObjectArray(a[0]), true, Foundation.ComparerMode.Text));
+        Register("ArrayCore", "Slice", (a, _) => ArrayCore.Slice(ToObjectArray(a[0]), ToLong(a[1]), ToLong(a[2])));
+        Register("ArrayCore", "Filter", (a, _) => ArrayCore.Filter(ToObjectArray(a[0]), ToClr(a[1]), ToString(a[2])));
 
         // ═══════════════════ RegexCore ═══════════════════
         Register("RegexCore", "RegexTest", (a, k) => RegexCore.RegexTest(ToString(a[0]), ToString(a[1]),

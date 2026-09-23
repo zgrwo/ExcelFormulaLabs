@@ -193,6 +193,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         }
 
         // 防错原则2: Regex timeout prevents ReDoS / catastrophic backtracking
+        [Trait("Category", "Security")]
         [Fact] public void Catastrophic_backtracking_does_not_hang()
         {
             // Evil regex: (a+)+b with no 'b' suffix causes exponential backtracking.
@@ -216,6 +217,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             sw.ElapsedMilliseconds.Should().BeLessThan(7000, "5s timeout + 2s tolerance");
         }
 
+        [Trait("Category", "Security")]
         [Fact] public void ValidatePattern_exceeds_max_length_throws()
         {
             var longPattern = new string('x', RegexCore.MaxPatternLength + 1);

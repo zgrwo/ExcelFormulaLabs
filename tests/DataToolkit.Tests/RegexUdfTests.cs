@@ -121,6 +121,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
 
         // R1-4：每格 5s Timeout 在数组分发下线性放大（旧实现 5 格病态模式 = 5×5s = 25s）。
         // 调用级预算把总时长钳在 5s + 单格：首格超时后剩余格立即 #VALUE!。
+        [Trait("Category", "Security")]
         [Fact]
         public void Array_budget_bounds_total_time()
         {
@@ -134,6 +135,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
 
         // R1-4 镜像：ARR.FILTER 的 regex 超时必须显式失败（旧实现 FilterUtils 吞超时判 false，
         // 整列被静默过滤光 → 用户无法区分"无匹配"与"病态模式"）。
+        [Trait("Category", "Security")]
         [Fact]
         public void Filter_regex_timeout_surfaces_error()
         {

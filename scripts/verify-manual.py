@@ -244,6 +244,11 @@ def cross_vs_csharp(name, py_value, manifest_id, tol=None, field=None, xform=Non
     REFERENCED.add(name)
     REFERENCED.add(manifest_id)
     CROSS_REFERENCED.add(manifest_id)
+    # R3-20（2026-09-23）：name 也计入 CROSS_REFERENCED——bespoke 检查的 name 通常就是
+    # UDF 名（如 "LINALG.QR_R[0,0] vs C#"），此前只记 manifest_id 使这些 UDF 被
+    # 覆盖率统计漏计（检查真实存在却报缺口）。归一化后不映射到任何 UDF 的 name
+    # （如 "REGRESS.R² vs C#"）无副作用。
+    CROSS_REFERENCED.add(name)
     ref = csharp_results().get(manifest_id)
     if ref is None:
         SKIP += 1
@@ -550,6 +555,19 @@ check("PHYCHEM.L_TO_GAL(10)", 10/3.78541, 2.64172, tol=1e-3)
 check("PHYCHEM.GAL_TO_L(10)", 10*3.78541, 37.8541, tol=1e-3)
 check("PHYCHEM.ATM_TO_PSI(2)", 2*14.6959, 29.3918, tol=1e-3)
 check("PHYCHEM.PSI_TO_ATM(30)", 30/14.6959, 2.04139, tol=1e-3)
+# 单位换算 UDF 的真 C# 对照（2026-09-23 覆盖率扩展）：
+# 既有 manifest 换算用例被映射到 PHYCHEM.TEMP/PRESS/VOL/MASS 父 UDF，子 UDF（C_TO_F 等）
+# 从未计入 CROSS_REFERENCED——此处在同一 C# 参照上以 UDF 名补对照，覆盖子 UDF。
+cross_vs_csharp("PHYCHEM.C_TO_F", 100 * 9/5 + 32, "PHYCHEM.TEMP_CtoF_100")
+cross_vs_csharp("PHYCHEM.F_TO_C", (32 - 32) * 5/9, "PHYCHEM.TEMP_FtoC_32")
+cross_vs_csharp("PHYCHEM.ATM_TO_PSI", 1 * 14.6959, "PHYCHEM.PRESS_ATMtoPSI_1", tol=1e-3)
+cross_vs_csharp("PHYCHEM.GAL_TO_L", 1 * 3.78541, "PHYCHEM.VOL_GALtoL_1", tol=1e-3)
+cross_vs_csharp("PHYCHEM.KG_TO_LB", 1 * 2.20462, "PHYCHEM.MASS_KGtoLB_1", tol=1e-3)
+# 反方向换算：新增 manifest 条目（PhyChemCore.ConvertPressure/Volume/Mass 已注册）。
+# Python 侧用标准精确换算常数独立计算（非引用 C# 代码）。
+cross_vs_csharp("PHYCHEM.PSI_TO_ATM", 14.6959 * 6894.76 / 101325, "PHYCHEM.PRESS_PSItoATM_1", tol=1e-3)
+cross_vs_csharp("PHYCHEM.L_TO_GAL", 3.78541 / 3.785411784, "PHYCHEM.VOL_LtoGAL_1", tol=1e-3)
+cross_vs_csharp("PHYCHEM.LB_TO_KG", 2.20462 / 2.2046226218, "PHYCHEM.MASS_LBtoKG_1", tol=1e-3)
 # R 与 C# 同为精确值 8.31446261815324/101.325（0.082057 是约数）。
 Rg=8.31446261815324/101.325; Vstp=1*Rg*273.15/1.0
 cross_vs_csharp("PHYCHEM.IDEALGAS(V) vs C#", Vstp, "PHYCHEM.IDEALGAS_V", tol=1e-12)
@@ -680,6 +698,20 @@ cross_check("STR.HTMLENCODE", _html.escape("<b>&"))
 cross_check("STR.HTMLDECODE", _html.unescape("&lt;b&gt;"))
 cross_check("STR.PADLEFT", "42".rjust(5))
 cross_check("STR.PADRIGHT", "42".ljust(5))
+# 2026-09-23 覆盖率扩展：以下 UDF 此前无真 C# 对照（manifest 条目与 Dispatcher 同步新增）。
+# Python 侧均为独立实现（列表推导 / 切片 / 标准库），非镜像 C# 代码。
+cross_vs_csharp("STR.NORMWS", " ".join("  hello   world  ".split()), "STR.NORMWS")
+cross_vs_csharp("STR.TITLE", "hello world".title(), "STR.TITLE")
+cross_vs_csharp("STR.REMOVE", "".join(c for c in "hello world" if c not in "lo"), "STR.REMOVE")
+cross_vs_csharp("STR.KEEP", "".join(c for c in "hello world" if c in "lo"), "STR.KEEP")
+cross_vs_csharp("STR.TRUNCATE", "hello world"[:8 - 3] + "...", "STR.TRUNCATE")
+cross_vs_csharp("STR.STARTSWITH", "hello".startswith("he"), "STR.STARTSWITH")
+cross_vs_csharp("STR.ENDSWITH", "hello".endswith("lo"), "STR.ENDSWITH")
+cross_vs_csharp("STR.LEFTOF", "a/b/c".split("/")[0], "STR.LEFTOF")
+cross_vs_csharp("STR.RIGHTOF", "/".join("a/b/c".split("/")[1:]), "STR.RIGHTOF")
+cross_vs_csharp("STR.EXTRACT", "a[b]c"["a[b]c".index("[") + 1:"a[b]c".index("]")], "STR.EXTRACT")
+cross_vs_csharp("STR.NTHWORD", "one two three".split()[1], "STR.NTHWORD")
+cross_vs_csharp("STR.STRIPHTML", "hi", "STR.STRIPHTML")
 
 # ========================================================================
 # DT (25 UDFs)
@@ -840,8 +872,18 @@ cross_check("ARR.INDEXOF", [1,2,3].index(2))
 cross_check("ARR.CONTAINS", 3 in [1,2,3])
 cross_check("ARR.REVERSE", [1,2,3][::-1])
 cross_check("ARR.COUNT", len([1,2,3]))
-cross_check("ARR.CONCAT", [1,2] + [3,4])
+cross_check("ARR.CONCAT", [1,2]+[3,4])
 cross_check("ARR.FLATTEN", [1,2,3,4])
+# 2026-09-23 覆盖率扩展：排序/切片/过滤子 UDF 的真 C# 对照（Python 独立实现）。
+cross_vs_csharp("ARR.SORTASC", sorted(["c","a","b"]), "ARR.SORTASC")
+cross_vs_csharp("ARR.SORTDESC", sorted([3,1,2], reverse=True), "ARR.SORTDESC")
+cross_vs_csharp("ARR.SORTTEXT", sorted(["b","A","c"], key=str.lower), "ARR.SORTTEXT")
+cross_vs_csharp("ARR.SLICE", [10,20,30,40,50][1:1+3], "ARR.SLICE")
+cross_vs_csharp("ARR.FILTER", [x for x in [1,2,3,4,5] if x > 3], "ARR.FILTER")
+cross_vs_csharp("ARR.FILTER_EQ", [x for x in [1,2,3,4,5] if x == 3], "ARR.FILTER_EQ")
+cross_vs_csharp("ARR.FILTER_GT", [x for x in [1,2,3,4,5] if x > 3], "ARR.FILTER_GT")
+cross_vs_csharp("ARR.FILTER_LT", [x for x in [1,2,3,4,5] if x < 3], "ARR.FILTER_LT")
+cross_vs_csharp("ARR.FILTER_NE", [x for x in [1,2,3,4,5] if x != 3], "ARR.FILTER_NE")
 # SHUFFLE — Fisher-Yates format check
 # 多重集不变断言（乱序不得丢元素/重复元素；Fisher-Yates 契约）；
 # 仅验证保长恒真（shuffle 本身恒保长）无区分度。
@@ -1480,6 +1522,9 @@ _ID2UDF = {
     "PHYCHEM.VOL_LtoML_1": "PHYCHEM.VOL", "PHYCHEM.VOL_GALtoL_1": "PHYCHEM.VOL",
     "PHYCHEM.MASS_KGtoLB_1": "PHYCHEM.MASS",
     "PHYCHEM.IDEALGAS_V": "PHYCHEM.IDEALGAS", "PHYCHEM.GASSTP_Kelvin": "PHYCHEM.GASSTP",
+    "PHYCHEM.PRESS_PSItoATM_1": "PHYCHEM.PSI_TO_ATM",
+    "PHYCHEM.VOL_LtoGAL_1": "PHYCHEM.L_TO_GAL",
+    "PHYCHEM.MASS_LBtoKG_1": "PHYCHEM.LB_TO_KG",
     "STATS.CORRMATRIX_CONST": "STATS.CORRMATRIX",
     "DT.ADDWORKDAYS": "DT.ADDWKD", "DT.NEXTWORKDAY": "DT.NEXTWKD", "DT.ISLEAP_2024": "DT.ISLEAP",
     "DT.EASTER_2024": "DT.EASTER", "DT.EASTER_2025": "DT.EASTER",
@@ -1542,11 +1587,24 @@ print(f"    └ cross-validated (vs C#):         {CROSS_PASS}")
 # “UDF coverage” 是手册示例覆盖（含纯 Python 自校验）——
 # 必须同时打印真正与 C# 对照的 cross 覆盖数，防止 README/报告宣称口径虚高。
 if _cross_unmapped:
-    # 诊断（非失败）：C# 对照 manifest id 不能对应任何公开 UDF。DICT.FromKeys 等
-    # Foundation 级对照属预期；若新增 UDF 条目因漏映射未计入覆盖，此行会显式列出（R3-19）。
-    print(f"  [unmapped cross refs] {len(_cross_unmapped)}: {', '.join(sorted(_cross_unmapped))}")
+    # 诊断（非失败）：C# 对照引用不能对应任何公开 UDF。DICT.FromKeys 等 Foundation 级
+    # 对照属预期；若新增 UDF 条目因漏映射未计入覆盖，此行会显式列出（R3-19）。
+    # R3-20（2026-09-23）：bespoke 检查的字段级引用（如 "SOLVE.QUALITY_MAE" 是已覆盖
+    # SOLVE.QUALITY 的字段对照、"PIVOT.Pivot" 是大小写变体）不算漏映射，过滤后只留真实缺口。
+    _covered_ci = [u.lower() for u in _cross_covered]
+    def _is_field_variant(n):
+        nl = n.lower()
+        return any(nl == u or nl.startswith(u + "_") or nl.startswith(u + ".") for u in _covered_ci)
+    _real_unmapped = sorted(n for n in _cross_unmapped if not _is_field_variant(n))
+    if _real_unmapped:
+        print(f"  [unmapped cross refs] {len(_real_unmapped)}: {', '.join(_real_unmapped)}")
 print(f"  UDF coverage: {udf_count} of {UDF_TOTAL} UDFs covered (sync variants)")
 print(f"    └ of which cross-validated vs C#: {len(_cross_covered)} of {UDF_TOTAL} ({len(_cross_covered)/UDF_TOTAL*100:.1f}%)")
+# 缺口清单（VERIFY_MANUAL_SHOW_GAPS=1）：列出尚无真 C# 对照的 UDF，供扩充 manifest 用。
+# 默认不打印，保持既有输出口径（README/CHANGELOG 的 432 项计数不受影响）。
+if os.environ.get("VERIFY_MANUAL_SHOW_GAPS"):
+    _gaps = sorted(set(_API_UDFS) - _cross_covered)
+    print(f"  [cross gaps] {len(_gaps)}: {' '.join(_gaps)}")
 print(f"{'='*60}")
 if FAIL>0 or SKIP>0:
     print(f"\n  FAILURES DETECTED (failures={FAIL}, skipped={SKIP}). Review discrepancies above.")

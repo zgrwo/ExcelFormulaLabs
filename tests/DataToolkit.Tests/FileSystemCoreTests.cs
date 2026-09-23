@@ -14,6 +14,7 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
     public class SandboxCollection { }
 
     [Collection("Sandbox")]
+    [Trait("Category", "Security")]
     public class FileSystemCoreTests
     {
         // Original tests
