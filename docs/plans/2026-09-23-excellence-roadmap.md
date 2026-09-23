@@ -8,13 +8,13 @@
 
 ## 一、实测基线（2026-09-23，本机 CI 同口径）
 
-| 指标 | 初始实测 | 当前实测（2026-09-23 Phase 3 后） | 目标 |
+| 指标 | 初始实测 | 当前实测（2026-09-23 Phase 4 后） | 目标 |
 | :--- | :--- | :--- | :--- |
 | 行覆盖率 Foundation（net8.0） | 84.25%（门禁 75） | **96.02%（门禁 92）** | ≥88% 达成 |
 | 行覆盖率 Analytics（net8.0） | 89.05%（门禁 50） | **90.2%（门禁 86）** | ≥90% 达成 |
 | 行覆盖率 DataToolkit（net8.0） | 89.22%（门禁 42） | **90.18%（门禁 86）** | ≥90% 达成 |
 | 真 C# 交叉对照 UDF 数 | 124/240（51.7%） | **194/240（80.8%）** | ≥80% 达成 |
-| 手册检查总数 | 432（manual 235 / cross 197） | **461（manual 235 / cross 226），0 FAIL / 0 SKIP** | — |
+| 手册检查总数 | 432（manual 235 / cross 197） | **498（manual 235 / cross 263），0 FAIL / 0 SKIP** | — |
 | 测试弱断言审计 | 无 | 零断言/恒真 FAIL + 存在性断言预算 **0** | 预算归零 达成 |
 | 依赖锁定 | 无 lock 文件 | 8 工程 packages.lock.json + CI locked mode | 达成 |
 | NuGet 漏洞审计 | 仅 dependabot 告警 | CI `dependency-audit` job（JSON 解析 + 失败门禁） | 达成 |
@@ -165,6 +165,9 @@
 
 ---
 
+
+---
+
 ## Phase 3 — 工程质量与用户价值（2026-09-23 实施）
 
 ### 3.1 公共 ROADMAP.md `[x]`
@@ -234,6 +237,44 @@ dotnet build -c Release                          # ⑦ 分发构建
 
 > 全量 6 步入口 `scripts/verify-all.ps1` 不变；新增门禁以独立脚本接入 CI 与 pre-commit，
 > 避免改写既有"6 步 / 6 项"文档口径。
+
+---
+
+## Phase 4 — 用户价值与验证深化（2026-09-23 实施）
+
+### 4.1 基准回归阈值告警 `[x]`
+
+- [x] benchmarks.yml 接入 `benchmark-action/github-action-benchmark@v1`：对比上一轮结果，
+      劣化 >150% 触发 commit comment 告警（`fail-on-alert=false`，共享 runner 抖动不阻断）
+- [x] 历史数据经 actions/cache 持久化（key 含 run_id + restore-keys 前缀），不推 gh-pages
+- [x] `--exporters json`；三类报告分步上报（action 仅接受单文件，已本地 dry 验证文件名）
+- [x] 验证：YAML 结构校验 + dry 运行产物文件名与配置逐一比对
+
+### 4.2 交叉对照 65.4% → 80.8% `[x]`
+
+- [x] 新增 37 个函数的真 C# 对照（UDF 级覆盖 157 → 194）：DT 9 / REGEX 4 / DICT 8 /
+      RANGE 7 / JSON+XML 5 / PIVOT 2 / STR.FORMAT / LINALG.LU_P
+- [x] Dispatcher 新增 27 个注册 + ToDayOfWeek/NullableString 助手；manifest 190 → 227 条
+- [x] **交叉对照发现并修复真实缺陷**：`DT.WOM` 旧实现返回 0/2，与文档契约（1–5，6/15→3）
+      矛盾 → 修复为日历周序（独立 commit a295569），新增回归守卫
+- [x] verify-docs 检查 16 修正：manual/cross 为检查项数，允许 > 240（实测 cross=263 触发旧断言误报）
+- [x] 实测：498 项检查 0 FAIL / 0 SKIP；真 C# 对照 **194/240（80.8%）**；剩余 46 缺口为
+      FS（22，文件副作用）/ `*_ASYNC`（11，Excel 异步）/ 随机类（4）/ 复杂表输出（9）
+
+### 4.3 示例工作簿扩展 `[x]`
+
+- [x] SOLVE sheet：新增 `SOLVE.QUALITY`（交叉验证 R²/MAE）与 `SOLVE.EQUATION`（方程+闭式反解）
+- [x] DOE sheet：新增 coded 设计 + 响应数据块与 `DOE.ANALYZE` / `DOE.ANOVA` / `DOE.PARETO` 示例
+- [x] 示例分块放置（避开动态数组溢出区，防 #SPILL 冲突）；samples/README + docs/samples 同步
+- [x] 验证：openpyxl 重新生成 18 sheet 工作簿（19,337 bytes），结构与公式逐项抽查
+
+### 4.4 手册按模块拆页 `[x]`
+
+- [x] 3,983 行手册拆为：总览页（版本头/通用约定/错误参考/附录，114 行）+
+      16 个模块分页（`docs/user-manual/modules/01-stats.md` … `16-range.md`）
+- [x] TOC 链接重写为模块页链接；模块内外链相对路径自动加一层（`../specification` → `../../specification`）
+- [x] mkdocs nav 嵌套 16 模块；project-structure 树同步
+- [x] 验证：文件链接检查 0 断链；`mkdocs build --strict` 全绿；verify-docs 26 PASS
 
 ---
 
