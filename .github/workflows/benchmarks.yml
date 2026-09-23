@@ -1,7 +1,9 @@
 name: Benchmarks
 
-# 性能基准（BenchmarkDotNet）：不进门禁，只留历史趋势与回归证据。
+# 性能基准（BenchmarkDotNet）：不进门禁，留历史趋势 + 回归告警。
 # 触发：main 相关路径变更 + 手动 dispatch + 每周一 03:00 UTC 定时。
+# 回归检测：benchmark-action/github-action-benchmark，对比上一轮结果，>150% 阈值告警
+# （fail-on-alert=false：只告警不阻断，避免共享 runner 抖动误伤；历史数据经 actions/cache 持久化）。
 on:
   push:
     branches: [main]
@@ -19,7 +21,8 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  # commit comment（comment-on-alert）需要 contents: write；不推送 gh-pages 分支。
+  contents: write
 
 jobs:
   benchmarks:
@@ -44,15 +47,65 @@ jobs:
       - name: Restore
         run: dotnet restore
 
+      # 恢复上一轮基准历史（external-data-json-path 文件）。key 含 run_id 保证每轮都能写回，
+      # restore-keys 前缀取最近一次历史。
+      - name: Restore benchmark history
+        uses: actions/cache@v4
+        with:
+          path: benchmark-cache
+          key: benchmark-history-${{ github.run_id }}
+          restore-keys: |
+            benchmark-history-
+
       # BenchmarkSwitcher：--filter "*" 运行全部基准（Linalg / MapOver / Stats）。
+      # --exporters json：为 github-action-benchmark 产出 *-report-full-compressed.json。
       - name: Run benchmarks
-        run: dotnet run -c Release --project benchmarks/ExcelFormulaLabs.Benchmarks -- --filter "*"
+        run: dotnet run -c Release --project benchmarks/ExcelFormulaLabs.Benchmarks -- --filter "*" --exporters json
+
+      # 每类基准一个 JSON 报告文件（action 的 output-file-path 仅接受单文件，故分步调用）。
+      - name: Store benchmark result (Linalg)
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: 'benchmarkdotnet'
+          output-file-path: BenchmarkDotNet.Artifacts/results/ExcelFormulaLabs.Benchmarks.LinalgBenchmarks-report-full-compressed.json
+          external-data-json-path: ./benchmark-cache/benchmark-data.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          alert-threshold: '150%'
+          fail-on-alert: false
+          comment-on-alert: true
+          summary-always: true
+
+      - name: Store benchmark result (MapOver)
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: 'benchmarkdotnet'
+          output-file-path: BenchmarkDotNet.Artifacts/results/ExcelFormulaLabs.Benchmarks.MapOverBenchmarks-report-full-compressed.json
+          external-data-json-path: ./benchmark-cache/benchmark-data.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          alert-threshold: '150%'
+          fail-on-alert: false
+          comment-on-alert: true
+          summary-always: true
+
+      - name: Store benchmark result (Stats)
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: 'benchmarkdotnet'
+          output-file-path: BenchmarkDotNet.Artifacts/results/ExcelFormulaLabs.Benchmarks.StatsBenchmarks-report-full-compressed.json
+          external-data-json-path: ./benchmark-cache/benchmark-data.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          alert-threshold: '150%'
+          fail-on-alert: false
+          comment-on-alert: true
+          summary-always: true
 
       - name: Upload benchmark artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: benchmarkdotnet-artifacts
-          path: BenchmarkDotNet.Artifacts/**
+          path: |
+            BenchmarkDotNet.Artifacts/**
+            benchmark-cache/**
           if-no-files-found: warn
           retention-days: 90
