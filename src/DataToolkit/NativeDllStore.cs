@@ -106,7 +106,7 @@ namespace ExcelFormulaLabs.DataToolkit
             byte[] hash = sha.ComputeHash(data);
             var sb = new StringBuilder(64);
             foreach (byte b in hash)
-                sb.Append(b.ToString("x2"));
+                sb.Append(b.ToString("x2", System.Globalization.CultureInfo.InvariantCulture));
             return sb.ToString();
         }
     }

@@ -29,7 +29,9 @@ namespace ExcelFormulaLabs.Foundation
         /// <returns>Formatted message string; falls back to key if resource missing.</returns>
         public static string Get(string key, params object[] args)
         {
-            var template = Rm.GetString(key);
+            // 显式传 CurrentUICulture：满足 CA1304 的确定性要求，同时保留 UI 本地化语义
+            // （资源当前仅中性文化，行为与无参调用一致）。
+            var template = Rm.GetString(key, System.Globalization.CultureInfo.CurrentUICulture);
             if (template == null)
                 return key; // fail-safe: return key name so message is never null
             return args.Length > 0

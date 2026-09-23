@@ -440,7 +440,7 @@ namespace ExcelFormulaLabs.Foundation
                 // ToDouble 抛 InvalidCastException（"Invalid cast from 'Char' to 'Double'"），
                 // 违反 L2 哨兵契约（ToDouble/ToLong/ToBool 均返回哨兵）。
                 double d;
-                try { d = Convert.ToDouble(value); }
+                try { d = Convert.ToDouble(value, CultureInfo.InvariantCulture); }
                 catch (Exception ex) when (ExceptionFilters.IsCatchable(ex)) { return DateTime.MinValue; }
                 if (d >= 0 && !double.IsNaN(d) && !double.IsInfinity(d))
                 {

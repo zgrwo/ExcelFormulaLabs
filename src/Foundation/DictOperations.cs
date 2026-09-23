@@ -55,8 +55,8 @@ namespace ExcelFormulaLabs.Foundation
                     continue;
 
                 string keyStr = KeyToString(key);
-                if (!dict.ContainsKey(keyStr))
-                    dict.Add(keyStr, defaultValue!);  // null value 合法（Dictionary 允许），! 声明意图
+                if (dict.ContainsKey(keyStr)) continue;
+                dict[keyStr] = defaultValue!;  // null value 合法（Dictionary 允许），! 声明意图
             }
             return dict;
         }
@@ -122,7 +122,7 @@ namespace ExcelFormulaLabs.Foundation
             return Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? "";
         }
 
-        private static IEqualityComparer<string> ComparerFromMode(StringComparison mode) => mode switch
+        private static StringComparer ComparerFromMode(StringComparison mode) => mode switch
         {
             StringComparison.OrdinalIgnoreCase => StringComparer.OrdinalIgnoreCase,
             StringComparison.Ordinal => StringComparer.Ordinal,

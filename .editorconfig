@@ -29,6 +29,17 @@ csharp_style_expression_bodied_properties = when_on_single_line:suggestion
 csharp_indent_case_contents = true
 csharp_indent_switch_labels = true
 
+# 静态分析（Phase 3.3，AnalysisMode=Recommended）：以下规则的建议 API 在 net48 不存在
+# （双 TFM 兼容约束），或与 UDF 公开命名契约冲突——显式抑制并记录理由，禁止无理由关闭。
+dotnet_diagnostic.CA1707.severity = none   # UDF_*/测试方法用下划线分隔是公开契约，不重命名
+dotnet_diagnostic.CA2249.severity = none   # Contains(string, StringComparison) 仅 netstandard2.1+
+dotnet_diagnostic.CA1512.severity = none   # ArgumentOutOfRangeException.ThrowIf* 仅 .NET 7+
+dotnet_diagnostic.CA1845.severity = none   # span 版 string.Concat 仅 .NET Core
+dotnet_diagnostic.CA1846.severity = none   # AsSpan 字符串重载依赖 System.Memory
+dotnet_diagnostic.CA1847.severity = none   # Contains(char) 仅 netstandard2.1+（net48 退化为 LINQ 全扫描）
+dotnet_diagnostic.CA1850.severity = none   # SHA256.HashData 仅 .NET 5+
+dotnet_diagnostic.CA1837.severity = none   # Environment.ProcessId 仅 .NET 5+
+
 [*.{csproj,xml,props,targets}]
 indent_size = 2
 

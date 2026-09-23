@@ -14,6 +14,10 @@
     <!-- review 2026-09-05（R10）：警告不进红线 → 静默回潮（实测 23 警告曾在门禁全绿下合入）。
          src/ 全部警告清零后启用；tests 侧警告已同步清零但暂不强制（CrossValRunner 等工具工程独立演进）。 -->
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- 静态分析补盲（2026-09-23，Phase 3.3）：启用 .NET SDK 推荐分析器集
+         （CAxxxx，AnalysisLevel 随 SDK 8.0）。配合 TreatWarningsAsErrors=true，
+         新违规直接阻断构建；已按规则逐条修复清零后启用。 -->
+    <AnalysisMode>Recommended</AnalysisMode>
     <!-- 依赖可复现（2026-09-23）：提交 packages.lock.json；CI（CI=true）强制锁定模式，
          依赖漂移在 restore 阶段即失败。本地开发不加锁，便于显式更新 lock 后提交。 -->
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>

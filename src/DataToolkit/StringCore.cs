@@ -114,7 +114,7 @@ namespace ExcelFormulaLabs.DataToolkit
         { t ??= ""; int i=NthIdx(t,d,n); return i<0?t:t.Substring(i+d.Length); }
 
         internal static string ExtractBetween(string t, string l, string r, long n=1, bool inc=false)
-        { t ??= ""; int s=NthIdx(t,l,n); if(s<0)return""; int e=t.IndexOf(r,s+l.Length); if(e<0)return""; return inc?t.Substring(s,e-s+r.Length):t.Substring(s+l.Length,e-s-l.Length); }
+        { t ??= ""; int s=NthIdx(t,l,n); if(s<0)return""; int e=t.IndexOf(r,s+l.Length,StringComparison.Ordinal); if(e<0)return""; return inc?t.Substring(s,e-s+r.Length):t.Substring(s+l.Length,e-s-l.Length); }
 
         internal static string NthWord(string t, long n)
         {
@@ -269,6 +269,8 @@ namespace ExcelFormulaLabs.DataToolkit
 
         private static int NthIdx(string t, string s, long n)
         {
+            // 定界符匹配一律序数（Ordinal）：与全库确定性纪律一致，
+            // 避免 CurrentCulture 语言比较在 tr-TR 等 locale 下改变匹配位置。
             if (string.IsNullOrEmpty(t)) return -1;    // empty string → no match
             if (n == 0) n = 1;                         // default → first occurrence
             // 空分隔符 + n > len+1 时
@@ -283,7 +285,7 @@ namespace ExcelFormulaLabs.DataToolkit
                 for (long j = 0; j < absN; j++)
                 {
                     if (i <= 0) return -1;             // |n| exceeds occurrences (guards LastIndexOf(startIndex=-1))
-                    i = t.LastIndexOf(s, i - 1);       // search backward
+                    i = t.LastIndexOf(s, i - 1, StringComparison.Ordinal); // search backward
                     if (i < 0) return -1;
                 }
                 return i;
@@ -292,7 +294,7 @@ namespace ExcelFormulaLabs.DataToolkit
             int idx = -1;
             for (long j = 0; j < n; j++)
             {
-                idx = t.IndexOf(s, idx + 1);
+                idx = t.IndexOf(s, idx + 1, StringComparison.Ordinal);
                 if (idx < 0) return -1;
             }
             return idx;

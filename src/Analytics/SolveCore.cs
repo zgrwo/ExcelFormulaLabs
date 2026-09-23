@@ -60,6 +60,10 @@ namespace ExcelFormulaLabs.Analytics
     /// </summary>
     internal static class SolveCore
     {
+        // QUALITY / EQUATION 报表表头（静态复用，避免重复调用分配常量数组，CA1861）。
+        private static readonly string[] QualityHeaders = { "输出", "候选", "CV方案", "CV_R2", "CV_MAE", "选用" };
+        private static readonly string[] EquationHeaders = { "输出", "类型", "表达式" };
+
         internal const int MaxHistoryRows = 5000;
         internal const int MaxRequestRows = 200;
         internal const int MaxFeatureColumns = 50;
@@ -2110,7 +2114,7 @@ namespace ExcelFormulaLabs.Analytics
                     rows.Add(new object[] { outputName, mdl, cv.Scheme, cv.R2, cv.Mae, "是" });
                 }
             }
-            return Report(rows, new[] { "输出", "候选", "CV方案", "CV_R2", "CV_MAE", "选用" });
+            return Report(rows, QualityHeaders);
         }
 
         private static object[,] Report(List<object[]> rows, string[] headers)
@@ -2197,7 +2201,7 @@ namespace ExcelFormulaLabs.Analytics
                     }
                 }
             }
-            return Report(rows, new[] { "输出", "类型", "表达式" });
+            return Report(rows, EquationHeaders);
         }
 
         private static string Num(double value) => value.ToString("G6", CultureInfo.InvariantCulture);

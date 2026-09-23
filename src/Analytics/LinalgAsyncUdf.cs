@@ -31,9 +31,9 @@ namespace ExcelFormulaLabs.Analytics
         // topic key 用 128 位双 FNV-1a 内容哈希（与 DecompCache.MatrixHash 同一实现：32 个
         // 十六进制位 + 维度/长度后缀），碰撞概率与分解缓存对齐：单 64 位哈希的碰撞会使 RTD
         // 把另一个矩阵/向量的缓存结果静默返回给本单元格（错值无任何信号）。
-        private static object AsyncKey(double[,] m) => LinalgCore.MatrixHash(m);
+        private static string AsyncKey(double[,] m) => LinalgCore.MatrixHash(m);
 
-        private static object AsyncKeyV(double[] v) => LinalgCore.VectorHash(v);
+        private static string AsyncKeyV(double[] v) => LinalgCore.VectorHash(v);
 
         [ExcelFunction(Name = "LINALG.SVD_U_ASYNC", Description = "SVD left singular vectors (U matrix), computed asynchronously.")]
         public static object UDF_LINALG_SVD_U_ASYNC([ExcelArgument(Name = "array", Description = "A range or 2D array")] object d)

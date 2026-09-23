@@ -19,9 +19,9 @@ namespace ExcelFormulaLabs.Analytics
         // topic key 为 128 位双 FNV-1a 内容哈希（复用 LinalgCore，与 DecompCache.MatrixHash
         // 同一实现）：单 64 位 31-进制哈希碰撞会使 RTD 把另一组输入的缓存结果静默返回给
         // 本单元格。
-        private static object AsyncKey(double[,] m) => LinalgCore.MatrixHash(m);
+        private static string AsyncKey(double[,] m) => LinalgCore.MatrixHash(m);
 
-        private static object AsyncKeyV(double[] v) => LinalgCore.VectorHash(v);
+        private static string AsyncKeyV(double[] v) => LinalgCore.VectorHash(v);
 
         [ExcelFunction(Name = "REGRESS.OLS_ASYNC",
           Description = "OLS regression, computed asynchronously on a background thread.")]

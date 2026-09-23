@@ -13,6 +13,9 @@ namespace ExcelFormulaLabs.DataToolkit
     /// <summary>JSON parsing/querying and XML XPath/table conversion. Ported from JsonUtils.bas + XmlUtils.bas.</summary>
     internal static class JsonXmlCore
     {
+        // JsonSerializerOptions 线程安全（首次使用后不可变），静态复用（CA1869）。
+        private static readonly JsonSerializerOptions PrettifyOptions = new JsonSerializerOptions { WriteIndented = true };
+
         // ── JSON ───────────────────────────────────────────────────────────
         internal static object? JsonParse(string json)
         { using var d=JsonDocument.Parse(json, new JsonDocumentOptions{MaxDepth=64}); return Elm(d.RootElement); }
@@ -24,7 +27,7 @@ namespace ExcelFormulaLabs.DataToolkit
         { try{using var _=JsonDocument.Parse(json, new JsonDocumentOptions{MaxDepth=64});return true;}catch(Exception ex) when(ExceptionFilters.IsCatchable(ex)){return false;} }
 
         internal static string JsonPrettify(string json)
-        { using var d=JsonDocument.Parse(json, new JsonDocumentOptions{MaxDepth=64}); return JsonSerializer.Serialize(d,new JsonSerializerOptions{WriteIndented=true}); }
+        { using var d=JsonDocument.Parse(json, new JsonDocumentOptions{MaxDepth=64}); return JsonSerializer.Serialize(d, PrettifyOptions); }
 
         internal static object[,]? JsonToTable(string json)
         {
@@ -52,7 +55,7 @@ namespace ExcelFormulaLabs.DataToolkit
         /// <summary>重复键须统一为「后者覆盖」（JSON 解析器通行语义，Python json.loads /
         /// JSON.NET 同款）：ToDictionary 遇重复键抛异常，而 QUERY（TryGetProperty 取首个）与
         /// TOTABLE（后写覆盖）各自成功——三条通道行为矛盾。</summary>
-        private static object? ElmObject(JsonElement e)
+        private static Dictionary<string, object?> ElmObject(JsonElement e)
         {
             var dict = new Dictionary<string, object?>(StringComparer.Ordinal);
             foreach (var p in e.EnumerateObject()) dict[p.Name] = Elm(p.Value);

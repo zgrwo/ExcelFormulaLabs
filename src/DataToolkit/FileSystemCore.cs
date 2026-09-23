@@ -27,6 +27,8 @@ namespace ExcelFormulaLabs.DataToolkit
     /// </remarks>
     internal static class FileSystemCore
     {
+        // GuardSearchPattern 的分段分隔符（静态复用，CA1861）。
+        private static readonly char[] SearchPatternSeparators = { '\\', '/' };
         private static volatile SandboxConfig _config = new(null);
         private static int _initialized;
         private static volatile bool _sessionEnded;
@@ -233,7 +235,7 @@ namespace ExcelFormulaLabs.DataToolkit
         private static void GuardSearchPattern(string pat)
         {
             if (string.IsNullOrEmpty(pat)) return;
-            var segments = pat.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
+            var segments = pat.Split(SearchPatternSeparators, StringSplitOptions.RemoveEmptyEntries);
             for (int i = 0; i < segments.Length; i++)
                 if (segments[i] == "..")
                     throw new ArgumentException("Search pattern must not contain '..' path segments.");

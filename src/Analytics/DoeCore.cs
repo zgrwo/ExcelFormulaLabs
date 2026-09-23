@@ -27,6 +27,9 @@ namespace ExcelFormulaLabs.Analytics
         // （OOM 被异常过滤器排除不可捕获）。
         internal const long MaxCells = 1_000_000;
 
+        // BoxBehnken 的成对 2 水平（coded ±1）；静态复用避免每次调用分配常量数组（CA1861）。
+        private static readonly int[] PairLevels = { 2, 2 };
+
         /// <summary>
         /// Unified entry point. Dispatches on <paramref name="method"/> (case-insensitive).
         /// </summary>
@@ -410,7 +413,7 @@ namespace ExcelFormulaLabs.Analytics
             if (k > MaxFactors)
                 throw new ArgumentException(ErrorMsg.Get("DOE_TooManyFactors", k, MaxFactors));
 
-            var pairFactorial = FullFactorialCoded(new[] { 2, 2 }); // 4 × 2, coded ±1
+            var pairFactorial = FullFactorialCoded(PairLevels); // 4 × 2, coded ±1
 
             long nPairs = (long)k * (k - 1) / 2; // long 防 int 溢出（k 大时 k*(k-1) 溢出 int）
             long edgePoints = nPairs * 4;
