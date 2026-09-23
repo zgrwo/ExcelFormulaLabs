@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     ExcelFormulaLabs 一键安装 / 卸载脚本（Windows PowerShell 5.1+）。

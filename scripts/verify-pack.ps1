@@ -1,4 +1,4 @@
-# verify-pack.ps1 - Validate ExcelDnaPack output integrity
+﻿# verify-pack.ps1 - Validate ExcelDnaPack output integrity
 # Usage: powershell -File verify-pack.ps1 -PublishDir <path> -Module <Analytics|DataToolkit> -Tfm <net48|net8.0-windows>
 param(
     [Parameter(Mandatory=$true)] [string] $PublishDir,

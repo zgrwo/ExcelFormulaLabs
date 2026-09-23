@@ -1,4 +1,4 @@
-# test-xll.ps1 - 本地 Excel XLL 加载/卸载冒烟测试（不入 CI）
+﻿# test-xll.ps1 - 本地 Excel XLL 加载/卸载冒烟测试（不入 CI）
 # 用法: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-xll.ps1 [-BaseDir <编译产物目录>]
 # 产物名依 v2.2.0 命名：`<Module>-AddIn-<tfm>[-64]-packed.xll`
 # （net48/net8.0 各出 32/64 两变体）；旧 `Analytics-AddIn64-packed.xll` 命名已不存在。本脚本测试 64 位变体。

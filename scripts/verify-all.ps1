@@ -1,4 +1,4 @@
-# verify-all.ps1 - One-command local verification (6-step gate)
+﻿# verify-all.ps1 - One-command local verification (6-step gate)
 # Usage: .\scripts\verify-all.ps1 [-Configuration Release] [-SkipCrossVal]
 # Runs all verification steps required before a PR or release.
 
