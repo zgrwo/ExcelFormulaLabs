@@ -49,5 +49,8 @@ results.Summary = new ResultSummary
     Error = results.Results.Count(r => r.Status != "ok")
 };
 
+// FS 探针目录清理（Phase 4.5）——结果已收集，清理失败不影响输出。
+Dispatcher.CleanupFsProbe();
+
 Console.WriteLine(ResultSerializer.Serialize(results));
 return 0;

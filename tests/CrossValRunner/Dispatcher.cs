@@ -342,6 +342,55 @@ public static class Dispatcher
         Register("JsonXmlCore", "JsonQuery", (a, _) => JsonXmlCore.JsonQuery(ToString(a[0]), ToString(a[1])));
         Register("JsonXmlCore", "XmlValidate", (a, _) => JsonXmlCore.XmlValidate(ToString(a[0])));
         Register("JsonXmlCore", "XmlXPath", (a, _) => JsonXmlCore.XmlXPath(ToString(a[0]), ToString(a[1])));
+        // 2026-09-23 覆盖率扩展（Phase 4.5）：FS 批次——纯路径函数直通；I/O 在探针目录内以
+        // 相对名操作（manifest 静态参数 + 运行时唯一根，避免绝对路径/环境耦合）。
+        Register("FileSystemCore", "FsNorm", (a, _) => FileSystemCore.NormalizePath(ToString(a[0])));
+        Register("FileSystemCore", "FsCombine", (a, _) => FileSystemCore.PathCombine(ToString(a[0]), ToString(a[1])));
+        Register("FileSystemCore", "FsFileName", (a, _) => FileSystemCore.GetFileName(ToString(a[0])));
+        Register("FileSystemCore", "FsBaseName", (a, _) => FileSystemCore.GetBaseName(ToString(a[0])));
+        Register("FileSystemCore", "FsExtension", (a, _) => FileSystemCore.GetExtension(ToString(a[0])));
+        Register("FileSystemCore", "FsFolder", (a, _) => FileSystemCore.GetFolderPath(ToString(a[0])));
+        Register("FileSystemCore", "FsPwd", (a, _) => FileSystemCore.GetCurrentFolder());
+        Register("FileSystemCore", "FsTemp", (a, _) => FileSystemCore.GetTempPath().TrimEnd(Path.DirectorySeparatorChar));
+        Register("FileSystemCore", "FsDrives", (a, _) =>
+            FileSystemCore.GetDrives().OrderBy(d => d, StringComparer.OrdinalIgnoreCase).ToArray());
+        Register("FileSystemCore", "FsMkdir", (a, _) => FileSystemCore.EnsureFolder(FsProbe.P(ToString(a[0]))));
+        Register("FileSystemCore", "FsWrite", (a, _) => FileSystemCore.WriteTextFile(FsProbe.P(ToString(a[0])), ToString(a[1])));
+        Register("FileSystemCore", "FsAppend", (a, _) => FileSystemCore.AppendTextFile(FsProbe.P(ToString(a[0])), ToString(a[1])));
+        Register("FileSystemCore", "FsRead", (a, _) => FileSystemCore.ReadTextFile(FsProbe.P(ToString(a[0]))));
+        Register("FileSystemCore", "FsFileExists", (a, _) => FileSystemCore.FileExists(FsProbe.P(ToString(a[0]))));
+        Register("FileSystemCore", "FsFileSize", (a, _) => FileSystemCore.GetFileSize(FsProbe.P(ToString(a[0]))));
+        Register("FileSystemCore", "FsFolderExists", (a, _) => FileSystemCore.FolderExists(FsProbe.P(ToString(a[0]))));
+        Register("FileSystemCore", "FsCopy", (a, _) => FileSystemCore.CopyFile(FsProbe.P(ToString(a[0])), FsProbe.P(ToString(a[1]))));
+        Register("FileSystemCore", "FsMove", (a, _) => FileSystemCore.MoveFile(FsProbe.P(ToString(a[0])), FsProbe.P(ToString(a[1]))));
+        // LS/LSDIR 返回探针根的**相对文件名**并排序：目录枚举顺序无契约，绝对路径两侧不同根。
+        Register("FileSystemCore", "FsList", (a, _) => FileSystemCore.ListFiles(FsProbe.P(ToString(a[0])), ToString(a[1]))
+            .Select(f => Path.GetFileName(f)).OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToArray());
+        Register("FileSystemCore", "FsListDir", (a, _) => FileSystemCore.ListFolders(FsProbe.P(ToString(a[0])), ToString(a[1]))
+            .Select(d => Path.GetFileName(d)).OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToArray());
+        Register("FileSystemCore", "FsDelete", (a, _) => FileSystemCore.DeleteFile(FsProbe.P(ToString(a[0]))));
+        Register("FileSystemCore", "FsDelDir", (a, _) => FileSystemCore.DeleteFolder(FsProbe.P(ToString(a[0])), true));
+    }
+
+    /// <summary>清理 FS 探针目录（Program 在测试执行后调用，尽力而为）。</summary>
+    public static void CleanupFsProbe()
+    {
+        try { if (Directory.Exists(FsProbe.Root)) Directory.Delete(FsProbe.Root, true); }
+        catch { /* best effort */ }
+    }
+
+    private static class FsProbe
+    {
+        public static readonly string Root = CreateRoot();
+
+        private static string CreateRoot()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "efl-crossval-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            return root;
+        }
+
+        public static string P(string rel) => Path.Combine(Root, rel);
     }
 
     public static (object? result, string? error) Invoke(string coreClass, string coreMethod,

@@ -13,8 +13,8 @@
 | 行覆盖率 Foundation（net8.0） | 84.25%（门禁 75） | **96.02%（门禁 92）** | ≥88% 达成 |
 | 行覆盖率 Analytics（net8.0） | 89.05%（门禁 50） | **90.2%（门禁 86）** | ≥90% 达成 |
 | 行覆盖率 DataToolkit（net8.0） | 89.22%（门禁 42） | **90.18%（门禁 86）** | ≥90% 达成 |
-| 真 C# 交叉对照 UDF 数 | 124/240（51.7%） | **194/240（80.8%）** | ≥80% 达成 |
-| 手册检查总数 | 432（manual 235 / cross 197） | **498（manual 235 / cross 263），0 FAIL / 0 SKIP** | — |
+| 真 C# 交叉对照 UDF 数 | 124/240（51.7%） | **216/240（90.0%）** | ≥80% 达成 |
+| 手册检查总数 | 432（manual 235 / cross 197） | **520（manual 235 / cross 285），0 FAIL / 0 SKIP** | — |
 | 测试弱断言审计 | 无 | 零断言/恒真 FAIL + 存在性断言预算 **0** | 预算归零 达成 |
 | 依赖锁定 | 无 lock 文件 | 8 工程 packages.lock.json + CI locked mode | 达成 |
 | NuGet 漏洞审计 | 仅 dependabot 告警 | CI `dependency-audit` job（JSON 解析 + 失败门禁） | 达成 |
@@ -258,8 +258,8 @@ dotnet build -c Release                          # ⑦ 分发构建
 - [x] **交叉对照发现并修复真实缺陷**：`DT.WOM` 旧实现返回 0/2，与文档契约（1–5，6/15→3）
       矛盾 → 修复为日历周序（独立 commit a295569），新增回归守卫
 - [x] verify-docs 检查 16 修正：manual/cross 为检查项数，允许 > 240（实测 cross=263 触发旧断言误报）
-- [x] 实测：498 项检查 0 FAIL / 0 SKIP；真 C# 对照 **194/240（80.8%）**；剩余 46 缺口为
-      FS（22，文件副作用）/ `*_ASYNC`（11，Excel 异步）/ 随机类（4）/ 复杂表输出（9）
+- [x] 实测（4.2 + 4.5 后）：520 项检查 0 FAIL / 0 SKIP；真 C# 对照 **216/240（90.0%）**；
+      剩余 24 缺口为 `*_ASYNC`（11，Excel 异步）/ 随机类（4）/ 复杂表输出（9）
 
 ### 4.3 示例工作簿扩展 `[x]`
 
@@ -275,6 +275,20 @@ dotnet build -c Release                          # ⑦ 分发构建
 - [x] TOC 链接重写为模块页链接；模块内外链相对路径自动加一层（`../specification` → `../../specification`）
 - [x] mkdocs nav 嵌套 16 模块；project-structure 树同步
 - [x] 验证：文件链接检查 0 断链；`mkdocs build --strict` 全绿；verify-docs 26 PASS
+
+### 4.5 FS 批次交叉对照（22/22） `[x]`
+
+- [x] 探针目录方案：Dispatcher 内 `FsProbe` 运行时唯一根（`%TEMP%/efl-crossval-<guid>`）+
+      相对路径包装，manifest 参数保持静态；Program 测试后清理（尽力而为）
+- [x] 22 个 FS UDF：纯路径 9（NORM/COMBINE/FNAME/BNAME/EXT/FOLDER/PWD/TEMP/DRIVES）+
+      I/O 13（MKDIR/WRITE/APPEND/READ/FEXISTS/FSIZE/FDEXISTS/COPY/MOVE/LS/LSDIR/DELETE/DELDIR）
+      按 manifest 顺序执行；LS/LSDIR 返回**相对文件名**并排序（目录枚举顺序无契约，
+      两侧比较集合而非绝对路径）
+- [x] **交叉对照发现 BOM 语义**：`FS.WRITE` 经 .NET `Encoding.UTF8` 写入 UTF-8 BOM（3 字节），
+      Append 不重复写；契约此前未声明 → 手册 FS.READ/WRITE/APPEND 明确 BOM 语义；
+      Python 侧以 `utf-8-sig` 镜像验证（14 字节与读回内容逐项一致）
+- [x] 实测：520 项检查 0 FAIL / 0 SKIP；真 C# 对照 **216/240（90.0%）**；
+      剩余 24 缺口为 `*_ASYNC`（11）/ 随机类（4）/ 复杂表输出（9）
 
 ---
 

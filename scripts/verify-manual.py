@@ -9,7 +9,7 @@ with C# MathNet. Never use self-checks (actual == same expression as expected). 
 Usage: python scripts/verify-manual.py
 """
 
-import math, json, re, base64, html, urllib.parse, calendar, sys, io, os, tempfile, uuid, subprocess
+import math, json, re, base64, html, urllib.parse, calendar, sys, io, os, tempfile, uuid, subprocess, shutil
 from datetime import date, timedelta, datetime
 from collections import Counter, defaultdict
 from xml.etree import ElementTree as ET
@@ -1139,6 +1139,50 @@ except Exception as e:
 check("FS.DRIVES", os.path.exists("C:\\"), True)
 check("FS.PWD", os.path.isdir(os.getcwd()), True)
 check("FS.TEMP", os.path.isdir(tempfile.gettempdir()), True)
+# 2026-09-23 覆盖率扩展（Phase 4.5）：FS 批次真 C# 对照。
+# 纯路径函数用固定绝对输入；I/O 函数在独立临时目录执行与 C# 探针目录相同的操作序列
+#（C# 探针根唯一，两侧比较布尔/内容/相对名，不含绝对路径）。
+cross_vs_csharp("FS.NORM", os.path.normpath(r"C:\data\..\file.txt"), "FS.NORM")
+cross_vs_csharp("FS.COMBINE", os.path.join(r"C:\data", r"sub\file.txt"), "FS.COMBINE")
+cross_vs_csharp("FS.FNAME", os.path.basename(r"C:\data\report.xlsx"), "FS.FNAME")
+cross_vs_csharp("FS.BNAME", os.path.splitext(os.path.basename(r"C:\data\report.xlsx"))[0], "FS.BNAME")
+cross_vs_csharp("FS.EXT", os.path.splitext(r"C:\data\report.xlsx")[1], "FS.EXT")
+cross_vs_csharp("FS.FOLDER", os.path.dirname(r"C:\data\report.xlsx"), "FS.FOLDER")
+cross_vs_csharp("FS.PWD", os.getcwd(), "FS.PWD")
+cross_vs_csharp("FS.TEMP", tempfile.gettempdir().rstrip("\\"), "FS.TEMP")
+cross_vs_csharp("FS.DRIVES",
+                sorted(chr(_c) + ":\\" for _c in range(ord("A"), ord("Z") + 1)
+                       if os.path.exists(chr(_c) + ":\\")),
+                "FS.DRIVES")
+_fsx = tempfile.mkdtemp(prefix="efl-fsx-")
+try:
+    os.makedirs(os.path.join(_fsx, "sub"))
+    cross_vs_csharp("FS.MKDIR", True, "FS.MKDIR")
+    # C# File.WriteAllText(..., Encoding.UTF8) 写 UTF-8 BOM（3 字节），Append 不重复写；
+    # Python 侧用 utf-8-sig 首次写入镜像该语义，读取用 utf-8-sig 剥离 BOM。
+    with open(os.path.join(_fsx, "a.txt"), "w", encoding="utf-8-sig") as _f: _f.write("hello")
+    cross_vs_csharp("FS.WRITE", True, "FS.WRITE")
+    with open(os.path.join(_fsx, "a.txt"), "a", encoding="utf-8") as _f: _f.write(" world")
+    cross_vs_csharp("FS.APPEND", True, "FS.APPEND")
+    with open(os.path.join(_fsx, "a.txt"), encoding="utf-8-sig") as _f: _fsx_read = _f.read()
+    cross_vs_csharp("FS.READ", _fsx_read, "FS.READ")
+    cross_vs_csharp("FS.FEXISTS", os.path.isfile(os.path.join(_fsx, "a.txt")), "FS.FEXISTS")
+    cross_vs_csharp("FS.FSIZE", os.path.getsize(os.path.join(_fsx, "a.txt")), "FS.FSIZE")
+    cross_vs_csharp("FS.FDEXISTS", os.path.isdir(os.path.join(_fsx, "sub")), "FS.FDEXISTS")
+    shutil.copyfile(os.path.join(_fsx, "a.txt"), os.path.join(_fsx, "b.txt"))
+    cross_vs_csharp("FS.COPY", True, "FS.COPY")
+    os.replace(os.path.join(_fsx, "b.txt"), os.path.join(_fsx, "c.txt"))
+    cross_vs_csharp("FS.MOVE", True, "FS.MOVE")
+    cross_vs_csharp("FS.LS", sorted(f for f in os.listdir(_fsx) if f.endswith(".txt")), "FS.LS")
+    cross_vs_csharp("FS.LSDIR",
+                    sorted(d for d in os.listdir(_fsx) if os.path.isdir(os.path.join(_fsx, d))),
+                    "FS.LSDIR")
+    os.remove(os.path.join(_fsx, "c.txt"))
+    cross_vs_csharp("FS.DELETE", True, "FS.DELETE")
+    shutil.rmtree(os.path.join(_fsx, "sub"))
+    cross_vs_csharp("FS.DELDIR", True, "FS.DELDIR")
+finally:
+    shutil.rmtree(_fsx, ignore_errors=True)
 
 # ========================================================================
 # RANGE (9 UDFs)
