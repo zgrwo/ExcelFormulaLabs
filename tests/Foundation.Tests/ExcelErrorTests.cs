@@ -45,9 +45,12 @@ namespace ExcelFormulaLabs.Foundation.Tests
     {
         [Fact] public void Equality_operators_compare_codes()
         {
-            (ExcelError.Value == ExcelError.Value).Should().BeTrue();
-            (ExcelError.Value != ExcelError.NA).Should().BeTrue();
-            (ExcelError.Value != ExcelError.Value).Should().BeFalse();
+            var a = ExcelError.Value;
+            var b = ExcelError.Value;
+            var na = ExcelError.NA;
+            (a == b).Should().BeTrue();
+            (a != na).Should().BeTrue();
+            (a != b).Should().BeFalse();
         }
 
         [Fact] public void GetHashCode_is_code_based()

@@ -470,6 +470,8 @@ if _cs_lup and _cs_lup["status"] == "ok":
     _uniq = set(np.unique(_P))
     _perm = bool(np.all(_P.sum(axis=0) == 1) and np.all(_P.sum(axis=1) == 1) and _uniq <= {0.0, 1.0})
     check("LINALG.LU_P permutation", _perm, True)
+    # 性质检查直接读取 C# 的 P 输出（固定输入 A 为 Python 侧常量）——与 LU_U 同口径计入 C# 对照。
+    CROSS_REFERENCED.add("LINALG.LU_P")
 else:
     SKIP += 1; print("  SKIP LINALG.LU_P permutation: no C# reference")
 # PINV
@@ -671,6 +673,8 @@ check("STR.COALESCE", "" or "default", "default")
 # FORMAT — .NET style format
 check("STR.FORMAT(1234.567)", f"{1234.567:.2f}", "1234.57")
 check("STR.FORMAT(0.25)", f"{0.25:.2%}", "25.00%")
+# 2026-09-23 覆盖率扩展（Phase 4）：STR/PIVOT 批次真 C# 对照（manifest + Dispatcher 同步新增）。
+cross_vs_csharp("STR.FORMAT", f"{3.14159:.2f}", "STR.FORMAT")
 check("STR.STRIPHTML", re.sub(r'<[^>]+>','',"<p>Hello <b>World</b></p>"), "Hello World")
 # CrossValRunner cross-checks (C# ↔ Python independent)
 cross_check("STR.REVERSE", "hello"[::-1])
@@ -767,6 +771,21 @@ def next_workday(d):
     return d
 check("DT.NEXTWKD(Fri)", next_workday(date(2024,6,14)), date(2024,6,14))
 check("DT.NEXTWKD(Sat)", next_workday(date(2024,6,15)), date(2024,6,17))
+# 2026-09-23 覆盖率扩展（Phase 4）：DT 批次真 C# 对照（manifest 条目与 Dispatcher 同步新增）。
+# Python 侧为独立实现（标准库 date/timedelta），非镜像 C# 代码。
+cross_vs_csharp("DT.AGEYEARS", ay, "DT.AGEYEARS")
+cross_vs_csharp("DT.AGEMONTHS", am, "DT.AGEMONTHS")
+cross_vs_csharp("DT.SOW", f"{start_of_week(d5).isoformat()}T00:00:00.0000000", "DT.SOW")
+cross_vs_csharp("DT.SOW_SUN", f"{start_of_week(d5,0).isoformat()}T00:00:00.0000000", "DT.SOW_SUN")
+cross_vs_csharp("DT.EOW", f"{(start_of_week(d5)+timedelta(days=6)).isoformat()}T00:00:00.0000000", "DT.EOW")
+cross_vs_csharp("DT.SOM", f"{d5.replace(day=1).isoformat()}T00:00:00.0000000", "DT.SOM")
+cross_vs_csharp("DT.WOM", week_of_month(date(2024,6,15)), "DT.WOM")
+cross_vs_csharp("DT.WEEKDAYNAME", d1.strftime("%A"), "DT.WEEKDAYNAME")
+cross_vs_csharp("DT.WKDBTWN", workdays_between(date(2024,6,3),date(2024,6,7)), "DT.WKDBTWN")
+_ts = 1718409600
+cross_vs_csharp("DT.FROMUNIX",
+                (datetime.fromtimestamp(_ts) - datetime(1899,12,30)).total_seconds() / 86400,
+                "DT.FROMUNIX", tol=1e-9)
 # EASTER — cross-validated against C# DateTimeCore.Easter via CrossValRunner
 # R5-P3-12 (review-2026-09-06)：原 Python 侧逐变量镜像 Meeus/Jones/Butcher 算法（移植对照，
 # 对「算法理解双侧同错」不可检）→ 改独立来源公开历表金值（含最早/最晚可能复活节锚点 2000/2038）。
@@ -834,6 +853,15 @@ cross_check("REGEX.COUNT", len(re.findall(r"\d","a1b2c3d4")))
 cross_check("REGEX.MATCH", re.search(r"\d+","a1b2c3").group())
 cross_check("REGEX.REPLACE", re.sub(r"\d","X","a1b2c3"))
 cross_check("REGEX.SPLIT", re.split(r"[,;|]","a,b;c|d"))
+# 2026-09-23 覆盖率扩展（Phase 4）：REGEX 剩余子 UDF 真 C# 对照。
+cross_vs_csharp("REGEX.ISMATCH", bool(re.search("hello","HELLO",re.I)), "REGEX.ISMATCH")
+cross_vs_csharp("REGEX.MATCHALL", re.findall(r"\d+","a1b22c333"), "REGEX.MATCHALL")
+_gm = re.match(r"([0-9]{4})-([0-9]{2})-([0-9]{2})", "2024-06-15")
+cross_vs_csharp("REGEX.GROUPS",
+                [[str(_i) for _i in range(_gm.re.groups + 1)],
+                 [_gm.group(_i) for _i in range(_gm.re.groups + 1)]],
+                "REGEX.GROUPS")
+cross_vs_csharp("REGEX.ESCAPE", re.escape("a.b*c"), "REGEX.ESCAPE")
 
 # ========================================================================
 # ARR (22 UDFs)
@@ -911,6 +939,24 @@ check("DICT.VALUES[0]", dv[0], 1)
 # 键契约：字符串原样、数值 InvariantCulture、bool→TRUE；null 跳过。
 for _k in ["Apple", "Banana", "42", "TRUE"]:
     cross_vs_csharp(f"DICT.FromKeys[{_k}] vs C#", "X", "DICT.FromKeys", tol=1e-12, field=_k)
+# 2026-09-23 覆盖率扩展（Phase 4）：DICT 集合运算真 C# 对照（Python 侧独立实现首现顺序去重）。
+_fk = ["Apple","Banana","Apple","Cherry","Banana","Date"]
+_fc = {}
+for _x in _fk:
+    if _x in _fc: _fc[_x] += 1
+    else: _fc[_x] = 1
+cross_vs_csharp("DICT.FREQUENCY", [[_k, _fc[_k]] for _k in dict.fromkeys(_fk)], "DICT.FREQUENCY")
+_la, _lb = [1,2,3,4], [3,4,5,6]
+cross_vs_csharp("DICT.INTERSECT", [_x for _x in _la if _x in set(_lb)], "DICT.INTERSECT")
+_union = []
+for _x in _la + _lb:
+    if _x not in _union: _union.append(_x)
+cross_vs_csharp("DICT.UNION", _union, "DICT.UNION")
+cross_vs_csharp("DICT.EXCEPT", [_x for _x in _la if _x not in set(_lb)], "DICT.EXCEPT")
+cross_vs_csharp("DICT.DICT", [["A",1],["B",2],["C",3]], "DICT.DICT")
+cross_vs_csharp("DICT.COUNT", 3, "DICT.COUNT")
+cross_vs_csharp("DICT.KEYS", ["A","B","C"], "DICT.KEYS")
+cross_vs_csharp("DICT.VALUES", [1,2,3], "DICT.VALUES")
 
 # ========================================================================
 # JSON / XML (8 UDFs)
@@ -945,6 +991,17 @@ for e in root.findall('employee'):
     xt_rows.append([e.find('name').text, e.find('dept').text, e.find('salary').text])
 check("XML.TOTABLE[0]", xt_rows[0], ["Alice","Sales","50000"])
 check("XML.TOTABLE count", len(xt_rows), 5)
+# 2026-09-23 覆盖率扩展（Phase 4）：JSON/XML 基础查询与校验真 C# 对照
+# （Python 侧用 json/ElementTree 独立实现）。
+cross_vs_csharp("JSON.PARSE", json.loads("[1,2,3]"), "JSON.PARSE")
+cross_vs_csharp("JSON.VALIDATE", True, "JSON.VALIDATE")  # json.loads 不抛 → 合法
+_qv = json.loads('{"a":{"b":2}}')
+for _seg in "a.b".split("."):
+    _qv = _qv[_seg]
+cross_vs_csharp("JSON.QUERY", _qv, "JSON.QUERY")
+cross_vs_csharp("XML.VALIDATE", ET.fromstring("<r><a>1</a></r>") is not None, "XML.VALIDATE")
+_xr = ET.fromstring("<r><a>1</a><a>2</a></r>")
+cross_vs_csharp("XML.XPATH", [e.text for e in _xr.findall("a")], "XML.XPATH")
 
 # ========================================================================
 # PIVOT (4 UDFs)
@@ -967,6 +1024,14 @@ for r in wide[1:]:
 check("PIVOT.UNPIVOT rows", len(unpivot_rows), 6)  # 2 products × 3 quarters
 check("PIVOT.UNPIVOT[0]", unpivot_rows[0], ["Alpha","Q1",10])
 check("PIVOT.GROUPBY(Alpha)", gs["Alpha"], 1980)
+# 2026-09-23 覆盖率扩展（Phase 4）：PIVOT.CROSSJOIN / PIVOT.UNPIVOT 真 C# 对照
+# （Python 侧用列表推导独立实现，非镜像 C# 循环）。
+_pa, _pb = [["a"],["1"]], [["x"],["2"]]
+cross_vs_csharp("PIVOT.CROSSJOIN", [[x[0], y[0]] for x in _pa for y in _pb], "PIVOT.CROSSJOIN")
+_ud = [["id","Q1","Q2"],[1,10,20],[2,30,40]]
+cross_vs_csharp("PIVOT.UNPIVOT",
+                [[row[0], _ud[0][vc], row[vc]] for row in _ud[1:] for vc in (1,2)],
+                "PIVOT.UNPIVOT")
 check("PIVOT.GROUPBY(Beta)", gs["Beta"], 1520)
 # CROSSJOIN — Cartesian product
 cj1=[["A","B"],["C","D"]]; cj2=[["X"],["Y"]]; cj_result=[]
@@ -1118,6 +1183,46 @@ cross_vs_csharp("RANGE.TOJSON minimal vs C#",
 cross_vs_csharp("RANGE.TOCSV minimal vs C#",
                 'Name,Note' + os.linesep + 'Alice,"a,b"' + os.linesep + 'Bob,"x""y"' + os.linesep,
                 "RANGE.ToCsvMinimal", tol=1e-12)
+# 2026-09-23 覆盖率扩展（Phase 4）：RANGE 导出/选择/转置真 C# 对照（Python 侧独立实现格式）。
+_r2 = [["Name","Age"],["Alice",30]]
+def _html_escape(v):
+    return (str(v).replace("&","&amp;").replace("<","&lt;").replace(">","&gt;")
+            .replace('"',"&quot;").replace("'","&#39;"))
+def _range_html(data, has_headers=True, cls=None):
+    out = "<table" + (f' class="{_html_escape(cls)}"' if cls else "") + ">"
+    for _i, _row in enumerate(data):
+        _tag = "th" if (has_headers and _i == 0) else "td"
+        out += "<tr>" + "".join(f"<{_tag}>{_html_escape(c)}</{_tag}>" for c in _row) + "</tr>"
+    return out + "</table>"
+cross_vs_csharp("RANGE.TOHTML", _range_html(_r2), "RANGE.TOHTML")
+def _md_escape(v):
+    return str(v).replace("\\","\\\\").replace("|","\\|").replace("\r\n"," ").replace("\n"," ")
+def _range_md(data, has_headers=True):
+    _hdr = data[0] if has_headers else [f"Col{i+1}" for i in range(len(data[0]))]
+    _lines = [" | ".join(_md_escape(c) for c in _hdr),
+              " | ".join("---" for _ in data[0])]
+    _lines += [" | ".join(_md_escape(c) for c in _row) for _row in (data[1:] if has_headers else data)]
+    return "".join(_l + os.linesep for _l in _lines)
+cross_vs_csharp("RANGE.TOMD", _range_md(_r2), "RANGE.TOMD")
+def _csv(data, delim, quote_all):
+    _lines = []
+    for _row in data:
+        _cells = []
+        for _v in _row:
+            _s = str(_v)
+            if quote_all or delim in _s or '"' in _s or "\r" in _s or "\n" in _s:
+                _s = '"' + _s.replace('"','""') + '"'
+            _cells.append(_s)
+        _lines.append(delim.join(_cells))
+    return "".join(_l + os.linesep for _l in _lines)
+cross_vs_csharp("RANGE.TOCSVSEMI", _csv(_r2, ";", True), "RANGE.TOCSVSEMI")
+cross_vs_csharp("RANGE.TOCSVTAB", _csv(_r2, "\t", False), "RANGE.TOCSVTAB")
+_r3 = [["a","b"],[1,2]]
+cross_vs_csharp("RANGE.TRANSPOSE", [list(_c) for _c in zip(*_r3)], "RANGE.TRANSPOSE")
+_r4 = [["a","b","c"],[1,2,3]]
+cross_vs_csharp("RANGE.SELCOLS", [[_row[0], _row[2]] for _row in _r4], "RANGE.SELCOLS")
+_r5 = [["a"],[1],[2]]
+cross_vs_csharp("RANGE.SELROWS", [_r5[0], _r5[2]], "RANGE.SELROWS")
 
 # ========================================================================
 # DOE (4 UDFs)

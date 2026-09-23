@@ -13,7 +13,7 @@
 | 行覆盖率 Foundation（net8.0） | 84.25%（门禁 75） | **96.02%（门禁 92）** | ≥88% 达成 |
 | 行覆盖率 Analytics（net8.0） | 89.05%（门禁 50） | **90.2%（门禁 86）** | ≥90% 达成 |
 | 行覆盖率 DataToolkit（net8.0） | 89.22%（门禁 42） | **90.18%（门禁 86）** | ≥90% 达成 |
-| 真 C# 交叉对照 UDF 数 | 124/240（51.7%） | **157/240（65.4%）** | ≥80%（未达，留后续） |
+| 真 C# 交叉对照 UDF 数 | 124/240（51.7%） | **194/240（80.8%）** | ≥80% 达成 |
 | 手册检查总数 | 432（manual 235 / cross 197） | **461（manual 235 / cross 226），0 FAIL / 0 SKIP** | — |
 | 测试弱断言审计 | 无 | 零断言/恒真 FAIL + 存在性断言预算 **0** | 预算归零 达成 |
 | 依赖锁定 | 无 lock 文件 | 8 工程 packages.lock.json + CI locked mode | 达成 |
@@ -67,7 +67,7 @@
       缺条目（PSI_TO_ATM / L_TO_GAL / LB_TO_KG）补 manifest + 映射
 - [x] STR 12 项（NORMWS/TITLE/REMOVE/KEEP/TRUNCATE/STARTSWITH/ENDSWITH/LEFTOF/RIGHTOF/EXTRACT/NTHWORD/STRIPHTML）
       + ARR 9 项（SORTASC/SORTDESC/SORTTEXT/SLICE/FILTER×5）：Dispatcher 注册 + manifest + Python 独立实现
-- [x] 验证：461 项检查 0 FAIL / 0 SKIP；真 C# 对照 **157/240（65.4%）** ≥ 150
+- [x] 验证：498 项检查 0 FAIL / 0 SKIP；真 C# 对照 **194/240（80.8%）** ≥ 192（Phase 4.2 达成）
 
 ### 1.5 修复复现测试审计（P0-5） `[x]`
 
@@ -272,7 +272,7 @@ dotnet build -c Release                          # ⑦ 分发构建
 | pre-commit / test-quality | PASS |
 | 治理脚本自测 | 4 脚本 7/14/16/23 场景全绿 |
 | dotnet build + test（双 TFM） | 0 警告 0 错误；2,873 用例 ×2 全绿 |
-| verify-manual | 461 项 0 FAIL / 0 SKIP；真 C# 对照 157/240 |
+| verify-manual | 498 项 0 FAIL / 0 SKIP；真 C# 对照 194/240 |
 | mkdocs build --strict | 全绿 |
 | Release 构建（-m:1） | 8 个 XLL；FileVersion/ProductVersion = 2.3.1 |
 | 待合并后确认 | release-please 首次 Release PR；docs.yml 首次 Pages 部署；benchmarks 首次 dispatch |

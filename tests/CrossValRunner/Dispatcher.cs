@@ -272,6 +272,15 @@ public static class Dispatcher
         Register("DateTimeCore", "EndOfMonth", (a, _) => DateTimeCore.EndOfMonth(ToDateTime(a[0])));
         Register("DateTimeCore", "UnixTimestamp", (a, _) => DateTimeCore.UnixTimestamp(ToDateTime(a[0])));
         Register("DateTimeCore", "AgeDays", (a, _) => DateTimeCore.AgeDays(ToDateTime(a[0]), ToDateTime(a[1])));
+        Register("DateTimeCore", "AgeYears", (a, _) => DateTimeCore.AgeYears(ToDateTime(a[0]), ToDateTime(a[1])));
+        Register("DateTimeCore", "AgeMonths", (a, _) => DateTimeCore.AgeMonths(ToDateTime(a[0]), ToDateTime(a[1])));
+        Register("DateTimeCore", "StartOfWeek", (a, _) => DateTimeCore.StartOfWeek(ToDateTime(a[0]), ToDayOfWeek(a[1])));
+        Register("DateTimeCore", "EndOfWeek", (a, _) => DateTimeCore.EndOfWeek(ToDateTime(a[0]), ToDayOfWeek(a[1])));
+        Register("DateTimeCore", "StartOfMonth", (a, _) => DateTimeCore.StartOfMonth(ToDateTime(a[0])));
+        Register("DateTimeCore", "WeekOfMonth", (a, _) => DateTimeCore.WeekOfMonth(ToDateTime(a[0]), ToDayOfWeek(a[1])));
+        Register("DateTimeCore", "WeekdayName", (a, _) => DateTimeCore.WeekdayName(ToDateTime(a[0])));
+        Register("DateTimeCore", "WorkdaysBetween", (a, _) => DateTimeCore.WorkdaysBetween(ToDateTime(a[0]), ToDateTime(a[1])));
+        Register("DateTimeCore", "FromUnixTimestamp", (a, _) => DateTimeCore.FromUnixTimestamp(ToDouble(a[0])).ToOADate());
         Register("DateTimeCore", "DateDiff", (a, _) => DateTimeCore.DateDiff(ToString(a[0]), ToDateTime(a[1]), ToDateTime(a[2])));
 
         // ═══════════════════ ArrayCore 补注册 ═══════════════════
@@ -301,6 +310,38 @@ public static class Dispatcher
             Kwarg(k, "n", 0L), Kwarg(k, "ic", true)));
         Register("RegexCore", "RegexSplit", (a, k) => RegexCore.RegexSplit(ToString(a[0]), ToString(a[1]),
             Kwarg(k, "n", 0L), Kwarg(k, "ic", true)));
+        // 2026-09-23 覆盖率扩展（Phase 4）：REGEX 剩余子 UDF（ESCAPE/GROUPS/ISMATCH/MATCHALL）。
+        Register("RegexCore", "RegexEscape", (a, _) => RegexCore.RegexEscape(ToString(a[0])));
+        Register("RegexCore", "RegexCaptureGroups", (a, k) => RegexCore.RegexCaptureGroups(ToString(a[0]), ToString(a[1]),
+            Kwarg(k, "ic", true)));
+        Register("RegexCore", "RegexMatchAll", (a, k) => RegexCore.RegexMatchAll(ToString(a[0]), ToString(a[1]),
+            Kwarg(k, "ic", true)));
+        // STR.FORMAT（.NET 格式串，InvariantCulture）
+        Register("StringCore", "FormatValue", (a, _) => StringCore.FormatValue(ToClr(a[0]), ToString(a[1])));
+        // PIVOT.CROSSJOIN / PIVOT.UNPIVOT
+        Register("PivotCore", "CrossJoin", (a, _) => PivotCore.CrossJoin(ToObject2D(a[0]), ToObject2D(a[1])));
+        Register("PivotCore", "Unpivot", (a, k) => PivotCore.Unpivot(ToObject2D(a[0]), ToIntArray(a[1]), ToIntArray(a[2]),
+            Kwarg(k, "hasHeaders", true)));
+        // 2026-09-23 覆盖率扩展（Phase 4）：DICT 集合运算 + RANGE 导出/选择/转置。
+        Register("DictSetCore", "Frequency", (a, _) => DictSetCore.Frequency(ToObjectArray(a[0])));
+        Register("DictSetCore", "Keys", (a, _) => DictSetCore.Keys(ToObject2D(a[0])));
+        Register("DictSetCore", "Values", (a, _) => DictSetCore.Values(ToObject2D(a[0])));
+        Register("DictSetCore", "Intersect", (a, _) => DictSetCore.Intersect(ToObjectArray(a[0]), ToObjectArray(a[1])));
+        Register("DictSetCore", "Union", (a, _) => DictSetCore.Union(ToObjectArray(a[0]), ToObjectArray(a[1])));
+        Register("DictSetCore", "Except", (a, _) => DictSetCore.Except(ToObjectArray(a[0]), ToObjectArray(a[1])));
+        Register("DictSetCore", "Dict", (a, _) => DictSetCore.Dict(ToObjectArray(a[0]), ToObjectArray(a[1])));
+        Register("DictSetCore", "Count", (a, _) => DictSetCore.Count(ToObject2D(a[0])));
+        Register("RangeExportCore", "RangeToHtml", (a, _) => RangeExportCore.RangeToHtml(ToObject2D(a[0]), ToBool(a[1]), NullableString(a[2])));
+        Register("RangeExportCore", "RangeToMarkdown", (a, _) => RangeExportCore.RangeToMarkdown(ToObject2D(a[0]), ToBool(a[1])));
+        Register("RangeExportCore", "SelectColumns", (a, _) => RangeExportCore.SelectColumns(ToObject2D(a[0]), ToIntArray(a[1])));
+        Register("RangeExportCore", "SelectRows", (a, _) => RangeExportCore.SelectRows(ToObject2D(a[0]), ToIntArray(a[1])));
+        Register("RangeExportCore", "Transpose", (a, _) => RangeExportCore.Transpose(ToObject2D(a[0])));
+        // 2026-09-23 覆盖率扩展（Phase 4）：JSON / XML 基础查询与校验。
+        Register("JsonXmlCore", "JsonParse", (a, _) => JsonXmlCore.JsonParse(ToString(a[0])));
+        Register("JsonXmlCore", "JsonValidate", (a, _) => JsonXmlCore.JsonValidate(ToString(a[0])));
+        Register("JsonXmlCore", "JsonQuery", (a, _) => JsonXmlCore.JsonQuery(ToString(a[0]), ToString(a[1])));
+        Register("JsonXmlCore", "XmlValidate", (a, _) => JsonXmlCore.XmlValidate(ToString(a[0])));
+        Register("JsonXmlCore", "XmlXPath", (a, _) => JsonXmlCore.XmlXPath(ToString(a[0]), ToString(a[1])));
     }
 
     public static (object? result, string? error) Invoke(string coreClass, string coreMethod,
@@ -321,6 +362,9 @@ public static class Dispatcher
     private static bool ToBool(object? v) => v is bool b ? b : v is JsonElement je ? je.GetBoolean() : Convert.ToBoolean(v);
     private static string ToString(object? v) => v is string s ? s : v?.ToString() ?? "";
     private static DateTime ToDateTime(object? v) => v is DateTime dt ? dt : DateTime.Parse(v?.ToString() ?? "");
+
+    // manifest 的 start_day 用整数（0=Sunday..6=Saturday，与 DT.SOW/EOW/WOM 的 Excel 参数一致）。
+    private static DayOfWeek ToDayOfWeek(object? v) => (DayOfWeek)(int)ToLong(v);
 
     private static double[] ToDouble1D(object? v)
     {
@@ -425,6 +469,9 @@ public static class Dispatcher
 
     private static double? NullableDouble(object? v) =>
         v == null || (v is JsonElement je && je.ValueKind == JsonValueKind.Null) ? null : ToDouble(v);
+
+    private static string? NullableString(object? v) =>
+        v == null || (v is JsonElement je && je.ValueKind == JsonValueKind.Null) ? null : ToString(v);
 
     private static T Kwarg<T>(Dictionary<string, object?>? kwargs, string key, T defaultValue)
     {

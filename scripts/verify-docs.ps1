@@ -440,11 +440,14 @@ foreach ($rel in $proseFiles) {
             if ([int]$m.Groups[1].Value -ne $codeUdfs) { $proseMismatches += "${rel}: '$($m.Value)'" }
         }
         # CrossVal 双通道计数自洽（R2-9）：manual-only N / cross-validated M（合计 K）
-        # 必须 N+M==K 且各 ≤ UDF 总数；与 verify-manual.py 实际输出的对账由 CI cross-val job 负责。
+        # 必须 N+M==K 且为正数；与 verify-manual.py 实际输出的对账由 CI cross-val job 负责。
+        # 2026-09-23（Phase 4）：N/M 是**检查项数**而非 UDF 数——单个 UDF 可有多项检查，
+        # 检查数合法超过 UDF 总数（实测 cross=263 > 240），故移除“各 ≤ UDF 总数”断言；
+        # UDF 级覆盖声明（X/Y UDF）由下方分数形式单独约束（分子 ≤ 分母 == codeUdfs）。
         foreach ($m in [regex]::Matches($text, 'manual-only\s+(\d+)\s*/\s*cross-validated\s+(\d+)\s*[（(]\s*合计\s*(\d+)')) {
             $man = [int]$m.Groups[1].Value; $cross = [int]$m.Groups[2].Value; $tot = [int]$m.Groups[3].Value
             if ($man + $cross -ne $tot) { $proseMismatches += "${rel}: CrossVal 计数 '$($m.Value)' ($man+$cross != $tot)" }
-            if ($man -gt $codeUdfs -or $cross -gt $codeUdfs) { $proseMismatches += "${rel}: CrossVal 计数 '$($m.Value)' 超过 UDF 总数" }
+            if ($man -le 0 -or $cross -le 0) { $proseMismatches += "${rel}: CrossVal 计数 '$($m.Value)' 必须为正数" }
         }
         # 分数形式 `X/Y UDF`（README "224/236 个 UDF"）：分母是总数声明必须 == codeUdfs，
         # 分子是覆盖数只要求 ≤ codeUdfs（两者都验，防分子分母任一侧漂移）。
