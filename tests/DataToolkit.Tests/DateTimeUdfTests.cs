@@ -113,9 +113,10 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         // ══════════════════════════════════════════════════════════════════
         //  DT.WOM  (manual — long, week-of-month)
         // ══════════════════════════════════════════════════════════════════
-        [Fact] public void WOM_monday_anchor() => ((long)DateTimeUdf.UDF_DT_WOM(OA(2024, 6, 15), 1)).Should().Be(2);
-        [Fact] public void WOM_sunday_anchor() => ((long)DateTimeUdf.UDF_DT_WOM(OA(2024, 6, 15), 0)).Should().Be(2);
-        [Fact] public void WOM_first_monday() => ((long)DateTimeUdf.UDF_DT_WOM(OA(2024, 6, 3), 1)).Should().Be(1);
+        [Fact] public void WOM_monday_anchor() => ((long)DateTimeUdf.UDF_DT_WOM(OA(2024, 6, 15), 1)).Should().Be(3);
+        [Fact] public void WOM_sunday_anchor() => ((long)DateTimeUdf.UDF_DT_WOM(OA(2024, 6, 15), 0)).Should().Be(3);
+        [Fact] public void WOM_june_3_is_week_2() => ((long)DateTimeUdf.UDF_DT_WOM(OA(2024, 6, 3), 1)).Should().Be(2);
+        [Fact] public void WOM_month_first_day_is_week_1() => ((long)DateTimeUdf.UDF_DT_WOM(OA(2024, 6, 1), 1)).Should().Be(1);
         [Fact] public void WOM_null_date() => DateTimeUdf.UDF_DT_WOM(null!, 1).Should().BeNull();
 
         // ══════════════════════════════════════════════════════════════════

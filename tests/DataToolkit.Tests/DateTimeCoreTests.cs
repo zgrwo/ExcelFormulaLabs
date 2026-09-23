@@ -32,7 +32,8 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void WeekdayName_monday() => DateTimeCore.WeekdayName(new(2024,6,17)).Should().Be("Monday");
         [Fact] public void WeekdayName_sunday() => DateTimeCore.WeekdayName(new(2024,6,16)).Should().Be("Sunday");
         [Fact] public void EndOfWeek_saturday_to_sunday() => DateTimeCore.EndOfWeek(new(2024,6,15)).DayOfWeek.Should().Be(DayOfWeek.Sunday);
-        [Fact] public void WeekOfMonth() => DateTimeCore.WeekOfMonth(new(2024,6,15)).Should().Be(2);
+        [Fact] public void WeekOfMonth() => DateTimeCore.WeekOfMonth(new(2024,6,15)).Should().Be(3);
+        [Fact] public void WeekOfMonth_month_first_day_is_week_1() => DateTimeCore.WeekOfMonth(new(2024,6,1)).Should().Be(1);
         [Fact] public void AgeMonths() => DateTimeCore.AgeMonths(new(2020,1,15),new(2024,6,15)).Should().Be(53);
         [Fact] public void AgeDays() => DateTimeCore.AgeDays(new(2020,1,15),new(2024,6,15)).Should().Be(1613);
         [Fact] public void NextWorkday_friday() => DateTimeCore.NextWorkday(new(2024,6,14)).DayOfWeek.Should().Be(DayOfWeek.Monday);
