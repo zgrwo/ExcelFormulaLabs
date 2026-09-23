@@ -59,8 +59,9 @@ ExcelFormulaLabs/
 │   ├── specification/              #   技术规格
 │   │   ├── specification.md        #     项目概述、模块清单、功能规格
 │   │   └── api-reference.md        #     UDF 签名唯一信源（数字基准）
-│   ├── user-manual/                #   用户手册
-│   │   └── user-manual.md          #     每函数详细示例 + 结果解读
+│   ├── user-manual/                #   用户手册（总览 + 16 模块分页）
+│   │   ├── user-manual.md          #     总览/通用约定/错误参考/附录（版本头所在）
+│   │   └── modules/                #     16 个模块分页（01-stats … 16-range）
 │   ├── adr/                        #   架构决策记录（ADR）
 │   │   ├── adr-template.md
 │   │   ├── 0001-dual-tfm.md

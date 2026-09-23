@@ -59,7 +59,24 @@ validation:
 
 nav:
   - 首页: index.md
-  - 用户手册: user-manual/user-manual.md
+  - 用户手册:
+      - 总览与错误参考: user-manual/user-manual.md
+      - STATS: user-manual/modules/01-stats.md
+      - LINALG: user-manual/modules/02-linalg.md
+      - REGRESS: user-manual/modules/03-regress.md
+      - SOLVE: user-manual/modules/04-solve.md
+      - PHYCHEM: user-manual/modules/05-phychem.md
+      - DOE: user-manual/modules/06-doe.md
+      - STR: user-manual/modules/07-str.md
+      - DT: user-manual/modules/08-dt.md
+      - REGEX: user-manual/modules/09-regex.md
+      - ARR: user-manual/modules/10-arr.md
+      - DICT: user-manual/modules/11-dict.md
+      - JSON / XML: user-manual/modules/12-json-xml.md
+      - PIVOT: user-manual/modules/13-pivot.md
+      - SQL: user-manual/modules/14-sql.md
+      - FS: user-manual/modules/15-fs.md
+      - RANGE: user-manual/modules/16-range.md
   - API 参考: specification/api-reference.md
   - 技术规格: specification/specification.md
   - 术语表: governance/context.md
