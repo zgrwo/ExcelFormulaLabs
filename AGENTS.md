@@ -94,6 +94,7 @@ ExcelFormulaLabs/
 ├── AGENTS.md                     # 本文件
 ├── README.md                     # 用户向功能指南
 ├── README.en.md                  # 英文入口
+├── ROADMAP.md                    # 公开路线图（决策门 + 里程碑 + good first issue）
 ├── CHANGELOG.md                  # 版本变更记录（每个 v* tag 必须有条目，verify-docs 强制）
 ├── CONTRIBUTING.md               # 贡献指南（提交规范 + 发版流程）
 ├── CODE_OF_CONDUCT.md            # 行为准则
@@ -164,8 +165,9 @@ ExcelFormulaLabs/
 | 全量测试（6 步，同 verify-all.ps1） | ① verify-docs ② Build ③ dotnet test ④ CrossVal（verify-manual.py）⑤ Pre-commit Checks ⑥ Release build |
 | 文档一致性（20 个编号项；运行时 26 条断言，以脚本输出为准） | `powershell -File scripts/verify-docs.ps1` |
 | 提交前红线（6 项） | `powershell -File scripts/pre-commit-check.ps1` |
-| 测试质量（零断言/恒真断言 FAIL，存在性断言预算 3） | `powershell -File scripts/check-test-quality.ps1` |
-| CI 同口径覆盖率门禁（80/85/85） | `powershell -File scripts/coverage.ps1` |
+| 测试质量（零断言/恒真断言 FAIL，存在性断言预算 0） | `powershell -File scripts/check-test-quality.ps1` |
+| CI 同口径覆盖率门禁（92/86/86） | `powershell -File scripts/coverage.ps1` |
+| 静态分析（AnalysisMode=Recommended，0 警告门禁） | 随 `dotnet build` 强制（src/，net8 目标；抑制清单见 `.editorconfig`） |
 | 治理脚本自测 | `powershell -File tests/scripts/run-tests.ps1` |
 | 本地 Qoder 技能镜像 | `powershell -File scripts/sync-qoder-skills.ps1`（可选，本地工具用，不入库） |
 
@@ -287,6 +289,6 @@ ExcelFormulaLabs/
 | [user-manual.md](docs/user-manual/user-manual.md) | 学习教程 | 每函数详细示例 + 结果解读 |
 | [project-structure.md](docs/governance/project-structure.md) | 结构地图 | 文件职责与层级关系 |
 | [documentation.md](docs/governance/documentation.md) | 文档职责 | 各文档分工与维护规则 |
-| [adr/](docs/adr/adr-template.md) | 决策记录 | 架构决策 ADR 0001-0009 |
+| [adr/](docs/adr/adr-template.md) | 决策记录 | 架构决策 ADR 0001-0010 |
 | [CHANGELOG.md](CHANGELOG.md) | 变更记录 | 版本变更历史（与 tag 强制一致） |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 贡献指南 | 开发/PR/发版流程 |

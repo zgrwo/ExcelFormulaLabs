@@ -226,6 +226,7 @@ Artifacts: `src/*/bin/Release/{net8.0-windows|net48}/publish/`
 | Document | Role | Content |
 |------|------|------|
 | [README.en.md](README.en.md) | English entry | This page — entry point for international users |
+| [English API Summary](docs/api-summary.en.md) | Function index | All function names grouped by module (English) |
 | [API Reference](docs/specification/api-reference.md) | Single source of truth for numbers | Complete function signatures, parameter descriptions, error tables |
 | [User Manual](docs/user-manual/user-manual.md) | Learning tutorial | Detailed examples for every function + result interpretation guide |
 | [context.md](docs/governance/context.md) | Glossary | Single definition of every term |

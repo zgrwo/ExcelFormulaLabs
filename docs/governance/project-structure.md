@@ -50,6 +50,7 @@ ExcelFormulaLabs/
 │   ├── README.md                   #   分类导航索引
 │   ├── index.md                    #   文档站首页（mkdocs nav）
 │   ├── samples.md                  #   示例工作簿说明（mkdocs nav）
+│   ├── api-summary.en.md           #   英文 API 摘要页（函数名按模块索引）
 │   ├── governance/                 #   治理与基础
 │   │   ├── context.md              #     领域术语表
 │   │   ├── documentation.md        #     文档职责与维护规则
@@ -70,7 +71,8 @@ ExcelFormulaLabs/
 │   │   ├── 0006-doe-cross-validation-source.md
 │   │   ├── 0007-solve-module-and-bounded-search.md
 │   │   ├── 0008-solve-rate-model-and-time-extrapolation.md
-│   │   └── 0009-solve-rate-evolution.md
+│   │   ├── 0009-solve-rate-evolution.md
+│   │   └── 0010-excel-com-e2e-scheduling.md
 │   └── plans/                      #   实施计划（迁移/重构方案）
 │       └── 2026-09-12-solve-inverse-migration-plan.md
 │
@@ -80,7 +82,7 @@ ExcelFormulaLabs/
 │   ├── verify-manual.py            #   全 UDF 手册示例验证（Python↔C#）
 │   ├── verify-all.ps1              #   一键 6 步验证门（verify-docs/Build/test/CrossVal/pre-commit/Release build）
 │   ├── verify-pack.ps1             #   打包验证
-│   ├── coverage.ps1                #   CI 同口径覆盖率门禁（net8.0，80/85/85）
+│   ├── coverage.ps1                #   CI 同口径覆盖率门禁（net8.0，92/86/86）
 │   ├── install.ps1                 #   一键安装/卸载（SHA-256 校验 + 解锁 + HKCU 注册）
 │   ├── generate-samples.py         #   生成 samples/ 示例工作簿（openpyxl）
 │   ├── pre-commit-check.ps1        #   6 项红线检查（裸catch/自校验/IntelliSense/Core隔离/NaN守卫/hasHeaders）
@@ -208,6 +210,7 @@ ExcelFormulaLabs/
 ├── AGENTS.md                       # 项目宪法 / AI 行为准则
 ├── README.md                       # 用户向功能指南
 ├── README.en.md                    # 英文入口
+├── ROADMAP.md                      # 公开路线图（决策门 + 里程碑 + good first issue）
 ├── CHANGELOG.md                    # Keep a Changelog（版本条目与 tag 强制一致）
 ├── CONTRIBUTING.md                 # 贡献指南（含提交规范与发版流程）
 ├── CODE_OF_CONDUCT.md              # 行为准则

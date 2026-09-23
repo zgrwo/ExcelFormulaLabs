@@ -239,6 +239,7 @@ dotnet test
 |------|------|------|
 | [在线文档站](https://zgrwo.github.io/ExcelFormulaLabs/) | 全部用户文档 | Web 版手册，支持搜索与暗色主题 |
 | [README.en.md](README.en.md) | 英文入口 | English entry for international users |
+| [ROADMAP.md](ROADMAP.md) | 公开路线图 | 决策门、里程碑、good first issue 候选 |
 | [API 参考](docs/specification/api-reference.md) | 数字唯一信源 | 函数完整签名、参数说明、错误表 |
 | [用户手册](docs/user-manual/user-manual.md) | 学习教程 | 每个函数详细示例 + 结果解读指南 |
 | [context.md](docs/governance/context.md) | 术语表 | 所有术语唯一定义 |

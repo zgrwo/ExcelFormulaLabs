@@ -8,20 +8,21 @@
 
 ## 一、实测基线（2026-09-23，本机 CI 同口径）
 
-| 指标 | 初始实测 | 当前实测（2026-09-23） | 目标（Phase 2+） |
+| 指标 | 初始实测 | 当前实测（2026-09-23 Phase 3 后） | 目标 |
 | :--- | :--- | :--- | :--- |
-| 行覆盖率 Foundation（net8.0） | 84.25%（门禁 75） | 门禁已抬至 **80** | ≥88% |
-| 行覆盖率 Analytics（net8.0） | 89.05%（门禁 50） | 门禁已抬至 **85** | ≥90% |
-| 行覆盖率 DataToolkit（net8.0） | 89.22%（门禁 42） | 门禁已抬至 **85** | ≥90% |
-| 真 C# 交叉对照 UDF 数 | 124/240（51.7%） | **157/240（65.4%）** | ≥80% |
+| 行覆盖率 Foundation（net8.0） | 84.25%（门禁 75） | **96.02%（门禁 92）** | ≥88% 达成 |
+| 行覆盖率 Analytics（net8.0） | 89.05%（门禁 50） | **90.2%（门禁 86）** | ≥90% 达成 |
+| 行覆盖率 DataToolkit（net8.0） | 89.22%（门禁 42） | **90.18%（门禁 86）** | ≥90% 达成 |
+| 真 C# 交叉对照 UDF 数 | 124/240（51.7%） | **157/240（65.4%）** | ≥80%（未达，留后续） |
 | 手册检查总数 | 432（manual 235 / cross 197） | **461（manual 235 / cross 226），0 FAIL / 0 SKIP** | — |
-| 测试弱断言审计 | 无 | — | 零断言 FAIL + null-only WARN 预算 | 预算归零 |
-| 依赖锁定 | 无 lock 文件 | — | packages.lock.json + CI locked mode | — |
-| NuGet 漏洞审计 | 仅 dependabot 告警 | — | CI `dotnet list package --vulnerable` | — |
-| 性能基准 | BenchmarkDotNet 存在，不进 CI | — | 周更 workflow + 构件 | 回归阈值告警 |
-| 发版 | 手工 bump + CHANGELOG | verify-docs 三向断言 | release-please 自动化 | — |
-| 文档站 | 无（单文件 3,982 行手册） | — | — | mkdocs-material Pages |
-| 用户上手 | 手工加载 .xll | — | — | 安装脚本 + 示例工作簿 + SHA256 |
+| 测试弱断言审计 | 无 | 零断言/恒真 FAIL + 存在性断言预算 **0** | 预算归零 达成 |
+| 依赖锁定 | 无 lock 文件 | 8 工程 packages.lock.json + CI locked mode | 达成 |
+| NuGet 漏洞审计 | 仅 dependabot 告警 | CI `dependency-audit` job（JSON 解析 + 失败门禁） | 达成 |
+| 性能基准 | 不进 CI | 周更 workflow + 构件（阈值告警留后续） | 回归阈值告警（部分） |
+| 发版 | 手工 bump + CHANGELOG | release-please 自动化（首次 Release PR 待远端观察） | 达成 |
+| 文档站 | 无 | mkdocs-material + Pages + 英文 API 摘要页 | 达成 |
+| 用户上手 | 手工加载 .xll | 安装脚本 + 示例工作簿 + SHA256 | 达成 |
+| 静态分析 | 无 | `AnalysisMode=Recommended` + 0 警告门禁（32 处修复） | 达成 |
 
 > 覆盖率口径：`dotnet test` + coverlet `Include="[模块]*"`（与 ci.yml coverage job 一致）。
 > 本地旧 cobertura（`coverage-local/`）未加 Include 过滤，数字不可作为门禁依据。
@@ -164,13 +165,57 @@
 
 ---
 
-## Phase 3 — 可选优化
+## Phase 3 — 工程质量与用户价值（2026-09-23 实施）
 
-- [ ] 公共 `ROADMAP.md`（决策门 + good first issue）
-- [ ] Excel COM E2E（`test-load-unload.py`）定期化评估（self-hosted runner）
-- [ ] 死代码/静态分析补盲（Roslyn IDE0051/CA1812 或 `dotnet format analyzers`）
-- [ ] 覆盖率继续爬坡至 90+，弱断言预算归零
-- [ ] 英文 API 摘要页（README.en 已存在）
+### 3.1 公共 ROADMAP.md `[x]`
+
+- [x] 根 `ROADMAP.md`：项目定位、决策门（新 UDF/依赖/性能/行为变更/文档）、里程碑、
+      good first issue 候选
+- [x] AGENTS/project-structure 双树登记 + README 文档索引
+- [x] 验证：verify-docs 26 PASS
+
+### 3.2 Excel COM E2E 定期化评估 `[x]`
+
+- [x] 评估结论：**暂不纳入 CI**（[ADR-0010](../adr/0010-excel-com-e2e-scheduling.md)）——
+      托管 runner 无 Office；self-hosted 成本/并发独占/供应链风险；发版检查单手工 E2E 已覆盖
+- [x] 复评触发条件写入 ADR 演进节；ROADMAP 中期里程碑标注结论
+
+### 3.3 静态分析补盲 `[x]`
+
+- [x] `src/Directory.Build.props` 启用 `<AnalysisMode>Recommended</AnalysisMode>`，配合
+      `TreatWarningsAsErrors=true` 新违规直接阻断构建（net48 TFM 不产生该分析器集诊断）
+- [x] 修复 32 处命中（8 条规则）：CA1304/CA1305 文化显式化、CA1309/CA1310 序数/显式比较、
+      CA1859 具体返回类型、CA1861 静态复用常量数组、CA1864 去重查找、CA1869 缓存
+      `JsonSerializerOptions`
+- [x] 不可跨 TFM 的 7 条规则（CA2249/CA1512/CA1845/CA1846/CA1847/CA1850/CA1837，建议 API
+      仅 .NET Core+）与 CA1707（UDF 命名契约）在 `.editorconfig` 显式抑制并注明理由
+- [x] 验证：负向注入 `Convert.ToDouble("1.5")` → `error CA1305` 构建失败；双 TFM 构建 0 警告
+
+### 3.4 弱断言预算归零 `[x]`
+
+- [x] 替换 3 个存在性断言测试（`Uuid_not_null`/`RndA_not_null`/`RndN_not_null` →
+      格式+长度强断言）
+- [x] `check-test-quality.ps1` 默认 `-MaxWarn 0`；自测 7/7 通过
+- [x] AGENTS 命令表同步（预算 3 → 0）
+
+### 3.5 覆盖率爬坡至 90+ `[x]`
+
+- [x] 新增 61 个测试（Foundation 43 / Analytics 14 / DataToolkit 4），针对真实未覆盖分支：
+      RegexBudget 作用域/耗尽、SafeKey 深度与高秩数组、字典类型键与比较模式、Regex 缓存驱逐、
+      输入规范化退化路径、QuickSort/argsort 大数组、MapOver 逐格异常隔离与类型转换、
+      DecompCache/Identity/Diagonal 守卫、PHYCHEM 下标溢出、DictToReport 数组解包、
+      DOE 项数/单元数守卫与三阶交互、字符串 2D 空白归一化等
+- [x] 实测（CI 口径 net8.0）：Foundation 84.26% → **96.02%**、Analytics 89.06% → **90.2%**、
+      DataToolkit 89.45% → **90.18%**
+- [x] 门禁阈值 80/85/85 → **92/86/86**（≥4 点余量），ci.yml / coverage.ps1 / AGENTS /
+      project-structure 同步
+- [x] spec `[Fact]` 计数 2,805 → 2,866（Foundation 434 / Analytics 912 / DataToolkit 1,520）
+
+### 3.6 英文 API 摘要页 `[x]`
+
+- [x] `docs/api-summary.en.md`：20 个模块全部函数名索引 + 用法模式/错误语义/安全/验证摘要
+- [x] mkdocs nav 增条目；README.en 文档索引登记；project-structure 树登记
+- [x] 验证：`mkdocs build --strict` 全绿；verify-docs 26 PASS
 
 ---
 
