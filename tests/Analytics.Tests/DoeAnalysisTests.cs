@@ -213,7 +213,13 @@ namespace ExcelFormulaLabs.Analytics.Tests
             var design = new object[,] { { -1.0, -1.0 }, { -1.0, 1.0 }, { 1.0, -1.0 }, { 1.0, 1.0 } };
             var response = new object[] { 1.0, 2.0, 3.0, 4.0 };
             var r = (object[,])DoeAnalysisUdf.UDF_DOE_PARETO(design, response);
-            r.GetLength(0).Should().BeGreaterThan(1);
+            // 2 因子 4 run → 自动降阶 main（2 项）+ 表头 = 3 行 × 2 列；
+            // A 效应 = (3+4)/2 − (1+2)/2 = 2（硬编码期望，非形状存在性）。
+            r.GetLength(0).Should().Be(3);
+            r.GetLength(1).Should().Be(2);
+            r[0, 0].Should().Be("Term");
+            r[1, 0].Should().Be("A");
+            ((double)r[1, 1]).Should().BeApproximately(2.0, 1e-12);
         }
 
         [Fact] public void Anova_udf_accepts_quadratic_keyword()
@@ -224,7 +230,15 @@ namespace ExcelFormulaLabs.Analytics.Tests
                 { 1.0, 1.0 }, { 0.0, 0.0 }, { 0.0, 0.0 },
             };
             var response = new object[] { 1.0, 2.0, 3.0, 4.0, 2.5, 2.6 };
-            DoeAnalysisUdf.UDF_DOE_ANOVA(design, response, "quadratic").Should().BeOfType<object[,]>();
+            var r = (object[,])DoeAnalysisUdf.UDF_DOE_ANOVA(design, response, "quadratic");
+            // 二次项使 5 项 + 截距饱和（n=6）→ 自动降为 2way：A/B/AB 3 项
+            // + Error + Total + 表头 = 6 行 × 6 列。
+            r.GetLength(0).Should().Be(6);
+            r.GetLength(1).Should().Be(6);
+            r[0, 0].Should().Be("Source");
+            r[1, 0].Should().Be("A");
+            r[3, 0].Should().Be("AB");
+            r[5, 0].Should().Be("Total");
         }
 
         [Fact] public void Anova_rejects_too_many_expanded_terms()
@@ -250,7 +264,13 @@ namespace ExcelFormulaLabs.Analytics.Tests
             var y = new double[20];
             for (int i = 0; i < 20; i++) y[i] = 1.0 + i * 0.1 + rnd.NextDouble() * 0.01;
             var r = DoeAnalysisCore.Anova(X, y, 3, false);
-            r.GetLength(0).Should().BeGreaterThan(1);
+            // 4 因子 3 阶：14 项 + Error + Total + 表头 = 17 行 × 6 列；
+            // A 项 SS > 0（响应随 i 递增且 A 按最低位交替，效应显著）。
+            r.GetLength(0).Should().Be(17);
+            r.GetLength(1).Should().Be(6);
+            r[1, 0].Should().Be("A");
+            ((double)r[1, 1]).Should().BeGreaterThan(0.0);
+            r[16, 0].Should().Be("Total");
         }
     }
 }

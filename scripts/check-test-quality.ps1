@@ -176,7 +176,13 @@ function Get-CodeOnly {
 $assertRx = '\.Should\s*\(|Assert\s*\.\s*\w+|\bAssert\w+\s*\(|\bCheck\w+\s*\(|\bVerify\w+\s*\(|Record\s*\.\s*Exception'
 $presenceRx = '\.Should\s*\(\s*\)\s*\.\s*NotBeNull\s*\(|Assert\s*\.\s*NotNull\s*\('
 $tautologyRx = 'Assert\s*\.\s*True\s*\(\s*true\s*\)|Assert\s*\.\s*False\s*\(\s*false\s*\)'
-$testRx = '\[(Fact|Theory)\]\s*(?:\[[^\]]*\]\s*)*public\s+(?:async\s+)?(?:Task|void)\s+(\w+)\s*\('
+# 测试方法声明扫描（R1-10/F-08 扩面）：此前 `[Fact]`+`public`+`Task|void` 的窄模式漏掉
+#   ① `[FactAttribute]` 变体；② `[Fact, Trait(...)]` 合并属性；③ `[Fact(Skip="...")]`；
+#   ④ `public static`；⑤ 全限定返回类型（System.Threading.Tasks.Task）；
+#   ⑥ `ValueTask`；⑦ 属性/方法签名之间的注释与空行。任一形态的零断言测试此前完全不被扫描。
+$sigTrivia = '(?:\s|//[^\r\n]*|/\*[\s\S]*?\*/)*'
+$testRx = '\[(Fact|Theory)(?:Attribute)?(?:\s*\([^)]*\))?\s*(?:,\s*[^\]]*)?\]' + $sigTrivia +
+    '(?:\[[^\]]*\]' + $sigTrivia + ')*public\s+(?:static\s+)?(?:async\s+)?(?:[\w.]+\.)?(?:Task|ValueTask|void)\s+(\w+)\s*\('
 
 Write-Host ""
 Write-Host "[1/3] Checking zero-assertion tests ..."
@@ -211,6 +217,13 @@ foreach ($f in $testFiles) {
             $violations += "TAUTOLOGY: ${rel}:$line ($name)"
         }
     }
+}
+# F-08 最小发现守卫：tests/ 为空（RepoRoot 指错）或正则完全失配时 0 方法也 PASS，
+# 门禁静默空转。fixture 自测均含测试文件，不受影响。
+if ($testFiles.Count -eq 0) {
+    $violations += "NO_TESTS: no tests/**/*.cs found (wrong RepoRoot?)"
+} elseif ($totalMethods -eq 0) {
+    $violations += "NO_TESTS: $($testFiles.Count) files scanned but 0 test methods matched (regex broken?)"
 }
 if ($violations.Count -gt 0) {
     Write-Host "  [FAIL] Found $($violations.Count) weak assertion violation(s)" -ForegroundColor Red

@@ -67,7 +67,8 @@
       缺条目（PSI_TO_ATM / L_TO_GAL / LB_TO_KG）补 manifest + 映射
 - [x] STR 12 项（NORMWS/TITLE/REMOVE/KEEP/TRUNCATE/STARTSWITH/ENDSWITH/LEFTOF/RIGHTOF/EXTRACT/NTHWORD/STRIPHTML）
       + ARR 9 项（SORTASC/SORTDESC/SORTTEXT/SLICE/FILTER×5）：Dispatcher 注册 + manifest + Python 独立实现
-- [x] 验证：498 项检查 0 FAIL / 0 SKIP；真 C# 对照 **194/240（80.8%）** ≥ 192（Phase 4.2 达成）
+- [x] 验证（Phase 1.4 时点）：498 项检查 0 FAIL / 0 SKIP；真 C# 对照 **194/240（80.8%）**
+      （后续 Phase 4.2/4.5 提升至 520→523 项 / 216/240，见 4.2/4.5）
 
 ### 1.5 修复复现测试审计（P0-5） `[x]`
 
@@ -130,41 +131,8 @@
 - [x] 上传 BenchmarkDotNet.Artifacts 构件（保留 90 天）
 - [x] 本地验证：基准工程 Release 构建通过；YAML 结构校验通过（首次手动 dispatch 待合并后确认）
 
-### 2.2 release-please 自动化发版 `[ ]`
-
-- [ ] `.github/release-please/config.json` + manifest，`release-type: simple`
-- [ ] extra-files 同步 `src/Directory.Build.props` 的 Version/AssemblyVersion/FileVersion
-- [ ] release.yml 接入 release-please job（tag 与 GitHub Release 自动创建）
-- [ ] 验证：一次完整 release PR 演练（版本三向一致由 verify-docs 检查 10 兜底）
-
-### 2.3 安全回归测试显式化 `[ ]`
-
-- [ ] 将 FS 沙箱越界 / NTFS junction、SQL 注入与列名消毒、Regex 超时收敛为
-      `tests/Security.Tests`（或标签过滤 `--filter Security`）
-- [ ] CI 增加 `dotnet test --filter Security`
-- [ ] 验证：三类攻击面用例可独立运行且全绿
-
-### 2.4 用户快速上手包 `[ ]`
-
-- [ ] `samples/ExcelFormulaLabs-Samples.xlsx`：16 模块各一 sheet，公式已填
-- [ ] `scripts/install.ps1`：`Unblock-File` + 复制/引导加载 + 校验 SHA256
-- [ ] Release 附 `SHA256SUMS` 清单
-- [ ] 验证：干净机器按 README 步骤 60 秒出结果
-
-### 2.5 文档站 `[ ]`
-
-- [ ] mkdocs-material（或 DocFX）站点：手册按 16 模块拆页 + 截图
-- [ ] GitHub Pages 部署 workflow
-- [ ] 验证：`mkdocs build --strict` + Pages 可访问
-
-### 2.6 CI 路径过滤 + affected 测试接入 `[ ]`
-
-- [ ] docs-only PR 跳过重 job（paths 过滤）
-- [ ] `run-affected-tests.ps1` 接入 PR quick job（当前脚本存在但未接入 CI）
-- [ ] 验证：docs-only PR 全绿且耗时显著下降；src 改动仍触发全量
-
----
-
+> 注（review-2026-09-24 R1-13）：原此处残留一份 Phase 2 未勾选的重复清单
+>（与上方 `[x]` 版本并存，易被误读为未完成）——已删除，Phase 2 状态以本节 `[x]` 为准。
 
 ---
 
@@ -212,11 +180,11 @@
       DataToolkit 89.45% → **90.18%**
 - [x] 门禁阈值 80/85/85 → **92/86/86**（≥4 点余量），ci.yml / coverage.ps1 / AGENTS /
       project-structure 同步
-- [x] spec `[Fact]` 计数 2,805 → 2,866（Foundation 434 / Analytics 912 / DataToolkit 1,520）
+- [x] spec `[Fact]` 计数 2,805 → 2,866（Phase 3.5 时点；当前 2,871，见 specification.md）
 
 ### 3.6 英文 API 摘要页 `[x]`
 
-- [x] `docs/api-summary.en.md`：20 个模块全部函数名索引 + 用法模式/错误语义/安全/验证摘要
+- [x] `docs/api-summary.en.md`：16 个模块全部函数名索引 + 用法模式/错误语义/安全/验证摘要
 - [x] mkdocs nav 增条目；README.en 文档索引登记；project-structure 树登记
 - [x] 验证：`mkdocs build --strict` 全绿；verify-docs 26 PASS
 
@@ -255,11 +223,15 @@ dotnet build -c Release                          # ⑦ 分发构建
 - [x] 新增 37 个函数的真 C# 对照（UDF 级覆盖 157 → 194）：DT 9 / REGEX 4 / DICT 8 /
       RANGE 7 / JSON+XML 5 / PIVOT 2 / STR.FORMAT / LINALG.LU_P
 - [x] Dispatcher 新增 27 个注册 + ToDayOfWeek/NullableString 助手；manifest 190 → 227 条
-- [x] **交叉对照发现并修复真实缺陷**：`DT.WOM` 旧实现返回 0/2，与文档契约（1–5，6/15→3）
-      矛盾 → 修复为日历周序（独立 commit a295569），新增回归守卫
+- [x] **交叉对照发现并修复真实缺陷**：`DT.WOM` 旧实现返回 0/2，与文档示例（6/15→3）
+      矛盾 → 修复为日历周序（独立 commit a295569），新增回归守卫。
+      注（review-2026-09-24 R1-05）：上限契约修正为 1–6——含 1 号的那一周为第 1 周时，
+      1 号为周日且月长 31 天（如 2026-03）最多跨 6 个日历周，"1–5" 数学上不可达
 - [x] verify-docs 检查 16 修正：manual/cross 为检查项数，允许 > 240（实测 cross=263 触发旧断言误报）
 - [x] 实测（4.2 + 4.5 后）：520 项检查 0 FAIL / 0 SKIP；真 C# 对照 **216/240（90.0%）**；
-      剩余 24 缺口为 `*_ASYNC`（11，Excel 异步）/ 随机类（4）/ 复杂表输出（9）
+      剩余 24 缺口为 `*_ASYNC`（12，Excel 异步）/ 随机类（5：ARR.SHUFFLE、STR.RND*/UUID）/
+      复杂表输出（7：JSON/XML/SQL 表与 ARR.TOSET）
+      （review-2026-09-24 后：523 项检查 0 FAIL / 0 SKIP，真 C# 对照 216/240 不变）
 
 ### 4.3 示例工作簿扩展 `[x]`
 
@@ -288,7 +260,8 @@ dotnet build -c Release                          # ⑦ 分发构建
       Append 不重复写；契约此前未声明 → 手册 FS.READ/WRITE/APPEND 明确 BOM 语义；
       Python 侧以 `utf-8-sig` 镜像验证（14 字节与读回内容逐项一致）
 - [x] 实测：520 项检查 0 FAIL / 0 SKIP；真 C# 对照 **216/240（90.0%）**；
-      剩余 24 缺口为 `*_ASYNC`（11）/ 随机类（4）/ 复杂表输出（9）
+      剩余 24 缺口为 `*_ASYNC`（12）/ 随机类（5）/ 复杂表输出（7）
+      （review-2026-09-24 后：523 项检查，见 4.2）
 
 ---
 

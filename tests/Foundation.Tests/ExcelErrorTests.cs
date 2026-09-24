@@ -45,15 +45,18 @@ namespace ExcelFormulaLabs.Foundation.Tests
     {
         [Fact] public void Equality_operators_compare_codes()
         {
-            var a = ExcelError.Value;
-            var b = ExcelError.Value;
-            var na = ExcelError.NA;
+            // 用独立实例（非单例引用）验证运算符按 Code 比较——
+            // 旧写法两侧同为 ExcelError.Value 单例，引用相等语义下同样通过，无区分度。
+            var a = new ExcelError(2015);
+            var b = new ExcelError(2015);
+            var na = new ExcelError(2042);
             (a == b).Should().BeTrue();
             (a != na).Should().BeTrue();
             (a != b).Should().BeFalse();
         }
 
         [Fact] public void GetHashCode_is_code_based()
-            => ExcelError.NA.GetHashCode().Should().Be(ExcelError.NA.Code);
+            // 硬编码 2042（#N/A 的 Excel 错误码），不得取被测属性（ExcelError.NA.Code）自校验。
+            => ExcelError.NA.GetHashCode().Should().Be(2042);
     }
 }

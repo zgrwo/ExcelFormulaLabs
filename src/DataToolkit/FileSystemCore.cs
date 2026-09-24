@@ -190,9 +190,26 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static string[] ReadAllLines(string p, Encoding? e = null) { ValidatePath(p); var enc = e ?? Encoding.UTF8; using var fs = new FileStream(p, FileMode.Open, FileAccess.Read, FileShare.Read); if (MaxReadSizeBytes > 0 && fs.Length > MaxReadSizeBytes) throw new ArgumentException(ErrorMsg.Get("FS_ReadLimitExceeded", MaxReadSizeBytes)); using var sr = new StreamReader(fs, enc); var lines = new System.Collections.Generic.List<string>(); string? line; while ((line = sr.ReadLine()) != null) lines.Add(line); return lines.ToArray(); }
         internal static bool WriteTextFile(string p, string c, Encoding? e = null) { ValidatePath(p); var enc = e ?? Encoding.UTF8; if (MaxWriteSizeBytes > 0 && enc.GetByteCount(c) > MaxWriteSizeBytes) throw new ArgumentException(ErrorMsg.Get("FS_WriteLimitExceeded", MaxWriteSizeBytes)); File.WriteAllText(p, c, enc); return true; }
         // 同路径进程内串行化（R3-15）：累计上限的"检查长度 → 追加"若不原子，并发 APPEND
-        // 可各自通过检查后合计越界（check-then-act）。锁表按规范化全路径分桶。
-        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, object> AppendGates =
-            new(StringComparer.OrdinalIgnoreCase);
+        // 可各自通过检查后合计越界（check-then-act）。
+        // F-05：固定桶锁替代无界 ConcurrentDictionary——旧实现长会话下每个不同追加路径
+        // 泄漏一个锁对象；哈希碰撞只让无关路径偶发串行，不损失正确性（桶数取 2 的幂便于取模）。
+        private const int AppendGateBuckets = 1024;
+        private static readonly object[] AppendGates = CreateAppendGates();
+        private static object[] CreateAppendGates()
+        {
+            var gates = new object[AppendGateBuckets];
+            for (int i = 0; i < gates.Length; i++) gates[i] = new object();
+            return gates;
+        }
+        private static object AppendGateFor(string path)
+        {
+            unchecked
+            {
+                uint h = 2166136261;  // FNV-1a
+                foreach (char ch in path) { h ^= char.ToUpperInvariant(ch); h *= 16777619; }
+                return AppendGates[(int)(h % AppendGateBuckets)];
+            }
+        }
 
         internal static bool AppendTextFile(string p, string c, Encoding? e = null)
         {
@@ -206,7 +223,7 @@ namespace ExcelFormulaLabs.DataToolkit
             string gateKey;
             try { gateKey = Path.GetFullPath(p); }
             catch (Exception ex) when (ExceptionFilters.IsCatchable(ex)) { gateKey = p; }
-            lock (AppendGates.GetOrAdd(gateKey, _ => new object()))
+            lock (AppendGateFor(gateKey))
             {
                 if (MaxWriteSizeBytes > 0)
                 {

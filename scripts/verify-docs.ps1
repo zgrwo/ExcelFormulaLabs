@@ -1,7 +1,7 @@
 ﻿# verify-docs.ps1 - 文档一致性验证（唯一实现；verify-docs.sh 为包装器）
 # ============================================================================
 # 用法：.\scripts\verify-docs.ps1 [-RepoRoot <path>]
-# 20 个编号项（每个编号项含多条断言，运行时逐条输出：基线 26 条 = 25 PASS + 1 SKIP；
+# 20 个编号项（每个编号项含多条断言，运行时逐条输出：基线 27 条 = 26 PASS + 1 SKIP；
 # R08 review 2026-09-05：检查 19 于 2026-08-31 加入后头注计数漏更 → 2026-09-15 起采用
 # 「编号项 + 运行时断言数」双口径，引用者请以脚本尾部 Pass/Fail/Skip 输出为准）：
 #   1.  UDF 数量：api-reference.md 为准，与源码 [ExcelFunction] 一致
@@ -17,7 +17,7 @@
 #  11.  模块 csproj Description 函数数量 == 该模块 [ExcelFunction] 计数
 #  12.  Markdown 相对链接无断链（排除 http/https/mailto/#/Windows 绝对路径）
 #  13.  .qoder skills 镜像与 skills/ 一致（变换后字节比对，见 sync-qoder-skills.ps1）
-#  14.  project-structure.md 目录树声明的条目全部真实存在
+#  14.  project-structure.md 目录树声明的条目全部真实存在（含 docs/plans 反向：实际文件必须被声明）
 #  15.  AGENTS.md 与 project-structure.md 顶层目录集合一致（双目录树防漂移）
 #  16.  散文式 UDF 计数（AGENTS/CONTRIBUTING/CHANGELOG/注释/Total 表）== 推导值
 #  17.  [ExcelArgument] 名称 ↔ api-reference 参数列（自动比对，剥离可选标记）
@@ -368,6 +368,17 @@ if (-not $structEntries) {
     }
     if ($missingEntries.Count -eq 0) { Check "project-structure.md tree entries ($($structEntries.Count) entries)" "OK" }
     else { Check "project-structure.md tree entries" "missing: $($missingEntries -join ', ')" }
+
+    # 检查 14 反向（R1-13）：docs/plans/ 下实际文件必须被目录树声明——
+    # 2026-09-23-excellence-roadmap.md 曾漏登记而无门禁发现（仅 src/ 有检查 18 反向）。
+    $plansDir = Join-Path $RepoRoot "docs/plans"
+    if (Test-Path $plansDir) {
+        $declaredPlans = @($structEntries | Where-Object { -not $_.IsDir -and $_.Path -like 'docs/plans/*' } | ForEach-Object { $_.Path })
+        $actualPlans = @(Get-ChildItem -Path $plansDir -File -Filter '*.md' | ForEach-Object { "docs/plans/$($_.Name)" })
+        $undeclaredPlans = @($actualPlans | Where-Object { $_ -notin $declaredPlans })
+        if ($undeclaredPlans.Count -eq 0) { Check "docs/plans declared in tree ($($actualPlans.Count))" "OK" }
+        else { Check "docs/plans declared in tree" "undeclared: $($undeclaredPlans -join ', ')" }
+    }
 }
 
 # ---------- 15. AGENTS.md 与 project-structure.md 顶层目录一致 ----------
@@ -403,7 +414,8 @@ $proseMdFiles = Get-ChildItem -Path $RepoRoot -Recurse -Filter "*.md" |
     Where-Object { ($_.FullName -replace '\\', '/') -notmatch '/(\.git|bin|obj|\.qoder|TestResults|logs)/' -and ($_.FullName -replace '\\', '/') -notmatch 'BenchmarkDotNet\.Artifacts/' }
 # 相对路径统一归一化为正斜杠 + 去掉前导分隔符（Windows 为 \，Linux/macOS 为 /，pwsh 双平台兼容）
 $proseCsFiles = Get-ChildItem -Path (Join-Path $RepoRoot "src") -Recurse -Filter "*.cs" -ErrorAction SilentlyContinue |
-    Where-Object { $_.FullName -notmatch '[\\](obj|bin)[\\]' } |
+    # F-08：排除正则须双平台（旧式仅匹配反斜杠，Linux CI 上 bin/obj 生成物会被扫描）。
+    Where-Object { $_.FullName -notmatch '[/\\](obj|bin)[/\\]' } |
     ForEach-Object { ($_.FullName.Substring($RepoRoot.Length) -replace '\\', '/').TrimStart('/') }
 # P3-6：扫描域从"*.md + 单文件 ElementWiseMapper.cs"扩展为全部 src/**/*.cs（含注释中的
 # 散文计数；此前注释漂移可全绿通过）。
@@ -440,7 +452,8 @@ foreach ($rel in $proseFiles) {
             if ([int]$m.Groups[1].Value -ne $codeUdfs) { $proseMismatches += "${rel}: '$($m.Value)'" }
         }
         # CrossVal 双通道计数自洽（R2-9）：manual-only N / cross-validated M（合计 K）
-        # 必须 N+M==K 且为正数；与 verify-manual.py 实际输出的对账由 CI cross-val job 负责。
+        # 必须 N+M==K 且为正数；与实测值的精确对账由 verify-manual.py 的 README
+        # reconciliation 承担（CI cross-val job 执行，漂移即 FAIL，R1-09）。
         # 2026-09-23（Phase 4）：N/M 是**检查项数**而非 UDF 数——单个 UDF 可有多项检查，
         # 检查数合法超过 UDF 总数（实测 cross=263 > 240），故移除“各 ≤ UDF 总数”断言；
         # UDF 级覆盖声明（X/Y UDF）由下方分数形式单独约束（分子 ≤ 分母 == codeUdfs）。
@@ -455,6 +468,14 @@ foreach ($rel in $proseFiles) {
             $num = [int]$m.Groups[1].Value; $den = [int]$m.Groups[2].Value
             if ($den -ne $codeUdfs) { $proseMismatches += "${rel}: 分母 '$($m.Value)' ($den != $codeUdfs)" }
             if ($num -gt $codeUdfs) { $proseMismatches += "${rel}: 分子 '$($m.Value)' ($num > $codeUdfs)" }
+        }
+        # 分数形式 `X/Y（P%）`（README "216/240（90.0%）"，R1-09：旧正则要求 UDF 后缀，
+        # 此形态不在扫描域 → 真 C# 对照宣称漂移可全绿通过）。同样验分母/分子上界；
+        # 与实测值的精确对账由 verify-manual.py 的 README reconciliation 承担。
+        foreach ($m in [regex]::Matches($text, '(\d+)/(\d+)\s*[（(]\s*\d+(?:\.\d+)?\s*%\s*[）)]')) {
+            $num = [int]$m.Groups[1].Value; $den = [int]$m.Groups[2].Value
+            if ($den -ne $codeUdfs) { $proseMismatches += "${rel}: 分母 '$($m.Value)' ($den != $codeUdfs)" }
+            if ($num -gt $den) { $proseMismatches += "${rel}: 分子 '$($m.Value)' ($num > $den)" }
         }
     }
     # 模式 2：`UDF 总数 X→Y`（CHANGELOG 历史区间）——链式校验，不强制终值 == 当前计数。
@@ -575,15 +596,18 @@ if ($factFiles.Count -gt 0) {
     foreach ($ff in $factFiles) {
         $ft = Read-Utf8 $ff.FullName
         if ($ft) {
-            $codeFacts += ([regex]::Matches($ft, '\[Fact\]')).Count
-            $codeTheories += ([regex]::Matches($ft, '\[Theory\]')).Count
+            # F-08：[Fact(Skip="...")] / [FactAttribute] 变体此前不计入——声明计数应含全部
+            # 事实型测试（Skip 仅在运行时跳过，不改变源码事实数）。
+            $codeFacts += ([regex]::Matches($ft, '\[Fact(?:Attribute)?(?=[\]\(])')).Count
+            $codeTheories += ([regex]::Matches($ft, '\[Theory(?:Attribute)?(?=[\]\(])')).Count
         }
     }
     $factMismatches = @()
     foreach ($rel in $proseFiles) {
         if ($rel -notmatch '\.md$') { continue }
         $text = Read-Utf8 (Join-Path $RepoRoot $rel)
-        if (-not $text) { continue }
+        # F-08：不可读文件须 SKIP 计数输出，不得静默 continue（检查可能空转）。
+        if (-not $text) { Check-Skip "Fact count claims" "unreadable: $rel"; continue }
         foreach ($m in [regex]::Matches($text, '([\d,]+)\s*个?\s*\[(Fact|Theory)\]')) {
             $claim = [int]($m.Groups[1].Value -replace ',', '')
             $kind = $m.Groups[2].Value

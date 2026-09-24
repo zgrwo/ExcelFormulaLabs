@@ -2,7 +2,9 @@
 # test_governance_tools.ps1 — 治理工具脚本回归守卫
 # 场景：覆盖 5 个脚本面：scaffold-udf 标识符校验 / run-affected 未映射告警 /
 #       commit-msg bash 计数与 locale 固定 / patch-xll 缺失 exit 1 /
-#       update_excel_arguments 迁移完成语义。
+#       update_excel_arguments 迁移完成语义；
+#       [4c] 另覆盖 MSBuild Exec stderr 语义（R1-01：IgnoreStandardErrorWarningFormat
+#       静态断言 + Exec 写 stderr/exit 0 的 MSBuild 级功能复现）。
 # patch-xll 瞬时文件锁重试（-SimulateTransientLock 负向注入，
 #       需要 Release 构建产物时运行，否则 SKIP）。
 # 用法：pwsh 或 powershell 均可 -NoProfile -ExecutionPolicy Bypass -File tests/scripts/test_governance_tools.ps1
@@ -138,6 +140,53 @@ if ($builtXll) {
     Write-Host "  [SKIP] no Release-built xll found - retry scenario needs a real xll" -ForegroundColor DarkYellow
     $script:skipCount = [int]$script:skipCount + 1
 }
+
+Write-Host ""
+Write-Host "=== [4c] R1-01：MSBuild Exec stderr 语义（IgnoreStandardErrorWarningFormat）===" -ForegroundColor Cyan
+
+# (a) 两个 csproj 的 8 个 patch-xll Exec 必须带 IgnoreStandardErrorWarningFormat="true"
+#（否则 patch-xll 首败 stderr 会让"重试后成功"的构建仍报 MSB3073 -1）。
+foreach ($csprojRel in @("src\DataToolkit\DataToolkit.csproj", "src\Analytics\Analytics.csproj")) {
+    $cp = Join-Path $repo $csprojRel
+    $cpText = [System.IO.File]::ReadAllText($cp, [System.Text.Encoding]::UTF8)
+    # 仅统计 patch-xll-version.ps1 的 Exec（VerifyPackOutput 的 verify-pack Exec 不在此列）。
+    $patchExecs = [regex]::Matches($cpText, '<Exec [^>]*patch-xll-version\.ps1[^>]*>')
+    $execIgnored = @($patchExecs | Where-Object { $_.Value -match 'IgnoreStandardErrorWarningFormat="true"' }).Count
+    Assert-Scenario "patch-xll Execs ignore stderr format ($csprojRel)" `
+        ($patchExecs.Count -gt 0 -and $patchExecs.Count -eq $execIgnored) `
+        "patchExec=$($patchExecs.Count) ignored=$execIgnored"
+}
+
+# (b) 功能复现：Exec 子进程写 stderr 且 exit 0——带属性必须构建成功；
+# 不带属性必须 MSB3073 失败（证明该属性正是 R1-01 根因的开关）。
+$projWith = @'
+<Project>
+  <Target Name="StderrExit0">
+    <Exec Command="powershell -NoProfile -Command &quot;[Console]::Error.WriteLine('ERROR: boom'); exit 0&quot;" IgnoreStandardErrorWarningFormat="true" />
+  </Target>
+</Project>
+'@
+$projPlain = @'
+<Project>
+  <Target Name="StderrExit0">
+    <Exec Command="powershell -NoProfile -Command &quot;[Console]::Error.WriteLine('ERROR: boom'); exit 0&quot;" />
+  </Target>
+</Project>
+'@
+$projWithPath = Join-Path $tmpRoot "stderr-ignored.proj"
+$projPlainPath = Join-Path $tmpRoot "stderr-plain.proj"
+[System.IO.File]::WriteAllText($projWithPath, $projWith, (New-Object System.Text.UTF8Encoding($false)))
+[System.IO.File]::WriteAllText($projPlainPath, $projPlain, (New-Object System.Text.UTF8Encoding($false)))
+$ErrorActionPreference = "Continue"
+$null = dotnet msbuild $projWithPath -t:StderrExit0 -nologo 2>&1
+$exitIgnored = $LASTEXITCODE
+$null = dotnet msbuild $projPlainPath -t:StderrExit0 -nologo 2>&1
+$exitPlain = $LASTEXITCODE
+$ErrorActionPreference = "Stop"
+Assert-Scenario "Exec + IgnoreStandardErrorWarningFormat tolerates stderr/exit0" `
+    ($exitIgnored -eq 0) "exit=$exitIgnored"
+Assert-Scenario "Exec without attribute fails on stderr/exit0 (root cause reproduced)" `
+    ($exitPlain -ne 0) "exit=$exitPlain"
 
 Write-Host ""
 Write-Host "=== [5] update_excel_arguments.py 迁移完成语义（R5-P3-25）===" -ForegroundColor Cyan

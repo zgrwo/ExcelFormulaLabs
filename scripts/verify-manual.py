@@ -61,6 +61,13 @@ CROSS_REFERENCED = set()  # 真正调用 C# 的 cross_* 用例名集合——
 # 覆盖率宣称必须区分：REFERENCED（含纯 Python 自校验）推导的是“手册示例覆盖”，
 # CROSS_REFERENCED 推导的才是“与 C# 交叉验证覆盖”。
 
+def _contains_null(v):
+    """unwrap 后的 C# 值中是否含真 null（None）——{"__nan__"} 标签会变成 float nan，
+    不在检测范围。ndarray 通道用它区分「NaN 标签」与「真 null」（R1-12）。"""
+    if isinstance(v, dict): return any(_contains_null(x) for x in v.values())
+    if isinstance(v, (list, tuple)): return any(_contains_null(x) for x in v)
+    return v is None
+
 def check(name, actual, expected, tol=EPS, manual=True):
     global PASS, FAIL, MANUAL_PASS, CROSS_PASS
     REFERENCED.add(name)
@@ -76,6 +83,12 @@ def check(name, actual, expected, tol=EPS, manual=True):
         a = np.asarray(actual, dtype=float); e = np.asarray(expected, dtype=float)
         # rtol 显式取 RTOL_ULP：默认 1e-5 会稀释 manifest atol 预算 4~6 个数量级
         ok = a.shape == e.shape and np.allclose(a, e, atol=tol, rtol=RTOL_ULP, equal_nan=True)
+        # R1-12：equal_nan=True 会把 C# 真 null（unwrap 后 None，asarray 转 nan）与
+        # Python NaN 混同——"标签被改回 null"的回归无法被 ndarray 通道发现。
+        # 显式要求：Python 侧含 NaN 时，C# 侧必须来自 {"__nan__"} 标签而非 null。
+        if ok and _contains_null(actual) and bool(np.isnan(e).any()):
+            ok = False
+            print(f"  [note] {name}: C# null matched Python NaN only via equal_nan — null is not a NaN label")
         if ok: print(f"  OK {name}: shape={a.shape}")
         else: FAIL += 1; print(f"  FAIL {name}: mismatch\ngot={actual}\nexp={expected}")
     elif isinstance(expected, list) and isinstance(actual, list) and len(expected) == len(actual):
@@ -104,12 +117,23 @@ def load_csharp_results():
         script_dir / "tests" / "CrossValRunner" / "bin" / "Debug" / "net8.0-windows" / "CrossValRunner.exe",
         script_dir / "tests" / "CrossValRunner" / "bin" / "Release" / "net8.0-windows" / "CrossValRunner.exe",
     ]
-    runner = next((p for p in candidates if p.exists()), None)
     manifest = script_dir / "tests" / "CrossValRunner" / "test_manifest.json"
-    if runner is None:
+    existing = [p for p in candidates if p.exists()]
+    if not existing:
         print("  SKIP cross-check: CrossValRunner.exe not found (checked Debug/Release)")
         print(f"    Build it first: dotnet build tests/CrossValRunner")
         return {}
+    # R1-15：不按"Debug 优先"选，而取 mtime 最新者（陈旧 Release 二进制曾静默产生
+    # {ok:193, error:56}）；并校验二进制不早于源码/清单，早于 → 显式 WARN + 重建命令。
+    runner = max(existing, key=lambda p: p.stat().st_mtime)
+    _src_dir = script_dir / "tests" / "CrossValRunner"
+    _srcs = [p for p in (list(_src_dir.glob("*.cs")) + list(_src_dir.glob("*.json"))
+                         + [_src_dir / "CrossValRunner.csproj"]) if p.exists()]
+    if _srcs:
+        _newest_src = max(p.stat().st_mtime for p in _srcs)
+        if runner.stat().st_mtime < _newest_src:
+            print("  [WARN] CrossValRunner binary is older than its sources — "
+                  "results may not reflect current code. Rebuild: dotnet build tests/CrossValRunner")
     try:
         proc = subprocess.run([str(runner), str(manifest)], capture_output=True, text=True, timeout=60)
         if proc.returncode != 0:
@@ -118,18 +142,33 @@ def load_csharp_results():
         data = json.loads(proc.stdout)
         # manifest 的 summary 字段必须被消费——否则 C# 侧任何一条执行错误
         #（如 manifest 与 Dispatcher 失配）都会静默漏过，脚本照样 exit 0。
+        # R1-06/F-10：错误只计一次——此处按 id 预记，消费该条目的 cross_* 不再重复计
+        # （旧实现先 FAIL += err_count，随后每个 status!=ok 的 cross_check 再计一次）。
+        err_ids = {r["id"] for r in data["results"] if r.get("status") != "ok"}
         err_count = data.get("summary", {}).get("error", 0)
         if err_count > 0:
             print(f"  [WARN] CrossValRunner reported {err_count} C# execution error(s) — "
                   f"manifest/Dispatcher may be out of sync (see FAILs below).")
-            global FAIL
-            FAIL += err_count
+            global FAIL, _PRECOUNTED_ERRORS
+            _PRECOUNTED_ERRORS = err_ids
+            FAIL += len(err_ids)
         return {r["id"]: r for r in data["results"]}
     except Exception as e:
         print(f"  SKIP cross-check: {e}")
         return {}
 
 _csharp = None
+# R1-06/F-10：runner 执行错误已在 load_csharp_results 预记 FAIL 的 manifest id 集合，
+# 消费时（cross_check/cross_vs_csharp/cross_check_matrix）不得重复计数。
+_PRECOUNTED_ERRORS = set()
+
+def _count_csharp_error(ref_id):
+    """status!=ok 的条目计 FAIL；已被 summary 预记的 id 只计一次。"""
+    global FAIL
+    if ref_id not in _PRECOUNTED_ERRORS:
+        FAIL += 1
+        _PRECOUNTED_ERRORS.add(ref_id)
+
 def csharp_results():
     global _csharp
     if _csharp is None:
@@ -160,7 +199,7 @@ def cross_check(name, python_computed, tol=None):
         print(f"  SKIP {name}: no C# reference (manifest may need update)")
         return
     if ref["status"] != "ok":
-        FAIL += 1; print(f"  FAIL {name}: C# error — {ref.get('error', 'unknown')}")
+        _count_csharp_error(name); print(f"  FAIL {name}: C# error — {ref.get('error', 'unknown')}")
         return
     cs_val = unwrap(ref["result"]) if isinstance(ref["result"], (dict, list)) else ref["result"]
     # N01 (review-2026-09-05)：tolerance 语义改为「调用方显式 tol 为断言级声明基准（收紧），
@@ -255,7 +294,7 @@ def cross_vs_csharp(name, py_value, manifest_id, tol=None, field=None, xform=Non
         print(f"  SKIP {name}: no C# reference ({manifest_id})")
         return
     if ref["status"] != "ok":
-        FAIL += 1; print(f"  FAIL {name}: C# error — {ref.get('error', 'unknown')}")
+        _count_csharp_error(manifest_id); print(f"  FAIL {name}: C# error — {ref.get('error', 'unknown')}")
         return
     cs = unwrap(ref["result"]) if isinstance(ref["result"], (dict, list)) else ref["result"]
     if field is not None:
@@ -271,10 +310,19 @@ def cross_vs_csharp(name, py_value, manifest_id, tol=None, field=None, xform=Non
         cs = xform(cs)
     tol_eff = tol if tol is not None else (
         float(ref.get("tolerance")) if ref.get("tolerance") else EPS)
-    # 显式 tol 放宽 manifest 预算时打印审计提示（收紧符合 tol 优先级链；
-    # 放宽属断言级声明，须可见——FitRidge R² 1e-3 vs manifest 1e-10 放宽 7 个数量级）。
+    # 显式 tol 放宽 manifest 预算须可见且受上限约束（R1-06：bespoke 通道此前只打印
+    # note，REGRESS.RIDGE(R²) 1e-3 vs manifest 1e-10 静默放宽 1e7 倍也能过）。
+    # 与 cross_check 同语义：未列入白名单或超出该条上限倍率 → FAIL（收紧不受限）。
     if tol is not None and ref.get("tolerance") and float(ref["tolerance"]) > 0 and tol > float(ref["tolerance"]):
-        print(f"  [note] {name}: explicit tol {tol:g} 放宽 manifest {float(ref['tolerance']):g}")
+        _base_tol = float(ref["tolerance"])
+        _ratio = tol / _base_tol
+        _cap = _loosen_cap(name)
+        if _cap is None or _ratio > _cap * 1.000000001:
+            FAIL += 1
+            print(f"  FAIL {name}: explicit tol {tol:g} 放宽 manifest {_base_tol:g} " +
+                  f"({_ratio:.3g}x, cap {_cap if _cap else '未列入白名单'}) — R1-06 禁止无约束放宽")
+            return
+        print(f"  [note] {name}: explicit tol {tol:g} 放宽 manifest {_base_tol:g} ({_ratio:.3g}x, cap {_cap:g})")
     # 特殊值（NaN/±Inf/null）：与 cross_check 同款语义——同型同符号才 PASS
     if isinstance(cs, float) and (np.isnan(cs) or np.isinf(cs)):
         if isinstance(py_value, (float, np.floating)) and \
@@ -392,6 +440,16 @@ for _i in range(2):
     cross_vs_csharp(f"LINALG.SVD_S[{_i}] vs C#", S_svd[_i], "LINALG.SVD", tol=1e-3, field=("S", _i))
 check("LINALG.SVD_U[0,0]", abs(U_svd[0,0]+0.4287)<0.001, True)
 check("LINALG.SVD_VT[0,0]", abs(Vt_svd[0,0]+0.3863)<0.001, True)
+# SVD U 全列对照（R1-06）：manifest 条目 LINALG.SVD 的 U 字段此前只被 Python 常量自查
+# 覆盖，却经 _ID2UDF 映射计入 CROSS_REFERENCED（虚计）。此处消费 U 字段做真对照：
+# 左奇异向量逐列符号约定两侧可不同——按 C# 侧对齐每列符号后整矩阵比对。
+U_cs_full = np.asarray(unwrap(_pick_field(csharp_results()["LINALG.SVD"]["result"], "U")), dtype=float)
+# C# 返回薄 U（rows×k）；numpy 默认 full_matrices=True 给 rows×rows，取前 k 列对齐。
+U_aligned = U_svd[:, :S_svd.size].copy()
+for _ci in range(U_aligned.shape[1]):
+    if float(np.dot(U_cs_full[:, _ci], U_aligned[:, _ci])) < 0:
+        U_aligned[:, _ci] = -U_aligned[:, _ci]
+cross_vs_csharp("LINALG.SVD_U vs C#", U_aligned, "LINALG.SVD", tol=1e-6, field="U")
 # SVD Vt 全元素对照。右奇异向量逐行符号约定两侧可不同——
 # 先按 C# 侧对齐每行符号，再整矩阵比对（对齐是规范化，非改值）。
 Vt_cs_full = unwrap(_pick_field(csharp_results()["LINALG.SVD_VT"]["result"], "Vt"))
@@ -459,7 +517,9 @@ else:
 _cs_luu = csharp_results().get("LINALG.LU_U")
 if _cs_luu and _cs_luu["status"] == "ok":
     _U = np.array(unwrap(_cs_luu["result"]), dtype=float)
-    check("LINALG.LU_U upper-triangular", bool(np.allclose(_U, np.triu(_U), atol=1e-9)), True)
+    # F-10：性质检查读取 C# 结果（固定输入 A 为 Python 常量），属真 C# 对照——
+    # 须传 manual=False，否则被计入 manual-only 而低估 C# 覆盖率。
+    check("LINALG.LU_U upper-triangular", bool(np.allclose(_U, np.triu(_U), atol=1e-9)), True, manual=False)
 else:
     # C# 缺失/出错不得静默零计数——SKIP 致命化保证显式暴露
     #（与 QR/LU 主块的 else 兜底口径一致）。
@@ -469,7 +529,7 @@ if _cs_lup and _cs_lup["status"] == "ok":
     _P = np.array(unwrap(_cs_lup["result"]), dtype=float)
     _uniq = set(np.unique(_P))
     _perm = bool(np.all(_P.sum(axis=0) == 1) and np.all(_P.sum(axis=1) == 1) and _uniq <= {0.0, 1.0})
-    check("LINALG.LU_P permutation", _perm, True)
+    check("LINALG.LU_P permutation", _perm, True, manual=False)  # F-10：真 C# 对照，同 LU_U
     # 性质检查直接读取 C# 的 P 输出（固定输入 A 为 Python 侧常量）——与 LU_U 同口径计入 C# 对照。
     CROSS_REFERENCED.add("LINALG.LU_P")
 else:
@@ -618,6 +678,12 @@ def common_prefix(a,b):
     while i<min(len(a),len(b)) and a[i]==b[i]: i+=1
     return a[:i]
 check("STR.COMMONPFX", common_prefix("hello world","hello there"), "hello ")
+# 大小写不敏感分支：返回**首参**的公共前缀切片（R1-04——手册旧示例误写为第二参形态）。
+def common_prefix_ci(a,b):
+    i=0
+    while i<min(len(a),len(b)) and a[i].upper()==b[i].upper(): i+=1
+    return a[:i]
+check("STR.COMMONPFX(ci)", common_prefix_ci("Hello","hello"), "Hello")
 check("STR.TEXTJOIN", ", ".join(["Alice Johnson","Bob Smith","Carol White","David Brown","Eva Martinez"]),
       "Alice Johnson, Bob Smith, Carol White, David Brown, Eva Martinez")
 def levenshtein(a,b):
@@ -643,9 +709,15 @@ def soundex(s):
     code = ''.join(c for c in dedup if c != '0')
     return (code + '000')[:4]
 check("STR.SOUNDEX", soundex("Robert"), "R163")
-check("STR.URLENCODE", urllib.parse.quote_plus("hello world"), "hello+world")
-check("STR.URLDECODE", urllib.parse.unquote_plus("hello+world"), "hello world")
-check("STR.HTMLENCODE", html.escape("<div class='x'>", quote=False), "&lt;div class='x'&gt;")
+# R1-04：C# 实现为 Uri.EscapeDataString/UnescapeDataString（RFC 3986 路径语义，
+# 非 form-urlencoded）：空格→%20、十六进制大写、'+' 不还原；HTMLENCODE 为
+# WebUtility.HtmlEncode（单引号→&#39;）。Python 侧用同语义独立实现——旧版
+# quote_plus/unquote_plus/html.escape(quote=False) 复刻了错误直觉，为错误手册示例背书。
+check("STR.URLENCODE", urllib.parse.quote("hello world", safe=""), "hello%20world")
+check("STR.URLENCODE(2)", urllib.parse.quote("a=1&b=2", safe=""), "a%3D1%26b%3D2")
+check("STR.URLDECODE", urllib.parse.unquote("hello+world"), "hello+world")
+check("STR.HTMLENCODE", html.escape("<div class='x'>", quote=True).replace("&#x27;", "&#39;"),
+      "&lt;div class=&#39;x&#39;&gt;")
 check("STR.HTMLDECODE", html.unescape("&lt;div&gt;"), "<div>")
 check("STR.BASE64ENC", base64.b64encode(b"Hello World").decode(), "SGVsbG8gV29ybGQ=")
 check("STR.BASE64DEC", base64.b64decode("SGVsbG8=").decode(), "Hello")
@@ -1171,10 +1243,12 @@ try:
     # C# File.WriteAllText(..., Encoding.UTF8) 写 UTF-8 BOM（3 字节），Append 不重复写；
     # Python 侧用 utf-8-sig 首次写入镜像该语义，读取用 utf-8-sig 剥离 BOM。
     with open(os.path.join(_fsx, "a.txt"), "w", encoding="utf-8-sig") as _f: _f.write("hello")
-    cross_vs_csharp("FS.WRITE", True, "FS.WRITE")
+    # R1-15：C# 侧 FsWrite/FsAppend 返回读回内容（副作用验证）；Python 侧同样读回比对。
+    with open(os.path.join(_fsx, "a.txt"), encoding="utf-8-sig") as _f: _fsx_after_write = _f.read()
+    cross_vs_csharp("FS.WRITE", _fsx_after_write, "FS.WRITE")
     with open(os.path.join(_fsx, "a.txt"), "a", encoding="utf-8") as _f: _f.write(" world")
-    cross_vs_csharp("FS.APPEND", True, "FS.APPEND")
     with open(os.path.join(_fsx, "a.txt"), encoding="utf-8-sig") as _f: _fsx_read = _f.read()
+    cross_vs_csharp("FS.APPEND", _fsx_read, "FS.APPEND")
     cross_vs_csharp("FS.READ", _fsx_read, "FS.READ")
     cross_vs_csharp("FS.FEXISTS", os.path.isfile(os.path.join(_fsx, "a.txt")), "FS.FEXISTS")
     cross_vs_csharp("FS.FSIZE", os.path.getsize(os.path.join(_fsx, "a.txt")), "FS.FSIZE")
@@ -1366,9 +1440,13 @@ def cross_check_matrix(name, py_rows, tol=None):
     REFERENCED.add(name)  # 与 check/cross_check 一致收集覆盖名
     CROSS_REFERENCED.add(name)  # cross_* 族都计入 C# 对照集合
     ref = csharp_results().get(name)
-    if ref is None or ref["status"] != "ok":
+    if ref is None:
         global PASS, FAIL, SKIP, CROSS_PASS
         FAIL += 1; print(f"  FAIL {name}: no C# reference")
+        return
+    if ref["status"] != "ok":
+        global PASS, SKIP, CROSS_PASS
+        _count_csharp_error(name); print(f"  FAIL {name}: C# error — {ref.get('error', 'unknown')}")
         return
     cs = unwrap(ref["result"])
     if len(cs) != len(py_rows) + 1:
@@ -1389,7 +1467,10 @@ def cross_check_matrix(name, py_rows, tol=None):
             cv, pv = crow[c], prow[c-1]
             if cv is None and (pv is None or np.isnan(pv)):
                 continue
-            if cv is None or pv is None or not np.isclose(float(cv), float(pv), atol=tol_eff, equal_nan=True):
+            # rtol 显式取 RTOL_ULP：np.isclose 默认 rtol=1e-5 会把 manifest 声明的
+            # atol 预算（如 DOE 的 1e-8）稀释 ~4 个数量级（R1-06 矩阵通道漏改）。
+            if cv is None or pv is None or not np.isclose(float(cv), float(pv), atol=tol_eff,
+                                                          rtol=RTOL_ULP, equal_nan=True):
                 ok = False
                 maxdiff = max(maxdiff, abs(float(cv) - float(pv)) if cv is not None and pv is not None else 1e9)
     if ok:
@@ -1673,7 +1754,10 @@ _ID2UDF = {
     "DOE.FRAC_4": "DOE.PLAN", "DOE.FRAC_5": "DOE.PLAN", "DOE.FRAC_6": "DOE.PLAN",
     "DOE.RSM_2": "DOE.PLAN", "DOE.RSM_3": "DOE.PLAN", "DOE.BB_3": "DOE.PLAN", "DOE.BB_4": "DOE.PLAN",
     "REGRESS.FitOLS": "REGRESS.OLS", "REGRESS.FitWLS": "REGRESS.WLS", "REGRESS.FitRidge": "REGRESS.RIDGE",
-    "LINALG.SVD": "LINALG.SVD_U", "LINALG.QR": "LINALG.QR_Q", "LINALG.LU": "LINALG.LU_L",
+    # R1-06：manifest id LINALG.SVD 的字段消费方是 S 与 U（Vt 有独立条目）——
+    # 映射到 SVD_U 会让 SVD_S 漏计而 SVD_U 虚计；SVD_U 的覆盖由上方 U 字段真对照的
+    # 用例名（"LINALG.SVD_U vs C#"）直接提供。
+    "LINALG.SVD": "LINALG.SVD_S", "LINALG.QR": "LINALG.QR_Q", "LINALG.LU": "LINALG.LU_L",
     "PHYCHEM.MOLWT_H2SO4": "PHYCHEM.MOLWT", "PHYCHEM.MOLWT_NaCl": "PHYCHEM.MOLWT", "PHYCHEM.MOLWT_CaCO3": "PHYCHEM.MOLWT",
     "PHYCHEM.TEMP_CtoF_100": "PHYCHEM.TEMP", "PHYCHEM.TEMP_FtoC_32": "PHYCHEM.TEMP",
     "PHYCHEM.TEMP_CtoK_0": "PHYCHEM.TEMP", "PHYCHEM.TEMP_KtoC_300": "PHYCHEM.TEMP",
@@ -1764,6 +1848,44 @@ print(f"    └ of which cross-validated vs C#: {len(_cross_covered)} of {UDF_TO
 if os.environ.get("VERIFY_MANUAL_SHOW_GAPS"):
     _gaps = sorted(set(_API_UDFS) - _cross_covered)
     print(f"  [cross gaps] {len(_gaps)}: {' '.join(_gaps)}")
+
+# ── README 宣称对账（R1-09）──
+# verify-docs 检查 16 只能校验分子/分母的上界（分母==UDF 总数、分子≤分母），
+# "宣称值 ≠ 实测值"的漂移可全绿通过；且注释声称的对账此前无任何执行点。
+# 此处以实测为准做硬对账：README 是唯一对外计数面，漂移即 FAIL。
+_readme_path = Path(__file__).resolve().parent.parent / "README.md"
+try:
+    _readme_text = _readme_path.read_text(encoding="utf-8")
+except OSError as _re:
+    FAIL += 1; _readme_text = ""
+    print(f"  FAIL README reconciliation: cannot read {_readme_path} ({_re})")
+
+def _readme_claim(pattern, label):
+    """提取 README 计数宣称；缺失即 FAIL（计数行被删除时不得静默跳过对账）。"""
+    global FAIL
+    m = re.search(pattern, _readme_text)
+    if not m:
+        FAIL += 1
+        print(f"  FAIL README {label}: claim not found")
+        return None
+    return tuple(int(g) for g in m.groups())
+
+_claim_mc = _readme_claim(r'manual-only\s+(\d+)\s*/\s*cross-validated\s+(\d+)',
+                          'manual-only/cross-validated counts')
+if _claim_mc is not None and _claim_mc != (MANUAL_PASS, CROSS_PASS):
+    FAIL += 1
+    print(f"  FAIL README manual-only/cross-validated claim {_claim_mc} != actual "
+          f"({MANUAL_PASS}, {CROSS_PASS})")
+_claim_udf = _readme_claim(r'(\d+)/(\d+)\s*个 UDF 有硬编码期望值', 'manual example UDF coverage')
+if _claim_udf is not None and _claim_udf != (udf_count, UDF_TOTAL):
+    FAIL += 1
+    print(f"  FAIL README manual UDF coverage claim {_claim_udf} != actual "
+          f"({udf_count}, {UDF_TOTAL})")
+_claim_cross = _readme_claim(r'真正与 C# 实现对照的 UDF 为\s+(\d+)/(\d+)', 'cross-validated UDF coverage')
+if _claim_cross is not None and _claim_cross != (len(_cross_covered), UDF_TOTAL):
+    FAIL += 1
+    print(f"  FAIL README cross-validated UDF claim {_claim_cross} != actual "
+          f"({len(_cross_covered)}, {UDF_TOTAL})")
 print(f"{'='*60}")
 if FAIL>0 or SKIP>0:
     print(f"\n  FAILURES DETECTED (failures={FAIL}, skipped={SKIP}). Review discrepancies above.")

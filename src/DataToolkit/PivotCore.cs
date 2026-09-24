@@ -226,6 +226,9 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static object[,] CrossJoin(object[,] a, object[,] b)
         {
             int ra = a.GetLength(0), ca = a.GetLength(1), rb = b.GetLength(0), cb = b.GetLength(1);
+            // F-06：零列输入（ca+cb==0）时总单元格守卫恒 0 空转，且 `new object[ra*rb, 0]`
+            // 的 ra*rb 可能 int 溢出——Excel 区域不可达，直调 Core 须显式早退。
+            if (ca == 0 || cb == 0) return new object[0, ca + cb];
             const int maxCells = 1_000_000;
             long totalCells = (long)ra * rb * (ca + cb);
             if (totalCells > maxCells)

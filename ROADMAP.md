@@ -34,16 +34,16 @@ Excel 函数增强库：240 UDF，基于 C# / Excel-DNA，双 TFM（net48 + net8
 
 ### 当前：v2.3.x（质量底线已建立）
 
-- 覆盖率门禁 80/85/85（CI 同口径），测试质量守卫（零断言/恒真断言 FAIL，弱断言预算 0）
-- 真 C# 交叉对照 157/240；依赖锁定 + 漏洞审计进 CI；release-please 自动发版
+- 覆盖率门禁 92/86/86（CI 同口径），测试质量守卫（零断言/恒真断言 FAIL，弱断言预算 0）
+- 真 C# 交叉对照 216/240；依赖锁定 + 漏洞审计进 CI；release-please 自动发版
 - 文档站上线；示例工作簿 + 一键安装脚本
 
 ### 近期：v2.4（工程质量）
 
 - [ ] 静态分析补盲（IDE0051 未用私有成员 / CA1812 未实例化内部类）接入 CI
-- [ ] 覆盖率继续爬坡至 90+（Foundation 优先）
-- [ ] 英文 API 摘要页
-- [ ] Excel COM E2E（`scripts/test-load-unload.py`）定期化评估结论落地
+- [x] 覆盖率爬坡至 90+（Foundation 96.02% / Analytics 90.2% / DataToolkit 90.18%，门禁 92/86/86）
+- [x] 英文 API 摘要页（`docs/api-summary.en.md`）
+- [x] Excel COM E2E（`scripts/test-load-unload.py`）定期化评估结论落地（ADR-0010：暂不纳入 CI）
 
 ### 中期：v2.5（用户价值）
 

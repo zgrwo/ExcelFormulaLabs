@@ -4,8 +4,8 @@ namespace ExcelFormulaLabs.Foundation
 {
     /// <summary>
     /// Centralized exception filter policy.
-    /// All <c>catch</c> blocks in the codebase MUST use <see cref="IsCatchable"/>
-    /// as the <c>when</c> guard so that process-fatal exceptions are never swallowed.
+    /// 捕获后**吞掉或转换**的 <c>catch</c> 块必须使用 <see cref="IsCatchable"/> 作为
+    /// <c>when</c> 守卫，确保进程级致命异常永不被吞没。
     /// </summary>
     /// <remarks>
     /// Excluded (re-thrown) exceptions:
@@ -14,8 +14,12 @@ namespace ExcelFormulaLabs.Foundation
     ///   <item><see cref="StackOverflowException"/> — process cannot recover.</item>
     ///   <item><see cref="AccessViolationException"/> — corrupted state (CLR 4+).</item>
     /// </list>
-    /// If additional fatal exception types are identified in the future,
-    /// they are added HERE — one change propagates to all 25+ catch sites.
+    /// 例外（F-01，review-2026-09-24）：捕获**具体非致命类型**并立即 rethrow 或
+    /// 跳过候选后继续（如捕获 ArgumentException 后置 skipped 标志、捕获
+    /// RegexMatchTimeoutException 后直接 rethrow）无需 <c>when</c> 守卫——
+    /// 这些类型在继承层次上不可能是致命异常，守卫只是冗余；无过滤的空捕获块
+    /// 仍由 pre-commit 检查 1 强制禁止。若未来识别出新的致命异常类型，在本类集中
+    /// 登记——一处修改传播到全部 25+ 捕获点。
     /// </remarks>
     public static class ExceptionFilters
     {

@@ -134,6 +134,12 @@ git config core.hooksPath scripts/git-hooks
 3. 合并 Release PR → 自动打 `vX.Y.Z` tag、创建 GitHub Release，并触发 release.yml 构建/测试/打包/推送 NuGet
 4. 版本一致性由 `verify-docs.ps1` 强制：最新 tag == `<Version>` == `version.txt`，CHANGELOG 必有对应条目
 
+> **Release PR 无 CI 检查（已知边界，review-2026-09-24 R1-14）**：GITHUB_TOKEN 创建的
+> Release PR 触发的 workflow runs 停留在 `action_required`（GitHub 对 bot 事件的默认拦截），
+> 因此 Release PR 上**没有** CI/安全/文档门禁信号。合并前请在本地运行 `scripts/verify-all.ps1`
+> （6 步门）+ `scripts/verify-docs.ps1` 确认全绿；真正的全量验证在 tag 后的 release.yml 中强制执行。
+> 如需在 Release PR 上获得检查信号，需仓库管理员在 Settings → Actions 允许 bot PR 自动运行 workflow。
+>
 > **紧急手工发版**：bump `version.txt` 与 `src/Directory.Build.props` 的 `<Version>` + 更新 CHANGELOG → 提交 →
 > `git tag vX.Y.Z && git push origin vX.Y.Z`（tag 触发 release.yml 同流程）。
 > 发布前本地运行 `scripts/verify-all.ps1`（6 步门）+ `scripts/verify-docs.ps1` 确认全绿。

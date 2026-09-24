@@ -247,7 +247,10 @@ public static class VersionInfoPatcher
         // 4. Write back via UpdateResource
         if (!WriteVersionResource(filePath, data, language))
         {
-            Console.Error.WriteLine("ERROR: UpdateResource failed (file in use?).");
+            // R1-01：exit 5 是可重试失败，消息走 stdout——MSBuild Exec 会把子进程 stderr
+            // 中匹配错误规范格式的行记为 error（即使进程最终 exit 0 也判 MSB3073 -1），
+            // 首败写 stderr 会让 8 次重试成为死代码。最终失败由外层 PowerShell 写 stderr。
+            Console.WriteLine("UpdateResource failed (file in use?) - retryable.");
             return 5;
         }
 
@@ -470,7 +473,8 @@ Write-Host "Patching VERSIONINFO: $resolvedPath"
 # 且 WriteVersionResource 失败路径已 discard 释放句柄（否则同进程重试因泄漏句柄连败）。
 # 测试开关 -SimulateTransientLock 首调直接返回 5，驱动重试路径收敛。
 $exitCode = if ($SimulateTransientLock) {
-    Write-Host "ERROR: UpdateResource failed (file in use?)."
+    # 模拟可重试失败：stdout（与 C# 侧 exit 5 路径一致），重试提示随后输出。
+    Write-Host "UpdateResource failed (file in use?) - retryable (simulated)."
     5
 } else {
     [VersionInfoPatcher]::Patch($resolvedPath, $FileDescription, $ProductName, $FileVersion, $ProductVersion)
@@ -484,6 +488,8 @@ for ($i = 1; $exitCode -eq 5 -and $i -le 8; $i++) {
     $exitCode = [VersionInfoPatcher]::Patch($resolvedPath, $FileDescription, $ProductName, $FileVersion, $ProductVersion)
 }
 if ($exitCode -eq 5) {
-    Write-Host "ERROR: VERSIONINFO patch failed after 8 retries - file may be genuinely locked."
+    # R1-01：仅**最终**失败写 stderr（可被 MSBuild Exec 识别为 error），
+    # 重试期间的所有输出均走 stdout，避免 Exec 在"重试后成功"时仍判 MSB3073 -1。
+    [Console]::Error.WriteLine("ERROR: VERSIONINFO patch failed after 8 retries - file may be genuinely locked.")
 }
 exit $exitCode

@@ -34,6 +34,16 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void EndOfWeek_saturday_to_sunday() => DateTimeCore.EndOfWeek(new(2024,6,15)).DayOfWeek.Should().Be(DayOfWeek.Sunday);
         [Fact] public void WeekOfMonth() => DateTimeCore.WeekOfMonth(new(2024,6,15)).Should().Be(3);
         [Fact] public void WeekOfMonth_month_first_day_is_week_1() => DateTimeCore.WeekOfMonth(new(2024,6,1)).Should().Be(1);
+        // R1-05 回归：1 号为周日且月长 31 天（2026-03）时周一为周首跨 6 个日历周，
+        // 上限是 6 而非 5；周日为周首时同月仍为 5。
+        [Fact] public void WeekOfMonth_monday_start_reaches_six()
+        {
+            DateTimeCore.WeekOfMonth(new(2026,3,30)).Should().Be(6);
+            DateTimeCore.WeekOfMonth(new(2026,3,31)).Should().Be(6);
+            DateTimeCore.WeekOfMonth(new(2025,6,30)).Should().Be(6);
+        }
+        [Fact] public void WeekOfMonth_sunday_start_same_month_is_five()
+            => DateTimeCore.WeekOfMonth(new(2026,3,31), DayOfWeek.Sunday).Should().Be(5);
         [Fact] public void AgeMonths() => DateTimeCore.AgeMonths(new(2020,1,15),new(2024,6,15)).Should().Be(53);
         [Fact] public void AgeDays() => DateTimeCore.AgeDays(new(2020,1,15),new(2024,6,15)).Should().Be(1613);
         [Fact] public void NextWorkday_friday() => DateTimeCore.NextWorkday(new(2024,6,14)).DayOfWeek.Should().Be(DayOfWeek.Monday);

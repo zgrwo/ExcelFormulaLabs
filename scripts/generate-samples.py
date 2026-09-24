@@ -46,14 +46,49 @@ def put_table(ws, start_row, headers, rows):
     return start_row + len(rows)
 
 
+# 动态数组溢出布局登记表：每个示例的公式按声明的溢出矩形占位，生成后校验互不重叠
+#（R1-02：旧布局按"写公式的单元格"排布，ARR.UNIQUE 溢出 6 行压住下方示例 → #SPILL!）。
+_LAYOUT = []
+
+
+def _reserve(ws, row, col, rows, cols):
+    _LAYOUT.append((ws.title, row, col, rows, cols))
+
+
+def _check_layout():
+    from collections import defaultdict
+    by_sheet = defaultdict(list)
+    for sheet, row, col, rows, cols in _LAYOUT:
+        by_sheet[sheet].append((row, col, rows, cols))
+    for sheet, rects in by_sheet.items():
+        for i in range(len(rects)):
+            for j in range(i + 1, len(rects)):
+                r1, c1, h1, w1 = rects[i]
+                r2, c2, h2, w2 = rects[j]
+                if r1 < r2 + h2 and r2 < r1 + h1 and c1 < c2 + w2 and c2 < c1 + w1:
+                    raise AssertionError(
+                        f"layout overlap on {sheet}: "
+                        f"({r1},{c1},{h1}x{w1}) vs ({r2},{c2},{h2}x{w2})")
+
+
 def put_examples(ws, start_row, examples, label_col=6, formula_col=7):
-    """examples: [(label, formula), ...]，写在第 label_col/formula_col 列。"""
-    for i, (label, formula) in enumerate(examples):
-        r = start_row + i
+    """examples: [(label, formula[, spill_rows[, spill_cols]]), ...]，写在 label/formula 列。
+
+    纵向间隔 = 声明的溢出高度 + 1，保证动态数组溢出区不压住下一个示例
+    （openpyxl 不求值，溢出高度按 C# 实现/实测估计并登记到 _LAYOUT 做重叠校验）。
+    """
+    r = start_row
+    for ex in examples:
+        label, formula = ex[0], ex[1]
+        spill_rows = ex[2] if len(ex) > 2 else 1
+        spill_cols = ex[3] if len(ex) > 3 else 1
         lc = ws.cell(row=r, column=label_col, value=label)
         lc.font = LABEL_FONT
         ws.cell(row=r, column=formula_col, value=formula)
-    return start_row + len(examples)
+        _reserve(ws, r, label_col, 1, 1)
+        _reserve(ws, r, formula_col, spill_rows, spill_cols)
+        r += spill_rows + 1
+    return r
 
 
 def autosize(ws, widths):
@@ -94,7 +129,7 @@ def build():
         ("均值", "=STATS.MEAN(A4:A13)"),
         ("样本标准差", "=STATS.STDEV(A4:A13)"),
         ("中位数", "=STATS.MEDIAN(A4:A13)"),
-        ("描述统计摘要（9 值溢出）", "=STATS.SUMMARY(A4:A13)"),
+        ("描述统计摘要（9 值溢出）", "=STATS.SUMMARY(A4:A13)", 9, 1),
     ])
     autosize(ws, [12, 14, 14, 14, 4, 26, 26])
 
@@ -134,10 +169,11 @@ def build():
     ws = wb.create_sheet("ARR")
     put_title(ws, "ARR.* — 数组")
     put_table(ws, 3, ["value"], [[3], [1], [4], [1], [5], [9], [2]])
+    # 溢出高度：UNIQUE 6 个去重值 / SORTDESC 7 行 / SLICE 3 行（声明值 ≥ 实际，留余量）。
     put_examples(ws, 3, [
-        ("去重（保留首次顺序）", "=ARR.UNIQUE(A4:A10)"),
-        ("降序排列", "=ARR.SORTDESC(A4:A10)"),
-        ("切片（从索引 1 起 3 个）", "=ARR.SLICE(A4:A10, 1, 3)"),
+        ("去重（保留首次顺序）", "=ARR.UNIQUE(A4:A10)", 7, 1),
+        ("降序排列", "=ARR.SORTDESC(A4:A10)", 7, 1),
+        ("切片（从索引 1 起 3 个）", "=ARR.SLICE(A4:A10, 1, 3)", 3, 1),
     ])
     autosize(ws, [12, 14, 14, 4, 26, 28])
 
@@ -159,7 +195,7 @@ def build():
     put_table(ws, 3, ["xml"], [["<r><n>1</n><n>2</n><n>3</n></r>"]])
     put_examples(ws, 3, [
         ("是否合法 XML", "=XML.VALIDATE(A4)"),
-        ("XPath 查询（溢出）", '=XML.XPATH(A4, "//n")'),
+        ("XPath 查询（溢出）", '=XML.XPATH(A4, "//n")', 3, 1),
     ])
     autosize(ws, [34, 14, 14, 4, 26, 30])
 
@@ -168,7 +204,7 @@ def build():
     put_title(ws, "DICT.* — 频率统计")
     put_table(ws, 3, ["item"], [["A"], ["B"], ["A"], ["C"], ["A"], ["B"]])
     put_examples(ws, 3, [
-        ("频率统计（value/count 两列）", "=DICT.FREQUENCY(A4:A9)"),
+        ("频率统计（value/count 两列）", "=DICT.FREQUENCY(A4:A9)", 4, 2),
     ])
     autosize(ws, [12, 14, 14, 4, 30, 30])
 
@@ -182,7 +218,7 @@ def build():
     ws.cell(row=3, column=5).fill = HEAD_FILL
     put_examples(ws, 7, [
         ("行列式", "=LINALG.DET(A4:C6)"),
-        ("解方程组 Ax=b", "=LINALG.SOLVE(A4:C6, E4:E6)"),
+        ("解方程组 Ax=b", "=LINALG.SOLVE(A4:C6, E4:E6)", 3, 1),
     ])
     autosize(ws, [8, 8, 8, 4, 8, 4, 30, 30])
 
@@ -194,7 +230,7 @@ def build():
     ])
     put_examples(ws, 3, [
         ("R²", "=REGRESS.RSQ(A4:A8, B4:C8)"),
-        ("OLS 报告（11 行）", "=REGRESS.OLS(A4:A8, B4:C8)"),
+        ("OLS 报告（11 行 × 2 列）", "=REGRESS.OLS(A4:A8, B4:C8)", 11, 2),
     ])
     autosize(ws, [8, 8, 8, 4, 22, 30])
 
@@ -206,12 +242,12 @@ def build():
         [10, None, 13.0],   # 请求行：u 留空待求，目标 13 → 解 u=4
     ])
     put_examples(ws, 3, [
-        ("反解可调参数（请求行留空）", "=SOLVE.INVERSE(A4:C11)"),
+        ("反解可调参数（请求行留空）", "=SOLVE.INVERSE(A4:C11)", 2, 5),
     ])
     # 进阶：模型质量与方程（放在 INVERSE 溢出区之外，避免 #SPILL 冲突）
     put_examples(ws, 13, [
-        ("模型质量（交叉验证 R²/MAE）", "=SOLVE.QUALITY(A4:C11)"),
-        ("前向方程 + 闭式反解式", "=SOLVE.EQUATION(A4:C11)"),
+        ("模型质量（交叉验证 R²/MAE）", "=SOLVE.QUALITY(A4:C11)", 5, 6),
+        ("前向方程 + 闭式反解式", "=SOLVE.EQUATION(A4:C11)", 4, 3),
     ])
     autosize(ws, [14, 14, 14, 4, 30, 34])
 
@@ -231,14 +267,16 @@ def build():
     put_table(ws, 3, ["x1", "x2", "y"], [
         [-1, -1, 52], [-1, 1, 60], [1, -1, 58], [1, 1, 66],
     ])
+    # 溢出高度：PLAN 4 run + 表头（5 行 × 4 列）；ANALYZE 2 项 + 表头（3 行 × 5 列）；
+    # ANOVA 2 项 + Error/Total + 表头（5 行 × 6 列）；PARETO 2 项 + 表头（3 行 × 2 列）。
     put_examples(ws, 3, [
-        ("设计矩阵（含 StdOrder/RunOrder）", '=DOE.PLAN(2,2,0,2,"full",FALSE)'),
+        ("设计矩阵（含 StdOrder/RunOrder）", '=DOE.PLAN(2,2,0,2,"full",FALSE)', 5, 4),
     ])
     # 进阶：效应/方差分析/Pareto（放在 PLAN 溢出区之外，避免 #SPILL 冲突）
     put_examples(ws, 12, [
-        ("效应分析（ANALYZE）", "=DOE.ANALYZE(A4:B7, C4:C7)"),
-        ("ANOVA 表", "=DOE.ANOVA(A4:B7, C4:C7)"),
-        ("Pareto 效应排序", "=DOE.PARETO(A4:B7, C4:C7)"),
+        ("效应分析（ANALYZE）", "=DOE.ANALYZE(A4:B7, C4:C7)", 3, 5),
+        ("ANOVA 表", "=DOE.ANOVA(A4:B7, C4:C7)", 5, 6),
+        ("Pareto 效应排序", "=DOE.PARETO(A4:B7, C4:C7)", 3, 2),
     ])
     autosize(ws, [8, 8, 8, 4, 4, 34, 34])
 
@@ -260,8 +298,10 @@ def build():
         ["North", "A", 100], ["North", "B", 200], ["South", "A", 150],
         ["South", "B", 50], ["North", "A", 120],
     ])
+    # 列号为 0-based：region=0、product=1、amount=2；按 region 求和 amount。
+    #（R1-02：旧公式 {1},3 以 1-based 直觉写就 → agg_column=3 越界 #VALUE!。）
     put_examples(ws, 3, [
-        ("按 region 求和 amount", '=PIVOT.GROUPBY(A4:C8, {1}, 3, "sum")'),
+        ("按 region 求和 amount", '=PIVOT.GROUPBY(A4:C8, {0}, 2, "sum")', 3, 2),
     ])
     autosize(ws, [12, 12, 12, 4, 28, 40])
 
@@ -283,6 +323,10 @@ def build():
         ("规范化路径", '=FS.NORM("C:\\data\\..\\file.txt")'),
     ])
     autosize(ws, [28, 4, 4, 4, 30, 34])
+
+    # 生成后校验：所有示例的溢出矩形（含标签/公式单元格）互不重叠——
+    # 无需 Excel 即可在 CI 捕获 #SPILL! 布局回归。
+    _check_layout()
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     wb.save(OUT)

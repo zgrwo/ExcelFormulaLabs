@@ -37,9 +37,12 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static DateTime EndOfWeek(DateTime d, DayOfWeek s = DayOfWeek.Monday) { AssertValidDate(d); return StartOfWeek(d, s).AddDays(6); }
         internal static DateTime StartOfMonth(DateTime d) { AssertValidDate(d); return new(d.Year, d.Month, 1); }
         internal static DateTime EndOfMonth(DateTime d) { AssertValidDate(d); return new(d.Year, d.Month, DateTime.DaysInMonth(d.Year, d.Month)); }
-        // 契约（api-reference/user-manual）：返回当月第几周 1–5，含 1 号的那一周为第 1 周。
+        // 契约（api-reference/user-manual）：返回当月第几周 1–6，含 1 号的那一周为第 1 周。
         // 旧实现按 start_day 在 [月初, d] 的出现次数计数 → 6/1(周六) 返回 0、6/15 返回 2，
         // 与文档示例（6/1→1、6/15→3）矛盾；Phase 4 交叉对照发现（2026-09-23）。
+        // 上限 6 而非 5（review-2026-09-24 R1-05）：1 号为周日且月长 31 天（如 2026-03）
+        // 时周一为周首会跨 6 个日历周（2/23 起算）；"1–5" 在数学上不可达。周日为周首时
+        // 该月仍为 5（1 号即第 1 周起点）。
         internal static long WeekOfMonth(DateTime d, DayOfWeek s = DayOfWeek.Monday) { AssertValidDate(d); return (d.Date - StartOfWeek(StartOfMonth(d), s)).Days / 7 + 1; }
         internal static long AgeYears(DateTime b, DateTime? r = null) { AssertValidDate(b); var rd = r ?? DateTime.Today; int a = rd.Year - b.Year; if (rd.Month < b.Month || (rd.Month == b.Month && rd.Day < b.Day)) a--; return a; }
         internal static long AgeMonths(DateTime b, DateTime? r = null) { AssertValidDate(b); var rd = r ?? DateTime.Today; return (rd.Year - b.Year) * 12 + rd.Month - b.Month - (rd.Day < b.Day ? 1 : 0); }

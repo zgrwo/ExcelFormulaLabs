@@ -354,22 +354,51 @@ public static class Dispatcher
         Register("FileSystemCore", "FsTemp", (a, _) => FileSystemCore.GetTempPath().TrimEnd(Path.DirectorySeparatorChar));
         Register("FileSystemCore", "FsDrives", (a, _) =>
             FileSystemCore.GetDrives().OrderBy(d => d, StringComparer.OrdinalIgnoreCase).ToArray());
-        Register("FileSystemCore", "FsMkdir", (a, _) => FileSystemCore.EnsureFolder(FsProbe.P(ToString(a[0]))));
-        Register("FileSystemCore", "FsWrite", (a, _) => FileSystemCore.WriteTextFile(FsProbe.P(ToString(a[0])), ToString(a[1])));
-        Register("FileSystemCore", "FsAppend", (a, _) => FileSystemCore.AppendTextFile(FsProbe.P(ToString(a[0])), ToString(a[1])));
+        // R1-15：I/O 写操作返回**副作用验证**（读回内容/存在性）而非恒 true 布尔——
+        // 旧实现只比对 True 回显，无法发现"返回成功但未落盘"的实现回归。
+        Register("FileSystemCore", "FsMkdir", (a, _) =>
+        {
+            var p = FsProbe.P(ToString(a[0])); FileSystemCore.EnsureFolder(p); return Directory.Exists(p);
+        });
+        Register("FileSystemCore", "FsWrite", (a, _) =>
+        {
+            var p = FsProbe.P(ToString(a[0])); FileSystemCore.WriteTextFile(p, ToString(a[1]));
+            return FileSystemCore.ReadTextFile(p);  // 读回 = "hello"（BOM 由 StreamReader 剥离）
+        });
+        Register("FileSystemCore", "FsAppend", (a, _) =>
+        {
+            var p = FsProbe.P(ToString(a[0])); FileSystemCore.AppendTextFile(p, ToString(a[1]));
+            return FileSystemCore.ReadTextFile(p);  // 读回 = "hello world"
+        });
         Register("FileSystemCore", "FsRead", (a, _) => FileSystemCore.ReadTextFile(FsProbe.P(ToString(a[0]))));
         Register("FileSystemCore", "FsFileExists", (a, _) => FileSystemCore.FileExists(FsProbe.P(ToString(a[0]))));
         Register("FileSystemCore", "FsFileSize", (a, _) => FileSystemCore.GetFileSize(FsProbe.P(ToString(a[0]))));
         Register("FileSystemCore", "FsFolderExists", (a, _) => FileSystemCore.FolderExists(FsProbe.P(ToString(a[0]))));
-        Register("FileSystemCore", "FsCopy", (a, _) => FileSystemCore.CopyFile(FsProbe.P(ToString(a[0])), FsProbe.P(ToString(a[1]))));
-        Register("FileSystemCore", "FsMove", (a, _) => FileSystemCore.MoveFile(FsProbe.P(ToString(a[0])), FsProbe.P(ToString(a[1]))));
+        Register("FileSystemCore", "FsCopy", (a, _) =>
+        {
+            var s = FsProbe.P(ToString(a[0])); var d = FsProbe.P(ToString(a[1]));
+            FileSystemCore.CopyFile(s, d);
+            return File.Exists(d) && File.ReadAllText(d) == File.ReadAllText(s);
+        });
+        Register("FileSystemCore", "FsMove", (a, _) =>
+        {
+            var s = FsProbe.P(ToString(a[0])); var d = FsProbe.P(ToString(a[1]));
+            FileSystemCore.MoveFile(s, d);
+            return File.Exists(d) && !File.Exists(s);
+        });
         // LS/LSDIR 返回探针根的**相对文件名**并排序：目录枚举顺序无契约，绝对路径两侧不同根。
         Register("FileSystemCore", "FsList", (a, _) => FileSystemCore.ListFiles(FsProbe.P(ToString(a[0])), ToString(a[1]))
             .Select(f => Path.GetFileName(f)).OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToArray());
         Register("FileSystemCore", "FsListDir", (a, _) => FileSystemCore.ListFolders(FsProbe.P(ToString(a[0])), ToString(a[1]))
             .Select(d => Path.GetFileName(d)).OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToArray());
-        Register("FileSystemCore", "FsDelete", (a, _) => FileSystemCore.DeleteFile(FsProbe.P(ToString(a[0]))));
-        Register("FileSystemCore", "FsDelDir", (a, _) => FileSystemCore.DeleteFolder(FsProbe.P(ToString(a[0])), true));
+        Register("FileSystemCore", "FsDelete", (a, _) =>
+        {
+            var p = FsProbe.P(ToString(a[0])); FileSystemCore.DeleteFile(p); return !File.Exists(p);
+        });
+        Register("FileSystemCore", "FsDelDir", (a, _) =>
+        {
+            var p = FsProbe.P(ToString(a[0])); FileSystemCore.DeleteFolder(p, true); return !Directory.Exists(p);
+        });
     }
 
     /// <summary>清理 FS 探针目录（Program 在测试执行后调用，尽力而为）。</summary>

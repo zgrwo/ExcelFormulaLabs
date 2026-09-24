@@ -2,7 +2,7 @@
 
 > 本文档是**一份可直接投喂给任意 AI 审查代理的 Prompt 模板**，用于对本项目的任何变更（PR / 提交 / 发版前全量）做一次"先想后写、实证优先、杜绝假阳性"的深度审查。
 > 配套治理规则见 [documentation.md](documentation.md)；审查产出报告一律归档 `logs/reports/`，**不入库**。
-> **事实基准**：文中门禁编号、步骤数、阈值已于 2026-09-05 对照 v2.2.5 逐条实测校准（verify-docs 20 个编号项（运行时断言 26 条基线）/ pre-commit 6 项 / verify-all 6 步 / CI 7 job / 覆盖率 75/50/42）。版本前进后，引用任何编号前先重数（见 6.5）。
+> **事实基准**：文中门禁编号、步骤数、阈值已于 2026-09-24 对照 v2.3.1 逐条实测校准（verify-docs 20 个编号项（运行时断言 27 条基线）/ pre-commit 6 项 / verify-all 6 步 / CI 9 job / 覆盖率 92/86/86 / verify-manual 523 项检查·真 C# 对照 216/240）。版本前进后，引用任何编号前先重数（见 6.5）。
 
 ---
 
@@ -91,11 +91,11 @@ Foundation (共享工具)                    ← InputNormalizer / ElementWiseMa
 ⑥ `dotnet build -c Release`（双 TFM 打包验证）
 ```
 
-> CI `cross-val` job = build CrossValRunner + `dotnet test --filter CrossVal` + verify-manual.py 三段；本地 ④ 已把 CrossVal 执行一并包含。
+> CI `cross-val` job = build CrossValRunner + `dotnet test --filter CrossVal`（Analytics.Tests 的 `CrossVal_*` 普通单测，非 Python↔C# 对照）+ verify-manual.py 三段；本地 ④ 已把 CrossVal 执行一并包含。
 
 - **交叉验证铁律**：数值类 UDF 必须 `cross_check()` 且**非自校验**；Python 是**独立实现**，不共享 C# 代码路径；特殊值必须带标签（`{"__nan__":true}` / `{"__inf__":±1}`）且 Python 侧必须消费；manifest 的 `tolerance` 字段必须参与比较判定（曾为死数据）。
 - **通道分离**：`check()`（Python 参考实现自测）与 `cross_check()`（真正调 C#）**分开统计、分开汇报**，禁止合并成单一"覆盖率"声称。
-- 覆盖率门禁（CI coverage job，`ThresholdType=line`、`ThresholdStat=total`）：Foundation ≥ 75%（仅 net8.0）、Analytics ≥ 50% / DataToolkit ≥ 42%（仅 net8.0-windows）。
+- 覆盖率门禁（CI coverage job，`ThresholdType=line`、`ThresholdStat=total`）：Foundation ≥ 92%（仅 net8.0）、Analytics ≥ 86% / DataToolkit ≥ 86%（仅 net8.0-windows）。本地同口径用 `scripts/coverage.ps1`（失败即 FAIL，报告新鲜度自校验）。
 
 ### 3.6 治理红线与历史陷阱速查
 
@@ -156,7 +156,7 @@ codegraph node -f <文件> --symbols-only   # 文件模式：符号表 + depende
 
 | 流程 | 触发 | 审查要点 |
 | :--- | :--- | :--- |
-| [ci.yml](../../.github/workflows/ci.yml) | push main / PR / dispatch | 7 jobs：`redline-check`（pre-commit 6 项 + Conventional Commits + 治理脚本自测）、`test`（net8.0）、`test-net48`、`cross-val`（CrossVal + verify-manual）、`release-build`、`verify-docs`、`coverage`。核对：**失败是否真由变更引起**；依赖关系（needs）是否合理；PR 专属 job（提交规范）是否跳过 dependabot |
+| [ci.yml](../../.github/workflows/ci.yml) | push main / PR / dispatch | 9 jobs：`classify`（paths-filter，docs-only 跳过重 job；`**/*.props`/`version.txt`/`.editorconfig` 计入 code）、`redline-check`（pre-commit 6 项 + test-quality + Conventional Commits + 治理脚本自测）、`dependency-audit`（locked mode + 漏洞审计）、`test`（net8.0，含 Security 子集 trx 计数门禁）、`test-net48`、`cross-val`（CrossVal_* 单测 + verify-manual）、`release-build`、`verify-docs`、`coverage`（92/86/86）。核对：**失败是否真由变更引起**；依赖关系（needs）是否合理；PR 专属 job（提交规范）是否跳过 dependabot |
 | [release.yml](../../.github/workflows/release.yml) | `v*.*.*` tag | tag==props 版本一致性、8 个 .xll 产物收集（H1 断言、`fail_on_unmatched_files`）、GitHub Packages push（`--no-symbols`） |
 | [security.yml](../../.github/workflows/security.yml) | push main / PR / 定时 | CodeQL（C#）：如变更含注入/路径/资源面，核对扫描结果；**CodeQL 抑制注释在本仓库实测无效**（勿写、勿要求写） |
 | [stale.yml](../../.github/workflows/stale.yml) | 每日定时 | 僵尸 Issue/PR 关闭，不常动；核对豁免标签 |

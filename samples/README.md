@@ -1,6 +1,6 @@
 # 示例工作簿
 
-`ExcelFormulaLabs-Samples.xlsx` — 16 个模块各一个 sheet，含示例数据与可直接复制的公式。
+`ExcelFormulaLabs-Samples.xlsx` — 17 个模块各一个 sheet（JSON/XML 各一页，加使用说明共 18 个 sheet），含示例数据与可直接复制的公式。
 
 ## 使用
 

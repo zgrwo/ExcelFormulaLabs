@@ -38,15 +38,26 @@ try {
     foreach ($m in $modules) {
         Write-Host ""
         Write-Host "===== Coverage: $($m.Name) (threshold $($m.Threshold)%) =====" -ForegroundColor Cyan
+
+        # R1-07 假绿修复：运行前清理旧报告。coverlet 在测试失败/构建失败时**不重写**报告，
+        # 残留的旧报告会被下方"按最新文件读取"逻辑当成本轮结果 → 失败被静默读成 PASS。
+        $projDir = Join-Path $RepoRoot (Split-Path $m.Project -Parent)
+        $coverageDir = Join-Path $projDir 'coverage'
+        if (Test-Path $coverageDir) {
+            Get-ChildItem -Path $coverageDir -Filter '*.cobertura.xml' -File -ErrorAction SilentlyContinue |
+                Remove-Item -Force -ErrorAction SilentlyContinue
+        }
+
         dotnet test $m.Project -f $m.Tfm -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura `
             -p:CoverletOutput="coverage/$($m.Name.ToLower())" -p:Threshold=$($m.Threshold) `
             -p:ThresholdType=line -p:ThresholdStat=total -p:Include="$($m.Include)" --nologo
         $dotnetExit = $LASTEXITCODE
 
-        # 解析报告做汇总（coverlet 阈值已决定成败，这里只负责可读输出）
-        $projDir = Join-Path $RepoRoot (Split-Path $m.Project -Parent)
-        $report = Get-ChildItem -Path (Join-Path $projDir 'coverage') -Filter '*.cobertura.xml' -ErrorAction SilentlyContinue |
+        # 解析报告做汇总（可读输出）；退出码始终是权威判据（报告存在也不豁免）。
+        $report = Get-ChildItem -Path $coverageDir -Filter '*.cobertura.xml' -ErrorAction SilentlyContinue |
             Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        $rateOk = $false
+        $pct = 0.0
         if ($report) {
             $doc = New-Object System.Xml.XmlDocument
             $doc.Load($report.FullName)
@@ -54,18 +65,20 @@ try {
             $covered = $doc.DocumentElement.GetAttribute('lines-covered')
             $valid = $doc.DocumentElement.GetAttribute('lines-valid')
             $pct = [Math]::Round($rate * 100, 2)
-            if ($rate * 100 -ge $m.Threshold) {
+            $rateOk = $rate * 100 -ge $m.Threshold
+            if ($rateOk -and $dotnetExit -eq 0) {
                 Write-Host "  [PASS] $($m.Name): $pct% ($covered/$valid lines)" -ForegroundColor Green
             } else {
-                Write-Host "  [FAIL] $($m.Name): $pct% ($covered/$valid lines) < $($m.Threshold)%" -ForegroundColor Red
-                $failures += "$($m.Name) $pct% < $($m.Threshold)%"
+                Write-Host "  [FAIL] $($m.Name): $pct% ($covered/$valid lines) < $($m.Threshold)% (exit $dotnetExit)" -ForegroundColor Red
             }
-        } elseif ($dotnetExit -ne 0) {
-            $failures += "$($m.Name) dotnet test exit $dotnetExit"
-        } else {
-            Write-Host "  [WARN] $($m.Name): cobertura report not found" -ForegroundColor DarkYellow
         }
-        if ($dotnetExit -ne 0 -and -not $report) { $failures += "$($m.Name) dotnet test exit $dotnetExit" }
+        if ($dotnetExit -ne 0) {
+            $failures += "$($m.Name) dotnet test exit $dotnetExit"
+        } elseif (-not $report) {
+            $failures += "$($m.Name) cobertura report not found (test/build did not complete)"
+        } elseif (-not $rateOk) {
+            $failures += "$($m.Name) $pct% < $($m.Threshold)%"
+        }
     }
 } finally {
     Pop-Location

@@ -258,7 +258,7 @@ instance_num: 1=第1次（默认），-1=最后一次。
 ```
 =STR.COMMONPFX("hello world", "hello there")   → "hello "
 =STR.COMMONPFX("prefix_abc", "prefix_xyz")     → "prefix_"
-=STR.COMMONPFX("Hello", "hello", FALSE)        → "hello"
+=STR.COMMONPFX("Hello", "hello", FALSE)        → "Hello"   （大小写不敏感，返回首参切片）
 =STR.COMMONPFX("Hello", "hello", TRUE)         → ""
 ```
 
@@ -319,11 +319,15 @@ instance_num: 1=第1次（默认），-1=最后一次。
 
 ### STR.URLENCODE / STR.URLDECODE — URL 编解码
 
+采用 RFC 3986 百分号编码（.NET `Uri.EscapeDataString` 语义）：空格编码为 `%20`（非 `+`），
+十六进制为大写，`+` 不作为空格还原。
+
 **示例**：
 ```
-=STR.URLENCODE("hello world")             → "hello+world"
-=STR.URLENCODE("a=1&b=2")                 → "a%3d1%26b%3d2"
-=STR.URLDECODE("hello+world")             → "hello world"
+=STR.URLENCODE("hello world")             → "hello%20world"
+=STR.URLENCODE("a=1&b=2")                 → "a%3D1%26b%3D2"
+=STR.URLDECODE("hello+world")             → "hello+world"
+=STR.URLDECODE("a%3D1%26b%3D2")           → "a=1&b=2"
 ```
 
 ---
@@ -336,7 +340,7 @@ instance_num: 1=第1次（默认），-1=最后一次。
 
 **示例**：
 ```
-=STR.HTMLENCODE("<div class='x'>")    → "&lt;div class='x'&gt;"
+=STR.HTMLENCODE("<div class='x'>")    → "&lt;div class=&#39;x&#39;&gt;"
 =STR.HTMLDECODE("&lt;div&gt;")        → "<div>"
 =STR.HTMLENCODE("a & b")             → "a &amp; b"
 ```

@@ -55,7 +55,9 @@ namespace ExcelFormulaLabs.DataToolkit
             return mc[idx].Value;
         }
         internal static string[] RegexMatchAll(string i, string p, bool ic=true)
-        { ValidatePattern(p); var mc=Regex.Matches(i,p,F(ic),Timeout); var r=new string[mc.Count]; for(int j=0;j<mc.Count;j++)r[j]=mc[j].Value; return r; }
+        { ValidatePattern(p); // F-02：兄弟方法均走 BudgetedTimeout + 预算耗尽抛错；
+            // 此处曾直接用固定 Timeout，数组级预算对它无效（嵌套/直调 Core 可再耗 5s）。
+            var mc=Regex.Matches(i,p,F(ic),BudgetedTimeout()); var r=new string[mc.Count]; for(int j=0;j<mc.Count;j++)r[j]=mc[j].Value; return r; }
         internal static string RegexReplace(string i, string p, string r, bool ic=true)
             => RegexReplace(i, p, r, 0, ic);
 

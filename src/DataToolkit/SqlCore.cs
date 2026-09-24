@@ -124,13 +124,23 @@ namespace ExcelFormulaLabs.DataToolkit
                     "Multi-statement queries are blocked to prevent data exfiltration.");
             using var conn = new SqlConn("Data Source=:memory:");
             conn.Open();
-            CreateTable(conn, "data", range, hasHeaders);
-            if (extra != null) foreach (var kv in extra) CreateTable(conn, kv.Key, kv.Value, hasHeaders);
-            using var cmd = conn.CreateCommand(); cmd.CommandText = sql; cmd.CommandTimeout = SqlTimeoutSeconds;
+            // F-03：预算在建表前即挂载（源区域建表此前在预算窗口之外）；建表失败/异常时
+            // 由下方 catch 复位预算状态（防 [ThreadStatic] 标志泄漏到后续调用）。
             _budgetInterrupted = 0;
             _budgetStartTick = Environment.TickCount;
             _budgetMs = budgetMs;
             _budgetArmed = 1;
+            try
+            {
+                CreateTable(conn, "data", range, hasHeaders);
+                if (extra != null) foreach (var kv in extra) CreateTable(conn, kv.Key, kv.Value, hasHeaders);
+            }
+            catch (Exception ex) when (ExceptionFilters.IsCatchable(ex))
+            {
+                ResetBudget();
+                throw;
+            }
+            using var cmd = conn.CreateCommand(); cmd.CommandText = sql; cmd.CommandTimeout = SqlTimeoutSeconds;
 #if NET48
             // 必须在 ExecuteReader 之前注册（ProgressOps 影响语句准备期的进度回调频率）。
             int savedProgressOps = conn.ProgressOps;
@@ -238,10 +248,15 @@ namespace ExcelFormulaLabs.DataToolkit
                 try { SQLitePCL.raw.sqlite3_progress_handler(conn.Handle, 0, null, null); }
                 catch (Exception ex) when (ExceptionFilters.IsCatchable(ex)) { /* 连接已释放 */ }
 #endif
-                _budgetArmed = 0;
-                _budgetMs = 0;
-                _budgetInterrupted = 0;
+                ResetBudget();
             }
+        }
+
+        private static void ResetBudget()
+        {
+            _budgetArmed = 0;
+            _budgetMs = 0;
+            _budgetInterrupted = 0;
         }
 
         private static ArgumentException BudgetError(int budgetMs, Exception? cause) =>
@@ -251,6 +266,12 @@ namespace ExcelFormulaLabs.DataToolkit
         private static void CreateTable(SqlConn conn, string name, object[,] data, bool hasHeaders = true)
         {
             int rows = data.GetLength(0), cols = data.GetLength(1); if (rows == 0) return;
+            // F-03：源区域/附表建表也受单元格上限约束（在分配/插入前拒绝；与 PIVOT/DOE 同纪律）。
+            const long maxCells = 1_000_000;
+            if ((long)rows * cols > maxCells)
+                throw new ArgumentException(
+                    $"SQL input table '{name}' has {rows:N0} rows × {cols} cols = {(long)rows * cols:N0} cells. " +
+                    $"Maximum is {maxCells:N0}. Narrow the input range.");
             name = Sanitize(name, 0);  // table name gets the same sanitisation as column names
             int firstDataRow = hasHeaders ? 1 : 0;   // header contract: row 0 = column names when hasHeaders
             var names = new string[cols]; var types = new string[cols];

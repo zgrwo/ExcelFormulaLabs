@@ -75,7 +75,8 @@ ExcelFormulaLabs/
 │   │   ├── 0009-solve-rate-evolution.md
 │   │   └── 0010-excel-com-e2e-scheduling.md
 │   └── plans/                      #   实施计划（迁移/重构方案）
-│       └── 2026-09-12-solve-inverse-migration-plan.md
+│       ├── 2026-09-12-solve-inverse-migration-plan.md
+│       └── 2026-09-23-excellence-roadmap.md
 │
 ├── scripts/                        # 构建/验证脚本
 │   ├── verify-docs.ps1             #   文档一致性验证（20 项检查，唯一实现）
@@ -181,11 +182,12 @@ ExcelFormulaLabs/
 │
 ├── tests/                          # 测试
 │   ├── Directory.Build.props       #   测试工程依赖锁定（packages.lock.json + CI locked mode）
-│   ├── Foundation.Tests/           #   Foundation 层单元测试（含 csproj 与 14 个测试文件）
-│   ├── Analytics.Tests/            #   Analytics 层单元测试（含 csproj 与 20 个 .cs 文件）
-│   ├── DataToolkit.Tests/          #   DataToolkit 层单元测试（含 csproj 与 20 个测试文件）
+│   ├── Foundation.Tests/           #   Foundation 层单元测试（含 csproj 与 16 个测试文件）
+│   ├── Analytics.Tests/            #   Analytics 层单元测试（含 csproj 与 21 个 .cs 文件）
+│   ├── DataToolkit.Tests/          #   DataToolkit 层单元测试（含 csproj 与 23 个测试文件）
 │   ├── CrossValRunner/             #   C# 交叉验证调度器
 │   │   ├── CrossValRunner.csproj
+│   │   ├── packages.lock.json      #     依赖锁定（CI 强制 locked mode）
 │   │   ├── Program.cs
 │   │   ├── Dispatcher.cs
 │   │   ├── ResultSerializer.cs

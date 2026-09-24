@@ -42,9 +42,14 @@ jobs:
               - 'scripts/**'
               - 'templates/**'
               - '*.sln'
-              - '*.props'
+              # R1-08：`*.props` 在 picomatch 语义下不匹配嵌套路径（仓库无根级 *.props），
+              # 仅改 src/Directory.Build.props 的 PR 曾被判 docs-only → 全部重 job 跳过；
+              # release-please 的 Release PR 恰好只改 version.txt + props + CHANGELOG。
+              - '**/*.props'
               - '**/*.csproj'
               - '**/packages.lock.json'
+              - 'version.txt'
+              - '.editorconfig'
               - 'nuget.config'
               - 'requirements.txt'
               - '.github/workflows/**'
@@ -217,8 +222,22 @@ jobs:
 
       # 安全回归子集显式门禁（沙箱越界 / ReDoS / SQL 注入 / XXE / 公式注入 / 原生 DLL 完整性）。
       # 全量测试已包含这些用例，此步骤提供独立可见的通过/失败信号（--filter Category=Security）。
+      # R1-11：零匹配时 dotnet test 退出 0（trait 改名/删除后此"独立信号"静默变绿）——
+      # 经 trx 断言发现数 ≥ 50（基线 76），低于阈值即 FAIL。
       - name: Security regression subset
-        run: dotnet test --no-build --filter "Category=Security" --verbosity normal
+        shell: pwsh
+        run: |
+          dotnet test --no-build --filter "Category=Security" --logger "trx;LogFileName=security.trx" --verbosity normal
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $trxFiles = @(Get-ChildItem -Path . -Recurse -Filter 'security.trx' -ErrorAction SilentlyContinue)
+          if ($trxFiles.Count -eq 0) { Write-Host "security.trx not found - logger misconfigured?"; exit 1 }
+          $count = 0
+          foreach ($t in $trxFiles) {
+            [xml]$doc = Get-Content $t.FullName
+            $count += @($doc.TestRun.Results.UnitTestResult).Count
+          }
+          if ($count -lt 50) { Write-Host "Security subset matched only $count test result(s) (expected >= 50)"; exit 1 }
+          Write-Host "Security subset: $count test result(s) passed"
 
   test-net48:
     name: Build & Test (Debug, net48)
@@ -293,7 +312,9 @@ jobs:
       - name: Build CrossValRunner
         run: dotnet build tests/CrossValRunner/CrossValRunner.csproj -c Debug
 
-      - name: Run CrossVal tests
+      # F-11：该过滤器只匹配 Analytics.Tests 里名为 CrossVal_* 的普通单测，
+      # 真正的 Python↔C# 对照是下一步 verify-manual.py；步骤名按实际语义命名，避免误导。
+      - name: Run Analytics CrossVal_* unit tests (Python↔C# comparison is the next step)
         run: dotnet test --filter "CrossVal" --verbosity normal
 
       - name: Run verify-manual.py

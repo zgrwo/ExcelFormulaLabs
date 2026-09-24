@@ -233,7 +233,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `DT.EOW` | (serial_number, [start_day]) | `double` | 所在周的最后一天。start_day 默认 1=周一，0=周日（Excel 日期值） |
 | `DT.SOM` | (serial_number) | `double` | 当月第一天 |
 | `DT.EOM` | (serial_number) | `double` | 当月最后一天。对标 Excel EOMONTH |
-| `DT.WOM` | (serial_number, [start_day]) | `long` | 当月第几周（1-5） |
+| `DT.WOM` | (serial_number, [start_day]) | `long` | 当月第几周（1-6，含 1 号的那一周为第 1 周） |
 | `DT.DIM` | (year, month) | `long` | 指定年月的天数 |
 | `DT.AGEYEARS` | (start_date, [end_date]) | `long` | 周岁。end_date 默认今天；已提供但不可转换（文本/错误值）→ `#VALUE!`。对标 Excel DATEDIF |
 | `DT.AGEMONTHS` | (start_date, [end_date]) | `long` | 足月数。end_date 默认今天；不可转换 → `#VALUE!` |
@@ -334,9 +334,9 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
-| `PIVOT.PIVOT` | (source_range, row_field, col_field, value_field, [aggregation], [has_headers]) | `object[,]` | 透视表。row_field=行标签列, col_field=列标签列, value_field=值列。aggregation=`sum/avg/count/min/max`（默认 SUM），has_headers=首行是否表头（默认 TRUE）。聚合仅统计**数值类型**单元格：文本（含数字文本如 `"10"`）与空白跳过（Excel SUM 语义）；错误值传播 NaN |
+| `PIVOT.PIVOT` | (source_range, row_field, col_field, value_field, [aggregation], [has_headers]) | `object[,]` | 透视表。row_field=行标签列, col_field=列标签列, value_field=值列（列号均为 **0-based**，首列=0）。aggregation=`sum/avg/count/min/max`（默认 SUM），has_headers=首行是否表头（默认 TRUE）。聚合仅统计**数值类型**单元格：文本（含数字文本如 `"10"`）与空白跳过（Excel SUM 语义）；错误值传播 NaN |
 | `PIVOT.UNPIVOT` | (source_range, id_fields, value_fields, [has_headers]) | `object[,]` | 逆透视：宽列转为键值行。has_headers=首行是否表头（默认 TRUE） |
-| `PIVOT.GROUPBY` | (source_range, group_fields, agg_column, [aggregation], [has_headers]) | `object[,]` | 分组聚合。group_fields=分组列号数组, agg_column=聚合列（默认 SUM）。has_headers=首行是否表头（默认 TRUE）。聚合仅统计数值类型单元格（文本/空白跳过，错误值传播 NaN，同 `PIVOT.PIVOT`） |
+| `PIVOT.GROUPBY` | (source_range, group_fields, agg_column, [aggregation], [has_headers]) | `object[,]` | 分组聚合。group_fields=分组列号数组, agg_column=聚合列（列号均为 **0-based**，首列=0；越界返回 `#VALUE!`；默认 SUM）。has_headers=首行是否表头（默认 TRUE）。聚合仅统计数值类型单元格（文本/空白跳过，错误值传播 NaN，同 `PIVOT.PIVOT`） |
 | `PIVOT.CROSSJOIN` | (table1, table2) | `object[,]` | 笛卡尔积交叉连接 |
 
 ---

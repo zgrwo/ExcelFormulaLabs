@@ -50,7 +50,7 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
       - id: excelformulalabs-test-quality
-        name: ExcelFormulaLabs 测试质量（零断言/恒真断言 FAIL，存在性断言预算 3）
+        name: ExcelFormulaLabs 测试质量（零断言/恒真断言 FAIL，存在性断言预算 0）
         entry: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-test-quality.ps1
         language: system
         pass_filenames: false

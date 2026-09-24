@@ -78,7 +78,7 @@ Win10/11 自带 .NET Framework 4.8，直接加载 net48 版本的 `.xll`：
 | `PHYCHEM.*` | 分子量/温度/压力/体积/质量换算 | `=PHYCHEM.C_TO_F(100)` |
 | `DOE.*` | 实验设计矩阵（全因子设计，对齐 Minitab/JMP） | `=DOE.PLAN(2,2,0,2,"full",FALSE)` |
 | `SQL.*` | 对 Excel 区域写 SQL 查询 | `=SQL.QUERY(A1:D100, "SELECT Col1, AVG(Col3) FROM data GROUP BY Col1")` |
-| `PIVOT.*` | 透视表/逆透视/分组聚合/交叉连接 | `=PIVOT.GROUPBY(A1:C100, {1}, 3, "avg")` |
+| `PIVOT.*` | 透视表/逆透视/分组聚合/交叉连接 | `=PIVOT.GROUPBY(A1:C100, {0}, 2, "avg")` |
 | `RANGE.*` | 导出 HTML/JSON/Markdown/CSV | `=RANGE.TOMD(A1:D10, TRUE)` |
 | `FS.*` | 读写文件/列目录/复制删除 | `=FS.READ("C:\data.txt")` |
 
@@ -166,7 +166,7 @@ FileSystemCore.Initialize(new SandboxConfig(@"C:\Users\Public\Documents"));
 
 - **双 .NET 版本全量测试**，覆盖正常路径和退化输入（零值/空值/单元素/全等值）
 - **Python 交叉验证**：Stats/Regression 与 numpy/scipy 逐项对照，精度 1e-10；DataToolkit 集成管道测试覆盖跨模块组合
-- **手册验证**：228/240 个 UDF 有硬编码期望值的手册示例，由 Python 独立复算逐项对照（防自校验）；`verify-manual.py` 按双通道分报：manual-only 235 / cross-validated 285（合计 520 项检查；基线 2026-09-23，实际计数以脚本输出为准），其中真正与 C# 实现对照的 UDF 为 216/240（90.0%）（其余为 *_ASYNC（Excel 异步）与随机类等无法独立复算的变体，由 UDF 层测试或人工 E2E 覆盖）
+- **手册验证**：228/240 个 UDF 有硬编码期望值的手册示例，由 Python 独立复算逐项对照（防自校验）；`verify-manual.py` 按双通道分报：manual-only 235 / cross-validated 288（合计 523 项检查），其中真正与 C# 实现对照的 UDF 为 216/240（90.0%）（其余为 *_ASYNC（Excel 异步）与随机类等无法独立复算的变体，由 UDF 层测试或人工 E2E 覆盖）。以上计数由 `verify-manual.py` 对 README 硬对账，漂移即 FAIL
 
 ---
 

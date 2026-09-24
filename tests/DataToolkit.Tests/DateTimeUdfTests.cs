@@ -117,6 +117,8 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         [Fact] public void WOM_sunday_anchor() => ((long)DateTimeUdf.UDF_DT_WOM(OA(2024, 6, 15), 0)).Should().Be(3);
         [Fact] public void WOM_june_3_is_week_2() => ((long)DateTimeUdf.UDF_DT_WOM(OA(2024, 6, 3), 1)).Should().Be(2);
         [Fact] public void WOM_month_first_day_is_week_1() => ((long)DateTimeUdf.UDF_DT_WOM(OA(2024, 6, 1), 1)).Should().Be(1);
+        // R1-05 回归：上限 6（1 号周日 + 31 天月 + 周一为周首）。
+        [Fact] public void WOM_six_week_month_boundary() => ((long)DateTimeUdf.UDF_DT_WOM(OA(2026, 3, 31), 1)).Should().Be(6);
         [Fact] public void WOM_null_date() => DateTimeUdf.UDF_DT_WOM(null!, 1).Should().BeNull();
 
         // ══════════════════════════════════════════════════════════════════
