@@ -1,6 +1,6 @@
 # ExcelFormulaLabs — 项目规格文档
 
-> 版本：v2.4.1 | 最后更新：2026-09-16 | 状态：稳定发行中 <!-- x-release-please-version -->
+> 版本：v2.4.2 | 最后更新：2026-09-16 | 状态：稳定发行中 <!-- x-release-please-version -->
 
 ## 1. 项目概述
 
