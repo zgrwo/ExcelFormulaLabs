@@ -6,6 +6,13 @@
 
 > 版本一致性：每个 `v*` git tag 必须在本文档有对应条目（`verify-docs.ps1` 强制检查，见规则 [documentation.md](docs/governance/documentation.md)）。
 
+## [2.4.2](https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.4.1...v2.4.2) (2026-09-24)
+
+
+### 修复
+
+* **ci:** verify-docs 检查 10 豁免 Release PR 待发版版本（消除 tag 前时序性假红） ([0fc992d](https://github.com/zgrwo/ExcelFormulaLabs/commit/0fc992d5165cc098ff403fbdfc9fe3b4a3e1f10c))
+
 ## [2.4.1](https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.4.0...v2.4.1) (2026-09-24)
 
 
