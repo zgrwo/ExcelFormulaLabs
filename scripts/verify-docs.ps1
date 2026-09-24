@@ -172,6 +172,17 @@ if ($LASTEXITCODE -ne 0) {
 } else {
     # 只检查语义化版本 tag（vX.Y.Z），跳过 v1.0.0-net8.0 这类历史命名
     $semverTags = @($tags | Where-Object { $_ -match '^v\d+\.\d+\.\d+$' })
+    $props = Read-Utf8 (Join-Path $RepoRoot "src/Directory.Build.props")
+    $propsVer = if ($props -match '<Version>([0-9.]+)</Version>') { $Matches[1] } else { "?" }
+    # 「待发版版本」探测（Release PR 状态）：props <Version> 已是下一版本而 tag 尚未创建，
+    # 且 CHANGELOG 已有该版本条目——即 release-please Release PR 的合法形态。此时该版本豁免
+    # tag 一致性与反向幽灵断言；合并打 tag 后自动恢复强制。见 test_verify_docs.ps1 H3。
+    $pendingVer = ""
+    if ($propsVer -match '^\d+\.\d+\.\d+$' -and
+        ($semverTags -notcontains "v$propsVer") -and
+        ($changelog -match ("(?m)^##\s*\[" + [regex]::Escape($propsVer) + "\]"))) {
+        $pendingVer = $propsVer
+    }
     $untracked = @()
     foreach ($t in $semverTags) {
         $ver = $t -replace '^v', ''
@@ -194,7 +205,7 @@ if ($LASTEXITCODE -ne 0) {
     $ghosts = @()
     foreach ($m in [regex]::Matches($changelog, '(?m)^##\s*\[(\d+\.\d+\.\d+)\]')) {
         $v = $m.Groups[1].Value
-        if ($ghostAllow -notcontains $v -and ($semverTags -notcontains "v$v")) { $ghosts += $v }
+        if ($ghostAllow -notcontains $v -and ($semverTags -notcontains "v$v") -and $v -ne $pendingVer) { $ghosts += $v }
     }
     if ($ghosts.Count -eq 0) { Check "CHANGELOG entries all tagged" "OK" }
     else { Check "CHANGELOG entries all tagged" "no tag for: $($ghosts -join ', ')" }
@@ -207,10 +218,9 @@ if ($LASTEXITCODE -ne 0) {
                 $parts = $v -split '\.'
                 [long]$parts[0] * 1000000 + [long]$parts[1] * 1000 + [long]$parts[2]
             } } -Descending | Select-Object -First 1
-    $props = Read-Utf8 (Join-Path $RepoRoot "src/Directory.Build.props")
-    $propsVer = if ($props -match '<Version>([0-9.]+)</Version>') { $Matches[1] } else { "?" }
     $latestVer = $latestTag -replace '^v', ''
-    if ($propsVer -eq $latestVer) { Check "Directory.Build.props version == latest tag ($latestVer)" "OK" }
+    if ($pendingVer) { Check "Directory.Build.props version (pending release $pendingVer, awaiting tag)" "OK" }
+    elseif ($propsVer -eq $latestVer) { Check "Directory.Build.props version == latest tag ($latestVer)" "OK" }
     else { Check "Directory.Build.props version" "props=$propsVer latest-tag=$latestVer" }
 
     # G1 (review-2026-08-29)：AssemblyVersion / FileVersion 必须与 <Version> 一致

@@ -14,6 +14,7 @@
 # 场景 H：CHANGELOG 幽灵条目（无 tag）→ 检查 10 反向 FAIL
 # 场景 H2：版本标题悬空（内联/引用链接皆无）→ 检查 10 正向 FAIL（release-please
 #   内联链接 `## [X](url)` 须被接受，见场景 A 基线；悬空保护不因兼容而丢失）
+# 场景 H3：Release PR 待发版状态（props 已 bump、tag 未创建）→ 检查 10 豁免，应全绿
 # 场景 I：残留 .dna 扫描域——I1 Analytics 根残留 → FAIL；I2 bin/ 下 → PASS
 # 场景 J：MathNet 版本双解析失败 → 检查 5 FAIL（双 "?" 恒真 PASS，须注入版本使其失败）
 # 用法：pwsh 或 powershell 均可 -NoProfile -ExecutionPolicy Bypass -File tests/scripts/test_verify_docs.ps1
@@ -220,6 +221,48 @@ try {
     }
 } finally { $ErrorActionPreference = $prevEap }
 Run-VerifyDocs $fixtureH2 "missing entries: v2.4.0" $true
+
+# --- 场景 H3：Release PR 待发版状态（检查 10 豁免的正向守卫）---
+# tag 创建前 Release PR 的合法形态：props/version.txt/文档版本头已 bump 到下一版本，
+# CHANGELOG 已有该版本条目，但 tag 尚未创建。verify-docs 须全绿（H 反向幽灵与
+# props==latest tag 断言均豁免该版本），否则 Release PR CI 会时序性假红。
+Write-Host "[H3] Release PR 待发版状态（props 已 bump、tag 未创建）应 PASS（检查 10 豁免）"
+$fixtureH3 = Copy-RepoFixture
+$encH3 = New-Object System.Text.UTF8Encoding($false)
+# 下一 patch 从当前 version.txt 推导（不硬编码，防测试随发版腐化）
+$curVer = ([System.IO.File]::ReadAllText((Join-Path $fixtureH3 "version.txt"), $encH3)).Trim()
+$curParts = $curVer -split '\.'
+$nextVer = "$($curParts[0]).$($curParts[1]).$([int]$curParts[2] + 1)"
+[System.IO.File]::WriteAllText((Join-Path $fixtureH3 "version.txt"), "$nextVer`n", $encH3)
+foreach ($item in @(
+        @{ Rel = "src/Directory.Build.props"; Pat = ('<Version>' + [regex]::Escape($curVer) + '</Version>'); Rep = ('<Version>' + $nextVer + '</Version>') },
+        @{ Rel = "docs/specification/specification.md"; Pat = ('(?m)^(> 版本：v)' + [regex]::Escape($curVer) + '(?=\s)'); Rep = ('${1}' + $nextVer) },
+        @{ Rel = "docs/user-manual/user-manual.md"; Pat = ('(?m)^(> \*\*版本\*\*：)' + [regex]::Escape($curVer) + '(?=\s)'); Rep = ('${1}' + $nextVer) },
+        @{ Rel = "docs/specification/api-reference.md"; Pat = ('(?m)^(> 版本：v)' + [regex]::Escape($curVer) + '(?=\s)'); Rep = ('${1}' + $nextVer) }
+    )) {
+    $p = Join-Path $fixtureH3 $item.Rel
+    $t = [System.IO.File]::ReadAllText($p, $encH3)
+    $t2 = [regex]::Replace($t, $item.Pat, $item.Rep)
+    if ($t2 -eq $t) { throw "H3 注入失败：$($item.Rel) 版本锚点未匹配（版本头格式漂移）" }
+    [System.IO.File]::WriteAllText($p, $t2, $encH3)
+}
+[System.IO.File]::AppendAllText((Join-Path $fixtureH3 "CHANGELOG.md"),
+    "`n## [$nextVer](https://github.com/zgrwo/ExcelFormulaLabs/compare/v$curVer...v$nextVer) (2026-01-01)`n`n- H3 injected`n", $encH3)
+$prevEap = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+try {
+    git -C $fixtureH3 -c core.autocrlf=false init 2>$null | Out-Null
+    git -C $fixtureH3 config user.email "test@example.com" 2>$null | Out-Null
+    git -C $fixtureH3 config user.name "fixture" 2>$null | Out-Null
+    git -C $fixtureH3 -c core.autocrlf=false add -A 2>$null | Out-Null
+    git -C $fixtureH3 -c core.autocrlf=false commit -m "init" 2>$null | Out-Null
+    $changelogH3 = [System.IO.File]::ReadAllText((Join-Path $fixtureH3 "CHANGELOG.md"))
+    foreach ($m in [regex]::Matches($changelogH3, '(?m)^##\s*\[(\d+\.\d+\.\d+)\]')) {
+        $v3 = $m.Groups[1].Value
+        if ($v3 -ne $nextVer) { git -C $fixtureH3 tag ("v" + $v3) 2>$null | Out-Null }
+    }
+} finally { $ErrorActionPreference = $prevEap }
+Run-VerifyDocs $fixtureH3 "全部通过" $false
 
 # --- 场景 I：残留 .dna 扫描域（检查 8 覆盖 src 全模块；bin/obj 生成物排除）---
 Write-Host "[I1] Analytics 根残留 .dna 应 FAIL（检查 8 域扩展）"
