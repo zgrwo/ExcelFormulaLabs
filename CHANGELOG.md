@@ -6,6 +6,23 @@
 
 > 版本一致性：每个 `v*` git tag 必须在本文档有对应条目（`verify-docs.ps1` 强制检查，见规则 [documentation.md](docs/governance/documentation.md)）。
 
+## [2.4.0](https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.3.1...v2.4.0) (2026-09-24)
+
+
+### 新功能
+
+* **docs:** 文档站、示例工作簿与一键安装脚本 ([59bae4f](https://github.com/zgrwo/ExcelFormulaLabs/commit/59bae4ff48633a9fadf08aa86fed732aa01b8e95))
+* **samples:** 示例工作簿扩展（SOLVE 质量/方程 + DOE 效应分析） ([331a65e](https://github.com/zgrwo/ExcelFormulaLabs/commit/331a65e2b3e262099086a45e61d6fe886584211e))
+
+
+### 修复
+
+* **ci:** 8 个 PS1 脚本补 UTF-8 BOM（PS5.1 非中文系统解析失败） ([6ffd069](https://github.com/zgrwo/ExcelFormulaLabs/commit/6ffd06971bf58c7c6662dba12d711d7bd924a9bc))
+* **ci:** test_coverage.ps1 补 UTF-8 BOM（PS5.1 非中文系统解析失败） ([13f3036](https://github.com/zgrwo/ExcelFormulaLabs/commit/13f30360308ddb8e19bb38be3b743eb123aeb7e7))
+* **crossval:** FS.TEMP 改等价性检查（CI 8.3 短路径字符串比对不稳） ([1805b0f](https://github.com/zgrwo/ExcelFormulaLabs/commit/1805b0f3941efe15fa4567f78c2f668ecc2d2c5f))
+* **dt:** DT.WOM 对齐文档契约（当月第几周 1-5） ([a295569](https://github.com/zgrwo/ExcelFormulaLabs/commit/a2955693dcaad18b6d0531ef7c97c7b19b06610b))
+* **review:** 2026-09-24 两轮深度审查全量处置（R1-01…15 + F-01…13） ([23a8079](https://github.com/zgrwo/ExcelFormulaLabs/commit/23a8079668a6518fd5e8bcafc8c8bd9478eac162))
+
 ## [Unreleased]
 
 <!-- release-please 在下一次 Release PR 中把本版本区间内容归位到新版本条目 -->
