@@ -1,6 +1,6 @@
 # ExcelFormulaLabs 用户手册
 
-> **版本**：2.4.0 | **更新日期**：2026-09-16 <!-- x-release-please-version -->
+> **版本**：2.4.1 | **更新日期**：2026-09-16 <!-- x-release-please-version -->
 > 完整签名见 [API 参考](../specification/api-reference.md)；安装说明见 [README](../../README.md)
 
 ---
