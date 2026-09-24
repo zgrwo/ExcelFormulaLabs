@@ -175,10 +175,13 @@ if ($LASTEXITCODE -ne 0) {
     $untracked = @()
     foreach ($t in $semverTags) {
         $ver = $t -replace '^v', ''
-        if ($changelog -notmatch [regex]::Escape("## [$ver]")) { $untracked += $t }
-        # 章节头与版本链接行必须成对：只查 `## [X]` 时链接行（`[X]: ...`）丢失会门禁放过
-        # （[Unreleased] 悬空案例）。
-        elseif ($changelog -notmatch [regex]::Escape("[$ver]:")) { $untracked += $t }
+        if ($changelog -notmatch [regex]::Escape("## [$ver]")) { $untracked += $t; continue }
+        # 章节头与版本链接必须成对：只查 `## [X]` 时链接丢失会门禁放过（[Unreleased] 悬空案例）。
+        # 链接两种形式均合法：① 内联 `## [X](url) (date)`（release-please 生成，2026-09-24
+        # v2.4.0 实证）；② 引用定义 `[X]: url`（发版自动化前的手工条目）。两者皆无 = 悬空标题。
+        $hasInlineLink = $changelog -match [regex]::Escape("## [$ver](")
+        $hasRefLink = $changelog -match ("(?m)^\s*" + [regex]::Escape("[$ver]:"))
+        if (-not $hasInlineLink -and -not $hasRefLink) { $untracked += $t }
     }
     if ($untracked.Count -eq 0) { Check "CHANGELOG covers all tags ($($semverTags.Count) tags)" "OK" }
     else { Check "CHANGELOG covers all tags" "missing entries: $($untracked -join ', ')" }

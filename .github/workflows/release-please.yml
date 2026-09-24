@@ -40,10 +40,13 @@ jobs:
 
       # 新 tag 已由 release-please 创建；显式触发打包发布（含重试：tag 刚创建时
       # API 短暂不可见可能让 dispatch 报 404）。
+      # GH_REPO 必填：本 job 无 checkout（无 .git），gh 无法从本地 git remote 推断仓库，
+      # 缺省时 `gh workflow run` 报 "fatal: not a git repository"（v2.4.0 实证）。
       - name: Dispatch tag-triggered release build
         if: steps.release.outputs.release_created == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           TAG: ${{ steps.release.outputs.tag_name }}
         run: |
           for attempt in 1 2 3 4 5; do

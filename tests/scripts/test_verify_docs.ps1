@@ -1,5 +1,5 @@
 ﻿# ============================================================================
-# test_verify_docs.ps1 — verify-docs.ps1 回归守卫（25 场景 A–V；G 含 3 个中文变体子用例，K 含 3 个，L 含 2 个子用例）
+# test_verify_docs.ps1 — verify-docs.ps1 回归守卫（场景 A–V + 子用例 G2–G8 / H2 / I1·I2 / K1–K3 / L2）
 # 场景 N–V（F-09）：检查 2/3/4/6/7/14/15/17/18 的 FAIL 路径负向注入（此前无自测）
 # 场景 A：真实仓库副本 → 全部检查通过（基线，防门禁自身回归）
 # 场景 B：README 硬编码徽章 → 检查 9 FAIL
@@ -12,6 +12,8 @@
 #     G2 `N 项 UDF`（模式 1a 量词扩 项）/ G3 `UDF 数量 N`（模式 1b 倒装）/
 #     G4 `N 个函数（UDF）`（模式 1c）——注入后检查 16 必须 FAIL
 # 场景 H：CHANGELOG 幽灵条目（无 tag）→ 检查 10 反向 FAIL
+# 场景 H2：版本标题悬空（内联/引用链接皆无）→ 检查 10 正向 FAIL（release-please
+#   内联链接 `## [X](url)` 须被接受，见场景 A 基线；悬空保护不因兼容而丢失）
 # 场景 I：残留 .dna 扫描域——I1 Analytics 根残留 → FAIL；I2 bin/ 下 → PASS
 # 场景 J：MathNet 版本双解析失败 → 检查 5 FAIL（双 "?" 恒真 PASS，须注入版本使其失败）
 # 用法：pwsh 或 powershell 均可 -NoProfile -ExecutionPolicy Bypass -File tests/scripts/test_verify_docs.ps1
@@ -192,6 +194,32 @@ try {
     }
 } finally { $ErrorActionPreference = $prevEap }
 Run-VerifyDocs $fixtureH "no tag for: 9.9.9" $true
+
+# --- 场景 H2：CHANGELOG 版本标题悬空（检查 10 正向；inline/ref 链接兼容不得放宽为只查标题）---
+Write-Host "[H2] CHANGELOG 版本标题悬空应 FAIL（检查 10 正向）"
+$fixtureH2 = Copy-RepoFixture
+$clH2 = Join-Path $fixtureH2 "CHANGELOG.md"
+$textH2 = [System.IO.File]::ReadAllText($clH2, (New-Object System.Text.UTF8Encoding($false)))
+# 剥掉 2.4.0 标题的内联链接（`## [2.4.0](url) (date)` → `## [2.4.0] (date)`）；
+# CHANGELOG 底部无 [2.4.0]: 引用定义 → 两种链接形式皆无 = 悬空。
+$textH2 = [regex]::Replace($textH2, '## \[2\.4\.0\]\([^)]*\)', '## [2.4.0]')
+if ($textH2 -notmatch '## \[2\.4\.0\]\s') { throw "H2 注入失败：未找到 2.4.0 内联标题（CHANGELOG 格式漂移）" }
+[System.IO.File]::WriteAllText($clH2, $textH2, (New-Object System.Text.UTF8Encoding($false)))
+# 与 H 同法初始化 git 并打全量 tag：仅让「标题悬空」一项失败，隔离于反向幽灵检查。
+$prevEap = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+try {
+    git -C $fixtureH2 -c core.autocrlf=false init 2>$null | Out-Null
+    git -C $fixtureH2 config user.email "test@example.com" 2>$null | Out-Null
+    git -C $fixtureH2 config user.name "fixture" 2>$null | Out-Null
+    git -C $fixtureH2 -c core.autocrlf=false add -A 2>$null | Out-Null
+    git -C $fixtureH2 -c core.autocrlf=false commit -m "init" 2>$null | Out-Null
+    $changelogH2 = [System.IO.File]::ReadAllText($clH2)
+    foreach ($m in [regex]::Matches($changelogH2, '(?m)^##\s*\[(\d+\.\d+\.\d+)\]')) {
+        git -C $fixtureH2 tag ("v" + $m.Groups[1].Value) 2>$null | Out-Null
+    }
+} finally { $ErrorActionPreference = $prevEap }
+Run-VerifyDocs $fixtureH2 "missing entries: v2.4.0" $true
 
 # --- 场景 I：残留 .dna 扫描域（检查 8 覆盖 src 全模块；bin/obj 生成物排除）---
 Write-Host "[I1] Analytics 根残留 .dna 应 FAIL（检查 8 域扩展）"

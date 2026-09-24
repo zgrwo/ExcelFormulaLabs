@@ -11,6 +11,18 @@
           "type": "xml",
           "path": "src/Directory.Build.props",
           "xpath": "//Project/PropertyGroup/Version"
+        },
+        {
+          "type": "generic",
+          "path": "docs/specification/specification.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/user-manual/user-manual.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/specification/api-reference.md"
         }
       ]
     }

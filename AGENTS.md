@@ -176,7 +176,7 @@ ExcelFormulaLabs/
 - 所有提交信息必须符合 Conventional Commits：`type(scope): 描述`。
 - 允许类型：`feat fix docs style refactor test chore build ci perf revert release`。
 - 校验脚本：`scripts/validate-commit-msg.sh`（本地 hook：`scripts/git-hooks/commit-msg`；CI 对 PR 内每个提交强制执行）。
-- 发版流程：release-please 自动维护 Release PR（`version.txt` + `src/Directory.Build.props` `<Version>` + `CHANGELOG.md`），合并后自动打 tag 并 dispatch release.yml；紧急手工发版见 CONTRIBUTING。
+- 发版流程：release-please 自动维护 Release PR（`version.txt` + `src/Directory.Build.props` `<Version>` + `CHANGELOG.md` + 3 份文档版本头），合并后自动打 tag 并 dispatch release.yml；紧急手工发版见 CONTRIBUTING。
 - **版本一致性**：最新 `v*` tag 必须等于 `Directory.Build.props` 的 `<Version>`，且 CHANGELOG 必须有对应条目（verify-docs 检查 10 强制）。
 
 ## AGENTS.md 生态兼容
