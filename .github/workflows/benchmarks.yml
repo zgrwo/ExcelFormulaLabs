@@ -50,7 +50,7 @@ jobs:
       # 恢复上一轮基准历史（external-data-json-path 文件）。key 含 run_id 保证每轮都能写回，
       # restore-keys 前缀取最近一次历史。
       - name: Restore benchmark history
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: benchmark-cache
           key: benchmark-history-${{ github.run_id }}
