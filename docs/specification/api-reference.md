@@ -269,7 +269,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `DT.SEMESTER` | (serial_number) | `long` | 半年度（1 或 2） |
 | `DT.DOY` | (serial_number) | `long` | 一年中的第几天（1-366） |
 | `DT.ISLEAP` | (year) | `bool` | 是否为闰年 |
-| `DT.UNIXTS` | (serial_number) | `double` | Excel 日期 → Unix 时间戳（秒）。按机器本地时区解释日期（Unspecified Kind → 本地 UTC 偏移），跨时区同输入得不同值；`DT.FROMUNIX` 对称取本地时间，单机往返一致 |
+| `DT.UNIXTS` | (serial_number) | `double` | Excel 日期 → Unix 时间戳（秒）。按**墙上时刻**换算：序列号无时区语义，直接当 UTC 解释，故**结果与机器时区无关**（UTC+8 下 DATE(2024,1,1) 得 1704067200）；`DT.FROMUNIX` 为其逆运算，单机往返一致 |
 | `DT.FROMUNIX` | (unix_timestamp) | `double` | Unix 时间戳 → Excel 日期 |
 | `DT.DATEDIFF` | (date_unit, start_date, end_date) | `long` | 日期差：`"d"`=天, `"m"`=月, `"y"`=年, `"w"`=周。对标 Excel DATEDIF |
 <!-- END:generated -->

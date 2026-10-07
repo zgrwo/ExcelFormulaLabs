@@ -507,7 +507,7 @@
    "expr": "ElementWiseMapper.MapOver<double,double>(d,x=>DateTimeCore.UnixTimestamp(D(x)))",
    "generated": true,
    "returns": "double",
-   "doc": "Excel 日期 → Unix 时间戳（秒）。按机器本地时区解释日期（Unspecified Kind → 本地 UTC 偏移），跨时区同输入得不同值；`DT.FROMUNIX` 对称取本地时间，单机往返一致",
+   "doc": "Excel 日期 → Unix 时间戳（秒）。按**墙上时刻**换算：序列号无时区语义，直接当 UTC 解释，故**结果与机器时区无关**（UTC+8 下 DATE(2024,1,1) 得 1704067200）；`DT.FROMUNIX` 为其逆运算，单机往返一致",
    "doc_section": "DT"
   },
   {
