@@ -6,6 +6,25 @@
 
 > 版本一致性：每个 `v*` git tag 必须在本文档有对应条目（`verify-docs.ps1` 强制检查，见规则 [documentation.md](docs/governance/documentation.md)）。
 
+## [2.5.0](https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.4.2...v2.5.0) (2026-10-07)
+
+
+### 新功能
+
+* **api-ref:** api-reference 表体由元数据生成 + 门禁强度整改（含一处自测回归修复） ([5275f7b](https://github.com/zgrwo/ExcelFormulaLabs/commit/5275f7b92188ffd150460e105ef1ccef26f3a2ec))
+* **fs:** 让'沙箱默认关闭'可见（默认行为不变） ([ab85e61](https://github.com/zgrwo/ExcelFormulaLabs/commit/ab85e6100de9fccdfdc29f06dc8db42e44aaebc4))
+* **udf:** UDF 元数据化与源生成（ADR-0011，含 Category 分类） ([a23813c](https://github.com/zgrwo/ExcelFormulaLabs/commit/a23813ca302668f0387218417cdeeedf6eeaae67))
+
+
+### 修复
+
+* **ci:** 修 CP1252 编码崩溃 + 4 个 .ps1 补 UTF-8 BOM + 加编码门禁；README 补开发流程 ([be8e2d0](https://github.com/zgrwo/ExcelFormulaLabs/commit/be8e2d0f145b3a4ec4c473c8b9e77ff9100067bd))
+* **gate:** 按复核结论修复 6 项门禁诚信问题（声称 vs 实际不符） ([55bb505](https://github.com/zgrwo/ExcelFormulaLabs/commit/55bb505189a35f5dc40cd1ec14fc43778a587bd0))
+* **pack:** 修复 net48 JSON.* 全部失效——补齐 XLL 打包依赖闭包 + 新增门禁 ([acd94b7](https://github.com/zgrwo/ExcelFormulaLabs/commit/acd94b7f5284ae3f3097e76f135639565d98d484))
+* **review:** 2026-10-07 评审缺陷整改（P0 静默错值 6 项 + P1 数值守卫 5 项 + P2 口径收敛） ([2dd639a](https://github.com/zgrwo/ExcelFormulaLabs/commit/2dd639a062688813f64c24d5bde1473c493434ad))
+* **udf:** 给 12 个手写 *_ASYNC UDF 补 Category，兑现'240 个函数按模块分类'的声称 ([a0b0d64](https://github.com/zgrwo/ExcelFormulaLabs/commit/a0b0d6430a333454cb2dc3c8ec23b09e640bc064))
+* 处置复核结论剩余 5 项（覆盖率余量 / 沙箱判定 / ANOVA 文案 / 脚手架退出码 / SOLVE 死代码） ([6152afa](https://github.com/zgrwo/ExcelFormulaLabs/commit/6152afa027429aed459b850e87b360d25cf17726))
+
 ## [2.4.2](https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.4.1...v2.4.2) (2026-09-24)
 
 
