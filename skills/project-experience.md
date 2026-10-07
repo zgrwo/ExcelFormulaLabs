@@ -188,6 +188,79 @@ description: 项目经验库 — 从 v2.0.0 至今全部 commit/审查/CI 事故
 - **证据**：清理 bin 残留 .dna 后 10 次并行构建 0 失败。
 - **补充（2026-09-15 Release 构建竞态）**：`BuildInParallel=false` 只串行化**同一外层**的 inner dispatch——solution 级并行 / `ProjectReference` 直连会产生同一项目的并发内建（`-m:1` 复测可消、默认 `-m` 复现）。
 - **补充（2026-09-23 Release 打包残留竞态）**：.dna 隔离修复后，默认 `-m` 的 Release 构建仍连续 3 次在 ExcelDnaPack 资源更新报 Win32Exception 5「拒绝访问」（独占打开测试确认无外部进程持锁、文件非只读）；`-m:1` 一次通过。CI / release.yml / verify-all 的 Release 构建已统一 `-m:1`，原 3 次重试仅兜底瞬时文件锁。`CreateExcelAddIn` 通过 evaluation 期的 `None/Content` 发现 `.dna`：并发下对方 TFM 的 `.dna` 被本 TFM 打包进自己的 publish（实测 net8.0 XLL 落入 net48 目录），通配 Delete 还会删掉对方正在用的 `.dna`（pack Win32Exception 110 / 回退默认模板 → 静默坏 XLL）。**正确设计（已实施）**：① evaluation 期 `None Remove` 对方 TFM 的 `.dna`（`FilesInProject` 只含本 TFM，不存在时走 ExcelDna 默认名回退）；② `GenerateDnaFromTemplate`/`CleanupDnaAfterBuild` 只删本 TFM 的 `.dna`。残留自愈保留：本 TFM 上次 pack 中断残留由本次 Generate 删除；对方残留被 None Remove 屏蔽，不再污染（旧"通配删除 + 串行化"假设已废弃）。
+- **补充（2026-10-07 Debug 覆盖率链路 pack 失败 = MSBuild 工作节点复用）**：`scripts/coverage.ps1` 连跑三模块时，
+  DataToolkit 步**裸跑 4/4 失败**于 `PackExcelAddIn` → `ResourceResolverWin.End` → `EndUpdateResource`
+  报 `Win32Exception (110)`「系统无法打开指定的设备或文件」；同一命令**单独跑、或整套 Release 构建**均通过。
+  两个独立规避**各自实测生效**：① 运行前 `$env:MSBUILDDISABLENODEREUSE='1'`（实测 2/2 通过）；
+  ② 给脚本内 `dotnet test` 加 `-m:1`（实测 1/1 通过）。同一现象在"先跑一次完整 `-m:1` 构建"后仍复现，
+  故不是"产物陈旧"，而是前置两次 `dotnet test` 留下的**工作节点复用持有文件句柄**。
+  **判别**：pack 失败只出现在**同一 shell 连续多次 `dotnet` 调用**之后、且错误码是 110（ERROR_OPEN_FAILED）
+  而非 5（ACCESS_DENIED）时，先试这两个开关，不要改 `.csproj`/`.dna` 逻辑。
+  根因与规避已同步写入 `scripts/coverage.ps1` 头注与 `docs/governance/ai-review-prompt.md` §3.5。
+
+---
+
+## 九、环境归因（先在机器上找原因，再归因代码）
+
+> 与 §八 E6「间歇性失败先查环境残留」同族：都是"归因代码之前必须先排除环境"，
+> 但扫描对象不同——E6 查**仓库内残留**（bin/obj 陈旧 `.dna`），本节的 H1 查**机器资源**。
+> 两者是并列候选、不是替代关系；证据不足时两条都要查。
+
+### H1 内存耗尽（OOM）会伪装成一连串"看起来像代码缺陷"的现象
+- **现象**（2026-10-07 同一台机器、同一次内存吃紧期间并发出现，全部为**假阳性**）：
+  1. `verify-all.ps1` 整跑时 `SolveCoreTests.SolveInverse_SameSeed_IsDeterministic` 偶发失败，
+     且 `CrossValRunner` **同时**失败；而单独跑 6/6 过、工程级连跑 3/3 过、机器空闲时
+     解决方案级连跑 exit 0；
+  2. `dotnet test` 报 `Failed to load the dll from hostfxr.dll, HRESULT: 0x800705AF`
+     与 `Failed to create CoreCLR, HRESULT: 0x8007000E`，**但测试程序集仍报告全部通过、计数正确**；
+  3. Release 构建的 ExcelDnaPack 需要重试 2~3 次才成功；
+  4. 本次会话实测：`scripts/coverage.ps1` 连跑三个模块，Foundation/Analytics PASS 后
+     DataToolkit 报 `[BLOCKED]`（报告未生成）；**单独重跑同一命令 exit 0（89.34/85.41 全绿）**。
+     当时 `Get-Process` 可见 `Diablo III64` 3.4 GB + `D3Speed` 872 MB + `Memory Compression` 2.1 GB
+     在跑——即"机器上有大内存进程"这一条直接成立。
+- **根因**：CLR/hostfxr 在**提交内存（commit）不足**时无法启动或加载，失败发生在运行时宿主层，
+  与业务代码无关；同一进程内的测试可能已完成并正确计数，于是"报错 + 全绿"并存。
+- **识别信号（硬证据优先）**：
+  | 信号 | 判读 |
+  | :--- | :--- |
+  | `HRESULT: 0x8007000E` | **硬证据** = `E_OUTOFMEMORY`（Win32 14 = ERROR_OUTOFMEMORY） |
+  | `HRESULT: 0x800705AF` | **强信号** = Win32 1455 `ERROR_COMMITMENT_LIMIT`（页面文件/提交上限不足），同为内存类失败——但字面上没有 "memory" 字样，最容易被误读为环境损坏 |
+  | `hostfxr.dll` 加载失败 / `Failed to create CoreCLR` | 伴随信号（宿主起不来） |
+  | ExcelDnaPack 需重试 2~3 次才成功 | 伴随信号（见下方"不要误用"） |
+  | 报错的同时测试计数正确、且单独重跑必过 | 伴随信号（"错误存在但结果对"是无法用代码缺陷解释的组合） |
+- **处置顺序（不得跳步）**：
+  1. `Get-CimInstance Win32_OperatingSystem` 看 `FreePhysicalMemory` / `FreeVirtualMemory`，
+     `Get-Process | Sort-Object WorkingSet64 -Descending` 看谁在吃内存（浏览器、游戏、另一份 dotnet/VS）；
+  2. **先**释放/关停大内存进程，或把整跑拆成分模块单独跑，**再**复跑同一条命令；
+  3. 复跑通过 → 结论是**环境**，到此为止，**不要**再改代码；
+  4. 复跑仍在**同一处**稳定失败 → 才转入代码排查（此时同时按 E6 查 bin/obj 残留与 `-m:1`）。
+- **反面教训**：本次会话曾把上述第 1 项（`SolveInverse_SameSeed_IsDeterministic` + `CrossValRunner`
+  同时偶发失败）当作求解器确定性缺陷来排查，翻实现、查随机种子、比对 ADR-0007 承诺——
+  **浪费了多轮**；线索本来就在"两个不相关模块同时失败、单独跑必过"这个组合里。
+- **不要误用**：`E6 补充（2026-09-23）` 已证明当年 ExcelDnaPack 的 `Win32Exception` 是**真实并发缺陷**
+  （`.dna` 跨 TFM 污染），已由 `None Remove` + 只删本 TFM `.dna` 修复。**不要**因此把现在仍偶发的
+  打包失败一律归为 OOM。判别：OOM 场景必然**伴随** 0x8007000E / 0x800705AF 或"其它无关步骤同时失败"；
+  只有打包单独失败、且 `-m:1` 能稳定通过时，先按 E6 的构建竞态处理。
+
+### H2 轮询外部服务必须给"连续失败即放弃"的出口
+- **现象**（2026-10-07 会话）：写了一个等 GitHub Release 资产的 PowerShell 循环，**成功条件写了**
+  （资产数达标 + workflow 完成），**失败条件没写**——`Invoke-RestMethod` 撞上**未认证 API 限流**
+  （HTTP 403 rate limit）后没有终止条件，循环无限空转，刷出 **210 KB** 无用输出。
+- **根因**：把"成功条件"当成了"终止条件"。异常路径（限流/网络/5xx）不改变状态量，
+  成功条件永远不成立，循环就永不退出。
+- **铁律（三要素缺一不可，写循环前先凑齐）**：
+  1. **成功条件**（状态量达到目标）；
+  2. **超时**（墙钟上限：`$deadline = (Get-Date).AddMinutes(N)`，循环内比较）；
+  3. **连续 N 次失败即中止**（`$consecutiveFailures++`，成功则清零；到达 N 立即 `throw`，
+     **不要**用 `continue` 吞掉）。
+  三者之外，循环体内**必须**捕获请求异常（`try/catch`）并把异常计入计数器，否则
+  `$ErrorActionPreference='Stop'` 之外的默认语义会让异常静默重复。
+- **GitHub 专用附加规则**：查询 GitHub **优先用已认证的 `gh`**（`gh api` / `gh release view` /
+  `gh run view`）——认证配额与未认证 raw API **是两套独立配额**，且 `gh` 自带分页与错误信息；
+  未认证 `Invoke-RestMethod https://api.github.com/...` 有 60 次/小时的硬上限，
+  在轮询场景下必然撞上（本仓 `.github/workflows/release-please.yml` 的 dispatch 步骤即用
+  `gh workflow run` + 显式重试，可作正例）。
+- **证据**：210 KB 空转输出；`.github/workflows/release-please.yml`（gh + 5 次重试）。
 
 ---
 
@@ -202,3 +275,5 @@ description: 项目经验库 — 从 v2.0.0 至今全部 commit/审查/CI 事故
 | 改文档/计数 | 五、文档 SSOT |
 | 发版 | 六、发版流程 |
 | 修 bug | 七、治理流程 + 对应域条目 |
+| **偶发失败 / 报错但结果正确 / 长链整跑** | **八 E6（仓库残留）+ 九 H1（机器内存）** |
+| **写轮询/等待外部服务的脚本** | **九 H2** |

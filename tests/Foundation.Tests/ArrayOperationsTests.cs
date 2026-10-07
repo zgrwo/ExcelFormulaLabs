@@ -358,3 +358,63 @@ public class ArrayOperationsGapTests
         names[0].Should().Be("h");
     }
 }
+
+// 覆盖补齐：降序排序此前只用 3~5 元素（走插入排序，不触及三路快排的分区比较），
+// 分区里 `ascending ? cmp < 0 : cmp > 0` 的降序侧从未执行。
+public class SortDescendingPartitionTests
+{
+    [Fact] public void Sort_descending_large_array_is_ordered()
+    {
+        var rnd = new Random(7);
+        var a = Enumerable.Range(0, 500).Select(_ => rnd.Next(-1000, 1000)).ToArray();
+        var expected = a.OrderByDescending(x => x).ToArray();
+        ArrayOperations.Sort(a, ascending: false);
+        a.Should().Equal(expected);
+    }
+
+    [Fact] public void SortIndices_descending_large_array_is_sorted_and_permuted()
+    {
+        var values = Enumerable.Range(0, 300).Select(i => (double)(i % 7)).ToArray();
+        var idx = Enumerable.Range(0, 300).ToArray();
+        ArrayOperations.SortIndices(values, idx, ascending: false);
+        for (int i = 1; i < idx.Length; i++)
+            values[idx[i - 1]].Should().BeGreaterThanOrEqualTo(values[idx[i]]);
+        idx.Should().OnlyHaveUniqueItems();
+    }
+
+    // NaN 在 Numeric 排序里固定排最后（防错原则1 显式守卫，不依赖 IEEE 754 CompareTo 的偶然一致）。
+    // 两个方向都要：NaN 作为第一/第二操作数。
+    [Fact] public void Sort_numeric_nan_sorts_last_in_both_operand_positions()
+    {
+        var a = new object[] { 1.0, double.NaN };
+        ArrayOperations.Sort(a, ascending: true, ComparerMode.Numeric);
+        a[0].Should().Be(1.0);
+        ((double)a[1]).Should().Be(double.NaN);
+
+        var b = new object[] { double.NaN, 1.0 };
+        ArrayOperations.Sort(b, ascending: true, ComparerMode.Numeric);
+        b[0].Should().Be(1.0);
+        ((double)b[1]).Should().Be(double.NaN);
+    }
+}
+
+// 覆盖补齐：Slice 的"负起点越界钳到 0"与"长度 ≤ 0"两条守卫，以及 SortIndices 的 null 守卫。
+public class SliceAndIndexGuardTests
+{
+    [Fact] public void Slice_start_before_array_start_clamps_to_zero()
+        => ArrayOperations.Slice(new[] { 1, 2, 3 }, -10).Should().Equal(1, 2, 3);
+
+    [Fact] public void Slice_zero_or_negative_length_returns_empty()
+    {
+        ArrayOperations.Slice(new[] { 1, 2, 3 }, 0, 0).Should().BeEmpty();
+        ArrayOperations.Slice(new[] { 1, 2, 3 }, 0, -5).Should().BeEmpty();
+    }
+
+    [Fact] public void SortIndices_null_values_is_noop()
+    {
+        var idx = new[] { 0, 1, 2 };
+        Action act = () => ArrayOperations.SortIndices<int>(null!, idx);
+        act.Should().NotThrow();
+        idx.Should().Equal(0, 1, 2);
+    }
+}

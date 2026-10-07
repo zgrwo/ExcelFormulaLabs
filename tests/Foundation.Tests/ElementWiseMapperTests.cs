@@ -326,3 +326,50 @@ public class ElementWiseMapperGapTests
         r.Should().Equal(ExcelError.Value);
     }
 }
+
+// 三参 MapOverMulti 的逐格哨兵契约（MapSingleCell 3 参版）：错误/Null/DBNull/ExcelMissing/
+// ExcelEmpty 出现在**任一**位置时都必须就地短路，且不调用 mapper。此前只覆盖到第 1 参的
+// 部分情形（第 2/3 参的错误透传、Null、DBNull，以及 ExcelEmpty 位置透传均无用例）。
+// 每格数组取 2 元素以强制逐元素路径（1 元素会折叠为标量）。
+public class MapOverMultiThreeArgSentinelTests
+{
+    private static object[] Map3(object a, object b, object c)
+        => (object[])ElementWiseMapper.MapOverMulti<string, string, string, string>(
+            new object[] { a, "keep" }, new object[] { b, "keep" }, new object[] { c, "keep" },
+            (x, y, z) => x + y + z);
+
+    [Fact] public void Error_in_second_cell_passes_through()
+        => Map3("a", ExcelError.NA, "c")[0].Should().Be(ExcelError.NA);
+
+    [Fact] public void Error_in_third_cell_passes_through()
+        => Map3("a", "b", ExcelError.NA)[0].Should().Be(ExcelError.NA);
+
+    [Fact] public void Null_in_third_cell_passes_through()
+        => Map3("a", "b", null!)[0].Should().BeNull();
+
+    [Fact] public void DBNull_in_each_cell_maps_to_null()
+    {
+        Map3(DBNull.Value, "b", "c")[0].Should().BeNull();
+        Map3("a", DBNull.Value, "c")[0].Should().BeNull();
+        Map3("a", "b", DBNull.Value)[0].Should().BeNull();
+    }
+
+    // ExcelMissing（公式栏省略必选参数）= 输入错误 #VALUE!（P0-6），位置 2/3 同样成立。
+    [Fact] public void ExcelMissing_in_second_or_third_cell_is_input_error()
+    {
+        Map3("a", ExcelDna.Integration.ExcelMissing.Value, "c")[0].Should().Be(ExcelError.Value);
+        Map3("a", "b", ExcelDna.Integration.ExcelMissing.Value)[0].Should().Be(ExcelError.Value);
+    }
+
+    // 空单元格须透传**原始** Excel-DNA 哨兵（替换为 Foundation.ExcelEmpty 在真实 Excel 显示 #NUM!）。
+    [Fact] public void ExcelEmpty_in_second_or_third_cell_preserves_original_sentinel()
+    {
+        object sentinel = ExcelDna.Integration.ExcelEmpty.Value;
+        Map3("a", sentinel, "c")[0].Should().BeSameAs(sentinel);
+        Map3("a", "b", sentinel)[0].Should().BeSameAs(sentinel);
+    }
+
+    // 短路须逐格生效：第 0 格命中哨兵时第 1 格仍须正常映射。
+    [Fact] public void Sentinel_short_circuit_is_per_cell_not_per_range()
+        => Map3(ExcelError.NA, "b", "c")[1].Should().Be("keepkeepkeep");
+}

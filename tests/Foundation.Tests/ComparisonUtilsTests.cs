@@ -66,6 +66,8 @@ public class CompareTests
     [Fact] public void String_case_insensitive_compare() => ComparisonUtils.Compare("Apple", "banana").Should().Be(-1);
     [Fact] public void Compare_mixed_types_string_vs_number() => ComparisonUtils.Compare("hello", 42).Should().Be(1);
     [Fact] public void Compare_nan_sorts_last() => ComparisonUtils.Compare(double.NaN, 1.0).Should().BePositive();
+    // NaN 排序须对称：NaN 在前/在后都排最后（此前只测了 NaN 作为第一操作数）。
+    [Fact] public void Compare_nan_as_second_operand_sorts_last() => ComparisonUtils.Compare(1.0, double.NaN).Should().BeNegative();
     [Fact] public void Compare_datetime() => ComparisonUtils.Compare(
         new System.DateTime(2025, 1, 15), new System.DateTime(2025, 6, 15)).Should().BeNegative();
 }
@@ -79,6 +81,20 @@ public class SafeKeyTests
     [Fact] public void Numeric_key() => ComparisonUtils.SafeKey(1.0).Should().StartWith("Numeric:");
     [Fact] public void String_key() => ComparisonUtils.SafeKey("hello").Should().Be("String:hello");
     [Fact] public void Date_key() => ComparisonUtils.SafeKey(new System.DateTime(2025, 6, 15, 10, 30, 0)).Should().Be("Date:2025-06-15 10:30:00");
+    // 整秒键不带小数段，但**带亚秒**的必须追加小数段——否则与整秒塌缩为同一去重键
+    // （ARR.UNIQUE 静默丢值）。此前只有整秒侧有用例。
+    [Fact] public void Sub_second_date_key_appends_fraction_segment()
+        => ComparisonUtils.SafeKey(new System.DateTime(2025, 6, 15, 10, 30, 0, 678))
+            .Should().Be("Date:2025-06-15 10:30:00.6780000");
+
+    [Fact] public void Sub_second_and_whole_second_keys_do_not_collapse()
+        => ComparisonUtils.SafeKey(new System.DateTime(2025, 6, 15, 10, 30, 0, 678))
+            .Should().NotBe(ComparisonUtils.SafeKey(new System.DateTime(2025, 6, 15, 10, 30, 0)));
+
+    [Fact] public void Boolean_false_key() => ComparisonUtils.SafeKey(false).Should().Be("Boolean:False");
+
+    [Fact] public void Empty_2D_array_key()
+        => ComparisonUtils.SafeKey(new object[0, 0]).Should().Be("Array2D(0×0):##EMPTY##");
     [Fact] public void SafeKey_null_element_in_1D_array() => ComparisonUtils.SafeKey(new object?[] { "a", null, "c" }).Should().Be("Array(3):8:String:a|13:Null:##NULL##|8:String:c");
     [Fact] public void SafeKey_empty_1D_array() => ComparisonUtils.SafeKey(System.Array.Empty<object>()).Should().Be("Array(0):##EMPTY##");
     // 长度前缀编码下，元素内嵌 "String:" 的分隔点伪造不再同键。

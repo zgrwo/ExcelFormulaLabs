@@ -11,15 +11,23 @@
 
     阈值按实测值留余量以吸收抖动，但**余量不是固定承诺**——它随实测漂移，
     引用时以本脚本输出为准（2026-10-07 复测，net8.0 + Include 过滤 + SandboxStatus
-    文件 I/O 测试补齐后）：
+    文件 I/O 测试补齐、**Foundation 分支用例补齐**后）：
         模块          line    阈值  余量      branch  阈值  余量
-        Foundation    95.80   92    3.80      86.56   84    2.56
+        Foundation    96.18   92    4.18      90.25   84    6.25
         Analytics     92.79   86    6.79      81.02   76    5.02
         DataToolkit   89.34   86    3.34      85.41   82    3.41
-    **当前最小余量 2.56 点（Foundation branch）**。此前的注释写"≥4 个点余量"且基线记为
-    DataToolkit 90.21/86.04，两项均与实测不符（P2-2：同一脚本实测 DataToolkit 行 87.50/分支
-    84.85，行余量仅 1.5 点；6 项指标里 4 项 < 4 点）。补 SandboxStatus 的 TryAppend/
-    RotateIfTooLarge 临时目录测试后 DataToolkit 回升到 89.34/85.41。阈值本身未调整。
+    **当前最小余量 3.34 点（DataToolkit line）**。此前的最小余量是 Foundation branch 2.56 点：
+    Foundation 分支只覆盖了守卫的"命中"侧（3 参 MapOverMulti 的逐格哨兵、DictOperations 的
+    NaN/±Inf 键、整秒 DateTime 键、SafeKey 的 Boolean:False / 空 2D 数组、降序排序的三路分区），
+    补齐后 86.56 → **90.25**。此前的注释曾写"≥4 个点余量"且基线记为 DataToolkit 90.21/86.04，
+    两项均与实测不符（P2-2：同一脚本实测 DataToolkit 行 87.50/分支 84.85，行余量仅 1.5 点）；
+    阈值本身自始未调整。
+
+    已知本机坑（不改变门禁语义，仅影响本机复现）：裸跑本脚本时 DataToolkit 步的
+    `PackExcelAddIn` 可能报 `Win32Exception (110)`「系统无法打开指定的设备或文件」
+    （`ResourceResolverWin.End` → `EndUpdateResource` 失败）——前置的 Foundation/Analytics
+    两次 `dotnet test` 留下的 MSBuild 工作节点复用会持有文件句柄。规避（二选一，均已实测）：
+    运行前设 `$env:MSBUILDDISABLENODEREUSE='1'`，或给本脚本内的 `dotnet test` 加 `-m:1`。
 
     为何需要本脚本：tests/*/coverage-local/ 下的历史报告**未加 Include 过滤**，
     Foundation 类在 Analytics 报告里显示 ~0%，数字误导（Analytics 53.5% vs 实际 90.2%）。
@@ -63,7 +71,7 @@ try {
 
         # MSBuild 的 -p: 以逗号作属性分隔符：多阈值必须转义为 %2C，否则报 MSB1006。
         $args = @(
-            'test', $m.Project, '-f', $m.Tfm,
+            'test', $m.Project, '-m:1', '-f', $m.Tfm,
             '-p:CollectCoverage=true', '-p:CoverletOutputFormat=cobertura',
             "-p:CoverletOutput=coverage/$($m.Name.ToLower())",
             "-p:Threshold=$($m.Threshold)%2C$($m.BranchThreshold)",

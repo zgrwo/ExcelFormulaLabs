@@ -464,6 +464,11 @@ def cmd_migrate(args):
 # `udfgen.py verify` 仍 PASS exit 0，而 scripts/verify-udfgen.ps1 头注与 AGENTS.md 都
 # 声称做了"手写 UDF 属性校验"。此处把声称兑现为属性级比对。
 #
+# 覆盖范围（四项，逐项对应一次**实测**的负向验证）：
+#   Description / Category / [ExcelArgument] Name 序列 / **C# 形参名（pname）序列**。
+#   第四项是补洞：前一轮只比了属性，而 review 举证里那条"把 `object d` 改名 `dRENAMED`"
+#   改的正是**形参名**（元数据 pname 字段），属性一字未动——旧实现因此放行。
+#
 # 解析要点：
 #   * 属性可能**跨行**（RegressionAsyncUdf.cs 的 `[ExcelFunction(Name = ...,\n Description = ...)]`
 #     就是折行写法），故按行匹配必然漏——用 iter_declarations 取完整声明块（括号配对、
@@ -492,6 +497,30 @@ def _q(v):
     return "<缺失>" if v is None else f'"{v}"'
 
 
+def src_pnames(params_raw: str) -> list:
+    """从 C# 形参原文取**纯形参名**序列（剥离 [ExcelArgument] 属性与默认值）。
+
+    比对口径**由实测确定**，不是猜的：RegressionAsyncUdf.cs 的 REGRESS.RIDGE_ASYNC 写作
+    `object lambda = null`，而元数据（parse_args 产出）pname 是纯 `lambda`——因为
+    parse_args 已把 `= null` 拆进 default 字段。故源码侧必须同样剥离 `= ...`，
+    否则正向比对直接 FAIL（假阳性）。此处刻意复用 parse_args 的 ARG_ATTR 与 rsplit 口径，
+    保证两侧解析语义同源。
+    """
+    out = []
+    for p in split_top(params_raw):
+        decl = one_line(p)
+        if not decl:
+            continue
+        m = ARG_ATTR.match(decl)
+        if m:
+            decl = one_line(m.group("decl"))
+        if "=" in decl:                      # 与 parse_args 同口径：默认值不进比对
+            decl = decl.split("=", 1)[0].strip()
+        parts = decl.rsplit(" ", 1)
+        out.append(parts[1].strip() if len(parts) == 2 else decl)
+    return out
+
+
 def check_hand_written(meta: dict, src: str, bad: list) -> None:
     """手写 UDF（generated=false）↔ 元数据的**属性级**比对，差异逐条追加到 bad。"""
     srcname = meta["sourceFile"]
@@ -502,7 +531,7 @@ def check_hand_written(meta: dict, src: str, bad: list) -> None:
             continue
         m = FN_ATTR.search(attr)
         if m:
-            decls.setdefault(m.group("name"), (attr, it["text"]))
+            decls.setdefault(m.group("name"), (attr, it["text"], it["params"]))
 
     for f in meta["functions"]:
         if f.get("generated"):
@@ -513,7 +542,7 @@ def check_hand_written(meta: dict, src: str, bad: list) -> None:
             bad.append(f'{srcname}: 手写 UDF "{name}" 在源码中找不到'
                        f'（元数据有、源码无 [ExcelFunction(Name = "{name}")] 声明）')
             continue
-        attr, full = hit
+        attr, full, params_raw = hit
         # Description ← 元数据 desc
         dm = DESC_ATTR.search(attr)
         got_desc = one_line(dm.group("desc")) if dm else None
@@ -533,6 +562,13 @@ def check_hand_written(meta: dict, src: str, bad: list) -> None:
             if got != want:
                 bad.append(f'{srcname}: {name} 字段 ExcelArgument Name 序列不一致：'
                            f'元数据 ({", ".join(want)}) / 源码 ({", ".join(got)})')
+            # C# 形参名（pname）序列 ← 元数据 args[].pname：属性之外，形参本身也可被改名，
+            # 而 Excel 端按**名称**绑定参数（Excel-DNA 用 pname 生成参数名），改名是静默的行为变更。
+            want_p = [a.get("pname", "<缺失>") for a in f["args"]]
+            got_p = src_pnames(params_raw)
+            if got_p != want_p:
+                bad.append(f'{srcname}: {name} 字段 形参名序列 不一致：'
+                           f'元数据 ({", ".join(want_p)}) / 源码 ({", ".join(got_p)})')
 
 
 def cmd_verify(args):
@@ -562,7 +598,7 @@ def cmd_verify(args):
         for b in bad:
             print("  - " + b)
         return 1
-    print("PASS: 生成物与元数据一致（含手写 UDF 属性级校验：Description / Category / 参数名序列）")
+    print("PASS: 生成物与元数据一致（含手写 UDF 属性级校验：Description / Category / 参数名序列 / 形参名序列）")
     return 0
 
 
