@@ -62,7 +62,8 @@ namespace ExcelFormulaLabs.Analytics
 
         private static object[,] RequiredTable(object value, string name)
         {
-            if (value == null || InputNormalizer.IsExcelMissing(value) || InputNormalizer.IsExcelEmptyValue(value))
+            // 统一走 IsOmitted（P2-4）：旧实现手写 null/Missing/Empty 三态，漏掉 DBNull 分支。
+            if (InputNormalizer.IsOmitted(value))
                 throw new ArgumentException($"'{name}' must be a range or array, not empty.");
             return InputNormalizer.NormalizeTo2D(value)
                 ?? throw new ArgumentException($"'{name}' must be a 2D range or array.");
@@ -70,7 +71,8 @@ namespace ExcelFormulaLabs.Analytics
 
         private static object[,]? OptionalTable(object value)
         {
-            if (value == null || InputNormalizer.IsExcelMissing(value) || InputNormalizer.IsExcelEmptyValue(value))
+            // 同 RequiredTable：统一 IsOmitted（P2-4）。
+            if (InputNormalizer.IsOmitted(value))
                 return null;
             return InputNormalizer.NormalizeTo2D(value);
         }

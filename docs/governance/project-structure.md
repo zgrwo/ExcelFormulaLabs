@@ -76,7 +76,8 @@ ExcelFormulaLabs/
 │   │   └── 0010-excel-com-e2e-scheduling.md
 │   └── plans/                      #   实施计划（迁移/重构方案）
 │       ├── 2026-09-12-solve-inverse-migration-plan.md
-│       └── 2026-09-23-excellence-roadmap.md
+│       ├── 2026-09-23-excellence-roadmap.md
+│       └── 2026-10-07-review-remediation-plan.md
 │
 ├── scripts/                        # 构建/验证脚本
 │   ├── verify-docs.ps1             #   文档一致性验证（20 项检查，唯一实现）

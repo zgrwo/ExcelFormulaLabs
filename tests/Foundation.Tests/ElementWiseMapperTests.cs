@@ -200,16 +200,20 @@ public class MapOverTests
             (int a, int b) => a + b)
             .Should().Be(ExcelError.Value);
 
-    // ExcelMissing（公式栏省略）不得泄漏类型全名，按省略语义返回 null 哨兵。
-    [Fact] public void MapOver_excel_missing_returns_null()
+    // ExcelMissing（公式栏省略必选参数）= **输入错误** → #VALUE!（P0-6）。
+    // 旧实现返回 null：CLR 层看不出问题，但 Excel 侧顶层 null 被渲染为 #NUM!
+    // （"计算结果无定义"），与 api-reference 的错误语义相悖（真实 Excel 实测：
+    // =STR.REVERSE() → #NUM!）。原测试意图"类型全名不得泄漏"依然成立——
+    // ExcelError 不会把 ExcelDna.Integration.ExcelMissing 带进结果。
+    [Fact] public void MapOver_excel_missing_is_input_error()
         => ElementWiseMapper.MapOver<object, string>(
             ExcelDna.Integration.ExcelMissing.Value, x => "mapped:" + x)
-            .Should().BeNull();
+            .Should().Be(ExcelError.Value);
 
-    [Fact] public void MapOverMulti_excel_missing_returns_null()
+    [Fact] public void MapOverMulti_excel_missing_is_input_error()
         => ElementWiseMapper.MapOverMulti<object, object, string>(
             ExcelDna.Integration.ExcelMissing.Value, "b", (a, b) => "" + a + b)
-            .Should().BeNull();
+            .Should().Be(ExcelError.Value);
 }
 
 public class MapOverMultiThreeArgTests

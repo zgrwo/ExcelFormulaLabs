@@ -208,10 +208,13 @@ namespace ExcelFormulaLabs.Foundation
         {
             if (cell == null) return cell!;
             if (cell is DBNull) return null!;
-            // ExcelMissing（公式栏省略的自变量）须映射为省略 → null：落 ConvertValue 后
-            // TInput=object 时原样传给 mapper，类型全名泄漏进结果
-            // （STR.FORMAT(,"0.00") → "ExcelDna.Integration.ExcelMissing"）。
-            if (InputNormalizer.IsExcelMissing(cell)) return null!;
+            // ExcelMissing（公式栏省略的自变量）→ 输入错误 #VALUE!（P0-6）。
+            // 旧实现返回 null：既避免了类型全名经 ConvertValue 泄漏进结果，也让顶层 null
+            // 被 Excel-DNA 封送显示为 #NUM!——而 api-reference 的语义是 #NUM! = 计算结果
+            // 无定义、#VALUE! = 输入/执行错误，省略**必选**参数属后者（真实 Excel 实测：
+            // =STR.REVERSE() → #NUM!）。显式 null / DBNull 仍按"空"透传（既有契约）。
+            // 数组元素位不会出现 ExcelMissing（省略只发生在前端参数位）。
+            if (InputNormalizer.IsExcelMissing(cell)) return ExcelError.Value;
             // return the ORIGINAL empty sentinel — Excel-DNA renders its own ExcelEmpty as an
             // empty cell, while Foundation.ExcelEmpty (a custom class outside the Excel-DNA
             // marshalling allow-list) would render as #NUM! in real Excel.
@@ -230,8 +233,8 @@ namespace ExcelFormulaLabs.Foundation
             if (cell2 == null) return cell2!;
             if (cell1 is DBNull) return null!;
             if (cell2 is DBNull) return null!;
-            // ExcelMissing → 省略 → null（同单参版本）。
-            if (InputNormalizer.IsExcelMissing(cell1) || InputNormalizer.IsExcelMissing(cell2)) return null!;
+            // ExcelMissing → 输入错误 #VALUE!（同单参版本，P0-6）。
+            if (InputNormalizer.IsExcelMissing(cell1) || InputNormalizer.IsExcelMissing(cell2)) return ExcelError.Value;
             // pass through the original empty sentinel (Excel-DNA renders as empty).
             if (InputNormalizer.IsExcelEmptyValue(cell1)) return cell1!;
             if (InputNormalizer.IsExcelEmptyValue(cell2)) return cell2!;
@@ -252,9 +255,9 @@ namespace ExcelFormulaLabs.Foundation
             if (cell1 is DBNull) return null!;
             if (cell2 is DBNull) return null!;
             if (cell3 is DBNull) return null!;
-            // ExcelMissing → 省略 → null（同单参版本）。
+            // ExcelMissing → 输入错误 #VALUE!（同单参版本，P0-6）。
             if (InputNormalizer.IsExcelMissing(cell1) || InputNormalizer.IsExcelMissing(cell2)
-                || InputNormalizer.IsExcelMissing(cell3)) return null!;
+                || InputNormalizer.IsExcelMissing(cell3)) return ExcelError.Value;
             // pass through the original empty sentinel (Excel-DNA renders as empty).
             if (InputNormalizer.IsExcelEmptyValue(cell1)) return cell1!;
             if (InputNormalizer.IsExcelEmptyValue(cell2)) return cell2!;

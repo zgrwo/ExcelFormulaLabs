@@ -264,12 +264,20 @@ namespace ExcelFormulaLabs.Analytics.Tests
             act.Should().Throw<ArgumentException>().WithMessage("*within-group sum of squares*");
         }
 
-        // 输入虽拒绝 NaN/Inf，但有限极大值平方后溢出为 Inf 可绕过后置守卫
-        // （Abs(Inf)<1e-15 == false）→ f=Inf/Inf=NaN 静默泄漏；非有限平方和必须显式抛错。
-        [Fact] public void AnovaOneWay_ss_overflow_throws()
+        // 有限极大值输入（1e200 量级）：平方和会溢出，但 ANOVA 的 F/p 对公共正缩放不变，
+        // 故正确行为是**算出正确的 F**并把不可表示的 SS/MS 列按模块约定 NaN 封顶（P1-3）。
+        // 旧实现直接抛 "non-finite"（把合法的有限输入当非法，且与库内 StatsCore 的
+        // 缩放回退口径分裂）。参考值：scipy.stats.f_oneway([1,2],[3,4]) → F=8.0, p=0.10557280900008413
+        [Fact] public void AnovaOneWay_extreme_scale_keepsF_andCapsSs()
         {
-            var act = () => RegressionCore.AnovaOneWay(new[] { new[] { 1e200, 2e200 }, new[] { 3e200, 4e200 } });
-            act.Should().Throw<ArgumentException>().WithMessage("*non-finite*");
+            var r = RegressionCore.AnovaOneWay(new[] { new[] { 1e200, 2e200 }, new[] { 3e200, 4e200 } });
+            ((double)r["f_stat"]).Should().BeApproximately(8.0, 1e-12);
+            ((double)r["p_value"]).Should().BeApproximately(0.10557280900008413, 1e-12);
+            double.IsNaN((double)r["ss_within"]).Should().BeTrue("真值 1e400 不可表示 → NaN 封顶");
+            double.IsNaN((double)r["ss_between"]).Should().BeTrue("真值 4e400 不可表示 → NaN 封顶");
+            var means = (double[])r["group_means"];
+            means[0].Should().BeApproximately(1.5e200, 1e186);
+            means[1].Should().BeApproximately(3.5e200, 1e186);
         }
 
         // =====================================================================

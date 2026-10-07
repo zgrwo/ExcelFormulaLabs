@@ -651,14 +651,11 @@ namespace ExcelFormulaLabs.Analytics
             return Math.Sqrt(ss / (n - 1));
         }
 
-        private static double Median(double[] values)
-        {
-            var copy = (double[])values.Clone();
-            Array.Sort(copy);
-            int n = copy.Length;
-            if (n == 0) return double.NaN;
-            return n % 2 == 1 ? copy[n / 2] : 0.5 * (copy[n / 2 - 1] + copy[n / 2]);
-        }
+        // 中位数复用 StatsCore.Median（P1-2，库内口径收敛）：本类旧实现用 0.5*(lo+hi)，
+        // ±1e308 级输入下中间求和溢出为 +Inf → proximity=Inf → 所有起点目标值 Inf →
+        // 抛 "Optimization failed to evaluate any start point"（与真实原因无关的误导信息）。
+        // StatsCore.Median 已有 QuantileSafe 凸组合回退（lo*0.5 + hi*0.5，不溢出）。
+        private static double Median(double[] values) => StatsCore.Median(values);
 
         private static (double[][] X, double[] y) Subset(double[][] X, double[] y, List<int> idx)
         {
@@ -1000,6 +997,20 @@ namespace ExcelFormulaLabs.Analytics
 
         private static double Clamp(double v, double lo, double hi) => v < lo ? lo : v > hi ? hi : v;
 
+        /// <summary>
+        /// 字典序比较（P1-5）：目标偏差 fTarget 显著更小者胜；两者的相对差在
+        /// <see cref="R2TieTolerance"/> 内视为等价解集，此时用 proximity 选点
+        /// （越接近历史中位数越好）。与 ADR-0007 决策 4 的 "target-first" 语义一致。
+        /// </summary>
+        private static bool LexicographicallyBetter(
+            double target, double proximity, double bestTarget, double bestProximity)
+        {
+            double tol = R2TieTolerance * Math.Max(Math.Abs(bestTarget), 1e-300);
+            if (target < bestTarget - tol) return true;
+            if (target > bestTarget + tol) return false;
+            return proximity < bestProximity;
+        }
+
         // ──────────────────────────── 反解优化与可达性 ────────────────────────────
 
         /// <summary>
@@ -1191,9 +1202,14 @@ namespace ExcelFormulaLabs.Analytics
 
 
             var result = new double[r, v + outCount + 2];
-            var rng = new XorShift64((ulong)seed);
             for (int q = 0; q < r; q++)
             {
+                // 每请求行独立重建**同种子** rng（P0-5）：旧实现把 rng 建在循环之外，
+                // 同一个实例跨行持续前进，使两个**完全相同**的请求行得到不同推荐值
+                // （实测 3.999999996847408 vs 3.999999997003461；目标超出可达区间时
+                // 两端被边界钳制会掩盖该差异），结果依赖该行在表中的位置——违背
+                // ADR-0007「确定性（XorShift64，禁 System.Random）」的承诺。
+                var rng = new XorShift64((ulong)seed);
                 double[] request = requests[q];
                 double[] target = targets[q];
                 double[] feature = new double[k];
@@ -1226,6 +1242,8 @@ namespace ExcelFormulaLabs.Analytics
                             $"Reachability sampling produced no finite predictions for output {j} " +
                             $"(model={models[j].Kind}); model is numerically unstable.");
 
+                // 字典序选点所需的两个分量：objective 每次求值刷新它们（P1-5）。
+                double lastTarget = 0, lastProximity = 0;
                 Func<double[], double> objective = u =>
                 {
                     for (int c = 0; c < v; c++) feature[variableCols[c]] = u[c];
@@ -1247,11 +1265,16 @@ namespace ExcelFormulaLabs.Analytics
                         double z = (u[c] - medians[variableCols[c]]) / range;
                         proximity += z * z;
                     }
+                    // 加权和仅用于**搜索**（模式搜索需要一个标量目标）；最终选点按
+                    // 字典序（P1-5，见下）。
+                    lastTarget = fTarget;
+                    lastProximity = proximity;
                     return TargetPriority * fTarget + ProximityWeight * proximity;
                 };
 
                 double[]? bestU = null;
-                double bestE = double.PositiveInfinity;
+                double bestTarget = double.PositiveInfinity;
+                double bestProximity = double.PositiveInfinity;
                 for (int start = 0; start < maxStarts; start++)
                 {
                     var u0 = new double[v];
@@ -1266,10 +1289,18 @@ namespace ExcelFormulaLabs.Analytics
                             u0[c] = lo + (hi - lo) * NextUniform(ref rng);
                     }
                     var found = LocalSearch(objective, u0, bounds);
-                    double e = objective(found);
-                    if (e < bestE)
+                    objective(found); // 刷新 lastTarget/lastProximity 到 found 的取值
+                    // 字典序选点（P1-5，对齐 ADR-0007 决策 4 的"target-first"承诺）：
+                    // 旧实现按加权和 `1e6·fTarget + 0.02·proximity` 选点。proximity ≤ v ≤ 20，
+                    // 故 fTarget 相对差 < 4e-7（σ ≲ 6.3e-4）时 proximity 项可反超——可能丢弃
+                    // σ=1e-7 的"可达"点而选中 σ=1e-5 的点，据此把状态误报成"不可达"。
+                    // 现在：fTarget 显著更小者胜；等价集（相对差 ≤ R2TieTolerance）内用
+                    // proximity 选点——与 ADR 描述的语义一致。
+                    if (bestU == null ||
+                        LexicographicallyBetter(lastTarget, lastProximity, bestTarget, bestProximity))
                     {
-                        bestE = e;
+                        bestTarget = lastTarget;
+                        bestProximity = lastProximity;
                         bestU = found;
                     }
                 }
@@ -1287,7 +1318,14 @@ namespace ExcelFormulaLabs.Analytics
                     if (double.IsNaN(target[j])) continue;
                     double dev = Math.Abs(p - target[j]) / scales[j];
                     if (dev > maxDeviation) maxDeviation = dev;
-                    double magnitude = Math.Max(Math.Max(Math.Abs(minOut[j]), Math.Abs(maxOut[j])), Math.Abs(maxOut[j] - minOut[j]));
+                    // 跨度项须防溢出（P1-1）：minOut/maxOut 异号且接近 ±1e308 时
+                    // |max−min| = Inf → magnitude=Inf → tol=Inf → inRange 恒真 →
+                    // 状态恒报"可达"（纵深防御失效）。仅在真溢出时封顶；所有有限跨度
+                    // 场景保持逐位不变。此时 tol=1e-9·MaxValue≈1.8e299 ≪ |min|，故
+                    // 后续 min−tol / max+tol 不再产生新的溢出。
+                    double span = maxOut[j] - minOut[j];
+                    if (double.IsInfinity(span)) span = double.MaxValue;
+                    double magnitude = Math.Max(Math.Max(Math.Abs(minOut[j]), Math.Abs(maxOut[j])), span);
                     double tol = ReachToleranceFraction * Math.Max(magnitude, 1e-300);
                     bool inRange = target[j] >= minOut[j] - tol && target[j] <= maxOut[j] + tol;
                     bool achieved = dev <= AchievedSigmaTolerance;

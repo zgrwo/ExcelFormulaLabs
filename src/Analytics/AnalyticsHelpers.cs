@@ -75,9 +75,8 @@ namespace ExcelFormulaLabs.Analytics
                     object raw = m[r, c];
                     // 仅跳过空/错误单元格；非数值文本显式报错——与文档（只跳过空/错误）
                     // 及 OLS/WLS 同输入 #VALUE! 的口径一致；静默丢弃文本会与该口径矛盾。
-                    if (raw == null || raw is DBNull
-                        || InputNormalizer.IsExcelEmptyValue(raw)
-                        || InputNormalizer.IsExcelErrorValue(raw))
+                    // 判定收敛到 InputNormalizer.IsBlankOrErrorCell（P2-4）。
+                    if (InputNormalizer.IsBlankOrErrorCell(raw))
                         continue;
                     double v = InputNormalizer.ToDouble(raw);
                     if (double.IsNaN(v))
@@ -98,9 +97,7 @@ namespace ExcelFormulaLabs.Analytics
             for (int c = 0; c < cols; c++)
             {
                 object raw = m[0, c];
-                if (raw == null || raw is DBNull
-                    || InputNormalizer.IsExcelEmptyValue(raw)
-                    || InputNormalizer.IsExcelErrorValue(raw))
+                if (InputNormalizer.IsBlankOrErrorCell(raw))
                     continue;
                 if (double.IsNaN(InputNormalizer.ToDouble(raw))) return true;
             }

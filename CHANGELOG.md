@@ -41,6 +41,62 @@
 
 <!-- release-please 在下一次 Release PR 中把本版本区间内容归位到新版本条目 -->
 
+### Fixed（2026-10-07 评审缺陷整改：P0 静默错值 + P1 数值守卫 + P2 口径收敛）
+
+- **P0-1 `LINALG.DET` 尺度归一化缺失（静默错值）**：`det(diag(1e300,1e300,1e-300,1e-300))` 真值为 1，
+  旧实现返回 `NaN`（对角逆序返回 `0.0`——结果依赖行列顺序）。改为**逐行尺度归一 + 对数域累积**
+  （`det(A) = (Π sᵢ)·det(A′)`），单一行列式归一在动态范围 > 1e308 时仍会下溢失效，故不采用。
+  仅当最终真值不可表示时按模块约定 `NaN` 封顶。
+- **P0-2 `REGRESS.RIDGE` 的 `df` 语义**：由"参数个数 p"改为**残差自由度 n−p**，与 `REGRESS.OLS`/`WLS`
+  统一，并**兑现 user-manual 早已写明的「自由度（n − 变量数）」**（此前两份文档互相矛盾）。
+  n ≤ p 时如实给出 ≤ 0。**行为变更**，api-reference 同步。
+- **P0-3 `FitOLS/FitWLS(addIntercept:false)` 的 R² 定义**：无截距模型改用**非中心化 TSS = Σy²**
+  （statsmodels/R 口径）。实测 `X=[1;2;3], y=[1,2,4]`：0.923469387755102 → **0.9829931972789115**。
+  含截距路径不变（仍 0.9642857142857143）。
+- **P0-4 `DT.UNIXTS`/`DT.FROMUNIX` 时区依赖（静默不一致）**：旧实现用 `ToUniversalTime()`，
+  而输入来自 `DateTime.FromOADate`（Kind=Unspecified）→ .NET 按**本机时区**解释，同一 Excel 序列号
+  在不同时区的机器上给出不同 Unix 时间戳（实测 UTC+8 下相差 28800 秒）。改为 **Kind 分派**：
+  `Unspecified`（Excel 序列号）按**墙上时刻**；`Utc` 原样；`Local` 尊重其标记正常换算。
+  **行为变更**（结果变为时区无关）。修复过程由交叉验证反向抓出一次中间回归——首版一律
+  `SpecifyKind(Utc)` 会把 `Local` 的墙上时刻错误重贴标签（manifest 入参 `2024-01-01T00:00:00Z`
+  经 Dispatcher 转 Local 后偏移 +8h）；同时 Python 侧 oracle 原本用 `datetime.fromtimestamp`
+  （本地时区）**与 C# 共享同一错误假设**，故该缺陷当时对交叉验证不可见——两侧已一并改为
+  UTC/墙上时刻口径。
+- **P0-5 `SOLVE.INVERSE` 结果依赖请求行位置**：`rng` 建在请求行循环之外并跨行前进，两个**完全相同**的
+  请求行给出不同推荐值（实测 3.999999996847408 vs 3.999999997003461），违背 ADR-0007 的确定性承诺。
+  改为每请求行独立重建同种子 `rng`。
+- **P0-6 省略必选参数显示 `#NUM!`**：`MapOver` 的 `ExcelMissing` 分支返回 `null`，顶层 null 经
+  Excel-DNA 封送渲染为 `#NUM!`（"计算结果无定义"），而省略必选参数属**输入错误** → 改为 `#VALUE!`
+  （真实 Excel 实测 `=STR.REVERSE()`）。显式 `null`/`DBNull` 仍按"空"透传，既有契约不变。
+- **P1-1 `SOLVE` 可达性容差自身溢出**：`|maxOut − minOut|` 在 ±1e308 输出下变 `Inf` → `tol=Inf` →
+  `inRange` 恒真 → 状态恒报"可达"。仅在真溢出时封顶，有限跨度场景逐位不变。
+- **P1-2 `SolveCore.Median` 溢出**：偶数长度 `0.5*(lo+hi)` 在 ±1e308 下变 `Inf` → 下游抛
+  "Optimization failed to evaluate any start point"（误导性根因）。改为复用 `StatsCore.Median`
+  （已有凸组合回退），库内中位数口径归一。
+- **P1-3 `REGRESS.ANOVA1` 极端量纲误拒**：`LINQ Average` 朴素左折叠在 1e308 量级溢出 → 抛
+  "输入过大"，而 ANOVA 的 F/p 对公共缩放不变。改为**公共尺度预归一**后计算：F/p 正确，
+  不可表示的 SS/MS 列按约定 `NaN` 封顶（实测 1e200 量级输入 F=8 与 scipy 一致）。
+- **P1-4 `STATS.SUM` 补偿求和**：`[1e16, 1, -1e16]` 朴素折叠得 `0.0`（`math.fsum` 与 `PIVOT.SUM`
+  的 Neumaier 都得 `1.0`）——同一名义运算库内两套精度标准。主路径改用 Neumaier 补偿求和，
+  溢出时仍回退 maxAbs 归一化路径。
+- **P1-5 `SOLVE` 目标函数非字典序**：ADR-0007 决策 4 声称 "target-first" 字典序，实现却是加权和
+  `1e6·fTarget + 0.02·proximity`；proximity ≤ v ≤ 20，故 fTarget 相对差 < 4e-7 时 proximity 可反超，
+  可能丢弃 σ 更小的"可达"点并把状态误报为"不可达"。改为**真字典序选点**（等价集内用 proximity）。
+- **P2-4 空/省略判定收敛**：`SolveUdf` 手写的三态判定（漏 `DBNull`）统一走 `InputNormalizer.IsOmitted`；
+  新增 `InputNormalizer.IsBlankOrErrorCell` 收敛 `AnalyticsHelpers`（2 处）与 `SqlCore`（1 处）
+  各自手写的"跳过空白或错误单元格"判定。
+- **P2-2 文档口径校正**：空白单元格作为必选数值参数实测为 `#VALUE!`（api-reference 此前记作 `#NUM!`）；
+  元素级函数的"返回类型"列为**数组入参时**的逐元素类型（形状保持：标量入 → 标量出）。
+
+### 实测推翻的两条评审结论（不改代码，避免过度修复）
+
+- **SOLVE 同步 UI 冻结风险不成立**：ADR-0007 的触发条件是 "n=5000 同步基准 >3s"。实测
+  （n=5000、3 变量、poly、200 请求行、`max_starts=50` 即文档上限）**358 ms**；auto 模型 1 请求行
+  113 ms。远低于阈值，无需异步改造。
+- **「236 个函数」非陈旧漂移**：该数字位于 `specification.md` 的**历史演化摘要**与 ADR-0003 的
+  决策时点描述中，是准确的历史记录；同理 verify-docs 检查 16 的词表**不应**扩到「N 个函数」，
+  否则会对历史文本误报。
+
 ## [2.3.1] - 2026-09-16
 
 ### Fixed（2026-09-14/15 两轮深度审计 + 发行前全量审查处置：R0/R1/R2/R3 + P3；报告归档 logs/reports/ 不入库）

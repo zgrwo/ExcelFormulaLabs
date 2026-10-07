@@ -28,6 +28,8 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 ## STATS.* -- 描述统计
 
 > 对标 Python scipy，精度 1e-10。元素级函数（ABS/SQRT/LN/LOG10/EXP/SIGN）支持数组公式。
+> **返回类型约定**：元素级函数**保持输入形状**——标量入 → 标量出，区域/数组入 → 同形状数组出。
+> 下表"返回"列的 `double[]`/`long[]` 指**数组入参时**的逐元素结果类型（`STATS.SIGN` 的 `long[]` 同理）。
 
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
@@ -113,7 +115,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 |------|------|------|------|
 | `REGRESS.OLS` | (known_y, known_x) | `object[11,?]` | **普通最小二乘法**。对标 Excel LINEST。返回 11 行报告：`coefficients`(系数)、`sse`(残差平方和)、`r_squared`(R²)、`adj_r_squared`(调整R²)、`residuals`(残差)、`fitted_values`(拟合值)、`standard_errors`(标准误)、`t_stats`(t值)、`p_values`(p值)、`n`(样本量)、`df`(自由度)。数组字段横向展开到多列。`p<0.05` 该系数显著。 |
 | `REGRESS.WLS` | (known_y, known_x, weights) | `object[11,?]` | **加权最小二乘法**（异方差数据）。返回同 OLS 的 11 行报告。`sse`/`r_squared`/`standard_errors`/`t_stats`/`p_values` 均为**加权（√w 变换）尺度**（与 statsmodels WLS 一致）；`residuals`/`fitted_values` 保持原始尺度便于与 y 比较。 |
-| `REGRESS.RIDGE` | (known_y, known_x, [lambda]) | `object[8,?]` | **岭回归**（L2 正则化，防过拟合）。λ 默认 1.0。返回 8 行：`coefficients`、`sse`、`r_squared`、`residuals`、`fitted_values`、`lambda`(惩罚参数)、`n`、`df`(简化口径 = 预测变量数 p；岭回归有效自由度严格应为 tr(H)，当前实现按 p 报告)。**不返回**标准误/t值/p值（正则化下推断无效）。 |
+| `REGRESS.RIDGE` | (known_y, known_x, [lambda]) | `object[8,?]` | **岭回归**（L2 正则化，防过拟合）。λ 默认 1.0。返回 8 行：`coefficients`、`sse`、`r_squared`、`residuals`、`fitted_values`、`lambda`(惩罚参数)、`n`、`df`(残差自由度 n−p，与 OLS/WLS 同语义；n ≤ p 时为 ≤ 0)。**不返回**标准误/t值/p值（正则化下推断无效）。 |
 | `REGRESS.ANOVA1` | (input_range) | `object[12,?]` | **单因素方差分析**。数据按列分组（每列一组）；首行若为文本列名自动按表头跳过。返回 12 行：`ss_between`(组间平方和)、`ss_within`(组内平方和)、`ss_total`、`df_between`、`df_within`、`df_total`、`ms_between`、`ms_within`、`f_stat`(F值)、`p_value`(p值)、`group_means`(各组均值)、`group_counts`(各组样本量)。数组字段横向展开到多列。`p<0.05` = 至少有一组均值显著不同。 |
 | `REGRESS.FACTORIMP` | (known_y, known_x) | `double[]` | **因子重要性排名**。按标准化后的 \|t\| 降序排列，返回 0-based 列索引数组。 |
 | `REGRESS.COEF` | (known_y, known_x) | `double[]` | OLS 回归系数向量（仅 beta）。 |
@@ -421,7 +423,9 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | 文件路径越界（沙箱模式） | `#VALUE!` | FS.* |
 | SQL 语法错误 | `#VALUE!` | SQL.* |
 | 空白单元格作为可选参数 | 与省略同语义回退文档默认值 | 全部（2026-09-14 起统一） |
-| 空白单元格作为必选数值参数 | 按空值哨兵处理（`ToDouble`→NaN → 通常 `#NUM!`） | 全部 |
+| 省略**必选**参数（公式栏留空） | `#VALUE!`（输入错误） | 全部（2026-10-07 起；此前为 `#NUM!`，语义误导） |
+| 空白单元格作为必选数值参数 | 按空值哨兵处理（`ToDouble`→NaN）；单格空白 → 空数组 → `#VALUE!`（**实测口径**，2026-10-07 校正，此前记作 `#NUM!`） | STATS.* 等 |
+| 空白单元格作为必选字符串参数 | MapOver 透传空哨兵 → Excel 渲染为 `0`（非空串） | STR.* 等 |
 | Excel 错误值作为 PIVOT/GROUPBY 聚合值 | 传播 NaN（分组结果 `#NUM!`，不再静默跳过） | PIVOT.* |
 
 ### 模块特定错误

@@ -451,8 +451,10 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             => StringUdf.UDF_STR_ISNW(ExcelEmpty.Value).Should().Be(true);
         [Fact] public void ExcelMissing_does_not_leak_type_name()
         {
-            StringUdf.UDF_STR_FMT(ExcelDna.Integration.ExcelMissing.Value, "0.00").Should().BeNull();
-            StringUdf.UDF_STR_REV(ExcelDna.Integration.ExcelMissing.Value).Should().BeNull();
+            // 省略必选参数 → 输入错误 #VALUE!（P0-6）。关键是**类型全名不得泄漏**进结果
+            // （旧实现返回 null，Excel 侧渲染 #NUM!；原断言只锁了 CLR 侧 null）。
+            StringUdf.UDF_STR_FMT(ExcelDna.Integration.ExcelMissing.Value, "0.00").Should().Be(ExcelError.Value);
+            StringUdf.UDF_STR_REV(ExcelDna.Integration.ExcelMissing.Value).Should().Be(ExcelError.Value);
         }
     }
 

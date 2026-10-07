@@ -855,8 +855,11 @@ cross_vs_csharp("DT.WOM", week_of_month(date(2024,6,15)), "DT.WOM")
 cross_vs_csharp("DT.WEEKDAYNAME", d1.strftime("%A"), "DT.WEEKDAYNAME")
 cross_vs_csharp("DT.WKDBTWN", workdays_between(date(2024,6,3),date(2024,6,7)), "DT.WKDBTWN")
 _ts = 1718409600
+# P0-4（2026-10-07）：DT.FROMUNIX 的契约是**墙上时刻**（手册：FROMUNIX(1704067200) → 2024-01-01），
+# 与 UNIXTS 互逆。旧实现用 .ToLocalTime()、此处用 datetime.fromtimestamp（本地时区）——
+# 两侧共享同一"本地时区"错误假设，故交叉验证当时无法发现该缺陷（UTC+8 下偏移 8 小时）。
 cross_vs_csharp("DT.FROMUNIX",
-                (datetime.fromtimestamp(_ts) - datetime(1899,12,30)).total_seconds() / 86400,
+                (datetime(1970,1,1) + timedelta(seconds=_ts) - datetime(1899,12,30)).total_seconds() / 86400,
                 "DT.FROMUNIX", tol=1e-9)
 # EASTER — cross-validated against C# DateTimeCore.Easter via CrossValRunner
 # R5-P3-12 (review-2026-09-06)：原 Python 侧逐变量镜像 Meeus/Jones/Butcher 算法（移植对照，

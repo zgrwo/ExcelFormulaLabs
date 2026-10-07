@@ -295,8 +295,9 @@ namespace ExcelFormulaLabs.DataToolkit
                     object v = data[r, c];
                     // Excel 错误单元格由封送层提供，类型全名与 Foundation.ExcelError
                     // 不同——必须走 IsExcelErrorValue 才按空值跳过
-                    // （Core 层零 Excel 依赖，只能按名识别）。
-                    if (v == null || v is DBNull || InputNormalizer.IsExcelEmptyValue(v) || InputNormalizer.IsExcelErrorValue(v)) continue;
+                    // （Core 层零 Excel 依赖，只能按名识别）。判定收敛到
+                    // InputNormalizer.IsBlankOrErrorCell（P2-4）。
+                    if (InputNormalizer.IsBlankOrErrorCell(v)) continue;
                     if (v is double or float) hasReal = true;
                     else if (v is int or long) hasInt = true;
                     else { hasReal = false; hasInt = false; break; }  // non-numeric → TEXT

@@ -349,9 +349,37 @@ namespace ExcelFormulaLabs.Analytics
         internal static double Determinant(double[,] m)
         {
             NumericGuard.AgainstNonFinite(m);
-            var r = Matrix<double>.Build.DenseOfArray(m).Determinant();
+            int n = m.GetLength(0);
+            if (n != m.GetLength(1))
+                throw new ArgumentException(
+                    $"Determinant requires a square matrix (got {n}×{m.GetLength(1)}).");
+            // 逐行尺度归一 + 对数域累积（P0-1）：单一 maxAbs 归一在此失效——
+            // diag(1e300,1e300,1e-300,1e-300) 归一后小元素下溢为 0，det(A′)=0，结果仍错
+            // （实测 NaN / 逆序 0.0，numpy 两序皆 1.0）。逐行归一后 A′ 元素 ∈ [-1,1]，
+            // det(A′) 有限；尺度因子在**对数域**相加，故只要求最终 det 可表示——
+            // 即使 Π sᵢ = 1e1200 本身不可表示，真值 1 依然算得出。
+            // det(A) = (Π sᵢ)·det(A′)；行缩放为正常数，不改变符号。
+            double logScale = 0;
+            var scaled = new double[n, n];
+            for (int r = 0; r < n; r++)
+            {
+                double s = 0;
+                for (int c = 0; c < n; c++)
+                {
+                    double a = Math.Abs(m[r, c]);
+                    if (a > s) s = a;
+                }
+                if (s == 0.0) return 0.0; // 存在全零行 → det 精确为 0
+                logScale += Math.Log(s);
+                for (int c = 0; c < n; c++) scaled[r, c] = m[r, c] / s;
+            }
+            double d = Matrix<double>.Build.DenseOfArray(scaled).Determinant();
+            if (d == 0.0) return 0.0;          // 归一后仍精确奇异
+            if (double.IsNaN(d)) return double.NaN;
+            double logAbs = Math.Log(Math.Abs(d)) + logScale;
             // 溢出真值不可表示 → NaN 封顶（模块约定，对齐 COND/Sum）。
-            return double.IsInfinity(r) ? double.NaN : r;
+            if (logAbs > 709.782712893384) return double.NaN; // ln(double.MaxValue)
+            return (d < 0 ? -1.0 : 1.0) * Math.Exp(logAbs);
         }
 
         internal static double[] Solve(double[,] A, double[] b)

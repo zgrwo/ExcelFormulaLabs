@@ -80,8 +80,40 @@ namespace ExcelFormulaLabs.DataToolkit
         internal static long DaysInMonth(long y, long m) { if (y < 1 || y > 9999) throw new ArgumentOutOfRangeException(nameof(y), $"Year {y} is outside the valid range [1, 9999]."); // 须补 [1,12] 校验：未校验时 (int)m 对 4294967297L 静默截断为 1 → DT.DIM(2026, 4294967297) 返回 31。
             if (m < 1 || m > 12) throw new ArgumentOutOfRangeException(nameof(m), $"Month {m} is outside the valid range [1, 12].");
             return DateTime.DaysInMonth((int)y, (int)m); }
-        internal static double UnixTimestamp(DateTime d) { AssertValidDate(d); return (d.ToUniversalTime() - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds; }
-        internal static DateTime FromUnixTimestamp(double ts) => new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(ts).ToLocalTime();
+        // Unix 纪元常量与"墙上时刻"语义（P0-4）：
+        // Excel 日期序列号经 DateTime.FromOADate 得到 Kind=Unspecified，**无时区语义**。
+        // 旧实现调 ToUniversalTime()，.NET 会把 Unspecified 当**本机时区**解释 → 同一序列号
+        // 在不同时区的机器上返回不同 Unix 时间戳（实测 UTC+8 下 2024-01-01 相差 28800s），
+        // 静默不一致且跨机器复算同一工作簿结果不同。
+        // 现按墙上时刻直接换算：SpecifyKind(Utc) 只重贴标签、不做偏移换算，
+        // 对 Kind=Utc 输入是恒等操作（既有 UnixTimestamp(Utc) 用例不受影响）。
+        private static readonly DateTime UnixEpoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        internal static double UnixTimestamp(DateTime d)
+        {
+            AssertValidDate(d);
+            // Kind 分派（CrossVal 反向抓出的回归）：**不能**一律 SpecifyKind——那会把
+            // 显式带 Kind=Local 的值重新贴标签。manifest 入参 "2024-01-01T00:00:00Z"
+            // 经 Dispatcher 转成 Local（墙上 08:00）后曾被误当 UTC，结果偏移 +8h，
+            // 被 Python 侧 UTC 口径对照抓出。
+            //   Utc         → 原样；
+            //   Local       → 尊重其时区标记，正常换算到 UTC；
+            //   Unspecified → Excel 序列号（FromOADate）无时区语义，按**墙上时刻**。
+            DateTime utc = d.Kind switch
+            {
+                DateTimeKind.Utc => d,
+                DateTimeKind.Local => d.ToUniversalTime(),
+                _ => DateTime.SpecifyKind(d, DateTimeKind.Utc),
+            };
+            return (utc - UnixEpoch).TotalSeconds;
+        }
+
+        /// <summary>
+        /// Unix 时间戳 → Excel 日期序列号。返回 Kind=Unspecified 的**墙上时刻**，
+        /// 与 <see cref="UnixTimestamp"/> 互逆（round-trip 精确）。
+        /// </summary>
+        internal static DateTime FromUnixTimestamp(double ts)
+            => DateTime.SpecifyKind(UnixEpoch.AddSeconds(ts), DateTimeKind.Unspecified);
         /// <summary>
         /// Date difference in the specified unit. "M" (months) and "Y" (years) use
         /// Excel DATEDIF complete-interval semantics: a month/year only counts when

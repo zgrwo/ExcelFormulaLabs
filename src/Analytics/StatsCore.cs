@@ -157,7 +157,11 @@ namespace ExcelFormulaLabs.Analytics
         internal static double Sum(double[] d)
         {
             if (d.Length == 0) return 0.0;
-            var r = d.Sum();
+            // 主路径用 Neumaier 补偿求和（P1-4）：朴素左折叠在灾难性抵消下**静默丢精度**
+            // （[1e16, 1, -1e16] 得 0.0，而 math.fsum 与 PIVOT.SUM 的 Neumaier 都得 1.0）——
+            // 库内原本只有 PivotCore 有补偿求和，同一名义运算两套精度标准。
+            // 溢出时（Neumaier 的补偿项会变成 Inf/NaN）仍走下方 maxAbs 归一化回退。
+            var r = NeumaierSum(d);
             if (!double.IsInfinity(r) && !double.IsNaN(r)) return r;
             // 顺序依赖溢出（R3-6）：朴素左折叠 [1e308, 1e308, -1e308] → Inf → NaN，而
             // 真值 1e308 可表示（交换顺序即正确）。主路径非有限时按 maxAbs 归一化求和
@@ -169,6 +173,26 @@ namespace ExcelFormulaLabs.Analytics
             for (int i = 0; i < d.Length; i++) s += d[i] / max;
             var scaled = s * max;
             return double.IsInfinity(scaled) ? double.NaN : scaled;
+        }
+
+        /// <summary>
+        /// Neumaier 补偿求和（Kahan 的改进版，误差项双向补偿）：比朴素折叠多一次
+        /// 比较与减法，结果对量级差异大的序列显著更准。
+        /// 注：DataToolkit 的 PivotCore 用 (sum, comp) 累加器对实现同一算法，
+        /// 形状不同（增量式 vs 批量）故未强行合并。
+        /// </summary>
+        private static double NeumaierSum(double[] d)
+        {
+            double sum = 0.0, comp = 0.0;
+            for (int i = 0; i < d.Length; i++)
+            {
+                double x = d[i];
+                double t = sum + x;
+                if (Math.Abs(sum) >= Math.Abs(x)) comp += (sum - t) + x;
+                else comp += (x - t) + sum;
+                sum = t;
+            }
+            return sum + comp;
         }
         /// <summary>
         /// Product of array elements. NaN/Inf input is guarded upstream by <see cref="AnalyticsHelpers.PrepV"/>.

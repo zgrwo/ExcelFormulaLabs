@@ -232,6 +232,19 @@ namespace ExcelFormulaLabs.Foundation
         }
 
         /// <summary>
+        /// True when a <b>cell value</b> carries no data: <c>null</c>, <see cref="DBNull"/>,
+        /// empty cell or Excel error。
+        /// 用于"跳过空白/错误单元格"的列扫描。与 <see cref="IsOmitted"/> 的区别：
+        /// 后者是**参数省略**语义（含 <c>ExcelMissing</c>、不含错误值），本方法反之。
+        /// 库内曾有三处手写等价判定（AnalyticsHelpers 表头/分组扫描、SqlCore 列类型推断），
+        /// 收敛为单一实现以防口径漂移。
+        /// </summary>
+        public static bool IsBlankOrErrorCell(object? value)
+        {
+            return value == null || value is DBNull || IsExcelEmptyValue(value) || IsExcelErrorValue(value);
+        }
+
+        /// <summary>
         /// Detect Excel error signals: Foundation <see cref="ExcelError"/> sentinel
         /// and <c>ExcelDna.Integration.ExcelError</c> (enum arriving from real Excel
         /// error cells) without a hard assembly reference.

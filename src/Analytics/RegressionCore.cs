@@ -69,7 +69,7 @@ namespace ExcelFormulaLabs.Analytics
             else { p = origP; Xaug = X; }
             var matX = Matrix<double>.Build.DenseOfArray(Xaug);
             var vecY = Vector<double>.Build.Dense(y);
-            return FitOLSCore(matX, vecY, n, p);
+            return FitOLSCore(matX, vecY, n, p, "OLS", addIntercept);
         }
 
         /// <summary>
@@ -79,7 +79,8 @@ namespace ExcelFormulaLabs.Analytics
         /// going through an intermediate managed array.
         /// </summary>
         private static Dictionary<string, object> FitOLSCore(
-            Matrix<double> matX, Vector<double> vecY, int n, int p, string op = "OLS")
+            Matrix<double> matX, Vector<double> vecY, int n, int p, string op = "OLS",
+            bool addIntercept = true)
         {
             // df 检查提前到 QR 之前：Thin QR 需要 n ≥ p（MathNet 对宽矩阵抛 NotSupportedException）。
             int df = n - p;
@@ -103,18 +104,33 @@ namespace ExcelFormulaLabs.Analytics
             var fitted = matX * beta;
             var residuals = vecY - fitted;
             double sse = residuals.DotProduct(residuals);
-            // TSS 用单遍中心化形式 Σ(y−ȳ)²：两遍公式 y'y−(Σy)²/n 在大均值 y（量级/散布比
-            // ≥1e12）时灾难性抵消，R² 静默错误（DoeAnalysisCore 同用稳定形式）。
-            double yMean = IncrementalMean(vecY);
-            double tss = 0;
-            for (int i = 0; i < n; i++) { double d = vecY[i] - yMean; tss += d * d; }
+            // TSS 定义随模型形式切换（P0-3，对齐 statsmodels/R 口径）：
+            //   含截距 → 中心化 TSS = Σ(y−ȳ)²（标准 R² 定义）；
+            //   无截距 → 非中心化 TSS = Σy²（无截距模型不含"被解释的均值"，用中心化形式会
+            //   与生态口径不一致，且可为负）。实测 X=[1;2;3], y=[1,2,4]：
+            //   中心化 → 0.923469387755102（旧实现），非中心化 → 0.9829931972789115（statsmodels）。
+            double tss;
+            if (addIntercept)
+            {
+                // 单遍中心化形式 Σ(y−ȳ)²：两遍公式 y'y−(Σy)²/n 在大均值 y（量级/散布比
+                // ≥1e12）时灾难性抵消，R² 静默错误（DoeAnalysisCore 同用稳定形式）。
+                double yMean = IncrementalMean(vecY);
+                tss = 0;
+                for (int i = 0; i < n; i++) { double d = vecY[i] - yMean; tss += d * d; }
+            }
+            else
+            {
+                tss = 0;
+                for (int i = 0; i < n; i++) tss += vecY[i] * vecY[i];
+            }
             if (double.IsNaN(tss) || double.IsInfinity(tss))
                 throw new ArgumentException(
                     $"Cannot fit {op}: total sum of squares is numerically unstable " +
                     "(response values too large for double precision).");
             if (tss == 0)  // 判据须精确零：Math.Abs(tss) < 1e-15 绝对阈值会把 1e-9 量纲 y 的 tss=2e-18 误判为常量响应抛错。TSS 是平方和（非负），真常量时精确为 0
-                throw new ArgumentException(
-                    $"Cannot fit {op}: total sum of squares is zero (constant response variable y).");
+                throw new ArgumentException(addIntercept
+                    ? $"Cannot fit {op}: total sum of squares is zero (constant response variable y)."
+                    : $"Cannot fit {op}: uncentered total sum of squares is zero (response variable y is identically zero).");
             double r2 = 1.0 - sse / tss;
             double adjR2 = 1.0 - (1.0 - r2) * (n - 1) / (double)df;
             double sigma2 = sse / df;
@@ -238,7 +254,7 @@ namespace ExcelFormulaLabs.Analytics
                 for (int j = 0; j < p; j++) matXw[i, j] = Xaug[i, j] * sw;
                 vecYw[i] = y[i] * sw;
             }
-            var result = FitOLSCore(matXw, vecYw, n, p, "WLS"); // Xw already has intercept column
+            var result = FitOLSCore(matXw, vecYw, n, p, "WLS", addIntercept); // Xw already has intercept column
             // Override residuals and fitted_values to ORIGINAL scale (coefficients are
             // identical on both scales; only the residual display scale differs).
             var beta = (double[])result["coefficients"];
@@ -263,7 +279,8 @@ namespace ExcelFormulaLabs.Analytics
             for (int i = 0; i < n; i++)
             {
                 sseW += wN[i] * residualsOrig[i] * residualsOrig[i];
-                double dev = y[i] - yMeanW;
+                // TSS 定义同 FitOLSCore（P0-3）：无截距用非中心化加权 Σw·y²。
+                double dev = addIntercept ? y[i] - yMeanW : y[i];
                 tssW += wN[i] * dev * dev;
             }
             if (double.IsNaN(tssW) || double.IsInfinity(tssW) ||
@@ -272,8 +289,9 @@ namespace ExcelFormulaLabs.Analytics
                     "Cannot fit WLS: weighted residual/total sum of squares is numerically unstable " +
                     "(response/weight values too large for double precision).");
             if (tssW == 0)
-                throw new ArgumentException(
-                    "Cannot fit WLS: weighted total sum of squares is zero (constant weighted response).");
+                throw new ArgumentException(addIntercept
+                    ? "Cannot fit WLS: weighted total sum of squares is zero (constant weighted response)."
+                    : "Cannot fit WLS: uncentered weighted total sum of squares is zero (weighted response is identically zero).");
             double r2W = 1.0 - sseW / tssW;
             // sse 对外契约 = Σw·resid²（原始权重）：归一化域结果乘回 wMax；真值不可表示
             // （wMax=1e308 且 sseW·wMax 溢出）→ NaN 封顶（模块约定）。
@@ -402,7 +420,12 @@ namespace ExcelFormulaLabs.Analytics
                 ["residuals"] = residuals.ToArray(),
                 ["fitted_values"] = fitted.ToArray(),
                 ["lambda"] = lambda,
-                ["n"] = (long)n, ["df"] = (long)p,
+                // P0-2：df 必须与 FitOLS/FitWLS 同语义（残差自由度 n−p），否则同一张
+                // REGRESS 报表里两个 df 含义相反（实测 n=5 含截距 p=3：OLS df=2 / Ridge df=3），
+                // 而 user-manual「REGRESS 报表字段」表把 RIDGE 的 df 明确列为"自由度
+                // （n − 变量数）"——旧实现（返回 p）与自家手册相悖。
+                // n ≤ p（岭回归的合法用法）时 df ≤ 0，如实给出以表明"无残差自由度"。
+                ["n"] = (long)n, ["df"] = (long)(n - p),
             };
         }
 
@@ -433,24 +456,47 @@ namespace ExcelFormulaLabs.Analytics
                         throw new ArgumentException(
                             $"Group {i} contains {(double.IsNaN(groups[i][j]) ? "NaN" : "Infinity")} at index {j}. ANOVA requires finite values.");
             }
-            var means = groups.Select(g => g.Average()).ToArray();
+            // 公共尺度预归一（P1-3）：ANOVA 的 F/p 对全体数据的公共正缩放不变，但朴素均值
+            // （LINQ Average 左折叠）在 1e308 量级溢出 → `means` 变 Inf → `(x−Inf)²` 变 Inf →
+            // 抛"输入过大"，而真值有限（scipy.stats.f_oneway 在同一输入下同样返回 NaN）。
+            // 库内 StatsCore.Mean/Sum 早已有缩放/补偿回退，此处口径分裂。
+            // 做法：全体先除 c=maxAbs 再算——缩放域内不溢出，F/p 无需还原；SS/MS 与
+            // group_means 按 c²/c 还原，不可表示则 NaN 封顶（与 Sum/Variance 同约定）。
+            double c = 0;
+            for (int i = 0; i < k; i++)
+                for (int j = 0; j < groups[i].Length; j++)
+                {
+                    double a = Math.Abs(groups[i][j]);
+                    if (a > c) c = a;
+                }
+            double invC = c > 0 ? 1.0 / c : 1.0;
+            var scaled = new double[k][];
+            var flatScaled = new List<double>();
+            for (int i = 0; i < k; i++)
+            {
+                scaled[i] = new double[groups[i].Length];
+                for (int j = 0; j < groups[i].Length; j++)
+                {
+                    scaled[i][j] = groups[i][j] * invC;
+                    flatScaled.Add(scaled[i][j]);
+                }
+            }
+            var meansScaled = scaled.Select(g => StatsCore.Mean(g)).ToArray();
             var counts = groups.Select(g => (long)g.Length).ToArray();
-            double grand = groups.SelectMany(g => g).Average();
+            double grand = StatsCore.Mean(flatScaled.ToArray());
             int totalN = groups.Sum(g => g.Length);
 
             double ssB = 0;
-            for (int i = 0; i < k; i++) ssB += counts[i] * Math.Pow(means[i] - grand, 2);
+            for (int i = 0; i < k; i++) ssB += counts[i] * Math.Pow(meansScaled[i] - grand, 2);
             double ssW = 0;
-            for (int i = 0; i < k; i++) ssW += groups[i].Sum(x => Math.Pow(x - means[i], 2));
+            for (int i = 0; i < k; i++) ssW += scaled[i].Sum(x => Math.Pow(x - meansScaled[i], 2));
 
             double dfB = k - 1, dfW = totalN - k;
             if (dfW <= 0)
                 throw new ArgumentException(
                     $"ANOVA requires at least 2 observations per group (df_within={dfW}).");
 
-            // 有限极大值（如 1e200）平方后仍可溢出为 Inf（输入虽已拒绝 NaN/Inf 仍需守卫）：
-            // 若守卫只查 `Math.Abs(ssW)<1e-15`，`Abs(Inf)<1e-15` 为 false → 绕过守卫 →
-            // f=Inf/Inf=NaN 静默泄漏（与 FitOLS/FitRidge 的 Inf 守卫不一致）。
+            // 有限极大值平方后仍可溢出（输入已拒绝 NaN/Inf 仍需守卫）；缩放域下不应到达。
             if (double.IsNaN(ssB) || double.IsInfinity(ssB) || double.IsNaN(ssW) || double.IsInfinity(ssW))
                 throw new ArgumentException(
                     "ANOVA failed: sums of squares are non-finite. Input values are too large in magnitude.");
@@ -467,6 +513,19 @@ namespace ExcelFormulaLabs.Analytics
             double msB = ssB / dfB, msW = ssW / dfW;
             double f = msB / msW;
             double p = FDistPValue(f, dfB, dfW);
+
+            // 还原到原始量纲：SS/MS × c²（c² 不可表示 → SS/MS 一律 NaN 封顶，F/p 仍有效）。
+            double c2 = c * c;
+            if (double.IsInfinity(c2))
+            {
+                ssB = double.NaN; ssW = double.NaN; msB = double.NaN; msW = double.NaN;
+            }
+            else
+            {
+                ssB *= c2; ssW *= c2; msB *= c2; msW *= c2;
+            }
+            var means = new double[k];
+            for (int i = 0; i < k; i++) means[i] = meansScaled[i] * c;
             // ssB/ssW 各自有限但之和可溢出 ±Inf → NaN 封顶（f_stat/p_value 已守卫；
             // 模块约定不向 Excel 泄漏 ±Inf）。
             double ssTotal = ssB + ssW;
