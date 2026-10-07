@@ -49,24 +49,35 @@ description: Excel-DNA 加载项开发全流程 — 创建、打包、测试、�
 三层双文件结构（Foundation → Analytics → DataToolkit），调用链和模块职责详见 [项目 skill](excel-dna-project.md#架构)。
 
 
-## 新 UDF 实现清单
+## 新 UDF 实现清单（ADR-0011：**声明不手写**）
 
 1. 在对应的 Core 类中实现 `internal static` 方法（纯逻辑，无 Excel 依赖）
-2. 在对应的 Udf 类中添加 `[ExcelFunction]` 包装方法，选择正确的 MapOver 变体
-3. 编写单元测试：标量、null、error 透传、数组、多参数尺寸不匹配
-4. 如果涉及统计函数，与 Python numpy/scipy 交叉验证
+2. 在 `udf-metadata/<X>Udf.json` 添加条目：函数名 / 描述 / 参数（名+描述+默认值）/ 分类 / `expr`
+   ——`expr` 就是原来手写方法体里 `WrapError(() => …)` 内的表达式，原样写进去
+3. 运行 `python tools/udfgen.py generate` 产出 `src/**/<X>Udf.g.cs`（**生成物，勿手改**）
+4. 编写单元测试：标量、null、error 透传、数组、多参数尺寸不匹配
+5. 如果涉及统计函数，与 Python numpy/scipy 交叉验证（`test_manifest.json` + `verify-manual.py`）
+6. `python tools/udfgen.py verify`（CI 门禁 `scripts/verify-udfgen.ps1` 同款）确认元数据 ↔ 生成物一致
+
+```jsonc
+// udf-metadata/StringUdf.json（节选）——手写的是这个
+{ "excel": "STR.REVERSE", "method": "UDF_STR_REV",
+  "desc": "Reverse a string character-wise",
+  "args": [{ "name": "text", "desc": "The text string to process",
+             "type": "object", "default": null, "pname": "t" }],
+  "expr": "ElementWiseMapper.MapOver<string, string>(t, StringCore.ReverseString)",
+  "generated": true }
+```
 
 ```csharp
-// Core (internal static, no Excel dependency)
-internal static string ReverseString(string t) { t ??= ""; var a = t.ToCharArray(); Array.Reverse(a); return new string(a); }
-
-// UDF ([ExcelFunction], public static object)
-[ExcelFunction(Name = "STR.REVERSE", Description = "Reverse a string character-wise.")]
-public static object UDF_STR_REV(
-    [ExcelArgument(Name = "text", Description = "The text string to process.")]
-    object t
-) => OutputWrapper.WrapError(() => ElementWiseMapper.MapOver<string, string>(t, StringCore.ReverseString));
+// 生成物（src/DataToolkit/StringUdf.g.cs，禁止手工修改）
+[ExcelFunction(Name = "STR.REVERSE", Description = "Reverse a string character-wise", Category = "String")] public static object UDF_STR_REV([ExcelArgument(Name = "text", Description = "The text string to process")] object t)
+    => OutputWrapper.WrapError(() => ElementWiseMapper.MapOver<string, string>(t, StringCore.ReverseString));
 ```
+
+> 需要分发层辅助方法（如 `M()`/`V()`）或语句体（`*_ASYNC`）时才手写 `*Udf.cs`：
+> 里面放 `public static partial class` + `private static` 助手，与生成物同名同命名空间即可。
+> **不要把 `[ExcelFunction]` 声明写回去**——门禁会因生成物与元数据不一致而 FAIL。
 
 ## 本项目常用命令
 

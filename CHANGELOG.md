@@ -41,6 +41,23 @@
 
 <!-- release-please 在下一次 Release PR 中把本版本区间内容归位到新版本条目 -->
 
+### Changed（2026-10-07 元数据化重构的流程债收尾）
+
+- **脚手架改为生成元数据**（`scripts/scaffold-udf.ps1`）：原先产出**手写** `[ExcelFunction]`
+  声明，与 ADR-0011"声明由元数据生成"直接冲突——会把新代码引向已废弃的做法。现改为：
+  生成 `{Name}Core.cs` + `udf-metadata/{Name}Udf.json` + `{Name}CoreTests.cs`，随后自动调用
+  `udfgen.py generate --only` 产出 `.g.cs`；元数据已存在时拒绝覆盖并提示直接编辑。
+  端到端实测：scaffold → 生成 4 个文件 → `dotnet build` 编译通过（探针文件已清理）。
+- **模板同步**：删除 `{Name}Udf.cs.template`（手写声明）与 `{Name}CrossVal.py.template`
+  （原流程要求"生成后手工合并再删除"，属自相矛盾），新增 `{Name}Udf.json.template`；
+  CrossVal 写法（manifest 条目 + `cross_check`/`check` 用法）并入 `templates/README.md`。
+- **Skill 更新**：`skills/excel-dna-addins.md` 的"新 UDF 实现清单"与
+  `skills/excel-dna-project.md` 的"UDF 声明规范"改为元数据形态（这两个 Skill 是改代码前
+  必读项，若不改会把人和 AI 引向手写声明）。
+- **文档对齐**：ADR-0011 决策 5 原先声称门禁"接入 `pre-commit` 与 CI"，实际只接了 CI——
+  改为明确**不接入 pre-commit**（避免把"提交前红线 6 项"扩成 7 项引发连串文档同步），
+  并补登本次遗漏的同步位置（templates / skills）；ADR-0003 的"同步位置"与演进节同步。
+
 ### Changed（2026-10-07 UDF 元数据化与源生成：ADR-0011）
 
 - **UDF 声明改为元数据生成**：新增单一真源 `udf-metadata/*.json`（19 份，覆盖全部 240 个函数）

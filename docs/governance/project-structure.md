@@ -179,9 +179,8 @@ ExcelFormulaLabs/
 │   ├── README.md
 │   └── NewModule/
 │       ├── {Name}Core.cs.template  #   含哨兵契约 + 异常过滤器
-│       ├── {Name}Udf.cs.template   #   含 MapOver 分发 + [ExcelFunction]
-│       ├── {Name}Core.Tests.cs.template  # 含边界/NaN/空值测试
-│       └── {Name}CrossVal.py.template    # 含 cross_check() 调用
+│       ├── {Name}Udf.json.template #   UDF 声明单一真源（ADR-0011；由 udfgen.py 生成 .g.cs）
+│       └── {Name}Core.Tests.cs.template  # 含边界/NaN/空值测试
 │
 ├── tools/                          # 代码生成/维护工具
 │   └── udfgen.py                   #   UDF 元数据化与源生成（extract/generate/migrate/verify，ADR-0011）

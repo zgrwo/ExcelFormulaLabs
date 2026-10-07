@@ -44,9 +44,10 @@ public static object UDF_STAT_MEAN([ExcelArgument(Name="number1", Description="A
 4. **行为不变由构造保证**：抽取阶段即做**逐函数 token 级往返校验**——把元数据重新生成回 C#，
    与原文**删除全部空白后逐字符比对**；不一致的函数**不进入生成集合**，保留手写，
    仅把其属性元数据纳入真源（供文档与门禁使用）。
-5. **一致性由"重生成即 diff"门禁强制**：新增 `scripts/verify-udfgen.ps1`（接入
-   `pre-commit` 与 CI）：重新生成并与入库文件比对，任何差异即 FAIL（既防手改生成物，
-   也防元数据与代码脱节）。
+5. **一致性由"重生成即 diff"门禁强制**：新增 `scripts/verify-udfgen.ps1`，接入
+   `ci.yml` 的 redline job：重新生成并与入库文件比对，任何差异即 FAIL（既防手改生成物，
+   也防元数据与代码脱节）。**不接入 `pre-commit-check.ps1`**——那会把文档中的
+   "提交前红线 6 项"扩成 7 项并引发连串同步；CI 每个 PR 都跑，本地按需手动运行即可。
 6. **`Category` 落地**：按模块赋予分类（如 `Statistics`、`Linear Algebra`、`Solve`），
    使 240 个函数在插入函数对话框中分组可寻。
 7. **api-reference 的参数列与函数名集合由元数据校验**（后续阶段：直接生成整张表）。
@@ -88,8 +89,10 @@ public static object UDF_STAT_MEAN([ExcelArgument(Name="number1", Description="A
 - **代价**：多一层生成步骤（改元数据后须跑 `udfgen.py generate`）；生成文件入库使
   `src/` 文件数 +19（须同步 `project-structure.md` 目录树）。
 - **需同步**：`AGENTS.md` 与 `docs/governance/project-structure.md` 双树（新增
-  `udf-metadata/`、`tools/` 与 19 个 `.g.cs`）、`CONTRIBUTING.md`（开发流程加生成步骤）、
-  新增 `scripts/verify-udfgen.ps1` 并接入 `pre-commit-check.ps1` 与 `ci.yml`。
+  `udf-metadata/`、`tools/` 与 17 个 `.g.cs`；`templates/` 模板清单随之更新）、
+  `CONTRIBUTING.md`（开发流程加生成步骤）、`skills/excel-dna-addins.md` 与
+  `skills/excel-dna-project.md`（声明模板改为元数据形态）、
+  新增 `scripts/verify-udfgen.ps1` 并接入 `ci.yml`（见决策 5：不接入 pre-commit）。
 
 ## 演进
 

@@ -1,6 +1,15 @@
-﻿# scaffold-udf.ps1 - UDF scaffold generator
-# Usage: .\scripts\scaffold-udf.ps1 -Module Analytics -Name Weather -Prefix WEATHER
-# Generates 4 files from templates/NewModule/ into the correct project directories.
+﻿# scaffold-udf.ps1 — UDF 模块脚手架（ADR-0011 流程）
+#
+# 用法：.\scripts\scaffold-udf.ps1 -Module Analytics -Name Weather -Prefix WEATHER
+#
+# 生成 3 个文件，然后调用 udfgen.py 产出 UDF 声明：
+#   src/<Module>/<Name>Core.cs              纯逻辑（哨兵契约 + 异常过滤器）
+#   udf-metadata/<Name>Udf.json             **UDF 声明的单一真源**
+#   tests/<Module>.Tests/<Name>CoreTests.cs 边界/NaN/空值测试
+#   → python tools/udfgen.py generate --only <Name>Udf
+#   src/<Module>/<Name>Udf.g.cs             生成物（勿手改）
+#
+# 不再生成手写的 *Udf.cs：属性与签名由元数据生成（见 ADR-0011）。
 
 param(
     [Parameter(Mandatory=$true)]
@@ -35,6 +44,14 @@ if ($Name -notmatch '^[A-Za-z][A-Za-z0-9]*$') {
 }
 if ($Prefix -notmatch '^[A-Za-z][A-Za-z0-9]*$') {
     Write-Host "[FAIL] -Prefix must be alphanumeric (UDF prefix, e.g. WEATHER, FIN): '$Prefix'"
+    exit 1
+}
+
+# 元数据类名含 $Name，若同名元数据已存在则拒绝——避免覆盖既有单一真源
+$metaPath = Join-Path (Join-Path $root "udf-metadata") "$Name`Udf.json"
+if (Test-Path $metaPath) {
+    Write-Host "[FAIL] 元数据已存在：$metaPath"
+    Write-Host "       新增函数请直接编辑该文件后运行：python tools/udfgen.py generate --only $Name`Udf"
     exit 1
 }
 
@@ -74,7 +91,6 @@ function Expand-Template {
     Write-Host "[OK]   $OutputFile"
 }
 
-# Generate 4 files
 Write-Host ""
 Write-Host "=== UDF Scaffold: $Name (Module=$Module, Prefix=$Prefix) ==="
 Write-Host ""
@@ -82,22 +98,34 @@ Write-Host ""
 Expand-Template (Join-Path $tplDir '{Name}Core.cs.template') `
                 (Join-Path $modulePath "$Name`Core.cs")
 
-Expand-Template (Join-Path $tplDir '{Name}Udf.cs.template') `
-                (Join-Path $modulePath "$Name`Udf.cs")
+Expand-Template (Join-Path $tplDir '{Name}Udf.json.template') `
+                $metaPath
 
 $testProject = Join-Path (Join-Path $root "tests") "$Module.Tests"
 Expand-Template (Join-Path $tplDir '{Name}Core.Tests.cs.template') `
                 (Join-Path $testProject "$Name`CoreTests.cs")
 
-# CrossVal template -> output as reference file in scripts/
-Expand-Template (Join-Path $tplDir '{Name}CrossVal.py.template') `
-                (Join-Path (Join-Path $root "scripts") "$Name`CrossVal.py")
+# 生成 UDF 声明（.g.cs）——属性/签名来自刚写出的元数据
+Write-Host ""
+Write-Host "-> python tools/udfgen.py generate --only $Name`Udf"
+Push-Location $root
+try {
+    & python (Join-Path $root "tools/udfgen.py") generate --only "$Name`Udf"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[WARN] 生成失败——请检查 $metaPath 的 JSON 结构后重跑 generate" -ForegroundColor Yellow
+    }
+} finally {
+    Pop-Location
+}
 
 Write-Host ""
 Write-Host "=== Done. Next steps: ==="
-Write-Host "  1. Implement core logic in src/$Module/$Name`Core.cs"
-Write-Host "  2. Adjust UDF signatures in src/$Module/$Name`Udf.cs"
-Write-Host "  3. Add tests in tests/$Module.Tests/$Name`CoreTests.cs"
-Write-Host "  4. Merge CrossVal entries into scripts/verify-manual.py, then DELETE scripts/$Name`CrossVal.py (standalone residue, not consumed by verify-manual)"
-Write-Host "  5. Run: dotnet build; dotnet test --filter $Name"
+Write-Host "  1. 实现纯逻辑：src/$Module/$Name`Core.cs（零 Excel 依赖）"
+Write-Host "  2. 调整 UDF 声明：编辑 udf-metadata/$Name`Udf.json（函数名/描述/参数/分类/expr）"
+Write-Host "     改完运行：python tools/udfgen.py generate"
+Write-Host "  3. 补测试：tests/$Module.Tests/$Name`CoreTests.cs（期望值必须硬编码，禁自校验）"
+Write-Host "  4. 数值类 UDF 补交叉验证：tests/CrossValRunner/test_manifest.json + scripts/verify-manual.py"
+Write-Host "     （写法见 templates/README.md；禁止 check(name, X, X)）"
+Write-Host "  5. 同步文档：api-reference.md / user-manual / project-structure.md 目录树"
+Write-Host "  6. 验证：python tools/udfgen.py verify; dotnet build; dotnet test --filter $Name"
 Write-Host ""

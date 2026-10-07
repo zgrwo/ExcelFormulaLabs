@@ -48,20 +48,30 @@ docs/
 
 部分统计 UDF（CVP/CV/PEAR/SPR/T1/T2）绕过 MapOver，用 `V()`/`M()` 直接调 Core。尺寸不匹配→`NaN`（非 ExcelError），`V(null)`→空数组→`NaN`。
 
-### UDF 声明规范
+### UDF 声明规范（ADR-0011：声明由元数据生成，**不手写**）
 
-所有 UDF 遵循统一声明模式。函数覆盖 6 种调度变体，以下是完整模板。
+手写的是 **Core 方法 + 元数据条目**；`[ExcelFunction]` 属性与签名由 `tools/udfgen.py`
+从 `udf-metadata/*.json` 生成到 `src/**/<X>Udf.g.cs`。函数覆盖 6 种调度变体，下面是基础形态。
 
 #### 基础模板（单参数 MapOver）
 
-```csharp
-[ExcelFunction(Name = "CATEGORY.NAME", Description = "一句话英文说明。")]
-public static object UDF_CAT_NAME(
-    [ExcelArgument(Name = "param_name", Description = "What this parameter is.")]
-    object input
-) => OutputWrapper.WrapError(() =>
-    ElementWiseMapper.MapOver<TIn, TOut>(input, SomeCore.Method));
+```jsonc
+// udf-metadata/<X>Udf.json —— 手写这个
+{ "excel": "CATEGORY.NAME", "method": "UDF_CAT_NAME",
+  "desc": "一句话英文说明。",
+  "args": [{ "name": "param_name", "desc": "What this parameter is.",
+             "type": "object", "default": null, "pname": "input" }],
+  "expr": "ElementWiseMapper.MapOver<TIn, TOut>(input, SomeCore.Method)",
+  "generated": true }
 ```
+
+```csharp
+// 生成物（src/**/<X>Udf.g.cs，禁止手工修改）
+[ExcelFunction(Name = "CATEGORY.NAME", Description = "一句话英文说明。", Category = "分类名")] public static object UDF_CAT_NAME([ExcelArgument(Name = "param_name", Description = "What this parameter is.")] object input)
+    => OutputWrapper.WrapError(() => ElementWiseMapper.MapOver<TIn, TOut>(input, SomeCore.Method));
+```
+
+改完元数据后运行 `python tools/udfgen.py generate`；一致性由 `scripts/verify-udfgen.ps1` 门禁强制。
 
 #### 完整声明要素
 

@@ -1,0 +1,45 @@
+{
+ "sourceFile": "src/{Module}/{Name}Udf.cs",
+ "generatedFile": "src/{Module}/{Name}Udf.g.cs",
+ "namespace": "ExcelFormulaLabs.{Module}",
+ "className": "{Name}Udf",
+ "category": "{Name}",
+ "usings": [
+  "ExcelDna.Integration",
+  "ExcelFormulaLabs.Foundation"
+ ],
+ "functions": [
+  {
+   "excel": "{PREFIX}.COMPUTE",
+   "method": "UDF_{PREFIX}_COMPUTE",
+   "desc": "{函数描述：一句话，会被 Excel 参数提示与 api-reference 引用}",
+   "args": [
+    {
+     "name": "value",
+     "desc": "{参数描述}",
+     "type": "object",
+     "default": null,
+     "pname": "value"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double, double>(value, {Name}Core.Compute)",
+   "generated": true
+  },
+  {
+   "excel": "{PREFIX}.PROCESS",
+   "method": "UDF_{PREFIX}_PROCESS",
+   "desc": "{函数描述}",
+   "args": [
+    {
+     "name": "text",
+     "desc": "{参数描述}",
+     "type": "object",
+     "default": null,
+     "pname": "text"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string, string>(text, {Name}Core.Process)",
+   "generated": true
+  }
+ ]
+}

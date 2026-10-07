@@ -32,8 +32,12 @@ Excel 传入参数形态复杂：标量、一维数组、二维区域、多参�
 
 - 正面：新 UDF 骨架由 scaffold-udf.ps1 自动生成，样板归零
 - 代价：ElementWiseMapper 是全项目最关键类，修改需全量回归（BenchmarkDotNet 有 MapOverBenchmarks 基线）
-- 同步位置：README 使用模式、skills/excel-dna-project.md、templates/NewModule/{Name}Udf.cs.template
+- 同步位置：README 使用模式、skills/excel-dna-project.md、templates/NewModule/{Name}Udf.json.template
 
 ## 演进
+
+- **2026-10-07**：UDF 声明改由元数据生成（[ADR-0011](0011-udf-metadata-and-codegen.md)）。
+  本 ADR 的 MapOver 抽象不变；受影响的是"同步位置"——模板从手写 `[ExcelFunction]` 改为
+  生成元数据条目（`{Name}Udf.json.template`）。
 
 - **2026-07**: 初始确认（v1.0.0）
