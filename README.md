@@ -5,7 +5,23 @@
 [![GitHub release](https://img.shields.io/github/v/release/zgrwo/ExcelFormulaLabs)](https://github.com/zgrwo/ExcelFormulaLabs/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**在 Excel 里直接用 `=STATS.MEAN()`、`=STR.REVERSE()`、`=JSON.PARSE()` 等函数。** 基于 C# 高性能实现，Python 级精度。net48 版本自带 IntelliSense 参数提示（net8.0 版本因 Excel-DNA 已知问题不提供，见[已知限制](#已知限制)），VBA 中可通过 `Application.Run` 直接调用。完整函数清单与数量见 [API 参考](docs/specification/api-reference.md)（数字唯一信源，测试状态见上方 CI 徽章）。
+**在 Excel 里直接用 `=SOLVE.INVERSE()`、`=DOE.PLAN()`、`=LINALG.SVD_S()`、`=STATS.MEAN()` 等 240 个函数。** 基于 C# 高性能实现，数值结果与 Python `scipy`/`numpy` 独立实现逐项交叉验证。net48 版本自带 IntelliSense 参数提示（net8.0 版本因 Excel-DNA 已知问题不提供，见[已知限制](#已知限制)），VBA 中可通过 `Application.Run` 直接调用。完整函数清单见 [API 参考](docs/specification/api-reference.md)（数字唯一信源，测试状态见上方 CI 徽章）。
+
+### 它补的是 Excel 内置函数做不到的事
+
+内置函数擅长**正向计算**（给定输入算输出）。本库的价值集中在三类内置能力覆盖不到的场景：
+
+| 场景 | 代表函数 | 内置能力的缺口 |
+| :--- | :--- | :--- |
+| **逆问题反解** | `SOLVE.INVERSE` · `SOLVE.PREDICT` · `SOLVE.QUALITY` | 给定目标结果反推输入参数。含多起点全局搜索、可达性判定、交叉验证选模型——不是「单变量求解」能覆盖的 |
+| **实验设计与分析** | `DOE.PLAN` · `DOE.ANALYZE` · `DOE.ANOVA` · `DOE.PARETO` | 全因子/正交设计矩阵生成 + 效应表、方差分析、Pareto 排序。Excel 完全没有 DOE 能力 |
+| **矩阵分解与回归诊断** | `LINALG.SVD_S` · `LINALG.EIGEN` · `LINALG.COND` · `LINALG.PINV` | 奇异值/特征分解、数值秩、条件数、伪逆。内置 `MINVERSE`/`MMULT` 只做稠密求逆与乘法 |
+
+> **关于重叠**：`STATS.*`、`STR.*`、`DT.*` 等确实与内置函数重叠（`STATS.MEAN` ≈ `AVERAGE`）。
+> 它们的意义是与其余模块共用**同一套契约**——统一的数组公式广播、空白/错误单元格语义、
+> 一致的错误码表，以及可用 VBA 批量调用的稳定入口——而不是替代内置函数。
+> 逐函数的对标关系与差异写在 [API 参考](docs/specification/api-reference.md) 的每一行里。
+
 
 ---
 

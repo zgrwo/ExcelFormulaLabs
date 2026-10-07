@@ -7,7 +7,24 @@
 [![GitHub release](https://img.shields.io/github/v/release/zgrwo/ExcelFormulaLabs)](https://github.com/zgrwo/ExcelFormulaLabs/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Use functions like `=STATS.MEAN()`, `=STR.REVERSE()`, `=JSON.PARSE()` directly in Excel.** Built on a high-performance C# implementation with Python-level precision. The net48 build ships with IntelliSense parameter hints (the net8.0 build does not, due to a known Excel-DNA issue — see [Known Limitations](#known-limitations)), and all functions can be called directly from VBA via `Application.Run`. See the [API Reference](docs/specification/api-reference.md) for the complete function list and count (the single source of truth for numbers; test status is shown in the CI badges above).
+**Use functions like `=SOLVE.INVERSE()`, `=DOE.PLAN()`, `=LINALG.SVD_S()` and `=STATS.MEAN()` — 240 of them — directly in Excel.** Built on a high-performance C# implementation, with every numerical result cross-validated against independent Python `scipy`/`numpy` implementations. The net48 build ships with IntelliSense parameter hints (the net8.0 build does not, due to a known Excel-DNA issue — see [Known Limitations](#known-limitations)), and all functions can be called directly from VBA via `Application.Run`. See the [API Reference](docs/specification/api-reference.md) for the complete function list (the single source of truth for numbers; test status is shown in the CI badges above).
+
+### What it adds that Excel's built-ins cannot do
+
+Built-in functions excel at **forward computation** (given inputs, produce outputs). The value here is concentrated in three areas built-ins do not cover:
+
+| Area | Representative functions | The gap in built-in capability |
+| :--- | :--- | :--- |
+| **Inverse-problem solving** | `SOLVE.INVERSE` · `SOLVE.PREDICT` · `SOLVE.QUALITY` | Work backwards from a target result to the input parameters. Multi-start global search, reachability checks and cross-validated model selection — not something Goal Seek covers |
+| **Design of experiments** | `DOE.PLAN` · `DOE.ANALYZE` · `DOE.ANOVA` · `DOE.PARETO` | Full-factorial / orthogonal design-matrix generation plus effect tables, ANOVA and Pareto ranking. Excel has no DOE capability at all |
+| **Matrix decomposition & regression diagnostics** | `LINALG.SVD_S` · `LINALG.EIGEN` · `LINALG.COND` · `LINALG.PINV` | Singular values, eigendecomposition, numerical rank, condition number, pseudo-inverse. Built-in `MINVERSE`/`MMULT` only do dense inversion and multiplication |
+
+> **On overlap**: `STATS.*`, `STR.*`, `DT.*` and friends do overlap with built-ins (`STATS.MEAN` ≈ `AVERAGE`).
+> Their point is to share **one contract** with the rest of the library — uniform array-formula broadcasting,
+> consistent blank/error-cell semantics, one error-code table, and a stable entry point callable in bulk from VBA —
+> not to replace built-ins. Per-function equivalences and differences are documented row by row in the
+> [API Reference](docs/specification/api-reference.md).
+
 
 ---
 
