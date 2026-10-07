@@ -512,4 +512,24 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             }
         }
     }
+
+    /// <summary>
+    /// 沙箱"默认关闭"必须对用户可见（诚信要求，非安全加固）。
+    /// 这里只钉住文案里的**事实**：出厂为 null、唯一开启路径、进程内不可切换、指向 SECURITY.md。
+    /// 文件追加本身是 I/O 副作用（写入真实 %LOCALAPPDATA%），不在单元测试里制造日志噪声。
+    /// </summary>
+    public class SandboxStatusTests
+    {
+        [Fact]
+        public void Disabled_notice_states_default_off_and_the_only_enable_path()
+        {
+            var notice = SandboxStatus.BuildDisabledNotice();
+            notice.Should().Contain("SandboxRoot = null");
+            notice.Should().Contain("DISABLED");
+            notice.Should().Contain("FileSystemCore.Initialize(new SandboxConfig(");
+            notice.Should().Contain("immutable per process");   // 无运行时开关
+            notice.Should().Contain("SECURITY.md");
+            SandboxStatus.BuildStatusBarText().Should().Contain("沙箱未启用");
+        }
+    }
 }

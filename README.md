@@ -143,14 +143,25 @@ Win10/11 自带 .NET Framework 4.8，直接加载 net48 版本的 `.xll`：
 
 ### 文件系统沙箱
 
-> ⚠️ **重要**：`FS.*` 函数默认**无路径限制**（`SandboxRoot` 为 `null`），可访问任意文件系统路径。
-> 若分发给不受信任的用户，请务必在 `AddIn.cs` 的 `AutoOpen()` 中启用沙箱：
+> ⚠️ **重要**：`FS.*` 函数出厂**默认无路径限制**（`SandboxRoot` 为 `null`，`ValidatePath` 空转），
+> 可访问任意文件系统路径。这是产品决策，**不是**"已受保护"。
+
+启用沙箱**只能在构建期**（配置为不可变 record，无运行时开关/环境变量/注册表项）：
+在 `src/DataToolkit/AddIn.cs` 的 `AutoOpen()` 中按注释示例加入调用并填入沙箱根目录，然后重新构建 XLL。
 
 ```csharp
 FileSystemCore.Initialize(new SandboxConfig(@"C:\Users\Public\Documents"));
 ```
 
-配置为不可变 record，启动时一次性设定，消除运行时竞态。越界访问返回 `#VALUE!`。沙箱支持 NTFS 重解析点（junctions/symlinks）逐段检查。
+越界访问返回 `#VALUE!`。沙箱支持 NTFS 重解析点（junctions/symlinks）逐段检查。
+
+**如何知道当前处于哪种状态**（每次加载时写入，无需打开调试器）：
+
+- 日志文件：`%LOCALAPPDATA%\ExcelFormulaLabs\logs\sandbox-status.log`（追加，含时间戳；
+  超过 1 MB 轮转为 `.1`；写入失败时静默，绝不影响 Excel 启动）
+- Excel 状态栏：加载时一次性提示（非阻塞、无对话框）
+
+两条通道报告的事实与本节、[SECURITY.md § File System Sandbox (default OFF)](SECURITY.md#file-system-sandbox-default-off) 一致。
 
 ### SQL 注入防护
 

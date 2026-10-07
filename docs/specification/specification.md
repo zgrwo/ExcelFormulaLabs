@@ -40,7 +40,7 @@
 | JSON/XML | JSON.*/XML.* | 8 | DataToolkit | 解析/XPath查询 |
 | 透视表 | PIVOT.* | 4 | DataToolkit | 透视/逆透视/分组聚合/交叉连接 |
 | SQL | SQL.* | 3 | DataToolkit | 对Excel区域写SQL查询 |
-| 文件系统 | FS.* | 22 | DataToolkit | 读写文件/列目录（沙箱保护） |
+| 文件系统 | FS.* | 22 | DataToolkit | 读写文件/列目录（沙箱**默认关闭**，见 §4.2） |
 | 范围导出 | RANGE.* | 9 | DataToolkit | 导出HTML/JSON/MD/CSV |
 
 ### 2.2 关键技术特性
@@ -83,14 +83,20 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 
 ### 4.1 测试体系
 
-- 2,887 个 [Fact] 与 19 个 [Theory]（xUnit + FluentAssertions；2026-10-07 实测回填：Foundation 434 + Analytics 924 + DataToolkit 1,529；含安全回归子集与审查缺陷复现回归、[Theory] 哨兵参数化用例。verify-docs 检查 20 强制这些声明 == tests/**/*.cs 实测计数）
+- 2,898 个 [Fact] 与 19 个 [Theory]（xUnit + FluentAssertions；实测回填：Foundation 436 + Analytics 926 + DataToolkit 1,536；含安全回归子集与审查缺陷复现回归、hasHeaders 表头契约行为用例（Foundation/Analytics/DataToolkit 三模块成对覆盖）、沙箱默认关闭文案守卫、[Theory] 哨兵参数化用例。verify-docs 检查 20 强制这些声明 == tests/**/*.cs 实测计数）
 - Python 交叉验证（scipy/numpy 独立计算，容差 1e-10）
 - 手册示例验证（verify-manual.py 全 UDF 覆盖）
 - XLL 加载/卸载自动化测试
 
 ### 4.2 安全规格
 
-- 文件系统沙箱（SandboxRoot + 重解析点逐段检查）
+- 文件系统沙箱（SandboxRoot + 重解析点逐段检查）——**出厂默认关闭**：`SandboxRoot` 为 `null`
+  时 `ValidatePath` 不做任何沙箱校验，`FS.*` 不受路径限制（`..` 穿越与 junction/symlink 拦截同样
+  不生效）。启用方式只有一条：在 `src/DataToolkit/AddIn.cs` 的 `AutoOpen()` 中调用
+  `FileSystemCore.Initialize(new SandboxConfig("<沙箱根目录>"))` 并重新构建 XLL
+  （`SandboxConfig` 进程内不可变，无运行时开关，见 ADR-0005）。该状态在每次加载时由
+  `src/DataToolkit/SandboxStatus.cs` 写入 `%LOCALAPPDATA%\ExcelFormulaLabs\logs\sandbox-status.log`
+  并在 Excel 状态栏一次性提示（非阻塞、无对话框）——文档承诺与出厂行为因此不会静默背离。
 - SQL 参数化（列名消毒 + 参数绑定）
 - 正则超时（5 秒防 ReDoS）
 - 异常过滤器（排除 OOM/StackOverflow/AccessViolation）
@@ -100,6 +106,8 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 - IntelliSense 仅限 net48（Excel-DNA Issue #343）
 - MathNet QR 不支持宽矩阵 m<n（宽矩阵输入显式抛 NotSupportedException 并引导 SVD/转置；零填充方案已废弃——会产生静默错误结果）
 - 双加载项同时卸载需逐一操作
+- `FS.*` 沙箱默认关闭且无运行时开关：以当前发行物直接使用时，路径校验（`ValidatePath`）为
+  空转，安全边界由**用户自行在构建期启用**决定——详见 SECURITY.md § File System Sandbox (default OFF)
 
 ## 5. 历史演化摘要
 

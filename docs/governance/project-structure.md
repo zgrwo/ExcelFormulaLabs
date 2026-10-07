@@ -157,6 +157,7 @@ ExcelFormulaLabs/
 │   │   ├── DataToolkit.csproj
 │   │   ├── packages.lock.json      #     依赖锁定（CI 强制 locked mode）
 │   │   ├── AddIn.cs                #     AutoOpen/AutoClose
+│   │   ├── SandboxStatus.cs         #     沙箱状态日志通道（默认关闭可见化，不改变默认行为）
 │   │   ├── NativeDllStore.cs        #     原生 DLL 内容寻址提取（SHA-256 + 原子替换）
 │   │   ├── StringUdf.g.cs / DateTimeUdf.g.cs / RegexUdf.g.cs / ArrayUdf.g.cs / DictSetUdf.g.cs / JsonXmlUdf.g.cs / PivotUdf.g.cs / SqlUdf.g.cs / FileSystemUdf.g.cs / RangeExportUdf.g.cs  # 由 udf-metadata/*.json 生成（ADR-0011，勿手改）
 │   │   ├── StringCore.cs / StringUdf.cs       # STR.*

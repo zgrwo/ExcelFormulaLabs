@@ -101,25 +101,60 @@ namespace ExcelFormulaLabs.DataToolkit
                     $"[AddIn] LoadLibrary 失败 (err {Marshal.GetLastWin32Error()}): {path}");
         }
 
+        /// <summary>
+        /// 沙箱出厂默认关闭（<c>SandboxConfig(null)</c>，FS.* 无路径限制）。此处**不启用**它
+        /// ——启用会打断既有用户的工作流；只把这一事实送到用户看得见的地方。
+        /// </summary>
+        /// <remarks>
+        /// <b>这是"让状态可见"，不是"启用沙箱"。</b>要真正启用，须在 <see cref="AutoOpen"/> 中按下面
+        /// 的示例显式加入调用并重新构建 XLL（<c>SandboxConfig</c> 进程内不可变，无运行时开关，见 ADR-0005）：
+        /// <code>
+        /// FileSystemCore.Initialize(new SandboxConfig(Path.Combine(
+        ///     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        ///     "ExcelFormulaLabs", "sandbox")));
+        /// </code>
+        /// 可见通道见 <see cref="ReportSandboxStatus"/>。
+        /// </remarks>
         public void AutoOpen()
         {
             PreLoadNativeDependencies();
-            // 沙箱默认未启用（SandboxConfig(null)，FS.* 不受限）。
-            // 产品决策点：如需默认受限，改为在此调用
-            //   FileSystemCore.Initialize(new SandboxConfig(Path.Combine(
-            //       Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            //       "ExcelFormulaLabs", "sandbox")));
-            // 未启用时输出警告。注意：Trace.WriteLine 默认无 TraceListener，
-            // 仅调试器/ETW 可见，对 Excel 终端用户不可见——用户警示由 README § 文件系统沙箱 与 SECURITY.md 承担。
-            if (FileSystemCore.SandboxRoot == null)
-            {
-                System.Diagnostics.Trace.WriteLine(
-                    "[FileSystemCore] ⚠ SandboxRoot is null — FS.* file operations are UNRESTRICTED (debug-only; " +
-                    "user guidance: README § 文件系统沙箱).");
-            }
+            ReportSandboxStatus();
 #if NET48
             ExcelAsyncUtil.QueueAsMacro(() => IntelliSenseServer.Install());
 #endif
+        }
+
+        /// <summary>
+        /// 沙箱未启用时，把该状态推送到两个**非阻塞**通道：
+        /// ① <c>%LOCALAPPDATA%\ExcelFormulaLabs\logs\sandbox-status.log</c>——追加、有真实消费者、
+        ///    可事后审计（权威记录）；
+        /// ② Excel 状态栏一次性提示——不打断工作流、无需确认。
+        /// 刻意不用 <c>MessageBox</c>：每次加载都弹窗会烦扰用户，且阻塞 Excel 启动宏。
+        /// </summary>
+        private static void ReportSandboxStatus()
+        {
+            if (FileSystemCore.SandboxRoot != null) return; // 已启用 → 无需提示
+
+            string notice = SandboxStatus.BuildDisabledNotice();
+            System.Diagnostics.Trace.WriteLine(notice); // 保留调试器/ETW 通道（不再作为唯一通道）
+            bool logged = SandboxStatus.TryAppend(notice);
+
+            // 状态栏必须等 Excel 就绪后再设，否则 AutoOpen 期间调用 COM 会失败。
+            string statusBarText = SandboxStatus.BuildStatusBarText();
+            ExcelAsyncUtil.QueueAsMacro(() =>
+            {
+                try
+                {
+                    dynamic? app = ExcelDnaUtil.Application;
+                    if (app != null) app.StatusBar = statusBarText;
+                }
+                catch (Exception ex) when (ExceptionFilters.IsCatchable(ex))
+                {
+                    // 尽力而为：非 Excel 宿主/Excel 正在关闭时静默降级，日志文件仍是权威记录。
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[AddIn] 状态栏提示失败（不影响加载项）: {ex.Message} (logged={logged})");
+                }
+            });
         }
 
         public void AutoClose()
