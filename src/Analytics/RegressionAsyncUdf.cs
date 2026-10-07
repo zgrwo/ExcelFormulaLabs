@@ -24,7 +24,7 @@ namespace ExcelFormulaLabs.Analytics
         private static string AsyncKeyV(double[] v) => LinalgCore.VectorHash(v);
 
         [ExcelFunction(Name = "REGRESS.OLS_ASYNC",
-          Description = "OLS regression, computed asynchronously on a background thread.")]
+          Description = "OLS regression, computed asynchronously on a background thread.", Category = "Regression")]
         public static object UDF_REGRESS_OLS_ASYNC(
             [ExcelArgument(Name = "known_y", Description = "The Y variable range (dependent variable)")] object y,
             [ExcelArgument(Name = "known_x", Description = "The X variable range (independent variables)")] object X)
@@ -39,7 +39,7 @@ namespace ExcelFormulaLabs.Analytics
         }
 
         [ExcelFunction(Name = "REGRESS.WLS_ASYNC",
-          Description = "Weighted Least Squares, computed asynchronously on a background thread.")]
+          Description = "Weighted Least Squares, computed asynchronously on a background thread.", Category = "Regression")]
         public static object UDF_REGRESS_WLS_ASYNC(
             [ExcelArgument(Name = "known_y", Description = "The Y variable range (dependent variable)")] object y,
             [ExcelArgument(Name = "known_x", Description = "The X variable range (independent variables)")] object X,
@@ -56,7 +56,7 @@ namespace ExcelFormulaLabs.Analytics
         }
 
         [ExcelFunction(Name = "REGRESS.RIDGE_ASYNC",
-          Description = "Ridge regression, computed asynchronously on a background thread.")]
+          Description = "Ridge regression, computed asynchronously on a background thread.", Category = "Regression")]
         public static object UDF_REGRESS_RIDGE_ASYNC(
             [ExcelArgument(Name = "known_y", Description = "The Y variable range (dependent variable)")] object y,
             [ExcelArgument(Name = "known_x", Description = "The X variable range (independent variables)")] object X,
