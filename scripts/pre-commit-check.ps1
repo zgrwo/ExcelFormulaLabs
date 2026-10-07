@@ -204,19 +204,34 @@ if ($leaked.Count -gt 0) {
 Write-Host ""
 Write-Host "[4/6] Checking Core layer isolation ..."
 
-# bin/obj 排除（与检查 5 口径一致）。名字通配 *Core.cs 的
-# 局限（Core 逻辑放非 *Core.cs 文件会漏网）为已知边界。
-$coreFiles = Get-ChildItem -Path "$RepoRoot/src" -Recurse -Filter "*Core.cs" -ErrorAction SilentlyContinue |
+# bin/obj 排除（与检查 5 口径一致）。
+# 旧实现只扫 *Core.cs——Core 逻辑一旦放在 AnalyticsHelpers.cs 这类非 *Core 文件即整层绕过
+#（2026-10-07 审查记为"已知边界"，实测 src/ 下有 17 个 *Core.cs 在扫描范围内、另有 17 个
+#  同样属于 Core/工具层的文件完全不在范围内）。改为**白名单豁免 + 全量扫描**：
+# 合法引用 ExcelDna 的只有三类——UDF 声明（UDF 层职责）、AddIn.cs（加载项入口）、
+# src/Foundation/**（共享适配层，ExcelError/ExcelEmpty/InputNormalizer 按设计面向 Excel）。
+# 其余任何 src/**/*.cs 引用 ExcelDna 即越层。
+$adapterAllowed = @(
+    '^src/Foundation/',      # 共享适配层（设计如此）
+    '/AddIn\.cs$',           # 加载项入口
+    'Udf\.g\.cs$',           # UDF 生成物
+    'Udf\.cs$'               # UDF 手写（含 *AsyncUdf.cs）
+)
+$allSrcFiles = Get-ChildItem -Path "$RepoRoot/src" -Recurse -Filter "*.cs" -ErrorAction SilentlyContinue |
     Where-Object { $_.FullName -notmatch "[/\\](obj|bin)[/\\]" }
+$coreFiles = $allSrcFiles | Where-Object {
+    $rel = ($_.FullName.Substring($RepoRoot.Length) -replace '\\', '/').TrimStart('/')
+    -not ($adapterAllowed | Where-Object { $rel -match $_ })
+}
 $coreHits = $coreFiles | Select-String -Pattern "ExcelDna"
 
 if ($coreHits) {
     foreach ($m in $coreHits) {
         $violations += "CORE_EXCEL_REF: $($m.Path):$($m.LineNumber)"
     }
-    Write-Host "  [FAIL] Found $($coreHits.Count) ExcelDna refs in Core" -ForegroundColor Red
+    Write-Host "  [FAIL] Found $($coreHits.Count) ExcelDna refs outside the adapter layer" -ForegroundColor Red
 } else {
-    Write-Host "  [OK] Core layer has zero Excel dependency" -ForegroundColor Green
+    Write-Host "  [OK] Core layer has zero Excel dependency (scanned $($coreFiles.Count)/$($allSrcFiles.Count) files; UDF 层/AddIn/Foundation 豁免)" -ForegroundColor Green
 }
 
 # -- Check 5: NaN/Inf guard in Core files --

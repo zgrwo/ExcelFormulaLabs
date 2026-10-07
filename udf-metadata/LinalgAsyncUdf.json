@@ -24,7 +24,10 @@
     }
    ],
    "generated": false,
-   "handReason": "statement-body"
+   "handReason": "statement-body",
+   "returns": "double[,]",
+   "doc": "SVD 左奇异向量 U（异步，大矩阵不阻塞 UI）",
+   "doc_section": "LINALG"
   },
   {
    "excel": "LINALG.SVD_S_ASYNC",
@@ -40,7 +43,10 @@
     }
    ],
    "generated": false,
-   "handReason": "statement-body"
+   "handReason": "statement-body",
+   "returns": "double[]",
+   "doc": "SVD 奇异值 S（异步）",
+   "doc_section": "LINALG"
   },
   {
    "excel": "LINALG.SVD_VT_ASYNC",
@@ -56,7 +62,10 @@
     }
    ],
    "generated": false,
-   "handReason": "statement-body"
+   "handReason": "statement-body",
+   "returns": "double[,]",
+   "doc": "SVD 右奇异向量转置 Vt（异步）",
+   "doc_section": "LINALG"
   },
   {
    "excel": "LINALG.QR_Q_ASYNC",
@@ -72,7 +81,10 @@
     }
    ],
    "generated": false,
-   "handReason": "statement-body"
+   "handReason": "statement-body",
+   "returns": "double[,]",
+   "doc": "QR 分解正交矩阵 Q（异步）",
+   "doc_section": "LINALG"
   },
   {
    "excel": "LINALG.QR_R_ASYNC",
@@ -88,7 +100,10 @@
     }
    ],
    "generated": false,
-   "handReason": "statement-body"
+   "handReason": "statement-body",
+   "returns": "double[,]",
+   "doc": "QR 分解上三角矩阵 R（异步）",
+   "doc_section": "LINALG"
   },
   {
    "excel": "LINALG.EIGEN_ASYNC",
@@ -104,7 +119,10 @@
     }
    ],
    "generated": false,
-   "handReason": "statement-body"
+   "handReason": "statement-body",
+   "returns": "double[]",
+   "doc": "特征值（异步，要求对称矩阵）",
+   "doc_section": "LINALG"
   },
   {
    "excel": "LINALG.SOLVE_ASYNC",
@@ -127,7 +145,10 @@
     }
    ],
    "generated": false,
-   "handReason": "statement-body"
+   "handReason": "statement-body",
+   "returns": "double[]",
+   "doc": "解线性方程组 Ax=b（异步）",
+   "doc_section": "LINALG"
   },
   {
    "excel": "LINALG.CHOLESKY_ASYNC",
@@ -143,7 +164,10 @@
     }
    ],
    "generated": false,
-   "handReason": "statement-body"
+   "handReason": "statement-body",
+   "returns": "double[,]",
+   "doc": "Cholesky 分解（异步）",
+   "doc_section": "LINALG"
   },
   {
    "excel": "LINALG.PINV_ASYNC",
@@ -159,7 +183,10 @@
     }
    ],
    "generated": false,
-   "handReason": "statement-body"
+   "handReason": "statement-body",
+   "returns": "double[,]",
+   "doc": "Moore-Penrose 伪逆（异步）",
+   "doc_section": "LINALG"
   }
  ]
 }

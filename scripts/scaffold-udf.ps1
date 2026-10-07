@@ -1,4 +1,4 @@
-﻿# scaffold-udf.ps1 — UDF 模块脚手架（ADR-0011 流程）
+# scaffold-udf.ps1 — UDF 模块脚手架（ADR-0011 流程）
 #
 # 用法：.\scripts\scaffold-udf.ps1 -Module Analytics -Name Weather -Prefix WEATHER
 #
@@ -105,17 +105,25 @@ $testProject = Join-Path (Join-Path $root "tests") "$Module.Tests"
 Expand-Template (Join-Path $tplDir '{Name}Core.Tests.cs.template') `
                 (Join-Path $testProject "$Name`CoreTests.cs")
 
-# 生成 UDF 声明（.g.cs）——属性/签名来自刚写出的元数据
-Write-Host ""
-Write-Host "-> python tools/udfgen.py generate --only $Name`Udf"
-Push-Location $root
-try {
-    & python (Join-Path $root "tools/udfgen.py") generate --only "$Name`Udf"
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "[WARN] 生成失败——请检查 $metaPath 的 JSON 结构后重跑 generate" -ForegroundColor Yellow
+# 生成 UDF 声明（.g.cs）——属性/签名来自刚写出的元数据。
+# tools/udfgen.py 不存在时**只告警不失败**：模板落盘是本脚本的核心职责，生成是便利步骤
+# （治理自测的临时夹具只复制 scripts/ 与 templates/，不含 tools/）。
+$udfgen = Join-Path (Join-Path $root "tools") "udfgen.py"
+if (Test-Path $udfgen) {
+    Write-Host ""
+    Write-Host "-> python tools/udfgen.py generate --only $Name`Udf"
+    Push-Location $root
+    try {
+        & python $udfgen generate --only "$Name`Udf"
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[WARN] 生成失败——请检查 $metaPath 的 JSON 结构后重跑 generate" -ForegroundColor Yellow
+        }
+    } finally {
+        Pop-Location
     }
-} finally {
-    Pop-Location
+} else {
+    Write-Host ""
+    Write-Host "[SKIP] 未找到 tools/udfgen.py，跳过 UDF 声明生成（元数据已写出：$metaPath）" -ForegroundColor Yellow
 }
 
 Write-Host ""

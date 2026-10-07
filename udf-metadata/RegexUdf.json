@@ -39,7 +39,10 @@
     }
    ],
    "expr": "Budgeted(()=>ElementWiseMapper.MapOverMulti<string,string,bool>(i,p,(x,y)=>RegexCore.RegexTest(x,y,InputNormalizer.ToBool(ic, true))))",
-   "generated": true
+   "generated": true,
+   "returns": "bool",
+   "doc": "是否匹配正则",
+   "doc_section": "REGEX"
   },
   {
    "excel": "REGEX.COUNT",
@@ -69,7 +72,10 @@
     }
    ],
    "expr": "Budgeted(()=>ElementWiseMapper.MapOverMulti<string,string,long>(i,p,(x,y)=>RegexCore.RegexCount(x,y,InputNormalizer.ToBool(ic, true))))",
-   "generated": true
+   "generated": true,
+   "returns": "long",
+   "doc": "非重叠匹配次数",
+   "doc_section": "REGEX"
   },
   {
    "excel": "REGEX.MATCH",
@@ -106,7 +112,10 @@
     }
    ],
    "expr": "Budgeted(()=>ElementWiseMapper.MapOverMulti<string,string,string>(i,p,(x,y)=>RegexCore.RegexMatch(x,y,InputNormalizer.ToLong(n),InputNormalizer.ToBool(ic, true))))",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "第 instance_num 个匹配子串。1=第一个（默认），-1=最后一个，无匹配或越界返回 `\"\"`",
+   "doc_section": "REGEX"
   },
   {
    "excel": "REGEX.MATCHALL",
@@ -136,7 +145,10 @@
     }
    ],
    "expr": "Budgeted(()=>RegexCore.RegexMatchAll(InputNormalizer.ToString(i),InputNormalizer.ToString(p),InputNormalizer.ToBool(ic, true)))",
-   "generated": true
+   "generated": true,
+   "returns": "string[]",
+   "doc": "所有正则匹配为数组。**不支持数组公式**（直接处理标量文本）",
+   "doc_section": "REGEX"
   },
   {
    "excel": "REGEX.REPLACE",
@@ -180,7 +192,10 @@
     }
    ],
    "expr": "Budgeted(()=>ElementWiseMapper.MapOver<string,string>(i,s=>RegexCore.RegexReplace(s,InputNormalizer.ToString(p),InputNormalizer.ToString(r),InputNormalizer.ToLong(n),InputNormalizer.ToBool(ic, true))))",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "替换第 instance_num 个正则匹配。0/省略=全部（默认），1=第一个，-1=最后一个",
+   "doc_section": "REGEX"
   },
   {
    "excel": "REGEX.SPLIT",
@@ -217,7 +232,10 @@
     }
    ],
    "expr": "Budgeted(()=>RegexCore.RegexSplit(InputNormalizer.ToString(i),InputNormalizer.ToString(p),InputNormalizer.ToLong(n),InputNormalizer.ToBool(ic, true)))",
-   "generated": true
+   "generated": true,
+   "returns": "string[]",
+   "doc": "按正则分隔符拆分。0/省略=无限拆分（默认），>0=最多拆 instance_num 次（得 instance_num+1 段），>100,000 饱和到 100,000（不报错）",
+   "doc_section": "REGEX"
   },
   {
    "excel": "REGEX.GROUPS",
@@ -247,7 +265,10 @@
     }
    ],
    "expr": "Budgeted(()=>RegexCore.RegexCaptureGroups(InputNormalizer.ToString(i),InputNormalizer.ToString(p),InputNormalizer.ToBool(ic, true)))",
-   "generated": true
+   "generated": true,
+   "returns": "object[2,n]",
+   "doc": "捕获组。row0=组名, row1=值。`[0]`=完整匹配",
+   "doc_section": "REGEX"
   },
   {
    "excel": "REGEX.ESCAPE",
@@ -263,7 +284,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,string>(l,RegexCore.RegexEscape)",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "转义正则特殊字符",
+   "doc_section": "REGEX"
   },
   {
    "excel": "REGEX.ISMATCH",
@@ -286,7 +310,10 @@
     }
    ],
    "expr": "Budgeted(()=>ElementWiseMapper.MapOverMulti<string,string,bool>(i,p,(x,y)=>RegexCore.RegexTest(x,y,true)))",
-   "generated": true
+   "generated": true,
+   "returns": "bool",
+   "doc": "不区分大小写匹配（REGEX.TEST ignore_case=true 的别名）",
+   "doc_section": "REGEX"
   }
  ]
 }

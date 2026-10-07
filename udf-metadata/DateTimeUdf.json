@@ -24,7 +24,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,long>(d,x=>DateTimeCore.IsoWeekNum(D(x)))",
-   "generated": true
+   "generated": true,
+   "returns": "long",
+   "doc": "ISO 8601 周数（1-53）。对标 Excel ISOWEEKNUM",
+   "doc_section": "DT"
   },
   {
    "excel": "DT.WEEKDAY",
@@ -40,7 +43,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,long>(d,x=>DateTimeCore.Weekday(D(x)))",
-   "generated": true
+   "generated": true,
+   "returns": "long",
+   "doc": "星期几（Sun=1, Sat=7，对标 VBA Weekday）",
+   "doc_section": "DT"
   },
   {
    "excel": "DT.WEEKDAYISO",
@@ -56,7 +62,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,long>(d,x=>DateTimeCore.WeekdayISO(D(x)))",
-   "generated": true
+   "generated": true,
+   "returns": "long",
+   "doc": "星期几 ISO（Mon=1, Sun=7）。对标 Excel WEEKDAY",
+   "doc_section": "DT"
   },
   {
    "excel": "DT.WEEKDAYNAME",
@@ -72,7 +81,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,string>(d,x=>DateTimeCore.WeekdayName(D(x)))",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "英文星期名（\"Monday\" 等）",
+   "doc_section": "DT"
   },
   {
    "excel": "DT.SOW",
@@ -95,7 +107,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,double>(d,x=>DateTimeCore.StartOfWeek(D(x),SD(sd)).ToOADate())",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "所在周的第一天。start_day 默认 1=周一，0=周日（Excel 日期值）",
+   "doc_section": "DT"
   },
   {
    "excel": "DT.EOW",
@@ -118,7 +133,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,double>(d,x=>DateTimeCore.EndOfWeek(D(x),SD(sd)).ToOADate())",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "所在周的最后一天。start_day 默认 1=周一，0=周日（Excel 日期值）",
+   "doc_section": "DT"
   },
   {
    "excel": "DT.SOM",
@@ -134,7 +152,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,double>(d,x=>DateTimeCore.StartOfMonth(D(x)).ToOADate())",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "当月第一天",
+   "doc_section": "DT"
   },
   {
    "excel": "DT.EOM",
@@ -150,7 +171,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,double>(d,x=>DateTimeCore.EndOfMonth(D(x)).ToOADate())",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "当月最后一天。对标 Excel EOMONTH",
+   "doc_section": "DT"
   },
   {
    "excel": "DT.WOM",
@@ -173,7 +197,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,long>(d,x=>DateTimeCore.WeekOfMonth(D(x),SD(sd)))",
-   "generated": true
+   "generated": true,
+   "returns": "long",
+   "doc": "当月第几周（1-6，含 1 号的那一周为第 1 周）",
+   "doc_section": "DT"
   },
   {
    "excel": "DT.DIM",
@@ -196,7 +223,10 @@
     }
    ],
    "expr": "(long)DateTimeCore.DaysInMonth(InputNormalizer.ToLong(y),InputNormalizer.ToLong(m))",
-   "generated": true
+   "generated": true,
+   "returns": "long",
+   "doc": "指定年月的天数",
+   "doc_section": "DT"
   },
   {
    "excel": "DT.AGEYEARS",
@@ -219,7 +249,10 @@
     }
    ],
    "expr": "(long)DateTimeCore.AgeYears(D(b),OptD(r))",
-   "generated": true
+   "generated": true,
+   "returns": "long",
+   "doc": "周岁。end_date 默认今天；已提供但不可转换（文本/错误值）→ `#VALUE!`。对标 Excel DATEDIF",
+   "doc_section": "DT"
   },
   {
    "excel": "DT.AGEMONTHS",
@@ -242,7 +275,10 @@
     }
    ],
    "expr": "(long)DateTimeCore.AgeMonths(D(b),OptD(r))",
-   "generated": true
+   "generated": true,
+   "returns": "long",
+   "doc": "足月数。end_date 默认今天；不可转换 → `#VALUE!`",
+   "doc_section": "DT"
   },
   {
    "excel": "DT.AGEDAYS",
@@ -265,7 +301,10 @@
     }
    ],
    "expr": "(long)DateTimeCore.AgeDays(D(b),OptD(r))",
-   "generated": true
+   "generated": true,
+   "returns": "long",
+   "doc": "总天数。end_date 默认今天；不可转换 → `#VALUE!`",
+   "doc_section": "DT"
   },
   {
    "excel": "DT.ISWE",
@@ -281,7 +320,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,bool>(d,x=>DateTimeCore.IsWeekend(D(x)))",
-   "generated": true
+   "generated": true,
+   "returns": "bool",
+   "doc": "是否为周六或周日",
+   "doc_section": "DT"
   },
   {
    "excel": "DT.ADDWKD",
@@ -304,7 +346,10 @@
     }
    ],
    "expr": "DateTimeCore.AddWorkdays(D(s),InputNormalizer.ToLong(ds)).ToOADate()",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "加 workdays 个工作日（跳过周末）。对标 Excel WORKDAY",
+   "doc_section": "DT"
   },
   {
    "excel": "DT.WKDBTWN",
@@ -327,7 +372,10 @@
     }
    ],
    "expr": "(long)DateTimeCore.WorkdaysBetween(D(s),D(e))",
-   "generated": true
+   "generated": true,
+   "returns": "long",
+   "doc": "两个日期间的工作日数。对标 Excel NETWORKDAYS",
+   "doc_section": "DT"
   },
   {
    "excel": "DT.NEXTWKD",
@@ -343,7 +391,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,double>(d,x=>DateTimeCore.NextWorkday(D(x)).ToOADate())",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "下一个工作日",
+   "doc_section": "DT"
   },
   {
    "excel": "DT.EASTER",
@@ -359,7 +410,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<long,double>(y,EasterOADate)",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "该年复活节日期（公历算法）",
+   "doc_section": "DT"
   },
   {
    "excel": "DT.QUARTER",
@@ -375,7 +429,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,long>(d,x=>DateTimeCore.Quarter(D(x)))",
-   "generated": true
+   "generated": true,
+   "returns": "long",
+   "doc": "日历季度（1-4）",
+   "doc_section": "DT"
   },
   {
    "excel": "DT.SEMESTER",
@@ -391,7 +448,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,long>(d,x=>DateTimeCore.Semester(D(x)))",
-   "generated": true
+   "generated": true,
+   "returns": "long",
+   "doc": "半年度（1 或 2）",
+   "doc_section": "DT"
   },
   {
    "excel": "DT.DOY",
@@ -407,7 +467,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,long>(d,x=>DateTimeCore.DayOfYear(D(x)))",
-   "generated": true
+   "generated": true,
+   "returns": "long",
+   "doc": "一年中的第几天（1-366）",
+   "doc_section": "DT"
   },
   {
    "excel": "DT.ISLEAP",
@@ -423,7 +486,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<long,bool>(y,yr=>DateTimeCore.IsLeapYear(yr))",
-   "generated": true
+   "generated": true,
+   "returns": "bool",
+   "doc": "是否为闰年",
+   "doc_section": "DT"
   },
   {
    "excel": "DT.UNIXTS",
@@ -439,7 +505,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,double>(d,x=>DateTimeCore.UnixTimestamp(D(x)))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "Excel 日期 → Unix 时间戳（秒）。按机器本地时区解释日期（Unspecified Kind → 本地 UTC 偏移），跨时区同输入得不同值；`DT.FROMUNIX` 对称取本地时间，单机往返一致",
+   "doc_section": "DT"
   },
   {
    "excel": "DT.FROMUNIX",
@@ -455,7 +524,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,double>(ts,x=>DateTimeCore.FromUnixTimestamp(x).ToOADate())",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "Unix 时间戳 → Excel 日期",
+   "doc_section": "DT"
   },
   {
    "excel": "DT.DATEDIFF",
@@ -485,7 +557,10 @@
     }
    ],
    "expr": "(long)DateTimeCore.DateDiff(InputNormalizer.ToString(u),D(d1),D(d2))",
-   "generated": true
+   "generated": true,
+   "returns": "long",
+   "doc": "日期差：`\"d\"`=天, `\"m\"`=月, `\"y\"`=年, `\"w\"`=周。对标 Excel DATEDIF",
+   "doc_section": "DT"
   }
  ]
 }

@@ -59,7 +59,10 @@
     }
    ],
    "expr": "SolveCore.Inverse( RequiredTable(data, \"data\"), OptionalTable(request), OptionalTable(bounds), InputNormalizer.ToString(model), InputNormalizer.IsOmitted(seed) ? 42L : InputNormalizer.ToLong(seed), InputNormalizer.IsOmitted(maxStarts) ? 10 : InputNormalizer.ToInt32(maxStarts))",
-   "generated": true
+   "generated": true,
+   "returns": "object[,]",
+   "doc": "反解推荐表，返回 `[请求行, <可调列名…>, <输出列名>预测…, (<输出列名>速率…), 最大偏差σ, 状态]`（含表头行；速率块仅在 rate 生效时出现）。`请求行`：data 内请求行标 `数据第N行`（N 为区间内 1-based 行号，含表头），独立 request 表标 `请求N`。`最大偏差σ = maxⱼ \\|预测ⱼ−目标ⱼ\\| / 历史输出标准差ⱼ`（标准差为 0 时取 1；仅统计有目标的输出）。`状态`=`可达`/`不可达`（目标是否落在参数边界内 2000 点采样的输出区间，相对容差 1e-9×量级；Core 数值接口 0=可达/1=不可达）。`bounds` 表：3 列 `[变量名或1-based序号, 下界, 上界]`，或 2 列按变量列顺序；默认历史最小/最大。请求可调列填值 = 寻优初值；固定列留空 = 历史中位数；来料留空 = #VALUE!。`model` 默认 `auto`，`seed` 默认 42，`max_starts` 默认 10（1–50）。`SharedOutput*` 列与其他输出一样出现在预测/速率块中，同组速率值相同；多时间列按输出后缀配对（见上）。",
+   "doc_section": "SOLVE"
   },
   {
    "excel": "SOLVE.PREDICT",
@@ -89,7 +92,10 @@
     }
    ],
    "expr": "SolveCore.PredictTable( RequiredTable(data, \"data\"), RequiredTable(values, \"values\"), InputNormalizer.ToString(model))",
-   "generated": true
+   "generated": true,
+   "returns": "double[,]",
+   "doc": "正向预测。`values` 为一行或多行\"非输出列\"取值（来料+可调+固定，按 data 列序，含时间列），返回 N 行 × 输出列数矩阵（无表头）。固定列留空取历史中位数；来料/可调留空 = #VALUE!。rate/rate_poly 模型下按每行给定的 t 计算 `Output(t)=Incoming−t·g(·)`（N×M 仅输出预测，不含速率）；t 须有限且 >0——显式速率模型报 `#VALUE!`，auto 则回退 linear/poly。`SharedOutput*` 列在 auto 下用池化 g（ADR-0009）。",
+   "doc_section": "SOLVE"
   },
   {
    "excel": "SOLVE.QUALITY",
@@ -119,7 +125,10 @@
     }
    ],
    "expr": "SolveCore.Quality( RequiredTable(data, \"data\"), InputNormalizer.ToString(model), InputNormalizer.IsOmitted(seed) ? 42L : InputNormalizer.ToLong(seed))",
-   "generated": true
+   "generated": true,
+   "returns": "object[,]",
+   "doc": "模型质量表 `[输出, 候选, CV方案, CV_R2, CV_MAE, 选用]`（含表头行）。`auto` 时普通输出给出 linear/poly/rate 三行，`SharedOutput*` 输出给出 rate/rate_poly 两行（池化 CV，ADR-0009）；候选结构不可用或样本不足时 `CV方案=跳过`、R2/MAE 空、`选用=否`，按 CV R² 选优（rate 的 CV 在 Output 原尺度计算）；`poly`/`rate_poly` 不可用 = 样本不足或展开超 100 项，`rate` 不可用 = 缺时间列/配对或样本不足。`CV方案`：n≥20 = `5折`，n<20 = `LOO`（需 n≥5，否则 #VALUE!）。显式模型时仅一行且 `选用=是`。",
+   "doc_section": "SOLVE"
   },
   {
    "excel": "SOLVE.EQUATION",
@@ -142,7 +151,10 @@
     }
    ],
    "expr": "SolveCore.Equation( RequiredTable(data, \"data\"), InputNormalizer.ToString(model))",
-   "generated": true
+   "generated": true,
+   "returns": "object[,]",
+   "doc": "方程表 `[输出, 类型, 表达式]`（含表头行）。`类型` = `前向方程`（如 `OutputY1 = 2 + 0.5*IncomingA + 1.5*VariableU1`，系数 6 位有效数字、InvariantCulture）、`速率方程`（速率模型：`OutputZ1速率 = g(...)`，rate_poly 含二次项）或 `反解公式`（仅单变量线性模型，如 `VariableU1 = (OutputY1 - 2 - 0.5*IncomingA) / 1.5`）；速率前向方程为 `OutputZ1(Time) = IncomingZ1 - Time*(...)`。`SharedOutput*` 成员各出一行相同表达式的速率方程（ADR-0009）。",
+   "doc_section": "SOLVE"
   }
  ]
 }

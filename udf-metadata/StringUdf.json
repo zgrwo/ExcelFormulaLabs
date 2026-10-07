@@ -24,7 +24,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,string>(t,StringCore.ReverseString)",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "反转字符串。`\"hello\"` → `\"olleh\"`",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.NORMWS",
@@ -40,7 +43,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,string>(t,StringCore.NormalizeWhitespace)",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "规范化空白：去首尾空格，合并连续空格为单个",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.TITLE",
@@ -56,7 +62,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,string>(t,StringCore.ToTitleCase)",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "转为首字母大写（Title Case）",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.REMOVE",
@@ -79,7 +88,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,string>(t,s=>StringCore.RemoveChars(s,InputNormalizer.ToString(ch)))",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "删除 text 中所有出现在 old_text 里的字符",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.KEEP",
@@ -102,7 +114,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,string>(t,s=>StringCore.KeepChars(s,InputNormalizer.ToString(ch)))",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "仅保留 text 中出现在 keep_chars 里的字符",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.PADLEFT",
@@ -132,7 +147,10 @@
     }
    ],
    "expr": "{string ps=InputNormalizer.ToString(pad);char pc=ps.Length>0?ps[0]:' ';return ElementWiseMapper.MapOver<string,string>(t,s=>StringCore.PadLeft(s,InputNormalizer.ToInt32(len),pc));}",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "左侧填充至指定长度",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.PADRIGHT",
@@ -162,7 +180,10 @@
     }
    ],
    "expr": "{string ps=InputNormalizer.ToString(pad);char pc=ps.Length>0?ps[0]:' ';return ElementWiseMapper.MapOver<string,string>(t,s=>StringCore.PadRight(s,InputNormalizer.ToInt32(len),pc));}",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "右侧填充至指定长度",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.TRUNCATE",
@@ -192,7 +213,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,string>(t,s=>StringCore.Truncate(s,InputNormalizer.ToInt32(len),InputNormalizer.IsOmitted(sfx)?\"...\":InputNormalizer.ToString(sfx)))",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "截断至指定长度，若截短则追加后缀（默认 `\"...\"`）",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.COUNTSUB",
@@ -222,7 +246,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOverMulti<string,string,long>(t,s,(a,b)=>StringCore.CountSubstring(a,b,InputNormalizer.ToBool(cs,true)))",
-   "generated": true
+   "generated": true,
+   "returns": "long",
+   "doc": "子串出现次数。match_case=true 区分大小写",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.STARTSWITH",
@@ -252,7 +279,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOverMulti<string,string,bool>(t,p,(a,b)=>StringCore.StartsWithStr(a,b,InputNormalizer.ToBool(cs,true)))",
-   "generated": true
+   "generated": true,
+   "returns": "bool",
+   "doc": "是否以指定前缀开头",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.ENDSWITH",
@@ -282,7 +312,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOverMulti<string,string,bool>(t,s,(a,b)=>StringCore.EndsWithStr(a,b,InputNormalizer.ToBool(cs,true)))",
-   "generated": true
+   "generated": true,
+   "returns": "bool",
+   "doc": "是否以指定后缀结尾",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.LEFTOF",
@@ -312,7 +345,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,string>(t,s=>StringCore.LeftOf(s,InputNormalizer.ToString(d),InputNormalizer.ToLong(n)))",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "第 instance_num 次出现的分隔符左侧内容。1=第一个（默认），-1=最后一个",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.RIGHTOF",
@@ -342,7 +378,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,string>(t,s=>StringCore.RightOf(s,InputNormalizer.ToString(d),InputNormalizer.ToLong(n)))",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "第 instance_num 次出现的分隔符右侧内容。1=第一个（默认），-1=最后一个",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.EXTRACT",
@@ -386,7 +425,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,string>(t,s=>StringCore.ExtractBetween(s,InputNormalizer.ToString(l),InputNormalizer.ToString(r),InputNormalizer.ToLong(n),InputNormalizer.ToBool(inc)))",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "第 instance_num 对左右分隔符之间的内容。1=第一对（默认），-1=最后一对。include_delimiters=true 含分隔符",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.NTHWORD",
@@ -409,7 +451,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,string>(t,s=>StringCore.NthWord(s,InputNormalizer.ToLong(n)))",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "第 instance_num 个空格分隔的词。1=第一个（默认），-1=最后一个",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.COMMONPFX",
@@ -439,7 +484,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOverMulti<string,string,string>(a,b,(x,y)=>StringCore.CommonPrefix(x,y,InputNormalizer.ToBool(cs,true)))",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "两字符串的最长公共前缀",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.TEXTJOIN",
@@ -469,7 +517,10 @@
     }
    ],
    "expr": "{var a=InputNormalizer.NormalizeTo1D(vals).Select(x=>InputNormalizer.ToString(x)).ToArray();return StringCore.TextJoin(InputNormalizer.ToString(d),InputNormalizer.ToBool(skip),a);}",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "用分隔符连接数组值。ignore_empty=true 跳过空值（对标 Excel TEXTJOIN）",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.LEVENSHTEIN",
@@ -492,7 +543,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOverMulti<string,string,long>(a,b,(x,y)=>StringCore.LevenshteinDistance(x,y))",
-   "generated": true
+   "generated": true,
+   "returns": "long",
+   "doc": "编辑距离（Levenshtein distance）",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.SOUNDEX",
@@ -508,7 +562,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,string>(t,StringCore.Soundex)",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "Soundex 语音编码（4 字符）",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.URLENCODE",
@@ -524,7 +581,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,string>(t,StringCore.UrlEncode)",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "URL 百分号编码。对标 Excel ENCODEURL",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.URLDECODE",
@@ -540,7 +600,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,string>(t,StringCore.UrlDecode)",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "URL 百分号解码",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.HTMLENCODE",
@@ -556,7 +619,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,string>(t,StringCore.HtmlEncode)",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "HTML 实体编码",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.HTMLDECODE",
@@ -572,7 +638,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,string>(t,StringCore.HtmlDecode)",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "HTML 实体解码",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.BASE64ENC",
@@ -588,7 +657,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,string>(t,StringCore.Base64Encode)",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "Base64 编码（UTF-8）",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.BASE64DEC",
@@ -604,7 +676,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,string>(t,StringCore.Base64Decode)",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "Base64 解码",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.UUID",
@@ -612,7 +687,10 @@
    "desc": "Generate a random UUID/GUID string",
    "args": [],
    "expr": "(object)StringCore.UUID()",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "生成随机 UUID/GUID",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.RNDSTR",
@@ -635,7 +713,10 @@
     }
    ],
    "expr": "(object)StringCore.RandomString(InputNormalizer.ToLong(len),InputNormalizer.ToString(cs))",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "从字符集 character_set 随机生成长度 num_chars 的字符串（默认 A-Za-z0-9）",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.RNDALPHA",
@@ -651,7 +732,10 @@
     }
    ],
    "expr": "(object)StringCore.RandomString(InputNormalizer.ToLong(len),\"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\")",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "随机生成字母串（A-Z, a-z）",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.RNDNUM",
@@ -667,7 +751,10 @@
     }
    ],
    "expr": "(object)StringCore.RandomString(InputNormalizer.ToLong(len),\"0123456789\")",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "随机生成数字串（0-9）",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.ISNULLEMPTY",
@@ -683,7 +770,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,bool>(BlankAsEmpty(t),s=>StringCore.IsNullOrEmptyStr(s))",
-   "generated": true
+   "generated": true,
+   "returns": "bool",
+   "doc": "是否为 null 或空串",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.ISNULLWS",
@@ -699,7 +789,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,bool>(BlankAsEmpty(t),s=>StringCore.IsNullOrWhitespaceStr(s))",
-   "generated": true
+   "generated": true,
+   "returns": "bool",
+   "doc": "是否为 null、空串或纯空白",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.COALESCE",
@@ -722,7 +815,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOverMulti<string,string,string>(BlankAsEmpty(p),BlankAsEmpty(fb),(a,b)=>StringCore.Coalesce(a,b))",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "取第一个非 null/空值，否则返回 value2",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.FORMAT",
@@ -745,7 +841,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOverMulti<object,string,string>(v,fmt,(a,b)=>StringCore.FormatValue(a,b))",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "按 .NET 格式字符串格式化。如 `\"0.00\"`, `\"yyyy-MM-dd\"`。对标 Excel TEXT",
+   "doc_section": "STR"
   },
   {
    "excel": "STR.STRIPHTML",
@@ -761,7 +860,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,string>(t,StringCore.StripHtml)",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "去除 HTML 标签，仅保留文本",
+   "doc_section": "STR"
   }
  ]
 }

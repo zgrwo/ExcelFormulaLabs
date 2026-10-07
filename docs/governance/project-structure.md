@@ -183,7 +183,7 @@ ExcelFormulaLabs/
 │       └── {Name}Core.Tests.cs.template  # 含边界/NaN/空值测试
 │
 ├── tools/                          # 代码生成/维护工具
-│   └── udfgen.py                   #   UDF 元数据化与源生成（extract/generate/migrate/verify，ADR-0011）
+│   └── udfgen.py                   #   UDF 元数据化与源生成（extract/generate/migrate/verify + extract-api/generate-api/verify-api，ADR-0011）
 │
 ├── udf-metadata/                   # UDF 元数据**单一真源**（每 Udf 文件一份 JSON，ADR-0011）
 │   ├── StatsUdf.json / LinalgUdf.json / RegressionUdf.json / SolveUdf.json / PhyChemUdf.json / DoeUdf.json / DoeAnalysisUdf.json

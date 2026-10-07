@@ -39,7 +39,7 @@ $RepoRoot = [System.IO.Path]::GetFullPath($RepoRoot)
 # 盘根（如 D:\，长度 3）不动。
 if ($RepoRoot.Length -gt 3) { $RepoRoot = $RepoRoot.TrimEnd('\', '/') }
 $ErrorActionPreference = "Continue"
-$script:pass = 0; $script:fail = 0; $script:skip = 0
+$script:pass = 0; $script:fail = 0; $script:skip = 0; $script:weak = 0
 
 function Read-Utf8 {
     param([string]$Path)
@@ -48,9 +48,16 @@ function Read-Utf8 {
 }
 
 function Check {
-    param([string]$Label, [string]$Result)
-    if ($Result -eq "OK") { Write-Host "  [PASS] $Label"; $script:pass++ }
-    else { Write-Host "  [FAIL] ${Label}: ${Result}"; $script:fail++ }
+    param([string]$Label, [string]$Result, [switch]$Weak)
+    # -Weak：纯"关键词存在/不存在"检查（不验证语义），如"skill.md 含 MapOver"。
+    # 这类检查不会因为文档改坏了而失败，只在词被删掉时才失败——强度远低于
+    # "源码计数 == 文档计数"类检查。加标记避免二者在报告里同等显示 [PASS]
+    #（2026-10-07 审查："20 项文档检查中最有效的只有 4~5 项，其余是单词 grep 与行数计数，
+    #  且在报告里同样显示 [PASS]"）。汇总处单列弱检查条数。
+    $tag = if ($Weak) { "[弱] " } else { "" }
+    if ($Result -eq "OK") { Write-Host "  [PASS] $tag$Label"; $script:pass++ }
+    else { Write-Host "  [FAIL] $tag${Label}: ${Result}"; $script:fail++ }
+    if ($Weak) { $script:weak++ }
 }
 
 # SKIP 分支（如无 git 环境）单列 skip 计数、不计入 pass：把 SKIP 计为 pass
@@ -86,17 +93,17 @@ else { Check "UDF full coverage" "missing: $($missing -join ', ')" }
 
 # ---------- 3. skill.md 含 RangeExport ----------
 $skillContent = Read-Utf8 (Join-Path $RepoRoot "skills/excel-dna-project.md")
-if ($skillContent -match 'RangeExport') { Check "skill.md RangeExport" "OK" }
-else { Check "skill.md RangeExport" "missing" }
+if ($skillContent -match 'RangeExport') { Check "skill.md RangeExport" "OK" -Weak }
+else { Check "skill.md RangeExport" "missing" -Weak }
 
 # ---------- 4. 架构术语 ----------
-if ($skillContent -match 'MapOver') { Check "skill.md MapOver term" "OK" }
-else { Check "skill.md MapOver term" "missing" }
+if ($skillContent -match 'MapOver') { Check "skill.md MapOver term" "OK" -Weak }
+else { Check "skill.md MapOver term" "missing" -Weak }
 $readmeContent = Read-Utf8 (Join-Path $RepoRoot "README.md")
 # README 缺失须显式 FAIL：否则本检查与检查 9 静默 PASS。
 if ($null -eq $readmeContent) { Check "README.md present" "missing" }
-elseif ($readmeContent -match 'ElementWiseMapper') { Check "README no internal class names" "should use MapOver not internal class" }
-else { Check "README no internal impl details" "OK" }
+elseif ($readmeContent -match 'ElementWiseMapper') { Check "README no internal class names" "should use MapOver not internal class" -Weak }
+else { Check "README no internal impl details" "OK" -Weak }
 
 # ---------- 5. MathNet 版本匹配 ----------
 $docVer = if ((Read-Utf8 (Join-Path $RepoRoot "docs/governance/context.md")) -match 'MathNet\.Numerics\s+([0-9.]+)') { $Matches[1] } else { "?" }
@@ -637,4 +644,7 @@ if ($factFiles.Count -gt 0) {
 # ---------- 汇总 ----------
 Write-Host ""
 Write-Host "=== Pass: $($script:pass)  Fail: $($script:fail)  Skip: $($script:skip) ==="
+if ($script:weak -gt 0) {
+    Write-Host "    其中弱检查 $($script:weak) 条（标记 [弱]：仅关键词存在性，不验证语义与计数）"
+}
 if ($script:fail -gt 0) { exit 1 } else { exit 0 }

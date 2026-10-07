@@ -23,7 +23,10 @@
     }
    ],
    "expr": "JsonXmlCore.JsonParse(InputNormalizer.ToString(j))",
-   "generated": true
+   "generated": true,
+   "returns": "object",
+   "doc": "解析 JSON 为原生结构：标量/一维标量数组正常返回；嵌套对象/数组渲染为非表格（需二维表时用 `JSON.TOTABLE`）",
+   "doc_section": "JSON"
   },
   {
    "excel": "JSON.QUERY",
@@ -46,7 +49,10 @@
     }
    ],
    "expr": "JsonXmlCore.JsonQuery(InputNormalizer.ToString(j),InputNormalizer.ToString(p))",
-   "generated": true
+   "generated": true,
+   "returns": "object",
+   "doc": "点路径查询。如 `\"store.book[0].title\"`",
+   "doc_section": "JSON"
   },
   {
    "excel": "JSON.VALIDATE",
@@ -62,7 +68,10 @@
     }
    ],
    "expr": "JsonXmlCore.JsonValidate(InputNormalizer.ToString(j))",
-   "generated": true
+   "generated": true,
+   "returns": "bool",
+   "doc": "是否为合法 JSON",
+   "doc_section": "JSON"
   },
   {
    "excel": "JSON.PRETTIFY",
@@ -78,7 +87,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,string>(j,JsonXmlCore.JsonPrettify)",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "JSON 格式化（缩进美化）",
+   "doc_section": "JSON"
   },
   {
    "excel": "JSON.TOTABLE",
@@ -94,7 +106,10 @@
     }
    ],
    "expr": "(object?)JsonXmlCore.JsonToTable(InputNormalizer.ToString(j))??ExcelDna.Integration.ExcelEmpty.Value",
-   "generated": true
+   "generated": true,
+   "returns": "object[,]",
+   "doc": "JSON 对象数组转二维表（含表头）",
+   "doc_section": "JSON"
   },
   {
    "excel": "XML.XPATH",
@@ -117,7 +132,10 @@
     }
    ],
    "expr": "JsonXmlCore.XmlXPath(InputNormalizer.ToString(x),InputNormalizer.ToString(xp))",
-   "generated": true
+   "generated": true,
+   "returns": "string[]",
+   "doc": "XPath 查询，返回匹配元素的值。对标 Excel FILTERXML",
+   "doc_section": "XML"
   },
   {
    "excel": "XML.VALIDATE",
@@ -133,7 +151,10 @@
     }
    ],
    "expr": "JsonXmlCore.XmlValidate(InputNormalizer.ToString(x))",
-   "generated": true
+   "generated": true,
+   "returns": "bool",
+   "doc": "是否为合法 XML",
+   "doc_section": "XML"
   },
   {
    "excel": "XML.TOTABLE",
@@ -156,7 +177,10 @@
     }
    ],
    "expr": "(object?)JsonXmlCore.XmlToTable(InputNormalizer.ToString(x),InputNormalizer.ToString(rp))??ExcelDna.Integration.ExcelEmpty.Value",
-   "generated": true
+   "generated": true,
+   "returns": "object[,]",
+   "doc": "XML 转二维表，row_xpath 定义行节点",
+   "doc_section": "XML"
   }
  ]
 }

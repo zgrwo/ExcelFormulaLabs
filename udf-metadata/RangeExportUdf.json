@@ -38,7 +38,10 @@
     }
    ],
    "expr": "RangeExportCore.RangeToHtml(D(d),InputNormalizer.ToBool(h, true),InputNormalizer.ToString(c))",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "导出为 HTML 表格。has_headers=首行是否表头（默认 TRUE）",
+   "doc_section": "RANGE"
   },
   {
    "excel": "RANGE.TOJSON",
@@ -68,7 +71,10 @@
     }
    ],
    "expr": "RangeExportCore.RangeToJson(D(d),InputNormalizer.ToBool(h, true),InputNormalizer.ToBool(p))",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "导出为 JSON。has_headers=首行是否表头（默认 TRUE）",
+   "doc_section": "RANGE"
   },
   {
    "excel": "RANGE.TOMD",
@@ -91,7 +97,10 @@
     }
    ],
    "expr": "RangeExportCore.RangeToMarkdown(D(d),InputNormalizer.ToBool(h, true))",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "导出为 Markdown 表格。has_headers=首行是否表头（默认 TRUE）",
+   "doc_section": "RANGE"
   },
   {
    "excel": "RANGE.TOCSV",
@@ -128,7 +137,10 @@
     }
    ],
    "expr": "RangeExportCore.RangeToCsv(D(d),InputNormalizer.ToString(dl) is string s && s.Length>0?s:\",\",InputNormalizer.ToBool(q, true),InputNormalizer.ToBool(hh, true))",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "导出为 CSV（自定义分隔符与字段引用）。**has_headers 为兼容参数、无实际效果**——CSV 恒导出全部行（含首行），该参数仅为与其他 RANGE.* 导出签名一致而保留",
+   "doc_section": "RANGE"
   },
   {
    "excel": "RANGE.TOCSVTAB",
@@ -144,7 +156,10 @@
     }
    ],
    "expr": "RangeExportCore.RangeToCsv(D(d),\"\\t\",false)",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "导出为 TSV（制表符分隔）",
+   "doc_section": "RANGE"
   },
   {
    "excel": "RANGE.TOCSVSEMI",
@@ -160,7 +175,10 @@
     }
    ],
    "expr": "RangeExportCore.RangeToCsv(D(d),\";\",true)",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "导出为分号分隔 CSV",
+   "doc_section": "RANGE"
   },
   {
    "excel": "RANGE.TRANSPOSE",
@@ -176,7 +194,10 @@
     }
    ],
    "expr": "RangeExportCore.Transpose(D(d))",
-   "generated": true
+   "generated": true,
+   "returns": "object[,]",
+   "doc": "行列转置。对标 Excel TRANSPOSE",
+   "doc_section": "RANGE"
   },
   {
    "excel": "RANGE.SELCOLS",
@@ -199,7 +220,10 @@
     }
    ],
    "expr": "RangeExportCore.SelectColumns(D(d),InputNormalizer.NormalizeTo1D(c).Select(x=>InputNormalizer.ToInt32(x)).ToArray())",
-   "generated": true
+   "generated": true,
+   "returns": "object[,]",
+   "doc": "选取指定列。对标 Excel CHOOSECOLS",
+   "doc_section": "RANGE"
   },
   {
    "excel": "RANGE.SELROWS",
@@ -222,7 +246,10 @@
     }
    ],
    "expr": "RangeExportCore.SelectRows(D(d),InputNormalizer.NormalizeTo1D(r).Select(x=>InputNormalizer.ToInt32(x)).ToArray())",
-   "generated": true
+   "generated": true,
+   "returns": "object[,]",
+   "doc": "选取指定行。对标 Excel CHOOSEROWS",
+   "doc_section": "RANGE"
   }
  ]
 }

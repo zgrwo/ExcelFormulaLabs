@@ -43,6 +43,9 @@ python scripts/verify-manual.py
 > 覆盖率门禁（行 + 分支）不在默认 6 步内：它会把三个测试工程带插桩再跑一遍（本机 2~4 分钟），
 > 而 CI 有独立 coverage job 覆盖。需要"本地 = CI 同口径"时加 `-WithCoverage`：
 > `powershell -File scripts/verify-all.ps1 -WithCoverage`（或单独 `scripts/coverage.ps1`）。
+>
+> 第 ⑤ 步除红线检查外**还跑治理脚本自测**（`tests/scripts/run-tests.ps1`）——改了任何
+> `scripts/*.ps1` 都必须过它，否则"改了治理脚本、其自测已挂"会一路绿灯到 CI 才暴露。
 
 ```powershell
 # ① 文档一致性（20 个编号项；运行时断言数见脚本输出）
@@ -98,6 +101,20 @@ powershell -File scripts/verify-udfgen.ps1
 - `src/**/<X>Udf.cs` 只保留 using、`partial` 类、参数预处理助手，以及 12 个语句体 UDF（`*_ASYNC`）。
 - 需要在分发层写逻辑时，改手写部分或元数据的 `expr`；业务逻辑一律落 Core。
 - `python tools/udfgen.py extract` 是**一次性引导工具**，元数据建立后不要再运行。
+
+### api-reference.md 的表体也是生成物
+
+`docs/specification/api-reference.md` 各章节内的表格由同一份元数据渲染（ADR-0011）：
+
+```bash
+python tools/udfgen.py generate-api     # 重新渲染表体（幂等；章节标题/正文段落不受影响）
+python tools/udfgen.py verify-api       # 只校验不写盘（CI 门禁同款）
+```
+
+改**函数名/参数/返回类型/中文说明**都要改元数据（`returns` = 返回列、`doc` = 说明列、
+`doc_section` = 所属章节），而不是直接改 Markdown 表格——表体带
+`<!-- BEGIN:generated X -->` 标记，手改会被 `scripts/verify-udfgen.ps1` 拦下。
+章节标题、正文段落、`---` 分隔线仍是手写，正常编辑。
 
 ### 红线规则
 

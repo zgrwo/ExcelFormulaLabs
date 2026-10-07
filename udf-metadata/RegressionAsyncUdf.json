@@ -31,7 +31,10 @@
     }
    ],
    "generated": false,
-   "handReason": "statement-body"
+   "handReason": "statement-body",
+   "returns": "object[11,?]",
+   "doc": "OLS 回归（异步，大数据集不阻塞 UI）",
+   "doc_section": "REGRESS"
   },
   {
    "excel": "REGRESS.WLS_ASYNC",
@@ -61,7 +64,10 @@
     }
    ],
    "generated": false,
-   "handReason": "statement-body"
+   "handReason": "statement-body",
+   "returns": "object[11,?]",
+   "doc": "加权最小二乘（异步）",
+   "doc_section": "REGRESS"
   },
   {
    "excel": "REGRESS.RIDGE_ASYNC",
@@ -91,7 +97,10 @@
     }
    ],
    "generated": false,
-   "handReason": "statement-body"
+   "handReason": "statement-body",
+   "returns": "object[8,?]",
+   "doc": "岭回归（异步）",
+   "doc_section": "REGRESS"
   }
  ]
 }

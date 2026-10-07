@@ -24,7 +24,10 @@
     }
    ],
    "expr": "(object)StatsCore.Mean(V(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "算术平均值",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.GEOMEAN",
@@ -40,7 +43,10 @@
     }
    ],
    "expr": "(object)StatsCore.GeometricMean(V(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "几何平均值（正数数组）",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.HARMEAN",
@@ -56,7 +62,10 @@
     }
    ],
    "expr": "(object)StatsCore.HarmonicMean(V(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "调和平均值（正数数组）",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.MEDIAN",
@@ -72,7 +81,10 @@
     }
    ],
    "expr": "(object)StatsCore.Median(V(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "中位数",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.VARP",
@@ -88,7 +100,10 @@
     }
    ],
    "expr": "(object)StatsCore.VarianceP(V(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "总体方差（除以 n）",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.VAR",
@@ -104,7 +119,10 @@
     }
    ],
    "expr": "(object)StatsCore.Variance(V(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "样本方差（除以 n-1）",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.STDEVP",
@@ -120,7 +138,10 @@
     }
    ],
    "expr": "(object)StatsCore.StdevP(V(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "总体标准差（除以 n）",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.STDEV",
@@ -136,7 +157,10 @@
     }
    ],
    "expr": "(object)StatsCore.Stdev(V(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "样本标准差（除以 n-1）",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.SKEW",
@@ -152,7 +176,10 @@
     }
    ],
    "expr": "(object)StatsCore.Skewness(V(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "样本偏度",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.KURT",
@@ -168,7 +195,10 @@
     }
    ],
    "expr": "(object)StatsCore.Kurtosis(V(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "样本超额峰度",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.MIN",
@@ -184,7 +214,10 @@
     }
    ],
    "expr": "(object)StatsCore.Min(V(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "最小值",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.MAX",
@@ -200,7 +233,10 @@
     }
    ],
    "expr": "(object)StatsCore.Max(V(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "最大值",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.RANGE",
@@ -216,7 +252,10 @@
     }
    ],
    "expr": "(object)StatsCore.Range(V(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "极差（max - min）",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.SUM",
@@ -232,7 +271,10 @@
     }
    ],
    "expr": "(object)StatsCore.Sum(V(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "求和",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.PRODUCT",
@@ -248,7 +290,10 @@
     }
    ],
    "expr": "(object)StatsCore.Product(V(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "求积",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.PERCENTILE",
@@ -271,7 +316,10 @@
     }
    ],
    "expr": "(object)StatsCore.Percentile(V(d),InputNormalizer.ToDouble(p))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "k 分位数（0-100），R7 算法。对标 Excel PERCENTILE.INC",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.IQR",
@@ -287,7 +335,10 @@
     }
    ],
    "expr": "(object)StatsCore.IQR(V(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "四分位距（Q3 - Q1），R7 算法",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.SUMMARY",
@@ -303,7 +354,10 @@
     }
    ],
    "expr": "StatsCore.Summary(V(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double[9]",
+   "doc": "描述统计摘要：`[n, mean, stdev, min, q1, median, q3, max, iqr]`。R7 分位数（对标 Python scipy）。",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.COVARP",
@@ -326,7 +380,10 @@
     }
    ],
    "expr": "(object)StatsCore.CovarianceP(V(a),V(b))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "总体协方差（除以 n）。对标 Excel COVARIANCE.P",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.COVAR",
@@ -349,7 +406,10 @@
     }
    ],
    "expr": "(object)StatsCore.Covariance(V(a),V(b))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "样本协方差（除以 n-1）。对标 Excel COVARIANCE.S",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.PEARSON",
@@ -372,7 +432,10 @@
     }
    ],
    "expr": "(object)StatsCore.Pearson(V(a),V(b))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "Pearson 线性相关系数 r。范围 -1~1。对标 Excel PEARSON",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.SPEARMAN",
@@ -395,7 +458,10 @@
     }
    ],
    "expr": "(object)StatsCore.Spearman(V(a),V(b))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "Spearman 秩相关系数。范围 -1~1",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.CORRMATRIX",
@@ -411,7 +477,10 @@
     }
    ],
    "expr": "(object)StatsCore.CorrelationMatrix(M(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double[,]",
+   "doc": "Pearson 相关矩阵。输入列为变量，返回对称矩阵，对角线为 1",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.TTEST1",
@@ -434,7 +503,10 @@
     }
    ],
    "expr": "(object)StatsCore.TTestOneSample(V(d),InputNormalizer.ToDouble(mu))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "单样本双侧 t 检验 p 值（H₀: mean = x）。`p<0.05` = 均值与 x 差异显著",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.TTEST2",
@@ -457,7 +529,10 @@
     }
    ],
    "expr": "(object)StatsCore.TTestTwoSample(V(a),V(b))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "Welch 双样本双侧 t 检验 p 值（不等方差）。`p<0.05` = 两样本均值差异显著",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.ZSCORE",
@@ -473,7 +548,10 @@
     }
    ],
    "expr": "StatsCore.ZScore(V(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double[]",
+   "doc": "标准化 z 值：(x - mean) / stdev",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.COUNT",
@@ -489,7 +567,10 @@
     }
    ],
    "expr": "StatsCore.CountNumeric(d)",
-   "generated": true
+   "generated": true,
+   "returns": "long",
+   "doc": "元素个数",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.MODE",
@@ -505,7 +586,10 @@
     }
    ],
    "expr": "(object)StatsCore.Mode(V(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "众数。全唯一返回 NaN（对标 Excel MODE.SNGL）",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.ABS",
@@ -521,7 +605,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,double>(d,Math.Abs)",
-   "generated": true
+   "generated": true,
+   "returns": "double[]",
+   "doc": "逐元素绝对值。对标 Excel ABS",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.SQRT",
@@ -537,7 +624,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,double>(d,StatsCore.SqrtSafe)",
-   "generated": true
+   "generated": true,
+   "returns": "double[]",
+   "doc": "逐元素平方根。对标 Excel SQRT",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.LN",
@@ -553,7 +643,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,double>(d,StatsCore.LogSafe)",
-   "generated": true
+   "generated": true,
+   "returns": "double[]",
+   "doc": "逐元素自然对数 ln(x)。对标 Excel LN",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.LOG10",
@@ -569,7 +662,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,double>(d,StatsCore.Log10Safe)",
-   "generated": true
+   "generated": true,
+   "returns": "double[]",
+   "doc": "逐元素常用对数 log₁₀(x)。对标 Excel LOG10",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.EXP",
@@ -585,7 +681,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,double>(d,StatsCore.ExpSafe)",
-   "generated": true
+   "generated": true,
+   "returns": "double[]",
+   "doc": "逐元素指数函数 eˣ。对标 Excel EXP",
+   "doc_section": "STATS"
   },
   {
    "excel": "STATS.SIGN",
@@ -601,7 +700,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,long>(d,StatsCore.Sign)",
-   "generated": true
+   "generated": true,
+   "returns": "long[]",
+   "doc": "逐元素符号：-1, 0, 1。对标 Excel SIGN",
+   "doc_section": "STATS"
   }
  ]
 }

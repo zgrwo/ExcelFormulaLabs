@@ -65,7 +65,10 @@
     }
    ],
    "expr": "DoeCore.Plan( InputNormalizer.ToInt32(qty1), InputNormalizer.ToInt32(level1), InputNormalizer.ToInt32(qty2), InputNormalizer.ToInt32(level2), InputNormalizer.ToString(method), InputNormalizer.ToBool(randomize, true), InputNormalizer.IsOmitted(seed) ? (long?)null : InputNormalizer.ToLong(seed))",
-   "generated": true
+   "generated": true,
+   "returns": "object[,]",
+   "doc": "生成 DOE 实验设计矩阵。method=`\"full\"` 全因子（总运行数 = level1^qty1 × level2^qty2）；method=`\"taguchi\"` 田口正交表（仅支持 2/3 水平，自动选最小 L4/L8/L9/L12/L16/L18/L27/L32）；method=`\"fractional\"` 2水平 ½ 部分因子（需 ≥4 个因子，生成元：末因子=前面因子乘积）；method=`\"rsm\"` 响应面 CCD（中心复合，连续因子，可旋转 α=2^(k/4)）；method=`\"bb\"` Box-Behnken（三水平响应面，需 ≥3 因子）。返回带表头二维表：`StdOrder`、`RunOrder`、`A`、`B`…，因子编码 -1/0/+1。randomize 默认 TRUE，seed 固定随机种子（null=随机）。表行序恒为标准序，randomize 仅打乱 `RunOrder` 列。安全上限：因子数 ≤1000、运行数 ≤1,000,000、输出单元格 ≤1,000,000（超出返回 #VALUE!）。",
+   "doc_section": "DOE"
   }
  ]
 }

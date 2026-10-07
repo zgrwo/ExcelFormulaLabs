@@ -2,6 +2,11 @@
 
 > 版本：v2.4.2 <!-- x-release-please-version -->
 > 全部 UDF 函数的完整签名。使用指南见 [README.md](../../README.md)，每函数详细示例见 [用户手册](../user-manual/user-manual.md)。
+>
+> **各章节内的表格是生成物**（ADR-0011）：由 `udf-metadata/*.json` 渲染，块首尾带
+> `<!-- BEGIN:generated X -->` / `<!-- END:generated -->` 标记。改函数名/参数/返回/说明请改元数据
+> 后运行 `python tools/udfgen.py generate-api`；直接改表体会被 `scripts/verify-udfgen.ps1` 拦下。
+> 章节标题、正文段落与分隔线是手写内容，生成器不动。
 
 ---
 
@@ -31,6 +36,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 > **返回类型约定**：元素级函数**保持输入形状**——标量入 → 标量出，区域/数组入 → 同形状数组出。
 > 下表"返回"列的 `double[]`/`long[]` 指**数组入参时**的逐元素结果类型（`STATS.SIGN` 的 `long[]` 同理）。
 
+<!-- BEGIN:generated STATS -->
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
 | `STATS.MEAN` | (number1) | `double` | 算术平均值 |
@@ -51,8 +57,6 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `STATS.PERCENTILE` | (array, k) | `double` | k 分位数（0-100），R7 算法。对标 Excel PERCENTILE.INC |
 | `STATS.IQR` | (number1) | `double` | 四分位距（Q3 - Q1），R7 算法 |
 | `STATS.SUMMARY` | (array) | `double[9]` | 描述统计摘要：`[n, mean, stdev, min, q1, median, q3, max, iqr]`。R7 分位数（对标 Python scipy）。 |
-| `STATS.COUNT` | (number) | `long` | 元素个数 |
-| `STATS.MODE` | (number) | `double` | 众数。全唯一返回 NaN（对标 Excel MODE.SNGL） |
 | `STATS.COVARP` | (array1, array2) | `double` | 总体协方差（除以 n）。对标 Excel COVARIANCE.P |
 | `STATS.COVAR` | (array1, array2) | `double` | 样本协方差（除以 n-1）。对标 Excel COVARIANCE.S |
 | `STATS.PEARSON` | (array1, array2) | `double` | Pearson 线性相关系数 r。范围 -1~1。对标 Excel PEARSON |
@@ -61,38 +65,23 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `STATS.TTEST1` | (array, x) | `double` | 单样本双侧 t 检验 p 值（H₀: mean = x）。`p<0.05` = 均值与 x 差异显著 |
 | `STATS.TTEST2` | (array1, array2) | `double` | Welch 双样本双侧 t 检验 p 值（不等方差）。`p<0.05` = 两样本均值差异显著 |
 | `STATS.ZSCORE` | (number1) | `double[]` | 标准化 z 值：(x - mean) / stdev |
+| `STATS.COUNT` | (number) | `long` | 元素个数 |
+| `STATS.MODE` | (number) | `double` | 众数。全唯一返回 NaN（对标 Excel MODE.SNGL） |
 | `STATS.ABS` | (number) | `double[]` | 逐元素绝对值。对标 Excel ABS |
 | `STATS.SQRT` | (number) | `double[]` | 逐元素平方根。对标 Excel SQRT |
 | `STATS.LN` | (number) | `double[]` | 逐元素自然对数 ln(x)。对标 Excel LN |
 | `STATS.LOG10` | (number) | `double[]` | 逐元素常用对数 log₁₀(x)。对标 Excel LOG10 |
 | `STATS.EXP` | (number) | `double[]` | 逐元素指数函数 eˣ。对标 Excel EXP |
 | `STATS.SIGN` | (number) | `long[]` | 逐元素符号：-1, 0, 1。对标 Excel SIGN |
+<!-- END:generated -->
 
 ---
 
 ## LINALG.* -- 线性代数
 
+<!-- BEGIN:generated LINALG -->
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
-| `LINALG.DET` | (array) | `double` | 矩阵行列式值。对标 Excel MDETERM |
-| `LINALG.SOLVE` | (array1, array2) | `double[]` | 解线性方程组 Ax = b。奇异/病态（条件数 > 1e14）→ `#VALUE!`（奇异系统可用 `LINALG.PINV`） |
-| `LINALG.MATMUL` | (array1, array2) | `double[,]` | 矩阵乘法。对标 Excel MMULT |
-| `LINALG.TRANSPOSE` | (array) | `double[,]` | 矩阵转置。对标 Excel TRANSPOSE |
-| `LINALG.TRACE` | (array) | `double` | 矩阵迹（对角线元素之和） |
-| `LINALG.RANK` | (array, [tolerance]) | `long` | 数值秩（默认容差 0 = 相对，numpy 约定；显式传绝对阈值仍支持） |
-| `LINALG.COND` | (array) | `double` | 条件数（2-范数）。奇异矩阵 → `NaN`（原 +∞，2026-09-05 改为 NaN 封顶） |
-| `LINALG.EIGEN` | (array) | `double[]` | 特征值。要求对称矩阵，非对称输入返回错误 |
-| `LINALG.SVD_U` | (array) | `double[,]` | SVD 左奇异向量矩阵 U。A = U·diag(S)·Vt |
-| `LINALG.SVD_S` | (array) | `double[]` | SVD 奇异值向量 S（降序排列） |
-| `LINALG.SVD_VT` | (array) | `double[,]` | SVD 右奇异向量转置 Vt。A = U·diag(S)·Vt |
-| `LINALG.QR_Q` | (array) | `double[,]` | QR 分解正交矩阵 Q。A = Q·R。要求 **行数 ≥ 列数**（宽矩阵 → `#VALUE!`，请改用 SVD 或先转置） |
-| `LINALG.QR_R` | (array) | `double[,]` | QR 分解上三角矩阵 R。A = Q·R。要求 **行数 ≥ 列数** |
-| `LINALG.LU_L` | (array) | `double[,]` | LU 分解下三角矩阵 L。A = P*L*U |
-| `LINALG.LU_U` | (array) | `double[,]` | LU 分解上三角矩阵 U。A = P*L*U |
-| `LINALG.LU_P` | (array) | `double[,]` | LU 分解置换矩阵 P。A = P*L*U |
-| `LINALG.PINV` | (array) | `double[,]` | Moore-Penrose 伪逆 |
-| `LINALG.CHOLESKY` | (array) | `double[,]` | Cholesky 分解。要求对称**正定**矩阵：非对称或非正定 → `#VALUE!` |
-| `LINALG.IDENTITY` | (size) | `double[,]` | 生成 n×n 单位矩阵 |
 | `LINALG.SVD_U_ASYNC` | (array) | `double[,]` | SVD 左奇异向量 U（异步，大矩阵不阻塞 UI） |
 | `LINALG.SVD_S_ASYNC` | (array) | `double[]` | SVD 奇异值 S（异步） |
 | `LINALG.SVD_VT_ASYNC` | (array) | `double[,]` | SVD 右奇异向量转置 Vt（异步） |
@@ -102,6 +91,26 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `LINALG.SOLVE_ASYNC` | (array1, array2) | `double[]` | 解线性方程组 Ax=b（异步） |
 | `LINALG.CHOLESKY_ASYNC` | (array) | `double[,]` | Cholesky 分解（异步） |
 | `LINALG.PINV_ASYNC` | (array) | `double[,]` | Moore-Penrose 伪逆（异步） |
+| `LINALG.SVD_U` | (array) | `double[,]` | SVD 左奇异向量矩阵 U。A = U·diag(S)·Vt |
+| `LINALG.SVD_S` | (array) | `double[]` | SVD 奇异值向量 S（降序排列） |
+| `LINALG.SVD_VT` | (array) | `double[,]` | SVD 右奇异向量转置 Vt。A = U·diag(S)·Vt |
+| `LINALG.QR_Q` | (array) | `double[,]` | QR 分解正交矩阵 Q。A = Q·R。要求 **行数 ≥ 列数**（宽矩阵 → `#VALUE!`，请改用 SVD 或先转置） |
+| `LINALG.QR_R` | (array) | `double[,]` | QR 分解上三角矩阵 R。A = Q·R。要求 **行数 ≥ 列数** |
+| `LINALG.LU_L` | (array) | `double[,]` | LU 分解下三角矩阵 L。A = P*L*U |
+| `LINALG.LU_U` | (array) | `double[,]` | LU 分解上三角矩阵 U。A = P*L*U |
+| `LINALG.LU_P` | (array) | `double[,]` | LU 分解置换矩阵 P。A = P*L*U |
+| `LINALG.PINV` | (array) | `double[,]` | Moore-Penrose 伪逆 |
+| `LINALG.DET` | (array) | `double` | 矩阵行列式值。对标 Excel MDETERM |
+| `LINALG.SOLVE` | (array1, array2) | `double[]` | 解线性方程组 Ax = b。奇异/病态（条件数 > 1e14）→ `#VALUE!`（奇异系统可用 `LINALG.PINV`） |
+| `LINALG.CHOLESKY` | (array) | `double[,]` | Cholesky 分解。要求对称**正定**矩阵：非对称或非正定 → `#VALUE!` |
+| `LINALG.EIGEN` | (array) | `double[]` | 特征值。要求对称矩阵，非对称输入返回错误 |
+| `LINALG.COND` | (array) | `double` | 条件数（2-范数）。奇异矩阵 → `NaN`（原 +∞，2026-09-05 改为 NaN 封顶） |
+| `LINALG.RANK` | (array, [tolerance]) | `long` | 数值秩（默认容差 0 = 相对，numpy 约定；显式传绝对阈值仍支持） |
+| `LINALG.IDENTITY` | (size) | `double[,]` | 生成 n×n 单位矩阵 |
+| `LINALG.MATMUL` | (array1, array2) | `double[,]` | 矩阵乘法。对标 Excel MMULT |
+| `LINALG.TRANSPOSE` | (array) | `double[,]` | 矩阵转置。对标 Excel TRANSPOSE |
+| `LINALG.TRACE` | (array) | `double` | 矩阵迹（对角线元素之和） |
+<!-- END:generated -->
 
 > **异步变体说明**：`*_ASYNC` 函数与同名同步版本计算结果完全一致，仅执行方式不同（通过 `ExcelAsyncUtil` 在后台线程计算，适用于大矩阵场景，避免阻塞 Excel UI）。
 
@@ -111,8 +120,12 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 
 > 返回 N×(maxLen+1) 纵向报告表（col0 = 字段名, col1.. = 标量值或数组展开）。统计解读：**p < 0.05 = 显著**，**R² 越接近 1 拟合越好**。
 
+<!-- BEGIN:generated REGRESS -->
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
+| `REGRESS.OLS_ASYNC` | (known_y, known_x) | `object[11,?]` | OLS 回归（异步，大数据集不阻塞 UI） |
+| `REGRESS.WLS_ASYNC` | (known_y, known_x, weights) | `object[11,?]` | 加权最小二乘（异步） |
+| `REGRESS.RIDGE_ASYNC` | (known_y, known_x, [lambda]) | `object[8,?]` | 岭回归（异步） |
 | `REGRESS.OLS` | (known_y, known_x) | `object[11,?]` | **普通最小二乘法**。对标 Excel LINEST。返回 11 行报告：`coefficients`(系数)、`sse`(残差平方和)、`r_squared`(R²)、`adj_r_squared`(调整R²)、`residuals`(残差)、`fitted_values`(拟合值)、`standard_errors`(标准误)、`t_stats`(t值)、`p_values`(p值)、`n`(样本量)、`df`(自由度)。数组字段横向展开到多列。`p<0.05` 该系数显著。 |
 | `REGRESS.WLS` | (known_y, known_x, weights) | `object[11,?]` | **加权最小二乘法**（异方差数据）。返回同 OLS 的 11 行报告。`sse`/`r_squared`/`standard_errors`/`t_stats`/`p_values` 均为**加权（√w 变换）尺度**（与 statsmodels WLS 一致）；`residuals`/`fitted_values` 保持原始尺度便于与 y 比较。 |
 | `REGRESS.RIDGE` | (known_y, known_x, [lambda]) | `object[8,?]` | **岭回归**（L2 正则化，防过拟合）。λ 默认 1.0。返回 8 行：`coefficients`、`sse`、`r_squared`、`residuals`、`fitted_values`、`lambda`(惩罚参数)、`n`、`df`(残差自由度 n−p，与 OLS/WLS 同语义；n ≤ p 时为 ≤ 0)。**不返回**标准误/t值/p值（正则化下推断无效）。 |
@@ -120,9 +133,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `REGRESS.FACTORIMP` | (known_y, known_x) | `double[]` | **因子重要性排名**。按标准化后的 \|t\| 降序排列，返回 0-based 列索引数组。 |
 | `REGRESS.COEF` | (known_y, known_x) | `double[]` | OLS 回归系数向量（仅 beta）。 |
 | `REGRESS.RSQ` | (known_y, known_x) | `double` | OLS 决定系数 R²。范围 0-1，1 = 完美拟合。 |
-| `REGRESS.OLS_ASYNC` | (known_y, known_x) | `object[11,?]` | OLS 回归（异步，大数据集不阻塞 UI） |
-| `REGRESS.WLS_ASYNC` | (known_y, known_x, weights) | `object[11,?]` | 加权最小二乘（异步） |
-| `REGRESS.RIDGE_ASYNC` | (known_y, known_x, [lambda]) | `object[8,?]` | 岭回归（异步） |
+<!-- END:generated -->
 
 ---
 
@@ -133,17 +144,20 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 >
 > **rate / rate_poly 速率模型（ADR-0008/0009）**：`OutputZx(t) = IncomingZx − t·g(...)`；`rate` 的 g 为线性，`rate_poly` 的 g 为二次（含平方/交互，ridge λ=1e-5）。约定：① 配对——`Output*`/`SharedOutput*` 去掉前缀后的后缀须与某个 `Incoming*` 的后缀一致（如 `OutputZ1`↔`IncomingZ1`，`输出收率`↔`来料收率`），显式 rate 缺失即 `#VALUE!`；② 时间列——去掉角色前缀后名称含 `Time`/`时间` 的特征列，**可多个**：优先按后缀配对（`FixedTimeZ1`↔`OutputZ1`），无匹配且只有一个时间列时全局生效（旧表兼容），多个候选匹配或无匹配（显式 rate）→ `#VALUE!`（auto 逐输出跳过）；③ **时间可调**：列名用 `Variable*`（如 `VariableTime`）则缺失时参与寻优（边界默认历史 min/max，可用 bounds 放宽），`Fixed*` 则为条件（留空取历史中位数）；④ 时间必须有限且 >0：显式 rate/rate_poly 报 `#VALUE!`；auto 下时间下界 ≤0 或请求/预测时间 ≤0 时按"跳过 rate"处理，回退 linear/poly 并保持其余候选可用；⑤ **共享速率**：多个 `SharedOutput*` 列构成一个组，共用一条 g（池化拟合 `(Incomingⱼ−Outputⱼ)/tⱼ`，排除组内全部配对来料列与全部时间列）；组内成员须全部配对，否则显式 rate 报错、auto 逐输出回退；`auto` 在共享组内比较 `rate` 与 `rate_poly`（并列取 rate）；显式 `linear`/`poly` 时共享角色退化为独立输出。所有时间列一律不进入任何 g。
 
+<!-- BEGIN:generated SOLVE -->
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
 | `SOLVE.INVERSE` | (data, [request], [bounds], [model], [seed], [max_starts]) | `object[,]` | 反解推荐表，返回 `[请求行, <可调列名…>, <输出列名>预测…, (<输出列名>速率…), 最大偏差σ, 状态]`（含表头行；速率块仅在 rate 生效时出现）。`请求行`：data 内请求行标 `数据第N行`（N 为区间内 1-based 行号，含表头），独立 request 表标 `请求N`。`最大偏差σ = maxⱼ \|预测ⱼ−目标ⱼ\| / 历史输出标准差ⱼ`（标准差为 0 时取 1；仅统计有目标的输出）。`状态`=`可达`/`不可达`（目标是否落在参数边界内 2000 点采样的输出区间，相对容差 1e-9×量级；Core 数值接口 0=可达/1=不可达）。`bounds` 表：3 列 `[变量名或1-based序号, 下界, 上界]`，或 2 列按变量列顺序；默认历史最小/最大。请求可调列填值 = 寻优初值；固定列留空 = 历史中位数；来料留空 = #VALUE!。`model` 默认 `auto`，`seed` 默认 42，`max_starts` 默认 10（1–50）。`SharedOutput*` 列与其他输出一样出现在预测/速率块中，同组速率值相同；多时间列按输出后缀配对（见上）。 |
 | `SOLVE.PREDICT` | (data, values, [model]) | `double[,]` | 正向预测。`values` 为一行或多行"非输出列"取值（来料+可调+固定，按 data 列序，含时间列），返回 N 行 × 输出列数矩阵（无表头）。固定列留空取历史中位数；来料/可调留空 = #VALUE!。rate/rate_poly 模型下按每行给定的 t 计算 `Output(t)=Incoming−t·g(·)`（N×M 仅输出预测，不含速率）；t 须有限且 >0——显式速率模型报 `#VALUE!`，auto 则回退 linear/poly。`SharedOutput*` 列在 auto 下用池化 g（ADR-0009）。 |
 | `SOLVE.QUALITY` | (data, [model], [seed]) | `object[,]` | 模型质量表 `[输出, 候选, CV方案, CV_R2, CV_MAE, 选用]`（含表头行）。`auto` 时普通输出给出 linear/poly/rate 三行，`SharedOutput*` 输出给出 rate/rate_poly 两行（池化 CV，ADR-0009）；候选结构不可用或样本不足时 `CV方案=跳过`、R2/MAE 空、`选用=否`，按 CV R² 选优（rate 的 CV 在 Output 原尺度计算）；`poly`/`rate_poly` 不可用 = 样本不足或展开超 100 项，`rate` 不可用 = 缺时间列/配对或样本不足。`CV方案`：n≥20 = `5折`，n<20 = `LOO`（需 n≥5，否则 #VALUE!）。显式模型时仅一行且 `选用=是`。 |
 | `SOLVE.EQUATION` | (data, [model]) | `object[,]` | 方程表 `[输出, 类型, 表达式]`（含表头行）。`类型` = `前向方程`（如 `OutputY1 = 2 + 0.5*IncomingA + 1.5*VariableU1`，系数 6 位有效数字、InvariantCulture）、`速率方程`（速率模型：`OutputZ1速率 = g(...)`，rate_poly 含二次项）或 `反解公式`（仅单变量线性模型，如 `VariableU1 = (OutputY1 - 2 - 0.5*IncomingA) / 1.5`）；速率前向方程为 `OutputZ1(Time) = IncomingZ1 - Time*(...)`。`SharedOutput*` 成员各出一行相同表达式的速率方程（ADR-0009）。 |
+<!-- END:generated -->
 
 ---
 
 ## PHYCHEM.* -- 物理化学
 
+<!-- BEGIN:generated PHYCHEM -->
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
 | `PHYCHEM.MOLWT` | (formula_text) | `double` | 分子量计算，如 `"H2SO4"` → 98.078 |
@@ -162,6 +176,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `PHYCHEM.IDEALGAS` | (pressure, volume, moles, temperature) | `double` | 理想气体状态方程 PV=nRT。将待求量填 `*` |
 | `PHYCHEM.GASSTP` | (volume, temperature, pressure, [t_unit], [p_unit]) | `double` | 气体体积换算标况（STP）。t_unit 默认 `"C"`，p_unit 默认 `"atm"` |
 | `PHYCHEM.DENSITY` | (mass, volume) | `double` | 密度 = 质量 / 体积 |
+<!-- END:generated -->
 
 ---
 
@@ -169,12 +184,14 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 
 > 生成 DOE（实验设计）矩阵并分析结果：StandardOrder + RunOrder + 编码因子列，以及效应估计、多因素 ANOVA、Pareto 排序。因子水平编码为 -1/0/+1（coded 单位）。`randomize=FALSE` 时 RunOrder = StandardOrder，输出可复现、可对齐 Minitab/JMP 标准顺序。支持全因子（`full`）、田口正交表（`taguchi`）、2水平部分因子（`fractional`）、响应面（`rsm` CCD / `bb` Box-Behnken）。
 
+<!-- BEGIN:generated DOE -->
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
-| `DOE.PLAN` | (factor_qty1, factor_level1, factor_qty2, factor_level2, method, [randomize], [seed]) | `object[,]` | 生成 DOE 实验设计矩阵。method=`"full"` 全因子（总运行数 = level1^qty1 × level2^qty2）；method=`"taguchi"` 田口正交表（仅支持 2/3 水平，自动选最小 L4/L8/L9/L12/L16/L18/L27/L32）；method=`"fractional"` 2水平 ½ 部分因子（需 ≥4 个因子，生成元：末因子=前面因子乘积）；method=`"rsm"` 响应面 CCD（中心复合，连续因子，可旋转 α=2^(k/4)）；method=`"bb"` Box-Behnken（三水平响应面，需 ≥3 因子）。返回带表头二维表：`StdOrder`、`RunOrder`、`A`、`B`…，因子编码 -1/0/+1。randomize 默认 TRUE，seed 固定随机种子（null=随机）。表行序恒为标准序，randomize 仅打乱 `RunOrder` 列。安全上限：因子数 ≤1000、运行数 ≤1,000,000、输出单元格 ≤1,000,000（超出返回 #VALUE!）。 |
 | `DOE.ANALYZE` | (design, response, [terms]) | `object[,]` | DOE 效应表。对编码设计矩阵（DOE.PLAN 的因子列）和响应列做 OLS 拟合，返回每项（主效应/交互/平方项）的 `Term`、`Coef`、`Effect`(2×Coef)、`t`、`p`。terms 默认 `"2way"`（主效应+2阶交互），可选 `"main"`、`"quadratic"`（含平方项，需 3 水平设计）。显式 terms 遇饱和设计（扩展项+截距 ≥ 样本数）时自动降为 `"main"`，避免秩亏 `#VALUE!`。 |
 | `DOE.ANOVA` | (design, response, [terms]) | `object[,]` | 多因素 ANOVA 表。返回每项的 `Source`、`SS`、`df`、`MS`、`F`、`p`，加 Error 行和 Total 行。F = t²、SS = MSE×t²（单自由度效应）。 |
 | `DOE.PARETO` | (design, response, [terms]) | `object[,]` | DOE Pareto 排序。按 \|效应\| 降序返回每项的 `Term`、`Effect`，供 Pareto 图。 |
+| `DOE.PLAN` | (factor_qty1, factor_level1, factor_qty2, factor_level2, method, [randomize], [seed]) | `object[,]` | 生成 DOE 实验设计矩阵。method=`"full"` 全因子（总运行数 = level1^qty1 × level2^qty2）；method=`"taguchi"` 田口正交表（仅支持 2/3 水平，自动选最小 L4/L8/L9/L12/L16/L18/L27/L32）；method=`"fractional"` 2水平 ½ 部分因子（需 ≥4 个因子，生成元：末因子=前面因子乘积）；method=`"rsm"` 响应面 CCD（中心复合，连续因子，可旋转 α=2^(k/4)）；method=`"bb"` Box-Behnken（三水平响应面，需 ≥3 因子）。返回带表头二维表：`StdOrder`、`RunOrder`、`A`、`B`…，因子编码 -1/0/+1。randomize 默认 TRUE，seed 固定随机种子（null=随机）。表行序恒为标准序，randomize 仅打乱 `RunOrder` 列。安全上限：因子数 ≤1000、运行数 ≤1,000,000、输出单元格 ≤1,000,000（超出返回 #VALUE!）。 |
+<!-- END:generated -->
 
 ---
 
@@ -182,6 +199,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 
 > 除 TEXTJOIN/UUID/RND* 外，其他函数支持数组公式（逐元素处理）。
 
+<!-- BEGIN:generated STR -->
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
 | `STR.REVERSE` | (text) | `string` | 反转字符串。`"hello"` → `"olleh"` |
@@ -218,6 +236,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `STR.COALESCE` | (value1, value2) | `string` | 取第一个非 null/空值，否则返回 value2 |
 | `STR.FORMAT` | (value, format_text) | `string` | 按 .NET 格式字符串格式化。如 `"0.00"`, `"yyyy-MM-dd"`。对标 Excel TEXT |
 | `STR.STRIPHTML` | (text) | `string` | 去除 HTML 标签，仅保留文本 |
+<!-- END:generated -->
 
 ---
 
@@ -225,6 +244,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 
 > 日期参数接受 Excel 日期序列号。start_day: 0=Sun, 1=Mon, ... (默认 1=Mon)。
 
+<!-- BEGIN:generated DT -->
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
 | `DT.ISOWEEK` | (serial_number) | `long` | ISO 8601 周数（1-53）。对标 Excel ISOWEEKNUM |
@@ -252,6 +272,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `DT.UNIXTS` | (serial_number) | `double` | Excel 日期 → Unix 时间戳（秒）。按机器本地时区解释日期（Unspecified Kind → 本地 UTC 偏移），跨时区同输入得不同值；`DT.FROMUNIX` 对称取本地时间，单机往返一致 |
 | `DT.FROMUNIX` | (unix_timestamp) | `double` | Unix 时间戳 → Excel 日期 |
 | `DT.DATEDIFF` | (date_unit, start_date, end_date) | `long` | 日期差：`"d"`=天, `"m"`=月, `"y"`=年, `"w"`=周。对标 Excel DATEDIF |
+<!-- END:generated -->
 
 ---
 
@@ -260,6 +281,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 > .NET 正则引擎。除 `REGEX.MATCHALL` / `REGEX.GROUPS` / `REGEX.SPLIT` 外支持数组公式（逐元素处理），超时 5 秒自动取消。
 > `[ignore_case]` **默认 TRUE（不区分大小写）**；显式传 FALSE 才区分大小写。
 
+<!-- BEGIN:generated REGEX -->
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
 | `REGEX.TEST` | (text, pattern, [ignore_case]) | `bool` | 是否匹配正则 |
@@ -271,11 +293,13 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `REGEX.GROUPS` | (text, pattern, [ignore_case]) | `object[2,n]` | 捕获组。row0=组名, row1=值。`[0]`=完整匹配 |
 | `REGEX.ESCAPE` | (text) | `string` | 转义正则特殊字符 |
 | `REGEX.ISMATCH` | (text, pattern) | `bool` | 不区分大小写匹配（REGEX.TEST ignore_case=true 的别名） |
+<!-- END:generated -->
 
 ---
 
 ## ARR.* -- 数组操作
 
+<!-- BEGIN:generated ARR -->
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
 | `ARR.SORT` | (array, [sort_order], [sort_mode]) | `object[]` | 排序。sort_order=TRUE 升序（默认），sort_mode=`"auto"/"text"/"numeric"`。对标 Excel SORT |
@@ -300,11 +324,13 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `ARR.FILL` | (value, count) | `object[]` | 生成长度 count 的数组，全部填充 value |
 | `ARR.RANGE` | (start, end, step) | `object[]` | 生成数值序列 start → end，步长 step。对标 Excel SEQUENCE |
 | `ARR.SHUFFLE` | (array) | `object[]` | 随机打乱（Fisher-Yates） |
+<!-- END:generated -->
 
 ---
 
 ## DICT.* -- 字典/集合操作
 
+<!-- BEGIN:generated DICT -->
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
 | `DICT.FREQUENCY` | (key_array) | `object[2,n]` | 频率统计。返回两列：value, count |
@@ -315,10 +341,12 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `DICT.COUNT` | (dict_table) | `long` | 字典行数 |
 | `DICT.KEYS` | (dict_table) | `object[]` | 提取字典第一列（键） |
 | `DICT.VALUES` | (dict_table) | `object[]` | 提取字典第二列（值） |
+<!-- END:generated -->
 ---
 
 ## JSON.* / XML.* -- JSON/XML 处理
 
+<!-- BEGIN:generated JSON -->
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
 | `JSON.PARSE` | (json_text) | `object` | 解析 JSON 为原生结构：标量/一维标量数组正常返回；嵌套对象/数组渲染为非表格（需二维表时用 `JSON.TOTABLE`） |
@@ -329,17 +357,20 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `XML.XPATH` | (xml_text, xpath_text) | `string[]` | XPath 查询，返回匹配元素的值。对标 Excel FILTERXML |
 | `XML.VALIDATE` | (xml_text) | `bool` | 是否为合法 XML |
 | `XML.TOTABLE` | (xml_text, row_xpath) | `object[,]` | XML 转二维表，row_xpath 定义行节点 |
+<!-- END:generated -->
 
 ---
 
 ## PIVOT.* -- 数据透视
 
+<!-- BEGIN:generated PIVOT -->
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
 | `PIVOT.PIVOT` | (source_range, row_field, col_field, value_field, [aggregation], [has_headers]) | `object[,]` | 透视表。row_field=行标签列, col_field=列标签列, value_field=值列（列号均为 **0-based**，首列=0）。aggregation=`sum/avg/count/min/max`（默认 SUM），has_headers=首行是否表头（默认 TRUE）。聚合仅统计**数值类型**单元格：文本（含数字文本如 `"10"`）与空白跳过（Excel SUM 语义）；错误值传播 NaN |
 | `PIVOT.UNPIVOT` | (source_range, id_fields, value_fields, [has_headers]) | `object[,]` | 逆透视：宽列转为键值行。has_headers=首行是否表头（默认 TRUE） |
 | `PIVOT.GROUPBY` | (source_range, group_fields, agg_column, [aggregation], [has_headers]) | `object[,]` | 分组聚合。group_fields=分组列号数组, agg_column=聚合列（列号均为 **0-based**，首列=0；越界返回 `#VALUE!`；默认 SUM）。has_headers=首行是否表头（默认 TRUE）。聚合仅统计数值类型单元格（文本/空白跳过，错误值传播 NaN，同 `PIVOT.PIVOT`） |
 | `PIVOT.CROSSJOIN` | (table1, table2) | `object[,]` | 笛卡尔积交叉连接 |
+<!-- END:generated -->
 
 ---
 
@@ -347,6 +378,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 
 > 需宏安全设置允许。元素级函数（除 LS/LSDIR/DRIVES/PWD/TEMP）支持数组公式。
 
+<!-- BEGIN:generated FS -->
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
 | `FS.NORM` | (file_path) | `string` | 规范化路径（统一斜杠，解析 . 和 ..） |
@@ -371,6 +403,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `FS.DRIVES` | () | `string[]` | 列出所有逻辑驱动器 |
 | `FS.PWD` | () | `string` | 当前工作目录 |
 | `FS.TEMP` | () | `string` | 系统临时文件夹路径 |
+<!-- END:generated -->
 
 ---
 
@@ -383,16 +416,19 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 > 列类型由全表扫描推断：全整数→`INTEGER`、含小数→`REAL`、含文本→`TEXT`（混合按 TEXT 处理）；布尔/日期以 `TRUE`/`FALSE`、`yyyy-MM-dd HH:mm:ss` 不变式文本存储，双 TFM 结果一致。
 > 源区域中的 Excel 错误单元格（`#VALUE!`/`#DIV/0!` 等）与空单元格一致按 NULL 写入。
 
+<!-- BEGIN:generated SQL -->
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
 | `SQL.QUERY` | (source_range, sql_query, [has_headers]) | `object[,]` | 对区域执行 SQL。表名 = `data` |
 | `SQL.JOIN` | (source_range, join_table, sql_query, [has_headers]) | `object[,]` | 两个表的 SQL。第一个表名 = `data`，第二个表名 = `extra` |
 | `SQL.QUERY3` | (table1, table2, table3, sql_query, [has_headers]) | `object[,]` | 三个表的 SQL。表名依次为 `data`、`b`、`c` |
+<!-- END:generated -->
 
 ---
 
 ## RANGE.* -- 范围导出
 
+<!-- BEGIN:generated RANGE -->
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
 | `RANGE.TOHTML` | (source_range, [has_headers], [css_class]) | `string` | 导出为 HTML 表格。has_headers=首行是否表头（默认 TRUE） |
@@ -404,6 +440,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | `RANGE.TRANSPOSE` | (source_range) | `object[,]` | 行列转置。对标 Excel TRANSPOSE |
 | `RANGE.SELCOLS` | (source_range, column_indices) | `object[,]` | 选取指定列。对标 Excel CHOOSECOLS |
 | `RANGE.SELROWS` | (source_range, row_indices) | `object[,]` | 选取指定行。对标 Excel CHOOSEROWS |
+<!-- END:generated -->
 
 ---
 

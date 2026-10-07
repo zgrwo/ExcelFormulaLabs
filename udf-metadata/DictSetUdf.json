@@ -23,7 +23,10 @@
     }
    ],
    "expr": "DictSetCore.Frequency(A(k))",
-   "generated": true
+   "generated": true,
+   "returns": "object[2,n]",
+   "doc": "频率统计。返回两列：value, count",
+   "doc_section": "DICT"
   },
   {
    "excel": "DICT.INTERSECT",
@@ -46,7 +49,10 @@
     }
    ],
    "expr": "DictSetCore.Intersect(A(a),A(b))",
-   "generated": true
+   "generated": true,
+   "returns": "object[]",
+   "doc": "交集：两个数组都有的值。**不区分大小写**（字符串键 IgnoreCase 归一）——与 ARR.UNIQUE 的区分大小写语义不同，见 context.md",
+   "doc_section": "DICT"
   },
   {
    "excel": "DICT.UNION",
@@ -69,7 +75,10 @@
     }
    ],
    "expr": "DictSetCore.Union(A(a),A(b))",
-   "generated": true
+   "generated": true,
+   "returns": "object[]",
+   "doc": "并集：两个数组所有不重复值。**不区分大小写**（同 DICT.INTERSECT）",
+   "doc_section": "DICT"
   },
   {
    "excel": "DICT.EXCEPT",
@@ -92,7 +101,10 @@
     }
    ],
    "expr": "DictSetCore.Except(A(a),A(b))",
-   "generated": true
+   "generated": true,
+   "returns": "object[]",
+   "doc": "差集：在 array1 但不在 array2 的值。**不区分大小写**（同 DICT.INTERSECT）",
+   "doc_section": "DICT"
   },
   {
    "excel": "DICT.DICT",
@@ -115,7 +127,10 @@
     }
    ],
    "expr": "DictSetCore.Dict(A(k),A(v))",
-   "generated": true
+   "generated": true,
+   "returns": "object[2,n]",
+   "doc": "用并行 key/value 数组构建双列表格",
+   "doc_section": "DICT"
   },
   {
    "excel": "DICT.COUNT",
@@ -131,7 +146,10 @@
     }
    ],
    "expr": "(long)DictSetCore.Count(InputNormalizer.NormalizeTo2D(d)!)",
-   "generated": true
+   "generated": true,
+   "returns": "long",
+   "doc": "字典行数",
+   "doc_section": "DICT"
   },
   {
    "excel": "DICT.KEYS",
@@ -147,7 +165,10 @@
     }
    ],
    "expr": "DictSetCore.Keys(InputNormalizer.NormalizeTo2D(d)!)",
-   "generated": true
+   "generated": true,
+   "returns": "object[]",
+   "doc": "提取字典第一列（键）",
+   "doc_section": "DICT"
   },
   {
    "excel": "DICT.VALUES",
@@ -163,7 +184,10 @@
     }
    ],
    "expr": "DictSetCore.Values(InputNormalizer.NormalizeTo2D(d)!)",
-   "generated": true
+   "generated": true,
+   "returns": "object[]",
+   "doc": "提取字典第二列（值）",
+   "doc_section": "DICT"
   }
  ]
 }

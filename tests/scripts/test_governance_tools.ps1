@@ -1,4 +1,4 @@
-﻿# ============================================================================
+# ============================================================================
 # test_governance_tools.ps1 — 治理工具脚本回归守卫
 # 场景：覆盖 5 个脚本面：scaffold-udf 标识符校验 / run-affected 未映射告警 /
 #       commit-msg bash 计数与 locale 固定 / patch-xll 缺失 exit 1 /
@@ -14,7 +14,7 @@ $repo = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)   # 仓库根
 $tmpRoot = Join-Path $env:TEMP ("gov-tool-test-" + [guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Path $tmpRoot -Force | Out-Null
 
-$passCount = 0; $failCount = 0
+$passCount = 0; $failCount = 0; $skipCount = 0
 $hostCmd = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell" }
 
 function Assert-Scenario {
@@ -26,6 +26,14 @@ function Assert-Scenario {
         $script:failCount++
         Write-Host "  [FAIL] $Name $Detail" -ForegroundColor Red
     }
+}
+
+# SKIP 单列计数、不计入 pass（与 verify-docs 的 Check-Skip 同语义）：
+# 把环境缺失计为 pass 会掩盖"该场景根本没跑"。
+function Skip-Scenario {
+    param([string]$Name)
+    $script:skipCount++
+    Write-Host "  [SKIP] $Name" -ForegroundColor Yellow
 }
 
 Write-Host ""
@@ -59,6 +67,28 @@ $exit = $LASTEXITCODE
 $genCore = Test-Path (Join-Path $fixtureRepo "src\Analytics\WeatherCore.cs")
 Assert-Scenario "scaffold accepts valid name (fixture)" (($exit -eq 0) -and $genCore) "exit=$exit coreExists=$genCore"
 
+# 1f：夹具含元数据模板时必须写出 udf-metadata/<Name>Udf.json（ADR-0011 的单一真源），
+#     且缺 tools/udfgen.py 时**只告警不失败**（本夹具正是无 tools/ 的情形）。
+$genMeta = Test-Path (Join-Path $fixtureRepo "udf-metadata\WeatherUdf.json")
+Assert-Scenario "scaffold emits metadata source of truth" $genMeta "metaExists=$genMeta"
+Assert-Scenario "scaffold skips missing udfgen without failing" (($out | Out-String) -match '\[SKIP\] 未找到 tools/udfgen.py') "exit=$exit"
+
+# 1g：端到端——夹具补齐 tools/udfgen.py 后，应生成 src/<Module>/<Name>Udf.g.cs。
+#     这是新流程（模板 → 元数据 → 生成）真正的回归守卫；无 python 环境时跳过。
+if (Get-Command python -ErrorAction SilentlyContinue) {
+    New-Item -ItemType Directory -Path (Join-Path $fixtureRepo "tools") -Force | Out-Null
+    Copy-Item (Join-Path $repo "tools\udfgen.py") (Join-Path $fixtureRepo "tools\udfgen.py") -Force
+    Remove-Item (Join-Path $fixtureRepo "udf-metadata\WeatherUdf.json") -Force -ErrorAction SilentlyContinue
+    Remove-Item (Join-Path $fixtureRepo "src\Analytics\WeatherCore.cs") -Force -ErrorAction SilentlyContinue
+    $out2 = & $hostCmd -NoProfile -ExecutionPolicy Bypass -File $scaffoldScript `
+        -Module Analytics -Name Rain -Prefix RAIN 2>&1
+    $exit2 = $LASTEXITCODE
+    $genCs = Test-Path (Join-Path $fixtureRepo "src\Analytics\RainUdf.g.cs")
+    Assert-Scenario "scaffold generates .g.cs end-to-end" (($exit2 -eq 0) -and $genCs) "exit=$exit2 gcsExists=$genCs"
+} else {
+    Write-Host "  [SKIP] python 不可用，跳过 scaffold 端到端生成场景"
+}
+
 Write-Host ""
 Write-Host "=== [2] run-affected-tests.ps1 未映射告警（N-G）===" -ForegroundColor Cyan
 
@@ -83,6 +113,14 @@ Assert-Scenario "non-standard-named src file routes to module tests" ($outStr -m
 
 Write-Host ""
 Write-Host "=== [3] validate-commit-msg.sh 计数与 locale（N-C + R5-P3-37）===" -ForegroundColor Cyan
+
+# 本场景需要 bash（validate-commit-msg.sh 是 POSIX shell 脚本）。无 bash 的机器上
+# **必须 SKIP 而非崩溃**：旧实现直接调 bash，在 $ErrorActionPreference="Stop" 下
+# "command not found" 升级为终止异常 → 脚本连汇总行都不打印、exit 1，
+# 看起来像"测试失败"而实为环境缺失（2026-10-07 本机复现）。
+if (-not (Get-Command bash -ErrorAction SilentlyContinue)) {
+    Skip-Scenario "validate-commit-msg.sh（本机无 bash）"
+} else {
 
 $msgFile = Join-Path $tmpRoot "commit-msg.txt"
 # 3a：合规中文标题（24 个中文字 ≈ 72 UTF-8 字节）在 C locale 下不应按字节误报
@@ -109,6 +147,8 @@ $null = bash (Join-Path $repo "scripts\validate-commit-msg.sh") $msgFile 2>&1
 $exitFmt = $LASTEXITCODE
 Assert-Scenario "non-conventional subject fails" ($exitFmt -ne 0) "exit=$exitFmt"
 $ErrorActionPreference = "Stop"
+
+}
 
 Write-Host ""
 Write-Host "=== [4] patch-xll-version.ps1 缺失 exit 1（N-D）===" -ForegroundColor Cyan

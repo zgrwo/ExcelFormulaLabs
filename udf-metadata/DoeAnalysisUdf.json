@@ -37,7 +37,10 @@
     }
    ],
    "expr": "{ double[,] X = M(design); double[] y = V(response); var (maxOrder, quadratic) = EffectiveTerms(X, terms); return DoeAnalysisCore.Analyze(X, y, maxOrder, quadratic); }",
-   "generated": true
+   "generated": true,
+   "returns": "object[,]",
+   "doc": "DOE 效应表。对编码设计矩阵（DOE.PLAN 的因子列）和响应列做 OLS 拟合，返回每项（主效应/交互/平方项）的 `Term`、`Coef`、`Effect`(2×Coef)、`t`、`p`。terms 默认 `\"2way\"`（主效应+2阶交互），可选 `\"main\"`、`\"quadratic\"`（含平方项，需 3 水平设计）。显式 terms 遇饱和设计（扩展项+截距 ≥ 样本数）时自动降为 `\"main\"`，避免秩亏 `#VALUE!`。",
+   "doc_section": "DOE"
   },
   {
    "excel": "DOE.ANOVA",
@@ -67,7 +70,10 @@
     }
    ],
    "expr": "{ double[,] X = M(design); double[] y = V(response); var (maxOrder, quadratic) = EffectiveTerms(X, terms); return DoeAnalysisCore.Anova(X, y, maxOrder, quadratic); }",
-   "generated": true
+   "generated": true,
+   "returns": "object[,]",
+   "doc": "多因素 ANOVA 表。返回每项的 `Source`、`SS`、`df`、`MS`、`F`、`p`，加 Error 行和 Total 行。F = t²、SS = MSE×t²（单自由度效应）。",
+   "doc_section": "DOE"
   },
   {
    "excel": "DOE.PARETO",
@@ -97,7 +103,10 @@
     }
    ],
    "expr": "{ double[,] X = M(design); double[] y = V(response); var (maxOrder, quadratic) = EffectiveTerms(X, terms); return DoeAnalysisCore.Pareto(X, y, maxOrder, quadratic); }",
-   "generated": true
+   "generated": true,
+   "returns": "object[,]",
+   "doc": "DOE Pareto 排序。按 \\|效应\\| 降序返回每项的 `Term`、`Effect`，供 Pareto 图。",
+   "doc_section": "DOE"
   }
  ]
 }

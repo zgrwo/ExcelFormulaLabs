@@ -40,7 +40,10 @@
     }
    ],
    "expr": "ArrayCore.Sort(A(a),InputNormalizer.ToBool(asc, true),ParseSortMode(mode))",
-   "generated": true
+   "generated": true,
+   "returns": "object[]",
+   "doc": "排序。sort_order=TRUE 升序（默认），sort_mode=`\"auto\"/\"text\"/\"numeric\"`。对标 Excel SORT",
+   "doc_section": "ARR"
   },
   {
    "excel": "ARR.SORTASC",
@@ -56,7 +59,10 @@
     }
    ],
    "expr": "ArrayCore.Sort(A(a),true,ComparerMode.Auto)",
-   "generated": true
+   "generated": true,
+   "returns": "object[]",
+   "doc": "升序排列（自动检测类型）",
+   "doc_section": "ARR"
   },
   {
    "excel": "ARR.SORTDESC",
@@ -72,7 +78,10 @@
     }
    ],
    "expr": "ArrayCore.Sort(A(a),false,ComparerMode.Auto)",
-   "generated": true
+   "generated": true,
+   "returns": "object[]",
+   "doc": "降序排列（自动检测类型）",
+   "doc_section": "ARR"
   },
   {
    "excel": "ARR.SORTNUM",
@@ -88,7 +97,10 @@
     }
    ],
    "expr": "ArrayCore.Sort(A(a),true,ComparerMode.Numeric)",
-   "generated": true
+   "generated": true,
+   "returns": "object[]",
+   "doc": "按数值升序排列",
+   "doc_section": "ARR"
   },
   {
    "excel": "ARR.SORTTEXT",
@@ -104,7 +116,10 @@
     }
    ],
    "expr": "ArrayCore.Sort(A(a),true,ComparerMode.Text)",
-   "generated": true
+   "generated": true,
+   "returns": "object[]",
+   "doc": "按文本升序排列（不区分大小写）",
+   "doc_section": "ARR"
   },
   {
    "excel": "ARR.UNIQUE",
@@ -120,7 +135,10 @@
     }
    ],
    "expr": "ArrayCore.Unique(A(a))",
-   "generated": true
+   "generated": true,
+   "returns": "object[]",
+   "doc": "去重，保留首次出现顺序。对标 Excel UNIQUE。**区分大小写**（Ordinal 精确比较，\"a\"/\"A\" 为两个值）；带亚秒的 DateTime 按完整精度参与去重",
+   "doc_section": "ARR"
   },
   {
    "excel": "ARR.INDEXOF",
@@ -143,7 +161,10 @@
     }
    ],
    "expr": "(long)ArrayCore.IndexOf(A(a),v)",
-   "generated": true
+   "generated": true,
+   "returns": "long",
+   "doc": "值首次出现的 0-based 索引，未找到返回 -1。对标 Excel MATCH",
+   "doc_section": "ARR"
   },
   {
    "excel": "ARR.SLICE",
@@ -173,7 +194,10 @@
     }
    ],
    "expr": "ArrayCore.Slice(A(a),InputNormalizer.ToLong(s),InputNormalizer.ToLong(l))",
-   "generated": true
+   "generated": true,
+   "returns": "object[]",
+   "doc": "从索引 start_index 起取 num_elements 个元素",
+   "doc_section": "ARR"
   },
   {
    "excel": "ARR.FLATTEN",
@@ -189,7 +213,10 @@
     }
    ],
    "expr": "ArrayCore.Flatten2D(InputNormalizer.NormalizeTo2D(a)!)",
-   "generated": true
+   "generated": true,
+   "returns": "object[]",
+   "doc": "二维区域按行展为一维。对标 Excel TOROW",
+   "doc_section": "ARR"
   },
   {
    "excel": "ARR.FILTER",
@@ -219,7 +246,10 @@
     }
    ],
    "expr": "{using (RegexBudget.Begin()) return ArrayCore.Filter(A(a),c,InputNormalizer.ToString(op));}",
-   "generated": true
+   "generated": true,
+   "returns": "object[]",
+   "doc": "按比较运算符过滤：`=`, `<>`, `>`, `<`, `>=`, `<=`。对标 Excel FILTER",
+   "doc_section": "ARR"
   },
   {
    "excel": "ARR.FILTER_EQ",
@@ -242,7 +272,10 @@
     }
    ],
    "expr": "ArrayCore.Filter(A(a),c,\"=\")",
-   "generated": true
+   "generated": true,
+   "returns": "object[]",
+   "doc": "筛选等于 criteria 的元素",
+   "doc_section": "ARR"
   },
   {
    "excel": "ARR.FILTER_NE",
@@ -265,7 +298,10 @@
     }
    ],
    "expr": "ArrayCore.Filter(A(a),c,\"<>\")",
-   "generated": true
+   "generated": true,
+   "returns": "object[]",
+   "doc": "筛选不等于 criteria 的元素",
+   "doc_section": "ARR"
   },
   {
    "excel": "ARR.FILTER_GT",
@@ -288,7 +324,10 @@
     }
    ],
    "expr": "ArrayCore.Filter(A(a),c,\">\")",
-   "generated": true
+   "generated": true,
+   "returns": "object[]",
+   "doc": "筛选大于 criteria 的元素",
+   "doc_section": "ARR"
   },
   {
    "excel": "ARR.FILTER_LT",
@@ -311,7 +350,10 @@
     }
    ],
    "expr": "ArrayCore.Filter(A(a),c,\"<\")",
-   "generated": true
+   "generated": true,
+   "returns": "object[]",
+   "doc": "筛选小于 criteria 的元素",
+   "doc_section": "ARR"
   },
   {
    "excel": "ARR.CONCAT",
@@ -334,7 +376,10 @@
     }
    ],
    "expr": "ArrayCore.Concat(A(a),A(b))",
-   "generated": true
+   "generated": true,
+   "returns": "object[]",
+   "doc": "拼接两个数组。对标 Excel VSTACK/HSTACK",
+   "doc_section": "ARR"
   },
   {
    "excel": "ARR.REVERSE",
@@ -350,7 +395,10 @@
     }
    ],
    "expr": "ArrayCore.Reverse(A(a))",
-   "generated": true
+   "generated": true,
+   "returns": "object[]",
+   "doc": "反转数组顺序",
+   "doc_section": "ARR"
   },
   {
    "excel": "ARR.COUNT",
@@ -366,7 +414,10 @@
     }
    ],
    "expr": "(long)ArrayCore.Count(A(a))",
-   "generated": true
+   "generated": true,
+   "returns": "long",
+   "doc": "元素个数。对标 Excel COUNT",
+   "doc_section": "ARR"
   },
   {
    "excel": "ARR.CONTAINS",
@@ -389,7 +440,10 @@
     }
    ],
    "expr": "(object)ArrayCore.Contains(A(a),v)",
-   "generated": true
+   "generated": true,
+   "returns": "bool",
+   "doc": "是否包含指定值",
+   "doc_section": "ARR"
   },
   {
    "excel": "ARR.TOSET",
@@ -405,7 +459,10 @@
     }
    ],
    "expr": "ArrayCore.Unique(A(a))",
-   "generated": true
+   "generated": true,
+   "returns": "object[]",
+   "doc": "去重（ARR.UNIQUE 的别名）",
+   "doc_section": "ARR"
   },
   {
    "excel": "ARR.FILL",
@@ -428,7 +485,10 @@
     }
    ],
    "expr": "ArrayCore.Fill(v,InputNormalizer.ToLong(n))",
-   "generated": true
+   "generated": true,
+   "returns": "object[]",
+   "doc": "生成长度 count 的数组，全部填充 value",
+   "doc_section": "ARR"
   },
   {
    "excel": "ARR.RANGE",
@@ -458,7 +518,10 @@
     }
    ],
    "expr": "ArrayCore.Sequence(InputNormalizer.ToDouble(s),InputNormalizer.ToDouble(e),InputNormalizer.ToDouble(step))",
-   "generated": true
+   "generated": true,
+   "returns": "object[]",
+   "doc": "生成数值序列 start → end，步长 step。对标 Excel SEQUENCE",
+   "doc_section": "ARR"
   },
   {
    "excel": "ARR.SHUFFLE",
@@ -474,7 +537,10 @@
     }
    ],
    "expr": "ArrayCore.Shuffle(A(a))",
-   "generated": true
+   "generated": true,
+   "returns": "object[]",
+   "doc": "随机打乱（Fisher-Yates）",
+   "doc_section": "ARR"
   }
  ]
 }

@@ -38,7 +38,10 @@
     }
    ],
    "expr": "SqlCore.SqlQuery(InputNormalizer.NormalizeTo2D(data)!, InputNormalizer.ToString(sql), hasHeaders: InputNormalizer.ToBool(hh, true))!",
-   "generated": true
+   "generated": true,
+   "returns": "object[,]",
+   "doc": "对区域执行 SQL。表名 = `data`",
+   "doc_section": "SQL"
   },
   {
    "excel": "SQL.JOIN",
@@ -75,7 +78,10 @@
     }
    ],
    "expr": "{ var t = new Dictionary<string, object[,]> { [\"extra\"] = InputNormalizer.NormalizeTo2D(extra)! }; return SqlCore.SqlQuery(InputNormalizer.NormalizeTo2D(data)!, InputNormalizer.ToString(sql), t, InputNormalizer.ToBool(hh, true))!; }",
-   "generated": true
+   "generated": true,
+   "returns": "object[,]",
+   "doc": "两个表的 SQL。第一个表名 = `data`，第二个表名 = `extra`",
+   "doc_section": "SQL"
   },
   {
    "excel": "SQL.QUERY3",
@@ -119,7 +125,10 @@
     }
    ],
    "expr": "{ var t = new Dictionary<string, object[,]> { [\"b\"] = InputNormalizer.NormalizeTo2D(b)!, [\"c\"] = InputNormalizer.NormalizeTo2D(c)! }; return SqlCore.SqlQuery(InputNormalizer.NormalizeTo2D(a)!, InputNormalizer.ToString(sql), t, InputNormalizer.ToBool(hh, true))!; }",
-   "generated": true
+   "generated": true,
+   "returns": "object[,]",
+   "doc": "三个表的 SQL。表名依次为 `data`、`b`、`c`",
+   "doc_section": "SQL"
   }
  ]
 }

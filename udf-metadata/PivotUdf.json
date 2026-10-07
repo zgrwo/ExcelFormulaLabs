@@ -59,7 +59,10 @@
     }
    ],
    "expr": "PivotCore.Pivot(InputNormalizer.NormalizeTo2D(d)!,InputNormalizer.ToInt32(kc),InputNormalizer.ToInt32(pc),InputNormalizer.ToInt32(vc),Agg(agg),InputNormalizer.ToBool(hh, true))",
-   "generated": true
+   "generated": true,
+   "returns": "object[,]",
+   "doc": "透视表。row_field=行标签列, col_field=列标签列, value_field=值列（列号均为 **0-based**，首列=0）。aggregation=`sum/avg/count/min/max`（默认 SUM），has_headers=首行是否表头（默认 TRUE）。聚合仅统计**数值类型**单元格：文本（含数字文本如 `\"10\"`）与空白跳过（Excel SUM 语义）；错误值传播 NaN",
+   "doc_section": "PIVOT"
   },
   {
    "excel": "PIVOT.UNPIVOT",
@@ -96,7 +99,10 @@
     }
    ],
    "expr": "{var ids=InputNormalizer.NormalizeTo1D(ic).Select(x=>InputNormalizer.ToInt32(x)).ToArray();var vs=InputNormalizer.NormalizeTo1D(vc).Select(x=>InputNormalizer.ToInt32(x)).ToArray();return PivotCore.Unpivot(InputNormalizer.NormalizeTo2D(d)!,ids,vs,InputNormalizer.ToBool(hh, true));}",
-   "generated": true
+   "generated": true,
+   "returns": "object[,]",
+   "doc": "逆透视：宽列转为键值行。has_headers=首行是否表头（默认 TRUE）",
+   "doc_section": "PIVOT"
   },
   {
    "excel": "PIVOT.GROUPBY",
@@ -140,7 +146,10 @@
     }
    ],
    "expr": "{var g=InputNormalizer.NormalizeTo1D(gc).Select(x=>InputNormalizer.ToInt32(x)).ToArray();return PivotCore.GroupBy(InputNormalizer.NormalizeTo2D(d)!,g,InputNormalizer.ToInt32(ac),Agg(agg),InputNormalizer.ToBool(hh, true));}",
-   "generated": true
+   "generated": true,
+   "returns": "object[,]",
+   "doc": "分组聚合。group_fields=分组列号数组, agg_column=聚合列（列号均为 **0-based**，首列=0；越界返回 `#VALUE!`；默认 SUM）。has_headers=首行是否表头（默认 TRUE）。聚合仅统计数值类型单元格（文本/空白跳过，错误值传播 NaN，同 `PIVOT.PIVOT`）",
+   "doc_section": "PIVOT"
   },
   {
    "excel": "PIVOT.CROSSJOIN",
@@ -163,7 +172,10 @@
     }
    ],
    "expr": "PivotCore.CrossJoin(InputNormalizer.NormalizeTo2D(a)!,InputNormalizer.NormalizeTo2D(b)!)",
-   "generated": true
+   "generated": true,
+   "returns": "object[,]",
+   "doc": "笛卡尔积交叉连接",
+   "doc_section": "PIVOT"
   }
  ]
 }

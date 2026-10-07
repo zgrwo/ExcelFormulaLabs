@@ -90,8 +90,14 @@ if (-not $SkipCrossVal) {
 }
 
 # Step 5: Pre-commit checks (bare catch / self-validation / IntelliSense / Core isolation)
-Step "5/6 Pre-commit Checks" {
+#         + 治理脚本自测（tests/scripts）——后者原先只在 CI 跑，本地"全量验证"不含它，
+#         于是"改了某个治理脚本 → 该脚本的自测挂了"能一路绿灯到 CI 才暴露
+#         （2026-10-07 实测：重写 scaffold-udf.ps1 后 test_governance_tools.ps1 失败，
+#          而当时 verify-docs / pre-commit / 单测全绿）。并入本步，6 步口径不变。
+Step "5/6 Pre-commit Checks + Governance Self-tests" {
     powershell -NoProfile -File "$root\scripts\pre-commit-check.ps1"
+    if ($LASTEXITCODE -ne 0) { throw "pre-commit-check FAILED" }
+    powershell -NoProfile -File "$root\tests\scripts\run-tests.ps1"
 }
 
 # Step 6: Release build (dual TFM packaging verification)

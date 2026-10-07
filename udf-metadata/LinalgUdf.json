@@ -23,7 +23,10 @@
     }
    ],
    "expr": "LinalgCore.SvdU(M(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double[,]",
+   "doc": "SVD 左奇异向量矩阵 U。A = U·diag(S)·Vt",
+   "doc_section": "LINALG"
   },
   {
    "excel": "LINALG.SVD_S",
@@ -39,7 +42,10 @@
     }
    ],
    "expr": "LinalgCore.SvdS(M(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double[]",
+   "doc": "SVD 奇异值向量 S（降序排列）",
+   "doc_section": "LINALG"
   },
   {
    "excel": "LINALG.SVD_VT",
@@ -55,7 +61,10 @@
     }
    ],
    "expr": "LinalgCore.SvdVt(M(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double[,]",
+   "doc": "SVD 右奇异向量转置 Vt。A = U·diag(S)·Vt",
+   "doc_section": "LINALG"
   },
   {
    "excel": "LINALG.QR_Q",
@@ -71,7 +80,10 @@
     }
    ],
    "expr": "LinalgCore.QrQ(M(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double[,]",
+   "doc": "QR 分解正交矩阵 Q。A = Q·R。要求 **行数 ≥ 列数**（宽矩阵 → `#VALUE!`，请改用 SVD 或先转置）",
+   "doc_section": "LINALG"
   },
   {
    "excel": "LINALG.QR_R",
@@ -87,7 +99,10 @@
     }
    ],
    "expr": "LinalgCore.QrR(M(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double[,]",
+   "doc": "QR 分解上三角矩阵 R。A = Q·R。要求 **行数 ≥ 列数**",
+   "doc_section": "LINALG"
   },
   {
    "excel": "LINALG.LU_L",
@@ -103,7 +118,10 @@
     }
    ],
    "expr": "LinalgCore.LuL(M(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double[,]",
+   "doc": "LU 分解下三角矩阵 L。A = P*L*U",
+   "doc_section": "LINALG"
   },
   {
    "excel": "LINALG.LU_U",
@@ -119,7 +137,10 @@
     }
    ],
    "expr": "LinalgCore.LuU(M(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double[,]",
+   "doc": "LU 分解上三角矩阵 U。A = P*L*U",
+   "doc_section": "LINALG"
   },
   {
    "excel": "LINALG.LU_P",
@@ -135,7 +156,10 @@
     }
    ],
    "expr": "LinalgCore.LuP(M(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double[,]",
+   "doc": "LU 分解置换矩阵 P。A = P*L*U",
+   "doc_section": "LINALG"
   },
   {
    "excel": "LINALG.PINV",
@@ -151,7 +175,10 @@
     }
    ],
    "expr": "LinalgCore.PseudoInverse(M(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double[,]",
+   "doc": "Moore-Penrose 伪逆",
+   "doc_section": "LINALG"
   },
   {
    "excel": "LINALG.DET",
@@ -167,7 +194,10 @@
     }
    ],
    "expr": "LinalgCore.Determinant(M(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "矩阵行列式值。对标 Excel MDETERM",
+   "doc_section": "LINALG"
   },
   {
    "excel": "LINALG.SOLVE",
@@ -190,7 +220,10 @@
     }
    ],
    "expr": "LinalgCore.Solve(M(A), V(b))",
-   "generated": true
+   "generated": true,
+   "returns": "double[]",
+   "doc": "解线性方程组 Ax = b。奇异/病态（条件数 > 1e14）→ `#VALUE!`（奇异系统可用 `LINALG.PINV`）",
+   "doc_section": "LINALG"
   },
   {
    "excel": "LINALG.CHOLESKY",
@@ -206,7 +239,10 @@
     }
    ],
    "expr": "LinalgCore.Cholesky(M(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double[,]",
+   "doc": "Cholesky 分解。要求对称**正定**矩阵：非对称或非正定 → `#VALUE!`",
+   "doc_section": "LINALG"
   },
   {
    "excel": "LINALG.EIGEN",
@@ -222,7 +258,10 @@
     }
    ],
    "expr": "LinalgCore.Eigenvalues(M(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double[]",
+   "doc": "特征值。要求对称矩阵，非对称输入返回错误",
+   "doc_section": "LINALG"
   },
   {
    "excel": "LINALG.COND",
@@ -238,7 +277,10 @@
     }
    ],
    "expr": "LinalgCore.ConditionNumber(M(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "条件数（2-范数）。奇异矩阵 → `NaN`（原 +∞，2026-09-05 改为 NaN 封顶）",
+   "doc_section": "LINALG"
   },
   {
    "excel": "LINALG.RANK",
@@ -261,7 +303,10 @@
     }
    ],
    "expr": "(long)LinalgCore.Rank(M(d), tol==null||tol is ExcelDna.Integration.ExcelMissing?0:InputNormalizer.ToDouble(tol))",
-   "generated": true
+   "generated": true,
+   "returns": "long",
+   "doc": "数值秩（默认容差 0 = 相对，numpy 约定；显式传绝对阈值仍支持）",
+   "doc_section": "LINALG"
   },
   {
    "excel": "LINALG.IDENTITY",
@@ -277,7 +322,10 @@
     }
    ],
    "expr": "LinalgCore.Identity(InputNormalizer.ToInt32(n))",
-   "generated": true
+   "generated": true,
+   "returns": "double[,]",
+   "doc": "生成 n×n 单位矩阵",
+   "doc_section": "LINALG"
   },
   {
    "excel": "LINALG.MATMUL",
@@ -300,7 +348,10 @@
     }
    ],
    "expr": "LinalgCore.MatMul(M(A), M(B))",
-   "generated": true
+   "generated": true,
+   "returns": "double[,]",
+   "doc": "矩阵乘法。对标 Excel MMULT",
+   "doc_section": "LINALG"
   },
   {
    "excel": "LINALG.TRANSPOSE",
@@ -316,7 +367,10 @@
     }
    ],
    "expr": "LinalgCore.Transpose(M(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double[,]",
+   "doc": "矩阵转置。对标 Excel TRANSPOSE",
+   "doc_section": "LINALG"
   },
   {
    "excel": "LINALG.TRACE",
@@ -332,7 +386,10 @@
     }
    ],
    "expr": "LinalgCore.Trace(M(d))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "矩阵迹（对角线元素之和）",
+   "doc_section": "LINALG"
   }
  ]
 }

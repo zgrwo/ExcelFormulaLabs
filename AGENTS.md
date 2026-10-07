@@ -88,8 +88,14 @@ src/<Module>/<X>Udf.cs     ← 手写部分：using、partial 类、参数预处
 - **新增/修改 UDF**：改 `udf-metadata/*.json` → 运行 `python tools/udfgen.py generate` → 只跑 Core/测试。
   `udfgen.py extract` 是**引导工具**，元数据建立后勿再运行（会把已迁移的声明抽成空）。
 - **改实现逻辑**：改 Core 层，或在元数据 `expr` 中调整调用表达式。
-- **门禁**：`scripts/verify-udfgen.ps1` 重生成并比对，任何手改生成物或"改元数据忘记重生成"都 FAIL。
+- **门禁**：`scripts/verify-udfgen.ps1` 一次跑两项——`udfgen.py verify`（生成物 ↔ 元数据）与
+  `udfgen.py verify-api`（api-reference 表体 ↔ 元数据），任一不一致即 FAIL。
 - **语句体 UDF**（12 个 `*_ASYNC`）保留手写，但其函数名/描述/参数仍须与元数据一致（同上门禁覆盖）。
+- **api-reference.md 的表体也是生成物**：`## X.* -- 中文名` 章节内的表格由元数据渲染，
+  块首尾带 `<!-- BEGIN:generated X -->` / `<!-- END:generated -->` 标记。
+  **改函数名/参数/返回/说明请改元数据**（`returns`=返回列、`doc`=中文说明列、`doc_section`=所属章节），
+  再运行 `python tools/udfgen.py generate-api`——直接改文档表体会被门禁拦下。
+  章节标题、正文段落与 `---` 分隔线仍是手写，生成器不碰。
 
 ## 仓库目录树
 
@@ -105,7 +111,7 @@ ExcelFormulaLabs/
 ├── samples/                      # 示例工作簿（16 模块公式示例 + 生成脚本说明）
 ├── templates/                    # 模块脚手架（NewModule）
 ├── tools/                        # 代码生成/维护工具（udfgen.py：UDF 元数据化与源生成，ADR-0011）
-├── udf-metadata/                 # UDF 元数据单一真源（每 Udf 文件一份 JSON；生成 src/**/*.g.cs）
+├── udf-metadata/                 # UDF 元数据单一真源（每 Udf 文件一份 JSON；生成 src/**/*.g.cs 与 api-reference 表体）
 ├── benchmarks/                   # 性能基准（BenchmarkDotNet）
 ├── build/                        # 构建配置说明
 ├── .github/                      # CI 工作流 + Issue/PR 模板 + CODEOWNERS + dependabot
@@ -181,7 +187,7 @@ ExcelFormulaLabs/
 | :--- | :--- |
 | 日常构建 | `dotnet restore && dotnet build && dotnet test` |
 | 分发构建 | `dotnet build -c Release` |
-| 全量测试（6 步，同 verify-all.ps1；`-WithCoverage` 追加第 7 步覆盖率门禁） | ① verify-docs ② Build ③ dotnet test ④ CrossVal（verify-manual.py）⑤ Pre-commit Checks ⑥ Release build |
+| 全量测试（6 步，同 verify-all.ps1；`-WithCoverage` 追加第 7 步覆盖率门禁） | ① verify-docs ② Build ③ dotnet test ④ CrossVal（verify-manual.py）⑤ Pre-commit Checks + 治理脚本自测 ⑥ Release build |
 | 文档一致性（20 个编号项；运行时 27 条断言，以脚本输出为准） | `powershell -File scripts/verify-docs.ps1` |
 | 提交前红线（6 项） | `powershell -File scripts/pre-commit-check.ps1` |
 | 测试质量（零断言/恒真断言 FAIL，存在性断言预算 0） | `powershell -File scripts/check-test-quality.ps1` |

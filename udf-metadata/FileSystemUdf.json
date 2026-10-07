@@ -23,7 +23,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,string>(p,FileSystemCore.NormalizePath)",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "规范化路径（统一斜杠，解析 . 和 ..）",
+   "doc_section": "FS"
   },
   {
    "excel": "FS.COMBINE",
@@ -46,7 +49,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOverMulti<string,string,string>(a,b,(x,y)=>FileSystemCore.PathCombine(x,y))",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "拼接路径",
+   "doc_section": "FS"
   },
   {
    "excel": "FS.FNAME",
@@ -62,7 +68,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,string>(p,FileSystemCore.GetFileName)",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "取文件名（含扩展名）",
+   "doc_section": "FS"
   },
   {
    "excel": "FS.BNAME",
@@ -78,7 +87,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,string>(p,FileSystemCore.GetBaseName)",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "取文件名（不含扩展名）",
+   "doc_section": "FS"
   },
   {
    "excel": "FS.EXT",
@@ -94,7 +106,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,string>(p,FileSystemCore.GetExtension)",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "取扩展名（含点号）",
+   "doc_section": "FS"
   },
   {
    "excel": "FS.FOLDER",
@@ -110,7 +125,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,string>(p,FileSystemCore.GetFolderPath)",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "取父目录路径",
+   "doc_section": "FS"
   },
   {
    "excel": "FS.FEXISTS",
@@ -126,7 +144,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,bool>(p,s=>FileSystemCore.FileExists(s))",
-   "generated": true
+   "generated": true,
+   "returns": "bool",
+   "doc": "文件是否存在",
+   "doc_section": "FS"
   },
   {
    "excel": "FS.FSIZE",
@@ -142,7 +163,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,long>(p,s=>FileSystemCore.GetFileSize(s))",
-   "generated": true
+   "generated": true,
+   "returns": "long",
+   "doc": "文件大小（字节）",
+   "doc_section": "FS"
   },
   {
    "excel": "FS.FDEXISTS",
@@ -158,7 +182,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,bool>(p,s=>FileSystemCore.FolderExists(s))",
-   "generated": true
+   "generated": true,
+   "returns": "bool",
+   "doc": "文件夹是否存在",
+   "doc_section": "FS"
   },
   {
    "excel": "FS.MKDIR",
@@ -174,7 +201,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,bool>(p,s=>FileSystemCore.EnsureFolder(s))",
-   "generated": true
+   "generated": true,
+   "returns": "bool",
+   "doc": "创建文件夹（含父目录）",
+   "doc_section": "FS"
   },
   {
    "excel": "FS.LS",
@@ -197,7 +227,10 @@
     }
    ],
    "expr": "FileSystemCore.ListFiles(InputNormalizer.ToString(p),InputNormalizer.ToString(pat) is string s && s.Length>0?s:\"*\")",
-   "generated": true
+   "generated": true,
+   "returns": "string[]",
+   "doc": "列出文件。`*` 匹配所有",
+   "doc_section": "FS"
   },
   {
    "excel": "FS.LSDIR",
@@ -220,7 +253,10 @@
     }
    ],
    "expr": "FileSystemCore.ListFolders(InputNormalizer.ToString(p),InputNormalizer.ToString(pat) is string s && s.Length>0?s:\"*\")",
-   "generated": true
+   "generated": true,
+   "returns": "string[]",
+   "doc": "列出子文件夹",
+   "doc_section": "FS"
   },
   {
    "excel": "FS.READ",
@@ -236,7 +272,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,string>(p,s=>FileSystemCore.ReadTextFile(s))",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "读取文本文件全部内容",
+   "doc_section": "FS"
   },
   {
    "excel": "FS.WRITE",
@@ -259,7 +298,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOverMulti<string,string,bool>(p,c,(a,b)=>FileSystemCore.WriteTextFile(a,b))",
-   "generated": true
+   "generated": true,
+   "returns": "bool",
+   "doc": "写入文本文件（覆盖）",
+   "doc_section": "FS"
   },
   {
    "excel": "FS.APPEND",
@@ -282,7 +324,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOverMulti<string,string,bool>(p,c,(a,b)=>FileSystemCore.AppendTextFile(a,b))",
-   "generated": true
+   "generated": true,
+   "returns": "bool",
+   "doc": "追加写入文本文件",
+   "doc_section": "FS"
   },
   {
    "excel": "FS.COPY",
@@ -305,7 +350,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOverMulti<string,string,bool>(s,d,(a,b)=>FileSystemCore.CopyFile(a,b))",
-   "generated": true
+   "generated": true,
+   "returns": "bool",
+   "doc": "复制文件",
+   "doc_section": "FS"
   },
   {
    "excel": "FS.MOVE",
@@ -328,7 +376,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOverMulti<string,string,bool>(s,d,(a,b)=>FileSystemCore.MoveFile(a,b))",
-   "generated": true
+   "generated": true,
+   "returns": "bool",
+   "doc": "移动/重命名文件",
+   "doc_section": "FS"
   },
   {
    "excel": "FS.DELETE",
@@ -344,7 +395,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,bool>(p,s=>FileSystemCore.DeleteFile(s))",
-   "generated": true
+   "generated": true,
+   "returns": "bool",
+   "doc": "永久删除文件",
+   "doc_section": "FS"
   },
   {
    "excel": "FS.DELDIR",
@@ -360,7 +414,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,bool>(p,s=>FileSystemCore.DeleteFolder(s,true))",
-   "generated": true
+   "generated": true,
+   "returns": "bool",
+   "doc": "删除文件夹及全部内容",
+   "doc_section": "FS"
   },
   {
    "excel": "FS.DRIVES",
@@ -368,7 +425,10 @@
    "desc": "List all logical drive letters",
    "args": [],
    "expr": "FileSystemCore.GetDrives()",
-   "generated": true
+   "generated": true,
+   "returns": "string[]",
+   "doc": "列出所有逻辑驱动器",
+   "doc_section": "FS"
   },
   {
    "excel": "FS.PWD",
@@ -376,7 +436,10 @@
    "desc": "Current working directory",
    "args": [],
    "expr": "(object)FileSystemCore.GetCurrentFolder()",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "当前工作目录",
+   "doc_section": "FS"
   },
   {
    "excel": "FS.TEMP",
@@ -384,7 +447,10 @@
    "desc": "Path to the system temporary folder",
    "args": [],
    "expr": "(object)FileSystemCore.GetTempPath()",
-   "generated": true
+   "generated": true,
+   "returns": "string",
+   "doc": "系统临时文件夹路径",
+   "doc_section": "FS"
   }
  ]
 }

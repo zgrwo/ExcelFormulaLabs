@@ -31,7 +31,10 @@
     }
    ],
    "expr": "AnalyticsHelpers.DictToReport(RegressionCore.FitOLS(M(X), V(y)))",
-   "generated": true
+   "generated": true,
+   "returns": "object[11,?]",
+   "doc": "**普通最小二乘法**。对标 Excel LINEST。返回 11 行报告：`coefficients`(系数)、`sse`(残差平方和)、`r_squared`(R²)、`adj_r_squared`(调整R²)、`residuals`(残差)、`fitted_values`(拟合值)、`standard_errors`(标准误)、`t_stats`(t值)、`p_values`(p值)、`n`(样本量)、`df`(自由度)。数组字段横向展开到多列。`p<0.05` 该系数显著。",
+   "doc_section": "REGRESS"
   },
   {
    "excel": "REGRESS.WLS",
@@ -61,7 +64,10 @@
     }
    ],
    "expr": "AnalyticsHelpers.DictToReport(RegressionCore.FitWLS(M(X), V(y), V(w)))",
-   "generated": true
+   "generated": true,
+   "returns": "object[11,?]",
+   "doc": "**加权最小二乘法**（异方差数据）。返回同 OLS 的 11 行报告。`sse`/`r_squared`/`standard_errors`/`t_stats`/`p_values` 均为**加权（√w 变换）尺度**（与 statsmodels WLS 一致）；`residuals`/`fitted_values` 保持原始尺度便于与 y 比较。",
+   "doc_section": "REGRESS"
   },
   {
    "excel": "REGRESS.RIDGE",
@@ -91,7 +97,10 @@
     }
    ],
    "expr": "AnalyticsHelpers.DictToReport(RegressionCore.FitRidge(M(X), V(y), InputNormalizer.IsOmitted(lambda)?1.0:InputNormalizer.ToDouble(lambda)))",
-   "generated": true
+   "generated": true,
+   "returns": "object[8,?]",
+   "doc": "**岭回归**（L2 正则化，防过拟合）。λ 默认 1.0。返回 8 行：`coefficients`、`sse`、`r_squared`、`residuals`、`fitted_values`、`lambda`(惩罚参数)、`n`、`df`(残差自由度 n−p，与 OLS/WLS 同语义；n ≤ p 时为 ≤ 0)。**不返回**标准误/t值/p值（正则化下推断无效）。",
+   "doc_section": "REGRESS"
   },
   {
    "excel": "REGRESS.ANOVA1",
@@ -107,7 +116,10 @@
     }
    ],
    "expr": "AnalyticsHelpers.DictToReport(RegressionCore.AnovaOneWay(AnalyticsHelpers.ToJaggedColumns(data)))",
-   "generated": true
+   "generated": true,
+   "returns": "object[12,?]",
+   "doc": "**单因素方差分析**。数据按列分组（每列一组）；首行若为文本列名自动按表头跳过。返回 12 行：`ss_between`(组间平方和)、`ss_within`(组内平方和)、`ss_total`、`df_between`、`df_within`、`df_total`、`ms_between`、`ms_within`、`f_stat`(F值)、`p_value`(p值)、`group_means`(各组均值)、`group_counts`(各组样本量)。数组字段横向展开到多列。`p<0.05` = 至少有一组均值显著不同。",
+   "doc_section": "REGRESS"
   },
   {
    "excel": "REGRESS.FACTORIMP",
@@ -130,7 +142,10 @@
     }
    ],
    "expr": "RegressionCore.FactorImportance(M(X), V(y)).Select(i=>(double)i).ToArray()",
-   "generated": true
+   "generated": true,
+   "returns": "double[]",
+   "doc": "**因子重要性排名**。按标准化后的 \\|t\\| 降序排列，返回 0-based 列索引数组。",
+   "doc_section": "REGRESS"
   },
   {
    "excel": "REGRESS.COEF",
@@ -153,7 +168,10 @@
     }
    ],
    "expr": "(double[])RegressionCore.FitOLS(M(X), V(y))[\"coefficients\"]",
-   "generated": true
+   "generated": true,
+   "returns": "double[]",
+   "doc": "OLS 回归系数向量（仅 beta）。",
+   "doc_section": "REGRESS"
   },
   {
    "excel": "REGRESS.RSQ",
@@ -176,7 +194,10 @@
     }
    ],
    "expr": "(double)RegressionCore.FitOLS(M(X), V(y))[\"r_squared\"]",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "OLS 决定系数 R²。范围 0-1，1 = 完美拟合。",
+   "doc_section": "REGRESS"
   }
  ]
 }

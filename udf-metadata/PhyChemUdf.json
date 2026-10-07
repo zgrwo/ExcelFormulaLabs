@@ -23,7 +23,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<string,double>(f,PhyChemCore.MolecularWeight)",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "分子量计算，如 `\"H2SO4\"` → 98.078",
+   "doc_section": "PHYCHEM"
   },
   {
    "excel": "PHYCHEM.TEMP",
@@ -53,7 +56,10 @@
     }
    ],
    "expr": "{var f=S(from);var t=S(to);return ElementWiseMapper.MapOver<double,double>(v,d=>PhyChemCore.ConvertTemperature(d,f,t));}",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "温度换算：C, F, K。对标 Excel CONVERT",
+   "doc_section": "PHYCHEM"
   },
   {
    "excel": "PHYCHEM.PRESS",
@@ -83,7 +89,10 @@
     }
    ],
    "expr": "{var f=S(from);var t=S(to);return ElementWiseMapper.MapOver<double,double>(v,d=>PhyChemCore.ConvertPressure(d,f,t));}",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "压力换算：ATM, PSI, PA, KPA, BAR, MMHG, TORR",
+   "doc_section": "PHYCHEM"
   },
   {
    "excel": "PHYCHEM.VOL",
@@ -113,7 +122,10 @@
     }
    ],
    "expr": "{var f=S(from);var t=S(to);return ElementWiseMapper.MapOver<double,double>(v,d=>PhyChemCore.ConvertVolume(d,f,t));}",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "体积换算：L, GAL, ML, M3, QT, FT3",
+   "doc_section": "PHYCHEM"
   },
   {
    "excel": "PHYCHEM.MASS",
@@ -143,7 +155,10 @@
     }
    ],
    "expr": "{var f=S(from);var t=S(to);return ElementWiseMapper.MapOver<double,double>(v,d=>PhyChemCore.ConvertMass(d,f,t));}",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "质量换算：KG, G, LB, OZ, TON, MG",
+   "doc_section": "PHYCHEM"
   },
   {
    "excel": "PHYCHEM.C_TO_F",
@@ -159,7 +174,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,double>(v,d=>PhyChemCore.ConvertTemperature(d,\"C\",\"F\"))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "摄氏度 → 华氏度",
+   "doc_section": "PHYCHEM"
   },
   {
    "excel": "PHYCHEM.F_TO_C",
@@ -175,7 +193,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,double>(v,d=>PhyChemCore.ConvertTemperature(d,\"F\",\"C\"))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "华氏度 → 摄氏度",
+   "doc_section": "PHYCHEM"
   },
   {
    "excel": "PHYCHEM.KG_TO_LB",
@@ -191,7 +212,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,double>(v,d=>PhyChemCore.ConvertMass(d,\"KG\",\"LB\"))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "千克 → 磅",
+   "doc_section": "PHYCHEM"
   },
   {
    "excel": "PHYCHEM.LB_TO_KG",
@@ -207,7 +231,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,double>(v,d=>PhyChemCore.ConvertMass(d,\"LB\",\"KG\"))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "磅 → 千克",
+   "doc_section": "PHYCHEM"
   },
   {
    "excel": "PHYCHEM.L_TO_GAL",
@@ -223,7 +250,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,double>(v,d=>PhyChemCore.ConvertVolume(d,\"L\",\"GAL\"))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "升 → 美制加仑",
+   "doc_section": "PHYCHEM"
   },
   {
    "excel": "PHYCHEM.GAL_TO_L",
@@ -239,7 +269,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,double>(v,d=>PhyChemCore.ConvertVolume(d,\"GAL\",\"L\"))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "美制加仑 → 升",
+   "doc_section": "PHYCHEM"
   },
   {
    "excel": "PHYCHEM.ATM_TO_PSI",
@@ -255,7 +288,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,double>(v,d=>PhyChemCore.ConvertPressure(d,\"ATM\",\"PSI\"))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "大气压 → PSI",
+   "doc_section": "PHYCHEM"
   },
   {
    "excel": "PHYCHEM.PSI_TO_ATM",
@@ -271,7 +307,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOver<double,double>(v,d=>PhyChemCore.ConvertPressure(d,\"PSI\",\"ATM\"))",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "PSI → 大气压",
+   "doc_section": "PHYCHEM"
   },
   {
    "excel": "PHYCHEM.IDEALGAS",
@@ -308,7 +347,10 @@
     }
    ],
    "expr": "{if(InputNormalizer.IsExcelErrorValue(p))return p;if(InputNormalizer.IsExcelErrorValue(v))return v;if(InputNormalizer.IsExcelErrorValue(n))return n;if(InputNormalizer.IsExcelErrorValue(t))return t;return PhyChemCore.IdealGasLaw(V(p),V(v),V(n),V(t));}",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "理想气体状态方程 PV=nRT。将待求量填 `*`",
+   "doc_section": "PHYCHEM"
   },
   {
    "excel": "PHYCHEM.GASSTP",
@@ -352,7 +394,10 @@
     }
    ],
    "expr": "{if(InputNormalizer.IsExcelErrorValue(vol))return vol;if(InputNormalizer.IsExcelErrorValue(temp))return temp;if(InputNormalizer.IsExcelErrorValue(press))return press;return PhyChemCore.GasToSTP(InputNormalizer.ToDouble(vol),InputNormalizer.ToDouble(temp),InputNormalizer.ToDouble(press),InputNormalizer.IsOmitted(tUnit)?\"C\":InputNormalizer.ToString(tUnit),InputNormalizer.IsOmitted(pUnit)?\"atm\":InputNormalizer.ToString(pUnit));}",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "气体体积换算标况（STP）。t_unit 默认 `\"C\"`，p_unit 默认 `\"atm\"`",
+   "doc_section": "PHYCHEM"
   },
   {
    "excel": "PHYCHEM.DENSITY",
@@ -375,7 +420,10 @@
     }
    ],
    "expr": "ElementWiseMapper.MapOverMulti<double,double,double>(mass,vol,PhyChemCore.Density)",
-   "generated": true
+   "generated": true,
+   "returns": "double",
+   "doc": "密度 = 质量 / 体积",
+   "doc_section": "PHYCHEM"
   }
  ]
 }

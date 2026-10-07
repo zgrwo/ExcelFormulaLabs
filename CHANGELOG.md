@@ -41,6 +41,43 @@
 
 <!-- release-please 在下一次 Release PR 中把本版本区间内容归位到新版本条目 -->
 
+### Changed（2026-10-07 api-reference 由元数据生成 + 门禁强度整改）
+
+- **api-reference.md 的表体改为由元数据生成**（ADR-0011 演进节落地）。元数据新增三个字段：
+  `returns`（返回列）、`doc`（中文说明列）、`doc_section`（所属章节）——这三列此前只存在于文档，
+  与元数据的 `desc`（英文 Excel 提示语）**240/240 全不相同**，故不能直接由 `desc` 生成，
+  否则会把 240 条中文说明替换成英文短提示。改用已验证的"引导抽取 + 往返比对"方法：
+  `udfgen.py extract-api`（一次性，带 `--force` 保护）抽入元数据，`generate-api` 渲染，
+  `verify-api` 重渲染比对；已并入 `scripts/verify-udfgen.ps1`（一轮跑两项，不短路）。
+  16 张表 / 240 个函数，块首尾带 `<!-- BEGIN:generated X -->` 标记；
+  **剔除标记行后前后行多重集完全相同**——零文案改动，仅 4 节 17 行因排序规则移位。
+  副作用：`verify-docs` 检查 1/2/17 保留（它们是对生成物的**独立对账**，
+  能发现"生成器自身有 bug"这类同源校验发现不了的失效）。
+- **`pre-commit-check.ps1` 检查 4 关闭作用域盲区**：原先只扫 `*Core.cs`（脚本注释自承
+  "已知边界"），实测 `src/` 下 17 个 `*Core.cs` 在扫描范围内、另有 17 个同属 Core/工具层的
+  文件完全不在。改为**白名单豁免 + 全量扫描**（豁免 UDF 声明 / `AddIn.cs` / `src/Foundation/**`），
+  并在输出中打印扫描范围（`scanned 20/72 files`）。负向注入实测：往 `AnalyticsHelpers.cs`
+  加一行 `ExcelDna` 引用——旧检查漏过，新检查 FAIL 并给出 `文件:行号`。
+- **`verify-docs.ps1` 区分弱检查**：纯关键词存在性检查（`skill.md 含 MapOver` 之类）标记 `[弱]`，
+  汇总单列条数（当前 3 条）。此前它们与"源码计数 == 文档计数"类检查在报告里同等显示 `[PASS]`。
+- **`verify-all.ps1` 第 ⑤ 步并入治理脚本自测**（`tests/scripts/run-tests.ps1`）——它原先只在 CI 跑，
+  本地"全量验证"不含它，导致"改了某个治理脚本、其自测已挂"能一路绿灯到 CI 才暴露（本次实测发生）。
+- **`test_governance_tools.ps1` 无 bash 时改 SKIP 而非崩溃**：该场景调 `validate-commit-msg.sh`
+  （POSIX shell），无 bash 的机器在 `$ErrorActionPreference="Stop"` 下把 "command not found"
+  升级为终止异常，脚本连汇总行都不打印就 exit 1，看起来像测试失败而实为环境缺失。
+  现加 `Skip-Scenario` 单列计数（与 `verify-docs` 的 `Check-Skip` 同语义）。
+
+### Fixed（重写 scaffold-udf.ps1 引入的治理自测回归）
+
+- 上一提交把 `scaffold-udf.ps1` 改为调用 `udfgen.py generate`，但治理自测的临时夹具只复制
+  `scripts/` 与 `templates/`、不含 `tools/`，于是 `python tools/udfgen.py` 报 "can't open file"
+  → `test_governance_tools.ps1` 失败（CI 会红）。修复：脚手架在 `tools/udfgen.py` 缺失时
+  **只告警不失败**（模板落盘是其核心职责，生成是便利步骤）；同时给自测**补一个真正的端到端场景**
+  （夹具补齐 `tools/udfgen.py`，断言生成出 `src/<Module>/<Name>Udf.g.cs`），使新流程本身也有回归守卫。
+- 恢复被编辑工具误剥的 UTF-8 BOM：`scripts/verify-docs.ps1`、`scripts/pre-commit-check.ps1`
+  （PS 5.1 在非 UTF-8 ACP 机器上读无 BOM 的 .ps1 会按 ANSI 解码中文）。`verify-all.ps1`
+  与 `verify-pack.ps1` 在 HEAD 本就无 BOM，未动。
+
 ### Changed（2026-10-07 覆盖率门禁扩到分支 + async UDF 入口补测试）
 
 - **覆盖率门禁从"只卡行"扩到"行 + 分支"**。实测基线（net8.0 + Include 过滤）：
