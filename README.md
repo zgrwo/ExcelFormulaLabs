@@ -5,7 +5,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/zgrwo/ExcelFormulaLabs)](https://github.com/zgrwo/ExcelFormulaLabs/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**在 Excel 里直接用 `=SOLVE.INVERSE()`、`=DOE.PLAN()`、`=LINALG.SVD_S()`、`=STATS.MEAN()` 等 240 个函数。** 基于 C# 高性能实现，数值结果与 Python `scipy`/`numpy` 独立实现逐项交叉验证。net48 版本自带 IntelliSense 参数提示（net8.0 版本因 Excel-DNA 已知问题不提供，见[已知限制](#已知限制)），VBA 中可通过 `Application.Run` 直接调用。完整函数清单见 [API 参考](docs/specification/api-reference.md)（数字唯一信源，测试状态见上方 CI 徽章）。
+**在 Excel 里直接用 `=SOLVE.INVERSE()`、`=DOE.PLAN()`、`=LINALG.SVD_S()`、`=STATS.MEAN()` 等 240 个函数。** 基于 C# 高性能实现；数值结果与 Python `scipy`/`numpy` 独立实现交叉验证（**240 个同步 UDF 中 216 个**与 C# 实现逐项对照，其余为 Python 侧参考实现自测，口径见[质量保证](#质量保证)）。net48 版本自带 IntelliSense 参数提示（net8.0 版本因 Excel-DNA 已知问题不提供，见[已知限制](#已知限制)），VBA 中可通过 `Application.Run` 直接调用。完整函数清单见 [API 参考](docs/specification/api-reference.md)（数字唯一信源，测试状态见上方 CI 徽章）。
 
 ### 它补的是 Excel 内置函数做不到的事
 
