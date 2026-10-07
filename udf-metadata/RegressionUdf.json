@@ -1,0 +1,182 @@
+{
+ "sourceFile": "src/Analytics/RegressionUdf.cs",
+ "generatedFile": "src/Analytics/RegressionUdf.g.cs",
+ "namespace": "ExcelFormulaLabs.Analytics",
+ "className": "RegressionUdf",
+ "category": "Regression",
+ "usings": [
+  "ExcelDna.Integration",
+  "ExcelFormulaLabs.Foundation",
+  "System.Linq"
+ ],
+ "functions": [
+  {
+   "excel": "REGRESS.OLS",
+   "method": "UDF_REGRESS_OLS",
+   "desc": "OLS regression; returns an 11-row report table (coefficients, fit, inference).",
+   "args": [
+    {
+     "name": "known_y",
+     "desc": "The Y variable range (dependent variable)",
+     "type": "object",
+     "default": null,
+     "pname": "y"
+    },
+    {
+     "name": "known_x",
+     "desc": "The X variable range (independent variables)",
+     "type": "object",
+     "default": null,
+     "pname": "X"
+    }
+   ],
+   "expr": "AnalyticsHelpers.DictToReport(RegressionCore.FitOLS(M(X), V(y)))",
+   "generated": true
+  },
+  {
+   "excel": "REGRESS.WLS",
+   "method": "UDF_REGRESS_WLS",
+   "desc": "Weighted Least Squares for heteroskedastic data; same 11-row report as OLS.",
+   "args": [
+    {
+     "name": "known_y",
+     "desc": "The Y variable range (dependent variable)",
+     "type": "object",
+     "default": null,
+     "pname": "y"
+    },
+    {
+     "name": "known_x",
+     "desc": "The X variable range (independent variables)",
+     "type": "object",
+     "default": null,
+     "pname": "X"
+    },
+    {
+     "name": "weights",
+     "desc": "Weight values for weighted least squares",
+     "type": "object",
+     "default": null,
+     "pname": "w"
+    }
+   ],
+   "expr": "AnalyticsHelpers.DictToReport(RegressionCore.FitWLS(M(X), V(y), V(w)))",
+   "generated": true
+  },
+  {
+   "excel": "REGRESS.RIDGE",
+   "method": "UDF_REGRESS_RIDGE",
+   "desc": "Ridge regression (L2, default lambda=1.0); no se/t/p (inference invalid).",
+   "args": [
+    {
+     "name": "known_y",
+     "desc": "The Y variable range (dependent variable)",
+     "type": "object",
+     "default": null,
+     "pname": "y"
+    },
+    {
+     "name": "known_x",
+     "desc": "The X variable range (independent variables)",
+     "type": "object",
+     "default": null,
+     "pname": "X"
+    },
+    {
+     "name": "[lambda]",
+     "desc": "Regularization parameter; default is 1.0",
+     "type": "object",
+     "default": "null",
+     "pname": "lambda"
+    }
+   ],
+   "expr": "AnalyticsHelpers.DictToReport(RegressionCore.FitRidge(M(X), V(y), InputNormalizer.IsOmitted(lambda)?1.0:InputNormalizer.ToDouble(lambda)))",
+   "generated": true
+  },
+  {
+   "excel": "REGRESS.ANOVA1",
+   "method": "UDF_REGRESS_ANOVA1",
+   "desc": "One-way ANOVA (groups as columns); returns SS, df, MS, F and p-value report.",
+   "args": [
+    {
+     "name": "input_range",
+     "desc": "Input data range with groups as columns",
+     "type": "object",
+     "default": null,
+     "pname": "data"
+    }
+   ],
+   "expr": "AnalyticsHelpers.DictToReport(RegressionCore.AnovaOneWay(AnalyticsHelpers.ToJaggedColumns(data)))",
+   "generated": true
+  },
+  {
+   "excel": "REGRESS.FACTORIMP",
+   "method": "UDF_REGRESS_FACTORIMP",
+   "desc": "Rank predictor importance by |t| from standardized OLS (0-based columns).",
+   "args": [
+    {
+     "name": "known_y",
+     "desc": "The Y variable range (dependent variable)",
+     "type": "object",
+     "default": null,
+     "pname": "y"
+    },
+    {
+     "name": "known_x",
+     "desc": "The X variable range (independent variables)",
+     "type": "object",
+     "default": null,
+     "pname": "X"
+    }
+   ],
+   "expr": "RegressionCore.FactorImportance(M(X), V(y)).Select(i=>(double)i).ToArray()",
+   "generated": true
+  },
+  {
+   "excel": "REGRESS.COEF",
+   "method": "UDF_REGRESS_COEF",
+   "desc": "OLS regression coefficients only (beta vector).",
+   "args": [
+    {
+     "name": "known_y",
+     "desc": "The Y variable range (dependent variable)",
+     "type": "object",
+     "default": null,
+     "pname": "y"
+    },
+    {
+     "name": "known_x",
+     "desc": "The X variable range (independent variables)",
+     "type": "object",
+     "default": null,
+     "pname": "X"
+    }
+   ],
+   "expr": "(double[])RegressionCore.FitOLS(M(X), V(y))[\"coefficients\"]",
+   "generated": true
+  },
+  {
+   "excel": "REGRESS.RSQ",
+   "method": "UDF_REGRESS_RSQ",
+   "desc": "OLS R-squared (coefficient of determination). 0-1; 1 = perfect fit.",
+   "args": [
+    {
+     "name": "known_y",
+     "desc": "The Y variable range (dependent variable)",
+     "type": "object",
+     "default": null,
+     "pname": "y"
+    },
+    {
+     "name": "known_x",
+     "desc": "The X variable range (independent variables)",
+     "type": "object",
+     "default": null,
+     "pname": "X"
+    }
+   ],
+   "expr": "(double)RegressionCore.FitOLS(M(X), V(y))[\"r_squared\"]",
+   "generated": true
+  }
+ ]
+}

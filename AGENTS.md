@@ -74,6 +74,23 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 - ✅ UDF 不包含业务逻辑；Core 不引用 `ExcelDna.Integration`
 - ❌ 禁止跨层直接调用或反向依赖
 
+## UDF 声明生成（ADR-0011）
+
+**UDF 声明不再手写**：属性（`Name`/`Description`/`Category`）与签名由元数据生成。
+
+```
+udf-metadata/<X>Udf.json   ← 单一真源（函数名/描述/参数名+描述/默认值/分类/调用表达式）
+        ↓ python tools/udfgen.py generate
+src/<Module>/<X>Udf.g.cs   ← 生成物，入库但**禁止手改**；覆盖 228/240 个函数
+src/<Module>/<X>Udf.cs     ← 手写部分：using、partial 类、参数预处理助手、12 个语句体 UDF
+```
+
+- **新增/修改 UDF**：改 `udf-metadata/*.json` → 运行 `python tools/udfgen.py generate` → 只跑 Core/测试。
+  `udfgen.py extract` 是**引导工具**，元数据建立后勿再运行（会把已迁移的声明抽成空）。
+- **改实现逻辑**：改 Core 层，或在元数据 `expr` 中调整调用表达式。
+- **门禁**：`scripts/verify-udfgen.ps1` 重生成并比对，任何手改生成物或"改元数据忘记重生成"都 FAIL。
+- **语句体 UDF**（12 个 `*_ASYNC`）保留手写，但其函数名/描述/参数仍须与元数据一致（同上门禁覆盖）。
+
 ## 仓库目录树
 
 > 路由地图：所有文件路径均以此为基准。详细结构见 [project-structure.md](docs/governance/project-structure.md)。
@@ -87,6 +104,8 @@ ExcelFormulaLabs/
 ├── scripts/                      # 构建/验证/治理脚本（含 install.ps1 一键安装）
 ├── samples/                      # 示例工作簿（16 模块公式示例 + 生成脚本说明）
 ├── templates/                    # 模块脚手架（NewModule）
+├── tools/                        # 代码生成/维护工具（udfgen.py：UDF 元数据化与源生成，ADR-0011）
+├── udf-metadata/                 # UDF 元数据单一真源（每 Udf 文件一份 JSON；生成 src/**/*.g.cs）
 ├── benchmarks/                   # 性能基准（BenchmarkDotNet）
 ├── build/                        # 构建配置说明
 ├── .github/                      # CI 工作流 + Issue/PR 模板 + CODEOWNERS + dependabot
@@ -166,6 +185,7 @@ ExcelFormulaLabs/
 | 文档一致性（20 个编号项；运行时 27 条断言，以脚本输出为准） | `powershell -File scripts/verify-docs.ps1` |
 | 提交前红线（6 项） | `powershell -File scripts/pre-commit-check.ps1` |
 | 测试质量（零断言/恒真断言 FAIL，存在性断言预算 0） | `powershell -File scripts/check-test-quality.ps1` |
+| UDF 生成物一致性（元数据 ↔ `src/**/*.g.cs`；ADR-0011） | `powershell -File scripts/verify-udfgen.ps1` |
 | CI 同口径覆盖率门禁（92/86/86） | `powershell -File scripts/coverage.ps1` |
 | 静态分析（AnalysisMode=Recommended，0 警告门禁） | 随 `dotnet build` 强制（src/，net8 目标；抑制清单见 `.editorconfig`） |
 | 治理脚本自测 | `powershell -File tests/scripts/run-tests.ps1` |
@@ -289,6 +309,6 @@ ExcelFormulaLabs/
 | [user-manual.md](docs/user-manual/user-manual.md) | 学习教程 | 每函数详细示例 + 结果解读 |
 | [project-structure.md](docs/governance/project-structure.md) | 结构地图 | 文件职责与层级关系 |
 | [documentation.md](docs/governance/documentation.md) | 文档职责 | 各文档分工与维护规则 |
-| [adr/](docs/adr/adr-template.md) | 决策记录 | 架构决策 ADR 0001-0010 |
+| [adr/](docs/adr/adr-template.md) | 决策记录 | 架构决策 ADR 0001-0011 |
 | [CHANGELOG.md](CHANGELOG.md) | 变更记录 | 版本变更历史（与 tag 强制一致） |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 贡献指南 | 开发/PR/发版流程 |

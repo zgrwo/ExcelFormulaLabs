@@ -1,0 +1,103 @@
+{
+ "sourceFile": "src/Analytics/DoeAnalysisUdf.cs",
+ "generatedFile": "src/Analytics/DoeAnalysisUdf.g.cs",
+ "namespace": "ExcelFormulaLabs.Analytics",
+ "className": "DoeAnalysisUdf",
+ "category": "DOE",
+ "usings": [
+  "ExcelDna.Integration",
+  "ExcelFormulaLabs.Foundation"
+ ],
+ "functions": [
+  {
+   "excel": "DOE.ANALYZE",
+   "method": "UDF_DOE_ANALYZE",
+   "desc": "DOE effect table (term, coef, effect, t, p) from a coded design matrix and response.",
+   "args": [
+    {
+     "name": "design",
+     "desc": "Coded factor matrix (DOE.PLAN factor columns)",
+     "type": "object",
+     "default": null,
+     "pname": "design"
+    },
+    {
+     "name": "response",
+     "desc": "Response column (one value per run)",
+     "type": "object",
+     "default": null,
+     "pname": "response"
+    },
+    {
+     "name": "[terms]",
+     "desc": "Terms: \\\"main\\\", \\\"2way\\\" (default), or \\\"quadratic\\\"",
+     "type": "object",
+     "default": "null",
+     "pname": "terms"
+    }
+   ],
+   "expr": "{ double[,] X = M(design); double[] y = V(response); var (maxOrder, quadratic) = EffectiveTerms(X, terms); return DoeAnalysisCore.Analyze(X, y, maxOrder, quadratic); }",
+   "generated": true
+  },
+  {
+   "excel": "DOE.ANOVA",
+   "method": "UDF_DOE_ANOVA",
+   "desc": "Multi-factor ANOVA table (SS, df, MS, F, p per term) from a coded design matrix and response.",
+   "args": [
+    {
+     "name": "design",
+     "desc": "Coded factor matrix (DOE.PLAN factor columns)",
+     "type": "object",
+     "default": null,
+     "pname": "design"
+    },
+    {
+     "name": "response",
+     "desc": "Response column (one value per run)",
+     "type": "object",
+     "default": null,
+     "pname": "response"
+    },
+    {
+     "name": "[terms]",
+     "desc": "Terms: \\\"main\\\", \\\"2way\\\" (default), or \\\"quadratic\\\"",
+     "type": "object",
+     "default": "null",
+     "pname": "terms"
+    }
+   ],
+   "expr": "{ double[,] X = M(design); double[] y = V(response); var (maxOrder, quadratic) = EffectiveTerms(X, terms); return DoeAnalysisCore.Anova(X, y, maxOrder, quadratic); }",
+   "generated": true
+  },
+  {
+   "excel": "DOE.PARETO",
+   "method": "UDF_DOE_PARETO",
+   "desc": "DOE Pareto ranking of effects (term, effect) sorted by descending magnitude.",
+   "args": [
+    {
+     "name": "design",
+     "desc": "Coded factor matrix (DOE.PLAN factor columns)",
+     "type": "object",
+     "default": null,
+     "pname": "design"
+    },
+    {
+     "name": "response",
+     "desc": "Response column (one value per run)",
+     "type": "object",
+     "default": null,
+     "pname": "response"
+    },
+    {
+     "name": "[terms]",
+     "desc": "Terms: \\\"main\\\", \\\"2way\\\" (default), or \\\"quadratic\\\"",
+     "type": "object",
+     "default": "null",
+     "pname": "terms"
+    }
+   ],
+   "expr": "{ double[,] X = M(design); double[] y = V(response); var (maxOrder, quadratic) = EffectiveTerms(X, terms); return DoeAnalysisCore.Pareto(X, y, maxOrder, quadratic); }",
+   "generated": true
+  }
+ ]
+}

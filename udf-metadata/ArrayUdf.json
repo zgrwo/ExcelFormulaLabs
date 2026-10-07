@@ -1,0 +1,480 @@
+{
+ "sourceFile": "src/DataToolkit/ArrayUdf.cs",
+ "generatedFile": "src/DataToolkit/ArrayUdf.g.cs",
+ "namespace": "ExcelFormulaLabs.DataToolkit",
+ "className": "ArrayUdf",
+ "category": "Array",
+ "usings": [
+  "ExcelDna.Integration",
+  "ExcelFormulaLabs.Foundation",
+  "System",
+  "System.Collections.Generic",
+  "System.Linq"
+ ],
+ "functions": [
+  {
+   "excel": "ARR.SORT",
+   "method": "UDF_ARR_SORT",
+   "desc": "Sort array. asc=true/false, mode=auto/text/numeric",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    },
+    {
+     "name": "[sort_order]",
+     "desc": "TRUE for ascending (default), FALSE for descending",
+     "type": "object",
+     "default": "null",
+     "pname": "asc"
+    },
+    {
+     "name": "[sort_mode]",
+     "desc": "Sort mode: auto (default), text, or numeric",
+     "type": "object",
+     "default": "null",
+     "pname": "mode"
+    }
+   ],
+   "expr": "ArrayCore.Sort(A(a),InputNormalizer.ToBool(asc, true),ParseSortMode(mode))",
+   "generated": true
+  },
+  {
+   "excel": "ARR.SORTASC",
+   "method": "UDF_ARR_SORTASC",
+   "desc": "Sort array ascending (auto-detect type)",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    }
+   ],
+   "expr": "ArrayCore.Sort(A(a),true,ComparerMode.Auto)",
+   "generated": true
+  },
+  {
+   "excel": "ARR.SORTDESC",
+   "method": "UDF_ARR_SORTDESC",
+   "desc": "Sort array descending (auto-detect type)",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    }
+   ],
+   "expr": "ArrayCore.Sort(A(a),false,ComparerMode.Auto)",
+   "generated": true
+  },
+  {
+   "excel": "ARR.SORTNUM",
+   "method": "UDF_ARR_SORTNUM",
+   "desc": "Sort array ascending by numeric value",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    }
+   ],
+   "expr": "ArrayCore.Sort(A(a),true,ComparerMode.Numeric)",
+   "generated": true
+  },
+  {
+   "excel": "ARR.SORTTEXT",
+   "method": "UDF_ARR_SORTTEXT",
+   "desc": "Sort array ascending by text (case-insensitive)",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    }
+   ],
+   "expr": "ArrayCore.Sort(A(a),true,ComparerMode.Text)",
+   "generated": true
+  },
+  {
+   "excel": "ARR.UNIQUE",
+   "method": "UDF_ARR_UNIQUE",
+   "desc": "Return unique values from an array",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    }
+   ],
+   "expr": "ArrayCore.Unique(A(a))",
+   "generated": true
+  },
+  {
+   "excel": "ARR.INDEXOF",
+   "method": "UDF_ARR_INDEXOF",
+   "desc": "Zero-based index of first occurrence, or -1 if not found",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    },
+    {
+     "name": "lookup_value",
+     "desc": "The value to search for in the array",
+     "type": "object",
+     "default": null,
+     "pname": "v"
+    }
+   ],
+   "expr": "(long)ArrayCore.IndexOf(A(a),v)",
+   "generated": true
+  },
+  {
+   "excel": "ARR.SLICE",
+   "method": "UDF_ARR_SLICE",
+   "desc": "Extract l elements from an array starting at index s",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    },
+    {
+     "name": "start_index",
+     "desc": "Starting index, 0-based",
+     "type": "object",
+     "default": null,
+     "pname": "s"
+    },
+    {
+     "name": "num_elements",
+     "desc": "Number of elements to extract",
+     "type": "object",
+     "default": null,
+     "pname": "l"
+    }
+   ],
+   "expr": "ArrayCore.Slice(A(a),InputNormalizer.ToLong(s),InputNormalizer.ToLong(l))",
+   "generated": true
+  },
+  {
+   "excel": "ARR.FLATTEN",
+   "method": "UDF_ARR_FLATTEN",
+   "desc": "Flatten a 2D range into 1D, row-major order",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    }
+   ],
+   "expr": "ArrayCore.Flatten2D(InputNormalizer.NormalizeTo2D(a)!)",
+   "generated": true
+  },
+  {
+   "excel": "ARR.FILTER",
+   "method": "UDF_ARR_FILTER",
+   "desc": "Filter array by comparison operator: =, <>, >, <, >=, <=",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    },
+    {
+     "name": "criteria",
+     "desc": "The criteria value to compare each element against",
+     "type": "object",
+     "default": null,
+     "pname": "c"
+    },
+    {
+     "name": "comparison_operator",
+     "desc": "Comparison operator: =, <>, >, <, >=, or <=",
+     "type": "object",
+     "default": null,
+     "pname": "op"
+    }
+   ],
+   "expr": "{using (RegexBudget.Begin()) return ArrayCore.Filter(A(a),c,InputNormalizer.ToString(op));}",
+   "generated": true
+  },
+  {
+   "excel": "ARR.FILTER_EQ",
+   "method": "UDF_ARR_FEQ",
+   "desc": "Filter array for elements equal to c",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    },
+    {
+     "name": "criteria",
+     "desc": "The criteria value to compare each element against",
+     "type": "object",
+     "default": null,
+     "pname": "c"
+    }
+   ],
+   "expr": "ArrayCore.Filter(A(a),c,\"=\")",
+   "generated": true
+  },
+  {
+   "excel": "ARR.FILTER_NE",
+   "method": "UDF_ARR_FNE",
+   "desc": "Filter array for elements not equal to c",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    },
+    {
+     "name": "criteria",
+     "desc": "The criteria value to compare each element against",
+     "type": "object",
+     "default": null,
+     "pname": "c"
+    }
+   ],
+   "expr": "ArrayCore.Filter(A(a),c,\"<>\")",
+   "generated": true
+  },
+  {
+   "excel": "ARR.FILTER_GT",
+   "method": "UDF_ARR_FGT",
+   "desc": "Filter array for elements greater than c",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    },
+    {
+     "name": "criteria",
+     "desc": "The criteria value to compare each element against",
+     "type": "object",
+     "default": null,
+     "pname": "c"
+    }
+   ],
+   "expr": "ArrayCore.Filter(A(a),c,\">\")",
+   "generated": true
+  },
+  {
+   "excel": "ARR.FILTER_LT",
+   "method": "UDF_ARR_FLT",
+   "desc": "Filter array for elements less than c",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    },
+    {
+     "name": "criteria",
+     "desc": "The criteria value to compare each element against",
+     "type": "object",
+     "default": null,
+     "pname": "c"
+    }
+   ],
+   "expr": "ArrayCore.Filter(A(a),c,\"<\")",
+   "generated": true
+  },
+  {
+   "excel": "ARR.CONCAT",
+   "method": "UDF_ARR_CONCAT",
+   "desc": "Concatenate two arrays",
+   "args": [
+    {
+     "name": "array1",
+     "desc": "First range or array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    },
+    {
+     "name": "array2",
+     "desc": "Second range or array",
+     "type": "object",
+     "default": null,
+     "pname": "b"
+    }
+   ],
+   "expr": "ArrayCore.Concat(A(a),A(b))",
+   "generated": true
+  },
+  {
+   "excel": "ARR.REVERSE",
+   "method": "UDF_ARR_REVERSE",
+   "desc": "Reverse array order",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    }
+   ],
+   "expr": "ArrayCore.Reverse(A(a))",
+   "generated": true
+  },
+  {
+   "excel": "ARR.COUNT",
+   "method": "UDF_ARR_COUNT",
+   "desc": "Count of elements in an array",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    }
+   ],
+   "expr": "(long)ArrayCore.Count(A(a))",
+   "generated": true
+  },
+  {
+   "excel": "ARR.CONTAINS",
+   "method": "UDF_ARR_CONTAINS",
+   "desc": "Returns TRUE if value exists in array",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    },
+    {
+     "name": "lookup_value",
+     "desc": "The value to search for in the array",
+     "type": "object",
+     "default": null,
+     "pname": "v"
+    }
+   ],
+   "expr": "(object)ArrayCore.Contains(A(a),v)",
+   "generated": true
+  },
+  {
+   "excel": "ARR.TOSET",
+   "method": "UDF_ARR_TOSET",
+   "desc": "Return unique values (alias for ARR.UNIQUE)",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    }
+   ],
+   "expr": "ArrayCore.Unique(A(a))",
+   "generated": true
+  },
+  {
+   "excel": "ARR.FILL",
+   "method": "UDF_ARR_FILL",
+   "desc": "Create array of length n filled with value v",
+   "args": [
+    {
+     "name": "value",
+     "desc": "The value to fill or format",
+     "type": "object",
+     "default": null,
+     "pname": "v"
+    },
+    {
+     "name": "count",
+     "desc": "Number of elements to generate or fill",
+     "type": "object",
+     "default": null,
+     "pname": "n"
+    }
+   ],
+   "expr": "ArrayCore.Fill(v,InputNormalizer.ToLong(n))",
+   "generated": true
+  },
+  {
+   "excel": "ARR.RANGE",
+   "method": "UDF_ARR_RANGE",
+   "desc": "Generate numeric sequence from start to end by step. Negative step for descending.",
+   "args": [
+    {
+     "name": "start",
+     "desc": "Starting value of the sequence",
+     "type": "object",
+     "default": null,
+     "pname": "s"
+    },
+    {
+     "name": "end",
+     "desc": "Ending value of the sequence",
+     "type": "object",
+     "default": null,
+     "pname": "e"
+    },
+    {
+     "name": "step",
+     "desc": "Step size between consecutive values. Use negative step for descending sequences.",
+     "type": "object",
+     "default": null,
+     "pname": "step"
+    }
+   ],
+   "expr": "ArrayCore.Sequence(InputNormalizer.ToDouble(s),InputNormalizer.ToDouble(e),InputNormalizer.ToDouble(step))",
+   "generated": true
+  },
+  {
+   "excel": "ARR.SHUFFLE",
+   "method": "UDF_ARR_SHUFFLE",
+   "desc": "Randomly shuffle array elements (Fisher-Yates)",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    }
+   ],
+   "expr": "ArrayCore.Shuffle(A(a))",
+   "generated": true
+  }
+ ]
+}

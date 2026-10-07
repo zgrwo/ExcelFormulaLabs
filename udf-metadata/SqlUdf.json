@@ -1,0 +1,125 @@
+{
+ "sourceFile": "src/DataToolkit/SqlUdf.cs",
+ "generatedFile": "src/DataToolkit/SqlUdf.g.cs",
+ "namespace": "ExcelFormulaLabs.DataToolkit",
+ "className": "SqlUdf",
+ "category": "SQL",
+ "usings": [
+  "ExcelDna.Integration",
+  "ExcelFormulaLabs.Foundation",
+  "System.Collections.Generic"
+ ],
+ "functions": [
+  {
+   "excel": "SQL.QUERY",
+   "method": "UDF_SQL_QUERY",
+   "desc": "Execute SQL on a range. Table = 'data'. Example: SELECT Name, SUM(Amount) FROM data GROUP BY Name",
+   "args": [
+    {
+     "name": "source_range",
+     "desc": "The input range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "data"
+    },
+    {
+     "name": "sql_query",
+     "desc": "A SQL query string; table name is data",
+     "type": "object",
+     "default": null,
+     "pname": "sql"
+    },
+    {
+     "name": "[has_headers]",
+     "desc": "TRUE (default): first row holds column names; FALSE: auto-generate Col1..ColN",
+     "type": "object",
+     "default": "null",
+     "pname": "hh"
+    }
+   ],
+   "expr": "SqlCore.SqlQuery(InputNormalizer.NormalizeTo2D(data)!, InputNormalizer.ToString(sql), hasHeaders: InputNormalizer.ToBool(hh, true))!",
+   "generated": true
+  },
+  {
+   "excel": "SQL.JOIN",
+   "method": "UDF_SQL_JOIN",
+   "desc": "SQL with 2 tables 'data' + 'extra'. Example: SELECT a.*, b.x FROM data a JOIN extra b ON a.ID=b.ID",
+   "args": [
+    {
+     "name": "source_range",
+     "desc": "The input range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "data"
+    },
+    {
+     "name": "join_table",
+     "desc": "A second range to join with the data table",
+     "type": "object",
+     "default": null,
+     "pname": "extra"
+    },
+    {
+     "name": "sql_query",
+     "desc": "A SQL query string; table name is data",
+     "type": "object",
+     "default": null,
+     "pname": "sql"
+    },
+    {
+     "name": "[has_headers]",
+     "desc": "TRUE (default): first row holds column names; FALSE: auto-generate Col1..ColN",
+     "type": "object",
+     "default": "null",
+     "pname": "hh"
+    }
+   ],
+   "expr": "{ var t = new Dictionary<string, object[,]> { [\"extra\"] = InputNormalizer.NormalizeTo2D(extra)! }; return SqlCore.SqlQuery(InputNormalizer.NormalizeTo2D(data)!, InputNormalizer.ToString(sql), t, InputNormalizer.ToBool(hh, true))!; }",
+   "generated": true
+  },
+  {
+   "excel": "SQL.QUERY3",
+   "method": "UDF_SQL_QUERY3",
+   "desc": "SQL with 3 tables 'data','b','c'.",
+   "args": [
+    {
+     "name": "table1",
+     "desc": "First data range for multi-table SQL",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    },
+    {
+     "name": "table2",
+     "desc": "Second data range for multi-table SQL",
+     "type": "object",
+     "default": null,
+     "pname": "b"
+    },
+    {
+     "name": "table3",
+     "desc": "Third data range for multi-table SQL",
+     "type": "object",
+     "default": null,
+     "pname": "c"
+    },
+    {
+     "name": "sql_query",
+     "desc": "A SQL query string; table name is data",
+     "type": "object",
+     "default": null,
+     "pname": "sql"
+    },
+    {
+     "name": "[has_headers]",
+     "desc": "TRUE (default): first row holds column names; FALSE: auto-generate Col1..ColN",
+     "type": "object",
+     "default": "null",
+     "pname": "hh"
+    }
+   ],
+   "expr": "{ var t = new Dictionary<string, object[,]> { [\"b\"] = InputNormalizer.NormalizeTo2D(b)!, [\"c\"] = InputNormalizer.NormalizeTo2D(c)! }; return SqlCore.SqlQuery(InputNormalizer.NormalizeTo2D(a)!, InputNormalizer.ToString(sql), t, InputNormalizer.ToBool(hh, true))!; }",
+   "generated": true
+  }
+ ]
+}

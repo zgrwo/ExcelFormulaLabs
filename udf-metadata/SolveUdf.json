@@ -1,0 +1,148 @@
+{
+ "sourceFile": "src/Analytics/SolveUdf.cs",
+ "generatedFile": "src/Analytics/SolveUdf.g.cs",
+ "namespace": "ExcelFormulaLabs.Analytics",
+ "className": "SolveUdf",
+ "category": "Solve",
+ "usings": [
+  "ExcelDna.Integration",
+  "ExcelFormulaLabs.Foundation",
+  "System"
+ ],
+ "functions": [
+  {
+   "excel": "SOLVE.INVERSE",
+   "method": "UDF_SOLVE_INVERSE",
+   "desc": "Invert process settings to hit output targets; returns a recommendation table.",
+   "args": [
+    {
+     "name": "data",
+     "desc": "History table with headers; may include request rows with blank adjustable columns. SharedOutput* columns pool one shared rate.",
+     "type": "object",
+     "default": null,
+     "pname": "data"
+    },
+    {
+     "name": "[request]",
+     "desc": "Optional separate request table with the same headers; data is then pure history.",
+     "type": "object",
+     "default": "null",
+     "pname": "request"
+    },
+    {
+     "name": "[bounds]",
+     "desc": "Optional bounds table (variable name or index, lower, upper); defaults to history min/max.",
+     "type": "object",
+     "default": "null",
+     "pname": "bounds"
+    },
+    {
+     "name": "[model]",
+     "desc": "Model: auto (default), linear, poly, rate or rate_poly.",
+     "type": "object",
+     "default": "null",
+     "pname": "model"
+    },
+    {
+     "name": "[seed]",
+     "desc": "Random seed for optimizer and sampling; default 42.",
+     "type": "object",
+     "default": "null",
+     "pname": "seed"
+    },
+    {
+     "name": "[max_starts]",
+     "desc": "Number of optimization starts (1-50); default 10.",
+     "type": "object",
+     "default": "null",
+     "pname": "maxStarts"
+    }
+   ],
+   "expr": "SolveCore.Inverse( RequiredTable(data, \"data\"), OptionalTable(request), OptionalTable(bounds), InputNormalizer.ToString(model), InputNormalizer.IsOmitted(seed) ? 42L : InputNormalizer.ToLong(seed), InputNormalizer.IsOmitted(maxStarts) ? 10 : InputNormalizer.ToInt32(maxStarts))",
+   "generated": true
+  },
+  {
+   "excel": "SOLVE.PREDICT",
+   "method": "UDF_SOLVE_PREDICT",
+   "desc": "Forward-predict outputs for one or more complete parameter rows.",
+   "args": [
+    {
+     "name": "data",
+     "desc": "History table with headers.",
+     "type": "object",
+     "default": null,
+     "pname": "data"
+    },
+    {
+     "name": "values",
+     "desc": "One or more rows of non-output values (Incoming + Variable + Fixed, data order).",
+     "type": "object",
+     "default": null,
+     "pname": "values"
+    },
+    {
+     "name": "[model]",
+     "desc": "Model: auto (default), linear, poly, rate or rate_poly.",
+     "type": "object",
+     "default": "null",
+     "pname": "model"
+    }
+   ],
+   "expr": "SolveCore.PredictTable( RequiredTable(data, \"data\"), RequiredTable(values, \"values\"), InputNormalizer.ToString(model))",
+   "generated": true
+  },
+  {
+   "excel": "SOLVE.QUALITY",
+   "method": "UDF_SOLVE_QUALITY",
+   "desc": "Cross-validated model quality per output (R2 / MAE by candidate model).",
+   "args": [
+    {
+     "name": "data",
+     "desc": "History table with headers.",
+     "type": "object",
+     "default": null,
+     "pname": "data"
+    },
+    {
+     "name": "[model]",
+     "desc": "Model: auto (default), linear, poly, rate or rate_poly.",
+     "type": "object",
+     "default": "null",
+     "pname": "model"
+    },
+    {
+     "name": "[seed]",
+     "desc": "Random seed for fold shuffling; default 42.",
+     "type": "object",
+     "default": "null",
+     "pname": "seed"
+    }
+   ],
+   "expr": "SolveCore.Quality( RequiredTable(data, \"data\"), InputNormalizer.ToString(model), InputNormalizer.IsOmitted(seed) ? 42L : InputNormalizer.ToLong(seed))",
+   "generated": true
+  },
+  {
+   "excel": "SOLVE.EQUATION",
+   "method": "UDF_SOLVE_EQUATION",
+   "desc": "Forward equation plus closed-form inverse formula for single-variable linear models.",
+   "args": [
+    {
+     "name": "data",
+     "desc": "History table with headers.",
+     "type": "object",
+     "default": null,
+     "pname": "data"
+    },
+    {
+     "name": "[model]",
+     "desc": "Model: auto (default), linear, poly, rate or rate_poly.",
+     "type": "object",
+     "default": "null",
+     "pname": "model"
+    }
+   ],
+   "expr": "SolveCore.Equation( RequiredTable(data, \"data\"), InputNormalizer.ToString(model))",
+   "generated": true
+  }
+ ]
+}

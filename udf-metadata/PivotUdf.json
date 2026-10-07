@@ -1,0 +1,169 @@
+{
+ "sourceFile": "src/DataToolkit/PivotUdf.cs",
+ "generatedFile": "src/DataToolkit/PivotUdf.g.cs",
+ "namespace": "ExcelFormulaLabs.DataToolkit",
+ "className": "PivotUdf",
+ "category": "Pivot",
+ "usings": [
+  "ExcelDna.Integration",
+  "ExcelFormulaLabs.Foundation",
+  "System.Linq"
+ ],
+ "functions": [
+  {
+   "excel": "PIVOT.PIVOT",
+   "method": "UDF_PIVOT_PIVOT",
+   "desc": "Create a pivot table. key_col=row labels, pivot_col=column labels, value_col=values, agg=sum/avg/count/min/max",
+   "args": [
+    {
+     "name": "source_range",
+     "desc": "The input range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    },
+    {
+     "name": "row_field",
+     "desc": "Column index for row labels in the pivot table",
+     "type": "object",
+     "default": null,
+     "pname": "kc"
+    },
+    {
+     "name": "col_field",
+     "desc": "Column index for column labels in the pivot table",
+     "type": "object",
+     "default": null,
+     "pname": "pc"
+    },
+    {
+     "name": "value_field",
+     "desc": "Column index for the values to aggregate",
+     "type": "object",
+     "default": null,
+     "pname": "vc"
+    },
+    {
+     "name": "[aggregation]",
+     "desc": "Aggregation function: SUM, AVG, COUNT, MIN, or MAX (default SUM)",
+     "type": "object",
+     "default": "null",
+     "pname": "agg"
+    },
+    {
+     "name": "[has_headers]",
+     "desc": "TRUE if the first row contains column headers",
+     "type": "object",
+     "default": "null",
+     "pname": "hh"
+    }
+   ],
+   "expr": "PivotCore.Pivot(InputNormalizer.NormalizeTo2D(d)!,InputNormalizer.ToInt32(kc),InputNormalizer.ToInt32(pc),InputNormalizer.ToInt32(vc),Agg(agg),InputNormalizer.ToBool(hh, true))",
+   "generated": true
+  },
+  {
+   "excel": "PIVOT.UNPIVOT",
+   "method": "UDF_PIVOT_UNPIVOT",
+   "desc": "Unpivot: convert wide columns to key-value rows",
+   "args": [
+    {
+     "name": "source_range",
+     "desc": "The input range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    },
+    {
+     "name": "id_fields",
+     "desc": "Array of column indices that identify each row in unpivot",
+     "type": "object",
+     "default": null,
+     "pname": "ic"
+    },
+    {
+     "name": "value_fields",
+     "desc": "Array of column indices to unpivot into value rows",
+     "type": "object",
+     "default": null,
+     "pname": "vc"
+    },
+    {
+     "name": "[has_headers]",
+     "desc": "TRUE if the first row contains column headers",
+     "type": "object",
+     "default": "null",
+     "pname": "hh"
+    }
+   ],
+   "expr": "{var ids=InputNormalizer.NormalizeTo1D(ic).Select(x=>InputNormalizer.ToInt32(x)).ToArray();var vs=InputNormalizer.NormalizeTo1D(vc).Select(x=>InputNormalizer.ToInt32(x)).ToArray();return PivotCore.Unpivot(InputNormalizer.NormalizeTo2D(d)!,ids,vs,InputNormalizer.ToBool(hh, true));}",
+   "generated": true
+  },
+  {
+   "excel": "PIVOT.GROUPBY",
+   "method": "UDF_PIVOT_GROUPBY",
+   "desc": "Group by columns and aggregate. agg=sum/avg/count/min/max",
+   "args": [
+    {
+     "name": "source_range",
+     "desc": "The input range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    },
+    {
+     "name": "group_fields",
+     "desc": "Array of column indices to group by",
+     "type": "object",
+     "default": null,
+     "pname": "gc"
+    },
+    {
+     "name": "agg_column",
+     "desc": "Column index for aggregation",
+     "type": "object",
+     "default": null,
+     "pname": "ac"
+    },
+    {
+     "name": "[aggregation]",
+     "desc": "Aggregation function: SUM, AVG, COUNT, MIN, or MAX (default SUM)",
+     "type": "object",
+     "default": "null",
+     "pname": "agg"
+    },
+    {
+     "name": "[has_headers]",
+     "desc": "TRUE if the first row contains column headers",
+     "type": "object",
+     "default": "null",
+     "pname": "hh"
+    }
+   ],
+   "expr": "{var g=InputNormalizer.NormalizeTo1D(gc).Select(x=>InputNormalizer.ToInt32(x)).ToArray();return PivotCore.GroupBy(InputNormalizer.NormalizeTo2D(d)!,g,InputNormalizer.ToInt32(ac),Agg(agg),InputNormalizer.ToBool(hh, true));}",
+   "generated": true
+  },
+  {
+   "excel": "PIVOT.CROSSJOIN",
+   "method": "UDF_PIVOT_CROSSJOIN",
+   "desc": "Cross join (Cartesian product) of two tables",
+   "args": [
+    {
+     "name": "table1",
+     "desc": "First data range for multi-table SQL",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    },
+    {
+     "name": "table2",
+     "desc": "Second data range for multi-table SQL",
+     "type": "object",
+     "default": null,
+     "pname": "b"
+    }
+   ],
+   "expr": "PivotCore.CrossJoin(InputNormalizer.NormalizeTo2D(a)!,InputNormalizer.NormalizeTo2D(b)!)",
+   "generated": true
+  }
+ ]
+}

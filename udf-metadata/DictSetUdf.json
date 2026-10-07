@@ -1,0 +1,169 @@
+{
+ "sourceFile": "src/DataToolkit/DictSetUdf.cs",
+ "generatedFile": "src/DataToolkit/DictSetUdf.g.cs",
+ "namespace": "ExcelFormulaLabs.DataToolkit",
+ "className": "DictSetUdf",
+ "category": "Dictionary & Set",
+ "usings": [
+  "ExcelDna.Integration",
+  "ExcelFormulaLabs.Foundation"
+ ],
+ "functions": [
+  {
+   "excel": "DICT.FREQUENCY",
+   "method": "UDF_DICT_FREQ",
+   "desc": "Frequency count of each unique value. Returns 2 columns: value, count",
+   "args": [
+    {
+     "name": "key_array",
+     "desc": "Array of key values",
+     "type": "object",
+     "default": null,
+     "pname": "k"
+    }
+   ],
+   "expr": "DictSetCore.Frequency(A(k))",
+   "generated": true
+  },
+  {
+   "excel": "DICT.INTERSECT",
+   "method": "UDF_DICT_INTER",
+   "desc": "Set intersection: values present in both arrays",
+   "args": [
+    {
+     "name": "array1",
+     "desc": "First range or array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    },
+    {
+     "name": "array2",
+     "desc": "Second range or array",
+     "type": "object",
+     "default": null,
+     "pname": "b"
+    }
+   ],
+   "expr": "DictSetCore.Intersect(A(a),A(b))",
+   "generated": true
+  },
+  {
+   "excel": "DICT.UNION",
+   "method": "UDF_DICT_UNION",
+   "desc": "Set union: all unique values from both arrays",
+   "args": [
+    {
+     "name": "array1",
+     "desc": "First range or array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    },
+    {
+     "name": "array2",
+     "desc": "Second range or array",
+     "type": "object",
+     "default": null,
+     "pname": "b"
+    }
+   ],
+   "expr": "DictSetCore.Union(A(a),A(b))",
+   "generated": true
+  },
+  {
+   "excel": "DICT.EXCEPT",
+   "method": "UDF_DICT_EXCEPT",
+   "desc": "Set difference: values in first array but not in second",
+   "args": [
+    {
+     "name": "array1",
+     "desc": "First range or array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    },
+    {
+     "name": "array2",
+     "desc": "Second range or array",
+     "type": "object",
+     "default": null,
+     "pname": "b"
+    }
+   ],
+   "expr": "DictSetCore.Except(A(a),A(b))",
+   "generated": true
+  },
+  {
+   "excel": "DICT.DICT",
+   "method": "UDF_DICT_DICT",
+   "desc": "Build a 2-column dictionary from parallel key and value arrays",
+   "args": [
+    {
+     "name": "key_array",
+     "desc": "Array of key values",
+     "type": "object",
+     "default": null,
+     "pname": "k"
+    },
+    {
+     "name": "value_array",
+     "desc": "Array of values corresponding to each key",
+     "type": "object",
+     "default": null,
+     "pname": "v"
+    }
+   ],
+   "expr": "DictSetCore.Dict(A(k),A(v))",
+   "generated": true
+  },
+  {
+   "excel": "DICT.COUNT",
+   "method": "UDF_DICT_COUNT",
+   "desc": "Number of rows in a 2-column dictionary table",
+   "args": [
+    {
+     "name": "dict_table",
+     "desc": "A 2-column table with keys in column 0 and values in column 1",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "(long)DictSetCore.Count(InputNormalizer.NormalizeTo2D(d)!)",
+   "generated": true
+  },
+  {
+   "excel": "DICT.KEYS",
+   "method": "UDF_DICT_KEYS",
+   "desc": "Extract keys (column 0) from a 2-column dictionary table",
+   "args": [
+    {
+     "name": "dict_table",
+     "desc": "A 2-column table with keys in column 0 and values in column 1",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "DictSetCore.Keys(InputNormalizer.NormalizeTo2D(d)!)",
+   "generated": true
+  },
+  {
+   "excel": "DICT.VALUES",
+   "method": "UDF_DICT_VALS",
+   "desc": "Extract values (column 1) from a 2-column dictionary table",
+   "args": [
+    {
+     "name": "dict_table",
+     "desc": "A 2-column table with keys in column 0 and values in column 1",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "DictSetCore.Values(InputNormalizer.NormalizeTo2D(d)!)",
+   "generated": true
+  }
+ ]
+}

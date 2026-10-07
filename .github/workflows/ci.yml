@@ -71,6 +71,11 @@ jobs:
       - name: Run test quality checks
         run: ./scripts/check-test-quality.ps1
 
+      # UDF 生成物 ↔ 元数据一致性（ADR-0011）：防手改 src/**/*.g.cs，
+      # 也防"改了 udf-metadata/ 忘记重生成"。
+      - name: Verify UDF generation is up to date
+        run: ./scripts/verify-udfgen.ps1
+
       # 受影响测试映射（信息性，不替代全量测试）：PR 内展示改动源文件 → 测试工程/类路由。
       - name: Affected test mapping (informational)
         if: github.event_name == 'pull_request'

@@ -1,0 +1,338 @@
+{
+ "sourceFile": "src/Analytics/LinalgUdf.cs",
+ "generatedFile": "src/Analytics/LinalgUdf.g.cs",
+ "namespace": "ExcelFormulaLabs.Analytics",
+ "className": "LinalgUdf",
+ "category": "Linear Algebra",
+ "usings": [
+  "ExcelDna.Integration",
+  "ExcelFormulaLabs.Foundation"
+ ],
+ "functions": [
+  {
+   "excel": "LINALG.SVD_U",
+   "method": "UDF_LINALG_SVD_U",
+   "desc": "SVD left singular vectors (U matrix). A = U*diag(S)*Vt.",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "LinalgCore.SvdU(M(d))",
+   "generated": true
+  },
+  {
+   "excel": "LINALG.SVD_S",
+   "method": "UDF_LINALG_SVD_S",
+   "desc": "SVD singular values (S vector). Sorted descending.",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "LinalgCore.SvdS(M(d))",
+   "generated": true
+  },
+  {
+   "excel": "LINALG.SVD_VT",
+   "method": "UDF_LINALG_SVD_VT",
+   "desc": "SVD right singular vectors transposed (Vt matrix). A = U*diag(S)*Vt.",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "LinalgCore.SvdVt(M(d))",
+   "generated": true
+  },
+  {
+   "excel": "LINALG.QR_Q",
+   "method": "UDF_LINALG_QR_Q",
+   "desc": "QR decomposition orthogonal matrix Q. A = Q*R.",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "LinalgCore.QrQ(M(d))",
+   "generated": true
+  },
+  {
+   "excel": "LINALG.QR_R",
+   "method": "UDF_LINALG_QR_R",
+   "desc": "QR decomposition upper-triangular matrix R. A = Q*R.",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "LinalgCore.QrR(M(d))",
+   "generated": true
+  },
+  {
+   "excel": "LINALG.LU_L",
+   "method": "UDF_LINALG_LU_L",
+   "desc": "LU decomposition lower-triangular matrix L. A = P*L*U.",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "LinalgCore.LuL(M(d))",
+   "generated": true
+  },
+  {
+   "excel": "LINALG.LU_U",
+   "method": "UDF_LINALG_LU_U",
+   "desc": "LU decomposition upper-triangular matrix U. A = P*L*U.",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "LinalgCore.LuU(M(d))",
+   "generated": true
+  },
+  {
+   "excel": "LINALG.LU_P",
+   "method": "UDF_LINALG_LU_P",
+   "desc": "LU decomposition permutation matrix P. A = P*L*U.",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "LinalgCore.LuP(M(d))",
+   "generated": true
+  },
+  {
+   "excel": "LINALG.PINV",
+   "method": "UDF_LINALG_PINV",
+   "desc": "Moore-Penrose pseudo-inverse.",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "LinalgCore.PseudoInverse(M(d))",
+   "generated": true
+  },
+  {
+   "excel": "LINALG.DET",
+   "method": "UDF_LINALG_DET",
+   "desc": "Determinant.",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "LinalgCore.Determinant(M(d))",
+   "generated": true
+  },
+  {
+   "excel": "LINALG.SOLVE",
+   "method": "UDF_LINALG_SOLVE",
+   "desc": "Solve Ax=b.",
+   "args": [
+    {
+     "name": "array1",
+     "desc": "First range or array",
+     "type": "object",
+     "default": null,
+     "pname": "A"
+    },
+    {
+     "name": "array2",
+     "desc": "Second range or array",
+     "type": "object",
+     "default": null,
+     "pname": "b"
+    }
+   ],
+   "expr": "LinalgCore.Solve(M(A), V(b))",
+   "generated": true
+  },
+  {
+   "excel": "LINALG.CHOLESKY",
+   "method": "UDF_LINALG_CHOLESKY",
+   "desc": "Cholesky decomposition.",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "LinalgCore.Cholesky(M(d))",
+   "generated": true
+  },
+  {
+   "excel": "LINALG.EIGEN",
+   "method": "UDF_LINALG_EIGEN",
+   "desc": "Eigenvalues.",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "LinalgCore.Eigenvalues(M(d))",
+   "generated": true
+  },
+  {
+   "excel": "LINALG.COND",
+   "method": "UDF_LINALG_COND",
+   "desc": "Condition number.",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "LinalgCore.ConditionNumber(M(d))",
+   "generated": true
+  },
+  {
+   "excel": "LINALG.RANK",
+   "method": "UDF_LINALG_RANK",
+   "desc": "Numerical rank. Tolerance = absolute singular-value threshold; default 0 = relative (numpy convention).",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    },
+    {
+     "name": "[tolerance]",
+     "desc": "Tolerance threshold for numerical rank detection; default 0 = relative (max_sv * max(rows,cols) * 1e-16)",
+     "type": "object",
+     "default": "null",
+     "pname": "tol"
+    }
+   ],
+   "expr": "(long)LinalgCore.Rank(M(d), tol==null||tol is ExcelDna.Integration.ExcelMissing?0:InputNormalizer.ToDouble(tol))",
+   "generated": true
+  },
+  {
+   "excel": "LINALG.IDENTITY",
+   "method": "UDF_LINALG_IDENTITY",
+   "desc": "Identity matrix.",
+   "args": [
+    {
+     "name": "size",
+     "desc": "The matrix dimension, e.g. 3 for a 3x3 identity matrix",
+     "type": "object",
+     "default": null,
+     "pname": "n"
+    }
+   ],
+   "expr": "LinalgCore.Identity(InputNormalizer.ToInt32(n))",
+   "generated": true
+  },
+  {
+   "excel": "LINALG.MATMUL",
+   "method": "UDF_LINALG_MATMUL",
+   "desc": "Matrix multiplication.",
+   "args": [
+    {
+     "name": "array1",
+     "desc": "First range or array",
+     "type": "object",
+     "default": null,
+     "pname": "A"
+    },
+    {
+     "name": "array2",
+     "desc": "Second range or array",
+     "type": "object",
+     "default": null,
+     "pname": "B"
+    }
+   ],
+   "expr": "LinalgCore.MatMul(M(A), M(B))",
+   "generated": true
+  },
+  {
+   "excel": "LINALG.TRANSPOSE",
+   "method": "UDF_LINALG_TRANSPOSE",
+   "desc": "Transpose.",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "LinalgCore.Transpose(M(d))",
+   "generated": true
+  },
+  {
+   "excel": "LINALG.TRACE",
+   "method": "UDF_LINALG_TRACE",
+   "desc": "Trace.",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "LinalgCore.Trace(M(d))",
+   "generated": true
+  }
+ ]
+}

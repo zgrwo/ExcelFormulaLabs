@@ -41,6 +41,39 @@
 
 <!-- release-please 在下一次 Release PR 中把本版本区间内容归位到新版本条目 -->
 
+### Changed（2026-10-07 UDF 元数据化与源生成：ADR-0011）
+
+- **UDF 声明改为元数据生成**：新增单一真源 `udf-metadata/*.json`（19 份，覆盖全部 240 个函数）
+  与生成器 `tools/udfgen.py`；`src/**/<X>Udf.g.cs`（17 份）由元数据生成并入库，
+  承接 **228/240** 个函数声明。余 12 个语句体 UDF（`*_ASYNC`）保留手写，其函数名/描述/参数
+  仍由同一元数据校验。
+- **行为零变更**：抽取阶段对每个候选做 **token 级往返校验**（删除全部空白后逐字符比对），
+  228/228 通过——生成物与手写原码 token 等价，等价性由构造保证而非测试推断；
+  双 TFM 测试用例数与迁移前完全一致（Foundation 438 / Analytics 972 / DataToolkit 1546）。
+- **新增 `Category` 分类**：240 个函数此前全部落在 Excel 插入函数对话框的默认分组，
+  现按模块分为 `Statistics` / `Linear Algebra` / `Regression` / `Solve` / `Physical Chemistry` /
+  `DOE` / `String` / `Date & Time` / `Regex` / `Array` / `Dictionary & Set` / `JSON & XML` /
+  `Pivot` / `SQL` / `File System` / `Range Export`。这是本次唯一的行为**新增**。
+- **样板消除**：`Name = "` 与 `Name="` 的写法分裂消失（生成器统一）；UDF 声明的手工维护
+  由"改 6–7 处"降为"改元数据 1 处 + 加 1 个 Core 方法"。
+- **新门禁** `scripts/verify-udfgen.ps1`（接入 CI redline job）：重生成并比对入库生成物，
+  手改生成物或"改元数据忘记重生成"均 FAIL；同时校验手写 UDF 的属性与元数据一致。
+- **双树同步**：`AGENTS.md` 与 `project-structure.md` 新增 `tools/`、`udf-metadata/` 与
+  17 个 `.g.cs` 登记；`CONTRIBUTING.md` 增加"新增/修改一个 UDF"流程。
+
+### 真机验证发现（本次未处置，另行开单）
+
+- **net48 版 DataToolkit 的 `JSON.*` 全部不可用**（`#VALUE!`）。隔离实验：同一公式
+  `=JSON.QUERY("{""a"":{""b"":7}}","a.b")` 在 net48 XLL 返回 `#VALUE!`、在 net8.0 XLL 返回 `7`；
+  `JSON.PARSE`/`JSON.VALIDATE` 同族同样失败。根因：net48 的 `DataToolkit-AddIn-net48.dna.tpl`
+  只登记了 `DataToolkit.dll` / `Foundation.dll` / `System.Data.SQLite.dll` / `ExcelDna.IntelliSense.dll`
+  四个程序集，**未打包 `System.Text.Json.dll` 及其依赖链**（`System.Memory`、`System.Buffers`、
+  `System.Text.Encodings.Web`、`System.Runtime.CompilerServices.Unsafe`、`Microsoft.Bcl.AsyncInterfaces`、
+  `System.Threading.Tasks.Extensions`、`System.Numerics.Vectors`）——这些 DLL 存在于输出目录却不在
+  XLL 内，运行时抛异常被 `WrapError` 兜成 `#VALUE!`。
+  **与本次元数据化无关**（未改动任何 `.csproj`/`.dna.tpl`，且 UDF 代码经 token 级往返校验与迁移前等价）；
+  单元测试在进程内运行（DLL 齐备）故一直全绿——这正是"CI 从不加载 .xll"所掩盖的缺陷类型。
+
 ### Fixed（2026-10-07 评审缺陷整改：P0 静默错值 + P1 数值守卫 + P2 口径收敛）
 
 - **P0-1 `LINALG.DET` 尺度归一化缺失（静默错值）**：`det(diag(1e300,1e300,1e-300,1e-300))` 真值为 1，

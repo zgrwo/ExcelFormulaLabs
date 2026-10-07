@@ -75,6 +75,26 @@ Core 层 (internal static, 纯逻辑)       ← 零 Excel 依赖
 Foundation (共享工具)                    ← InputNormalizer, ElementWiseMapper, OutputWrapper
 ```
 
+### 新增 / 修改一个 UDF（ADR-0011：声明由元数据生成）
+
+UDF 的属性（`Name`/`Description`/`Category`）与签名**不手写**，由 `udf-metadata/*.json` 生成：
+
+```bash
+# 1. 改元数据（函数名/描述/参数名+描述/默认值/分类/调用表达式）
+#    udf-metadata/<X>Udf.json
+# 2. 重新生成
+python tools/udfgen.py generate
+# 3. 只跑 Core 与测试
+dotnet build && dotnet test --filter <Module>
+# 4. 门禁（CI 同款：重生成并比对，手改生成物或忘记重生成都会 FAIL）
+powershell -File scripts/verify-udfgen.ps1
+```
+
+- `src/**/<X>Udf.g.cs` 是**生成物**：可提交、可 diff，但**禁止手工修改**。
+- `src/**/<X>Udf.cs` 只保留 using、`partial` 类、参数预处理助手，以及 12 个语句体 UDF（`*_ASYNC`）。
+- 需要在分发层写逻辑时，改手写部分或元数据的 `expr`；业务逻辑一律落 Core。
+- `python tools/udfgen.py extract` 是**一次性引导工具**，元数据建立后不要再运行。
+
 ### 红线规则
 
 - **不修改**现有 240 UDF 的公开签名、参数、返回值（数量以 [api-reference.md](docs/specification/api-reference.md) 为准）

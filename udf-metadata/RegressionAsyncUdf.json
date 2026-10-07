@@ -1,0 +1,97 @@
+{
+ "sourceFile": "src/Analytics/RegressionAsyncUdf.cs",
+ "generatedFile": "src/Analytics/RegressionAsyncUdf.g.cs",
+ "namespace": "ExcelFormulaLabs.Analytics",
+ "className": "RegressionAsyncUdf",
+ "category": "Regression",
+ "usings": [
+  "ExcelDna.Integration",
+  "ExcelFormulaLabs.Foundation",
+  "System"
+ ],
+ "functions": [
+  {
+   "excel": "REGRESS.OLS_ASYNC",
+   "method": "UDF_REGRESS_OLS_ASYNC",
+   "desc": "OLS regression, computed asynchronously on a background thread.",
+   "args": [
+    {
+     "name": "known_y",
+     "desc": "The Y variable range (dependent variable)",
+     "type": "object",
+     "default": null,
+     "pname": "y"
+    },
+    {
+     "name": "known_x",
+     "desc": "The X variable range (independent variables)",
+     "type": "object",
+     "default": null,
+     "pname": "X"
+    }
+   ],
+   "generated": false,
+   "handReason": "statement-body"
+  },
+  {
+   "excel": "REGRESS.WLS_ASYNC",
+   "method": "UDF_REGRESS_WLS_ASYNC",
+   "desc": "Weighted Least Squares, computed asynchronously on a background thread.",
+   "args": [
+    {
+     "name": "known_y",
+     "desc": "The Y variable range (dependent variable)",
+     "type": "object",
+     "default": null,
+     "pname": "y"
+    },
+    {
+     "name": "known_x",
+     "desc": "The X variable range (independent variables)",
+     "type": "object",
+     "default": null,
+     "pname": "X"
+    },
+    {
+     "name": "weights",
+     "desc": "Weight values for weighted least squares",
+     "type": "object",
+     "default": null,
+     "pname": "w"
+    }
+   ],
+   "generated": false,
+   "handReason": "statement-body"
+  },
+  {
+   "excel": "REGRESS.RIDGE_ASYNC",
+   "method": "UDF_REGRESS_RIDGE_ASYNC",
+   "desc": "Ridge regression, computed asynchronously on a background thread.",
+   "args": [
+    {
+     "name": "known_y",
+     "desc": "The Y variable range (dependent variable)",
+     "type": "object",
+     "default": null,
+     "pname": "y"
+    },
+    {
+     "name": "known_x",
+     "desc": "The X variable range (independent variables)",
+     "type": "object",
+     "default": null,
+     "pname": "X"
+    },
+    {
+     "name": "[lambda]",
+     "desc": "Regularization parameter; default is 1.0",
+     "type": "object",
+     "default": "null",
+     "pname": "lambda"
+    }
+   ],
+   "generated": false,
+   "handReason": "statement-body"
+  }
+ ]
+}

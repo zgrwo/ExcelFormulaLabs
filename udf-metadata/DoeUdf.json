@@ -1,0 +1,71 @@
+{
+ "sourceFile": "src/Analytics/DoeUdf.cs",
+ "generatedFile": "src/Analytics/DoeUdf.g.cs",
+ "namespace": "ExcelFormulaLabs.Analytics",
+ "className": "DoeUdf",
+ "category": "DOE",
+ "usings": [
+  "ExcelDna.Integration",
+  "ExcelFormulaLabs.Foundation"
+ ],
+ "functions": [
+  {
+   "excel": "DOE.PLAN",
+   "method": "UDF_DOE_PLAN",
+   "desc": "Generate a DOE design matrix (full/taguchi/fractional/rsm/bb); StdOrder + RunOrder + coded factors.",
+   "args": [
+    {
+     "name": "factor_qty1",
+     "desc": "Number of factors in group 1",
+     "type": "object",
+     "default": null,
+     "pname": "qty1"
+    },
+    {
+     "name": "factor_level1",
+     "desc": "Levels per factor in group 1",
+     "type": "object",
+     "default": null,
+     "pname": "level1"
+    },
+    {
+     "name": "factor_qty2",
+     "desc": "Number of factors in group 2",
+     "type": "object",
+     "default": null,
+     "pname": "qty2"
+    },
+    {
+     "name": "factor_level2",
+     "desc": "Levels per factor in group 2",
+     "type": "object",
+     "default": null,
+     "pname": "level2"
+    },
+    {
+     "name": "method",
+     "desc": "Design method: FULL, TAGUCHI, FRACTIONAL, RSM, or BB",
+     "type": "object",
+     "default": null,
+     "pname": "method"
+    },
+    {
+     "name": "[randomize]",
+     "desc": "Randomize run order (default TRUE)",
+     "type": "object",
+     "default": "null",
+     "pname": "randomize"
+    },
+    {
+     "name": "[seed]",
+     "desc": "Fixed seed for reproducible run order",
+     "type": "object",
+     "default": "null",
+     "pname": "seed"
+    }
+   ],
+   "expr": "DoeCore.Plan( InputNormalizer.ToInt32(qty1), InputNormalizer.ToInt32(level1), InputNormalizer.ToInt32(qty2), InputNormalizer.ToInt32(level2), InputNormalizer.ToString(method), InputNormalizer.ToBool(randomize, true), InputNormalizer.IsOmitted(seed) ? (long?)null : InputNormalizer.ToLong(seed))",
+   "generated": true
+  }
+ ]
+}

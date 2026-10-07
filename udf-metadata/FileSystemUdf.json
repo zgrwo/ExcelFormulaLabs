@@ -1,0 +1,390 @@
+{
+ "sourceFile": "src/DataToolkit/FileSystemUdf.cs",
+ "generatedFile": "src/DataToolkit/FileSystemUdf.g.cs",
+ "namespace": "ExcelFormulaLabs.DataToolkit",
+ "className": "FileSystemUdf",
+ "category": "File System",
+ "usings": [
+  "ExcelDna.Integration",
+  "ExcelFormulaLabs.Foundation"
+ ],
+ "functions": [
+  {
+   "excel": "FS.NORM",
+   "method": "UDF_FS_NORM",
+   "desc": "Normalize file path (slashes, resolve . and ..)",
+   "args": [
+    {
+     "name": "file_path",
+     "desc": "A file system path",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,string>(p,FileSystemCore.NormalizePath)",
+   "generated": true
+  },
+  {
+   "excel": "FS.COMBINE",
+   "method": "UDF_FS_COMB",
+   "desc": "Combine path parts into a full path",
+   "args": [
+    {
+     "name": "path1",
+     "desc": "First path component",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    },
+    {
+     "name": "path2",
+     "desc": "Second path component",
+     "type": "object",
+     "default": null,
+     "pname": "b"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOverMulti<string,string,string>(a,b,(x,y)=>FileSystemCore.PathCombine(x,y))",
+   "generated": true
+  },
+  {
+   "excel": "FS.FNAME",
+   "method": "UDF_FS_FNAME",
+   "desc": "Get file name from path",
+   "args": [
+    {
+     "name": "file_path",
+     "desc": "A file system path",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,string>(p,FileSystemCore.GetFileName)",
+   "generated": true
+  },
+  {
+   "excel": "FS.BNAME",
+   "method": "UDF_FS_BNAME",
+   "desc": "Get file name without extension",
+   "args": [
+    {
+     "name": "file_path",
+     "desc": "A file system path",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,string>(p,FileSystemCore.GetBaseName)",
+   "generated": true
+  },
+  {
+   "excel": "FS.EXT",
+   "method": "UDF_FS_EXT",
+   "desc": "Get file extension (with dot)",
+   "args": [
+    {
+     "name": "file_path",
+     "desc": "A file system path",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,string>(p,FileSystemCore.GetExtension)",
+   "generated": true
+  },
+  {
+   "excel": "FS.FOLDER",
+   "method": "UDF_FS_FDR",
+   "desc": "Get parent folder path",
+   "args": [
+    {
+     "name": "file_path",
+     "desc": "A file system path",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,string>(p,FileSystemCore.GetFolderPath)",
+   "generated": true
+  },
+  {
+   "excel": "FS.FEXISTS",
+   "method": "UDF_FS_FEX",
+   "desc": "Returns TRUE if file exists",
+   "args": [
+    {
+     "name": "file_path",
+     "desc": "A file system path",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,bool>(p,s=>FileSystemCore.FileExists(s))",
+   "generated": true
+  },
+  {
+   "excel": "FS.FSIZE",
+   "method": "UDF_FS_FSZ",
+   "desc": "File size in bytes",
+   "args": [
+    {
+     "name": "file_path",
+     "desc": "A file system path",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,long>(p,s=>FileSystemCore.GetFileSize(s))",
+   "generated": true
+  },
+  {
+   "excel": "FS.FDEXISTS",
+   "method": "UDF_FS_FDEX",
+   "desc": "Returns TRUE if folder exists",
+   "args": [
+    {
+     "name": "file_path",
+     "desc": "A file system path",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,bool>(p,s=>FileSystemCore.FolderExists(s))",
+   "generated": true
+  },
+  {
+   "excel": "FS.MKDIR",
+   "method": "UDF_FS_MKDIR",
+   "desc": "Create folder (including parents)",
+   "args": [
+    {
+     "name": "file_path",
+     "desc": "A file system path",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,bool>(p,s=>FileSystemCore.EnsureFolder(s))",
+   "generated": true
+  },
+  {
+   "excel": "FS.LS",
+   "method": "UDF_FS_LS",
+   "desc": "List files in a folder matching a wildcard pattern",
+   "args": [
+    {
+     "name": "file_path",
+     "desc": "A file system path",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    },
+    {
+     "name": "[search_pattern]",
+     "desc": "A file search pattern, e.g. *.txt or *.*",
+     "type": "object",
+     "default": "null",
+     "pname": "pat"
+    }
+   ],
+   "expr": "FileSystemCore.ListFiles(InputNormalizer.ToString(p),InputNormalizer.ToString(pat) is string s && s.Length>0?s:\"*\")",
+   "generated": true
+  },
+  {
+   "excel": "FS.LSDIR",
+   "method": "UDF_FS_LSDIR",
+   "desc": "List sub-folders matching a wildcard pattern",
+   "args": [
+    {
+     "name": "file_path",
+     "desc": "A file system path",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    },
+    {
+     "name": "[search_pattern]",
+     "desc": "A file search pattern, e.g. *.txt or *.*",
+     "type": "object",
+     "default": "null",
+     "pname": "pat"
+    }
+   ],
+   "expr": "FileSystemCore.ListFolders(InputNormalizer.ToString(p),InputNormalizer.ToString(pat) is string s && s.Length>0?s:\"*\")",
+   "generated": true
+  },
+  {
+   "excel": "FS.READ",
+   "method": "UDF_FS_READ",
+   "desc": "Read text file content as string",
+   "args": [
+    {
+     "name": "file_path",
+     "desc": "A file system path",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,string>(p,s=>FileSystemCore.ReadTextFile(s))",
+   "generated": true
+  },
+  {
+   "excel": "FS.WRITE",
+   "method": "UDF_FS_WRITE",
+   "desc": "Write content to a text file (overwrites)",
+   "args": [
+    {
+     "name": "file_path",
+     "desc": "A file system path",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    },
+    {
+     "name": "file_content",
+     "desc": "The text content to write to the file",
+     "type": "object",
+     "default": null,
+     "pname": "c"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOverMulti<string,string,bool>(p,c,(a,b)=>FileSystemCore.WriteTextFile(a,b))",
+   "generated": true
+  },
+  {
+   "excel": "FS.APPEND",
+   "method": "UDF_FS_APPEND",
+   "desc": "Append content to a text file",
+   "args": [
+    {
+     "name": "file_path",
+     "desc": "A file system path",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    },
+    {
+     "name": "file_content",
+     "desc": "The text content to write to the file",
+     "type": "object",
+     "default": null,
+     "pname": "c"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOverMulti<string,string,bool>(p,c,(a,b)=>FileSystemCore.AppendTextFile(a,b))",
+   "generated": true
+  },
+  {
+   "excel": "FS.COPY",
+   "method": "UDF_FS_COPY",
+   "desc": "Copy a file from source to destination",
+   "args": [
+    {
+     "name": "source_path",
+     "desc": "Source file path to copy or move from",
+     "type": "object",
+     "default": null,
+     "pname": "s"
+    },
+    {
+     "name": "destination_path",
+     "desc": "Destination file path to copy or move to",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOverMulti<string,string,bool>(s,d,(a,b)=>FileSystemCore.CopyFile(a,b))",
+   "generated": true
+  },
+  {
+   "excel": "FS.MOVE",
+   "method": "UDF_FS_MOVE",
+   "desc": "Move/rename a file",
+   "args": [
+    {
+     "name": "source_path",
+     "desc": "Source file path to copy or move from",
+     "type": "object",
+     "default": null,
+     "pname": "s"
+    },
+    {
+     "name": "destination_path",
+     "desc": "Destination file path to copy or move to",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOverMulti<string,string,bool>(s,d,(a,b)=>FileSystemCore.MoveFile(a,b))",
+   "generated": true
+  },
+  {
+   "excel": "FS.DELETE",
+   "method": "UDF_FS_DEL",
+   "desc": "Delete a file permanently",
+   "args": [
+    {
+     "name": "file_path",
+     "desc": "A file system path",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,bool>(p,s=>FileSystemCore.DeleteFile(s))",
+   "generated": true
+  },
+  {
+   "excel": "FS.DELDIR",
+   "method": "UDF_FS_DELDIR",
+   "desc": "Delete a folder and all its contents",
+   "args": [
+    {
+     "name": "file_path",
+     "desc": "A file system path",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,bool>(p,s=>FileSystemCore.DeleteFolder(s,true))",
+   "generated": true
+  },
+  {
+   "excel": "FS.DRIVES",
+   "method": "UDF_FS_DRVS",
+   "desc": "List all logical drive letters",
+   "args": [],
+   "expr": "FileSystemCore.GetDrives()",
+   "generated": true
+  },
+  {
+   "excel": "FS.PWD",
+   "method": "UDF_FS_PWD",
+   "desc": "Current working directory",
+   "args": [],
+   "expr": "(object)FileSystemCore.GetCurrentFolder()",
+   "generated": true
+  },
+  {
+   "excel": "FS.TEMP",
+   "method": "UDF_FS_TEMP",
+   "desc": "Path to the system temporary folder",
+   "args": [],
+   "expr": "(object)FileSystemCore.GetTempPath()",
+   "generated": true
+  }
+ ]
+}

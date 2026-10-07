@@ -1,0 +1,292 @@
+{
+ "sourceFile": "src/DataToolkit/RegexUdf.cs",
+ "generatedFile": "src/DataToolkit/RegexUdf.g.cs",
+ "namespace": "ExcelFormulaLabs.DataToolkit",
+ "className": "RegexUdf",
+ "category": "Regex",
+ "usings": [
+  "ExcelDna.Integration",
+  "ExcelFormulaLabs.Foundation",
+  "System",
+  "System.Runtime.InteropServices"
+ ],
+ "functions": [
+  {
+   "excel": "REGEX.TEST",
+   "method": "UDF_RX_TEST",
+   "desc": "Returns TRUE if string matches regex pattern",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "i"
+    },
+    {
+     "name": "pattern",
+     "desc": "A regular expression pattern",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    },
+    {
+     "name": "[ignore_case]",
+     "desc": "TRUE (default) to ignore case, FALSE for case-sensitive",
+     "type": "object",
+     "default": "null",
+     "pname": "ic"
+    }
+   ],
+   "expr": "Budgeted(()=>ElementWiseMapper.MapOverMulti<string,string,bool>(i,p,(x,y)=>RegexCore.RegexTest(x,y,InputNormalizer.ToBool(ic, true))))",
+   "generated": true
+  },
+  {
+   "excel": "REGEX.COUNT",
+   "method": "UDF_RX_COUNT",
+   "desc": "Count of non-overlapping regex matches in a string",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "i"
+    },
+    {
+     "name": "pattern",
+     "desc": "A regular expression pattern",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    },
+    {
+     "name": "[ignore_case]",
+     "desc": "TRUE (default) to ignore case, FALSE for case-sensitive",
+     "type": "object",
+     "default": "null",
+     "pname": "ic"
+    }
+   ],
+   "expr": "Budgeted(()=>ElementWiseMapper.MapOverMulti<string,string,long>(i,p,(x,y)=>RegexCore.RegexCount(x,y,InputNormalizer.ToBool(ic, true))))",
+   "generated": true
+  },
+  {
+   "excel": "REGEX.MATCH",
+   "method": "UDF_RX_MATCH",
+   "desc": "Nth regex match substring. n=1 (default/first), n=-1 (last), or empty string if no match",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "i"
+    },
+    {
+     "name": "pattern",
+     "desc": "A regular expression pattern",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    },
+    {
+     "name": "[ignore_case]",
+     "desc": "TRUE (default) to ignore case, FALSE for case-sensitive",
+     "type": "object",
+     "default": "null",
+     "pname": "ic"
+    },
+    {
+     "name": "[instance_num]",
+     "desc": "Which occurrence: 1=first (default), -1=last",
+     "type": "object",
+     "default": "null",
+     "pname": "n"
+    }
+   ],
+   "expr": "Budgeted(()=>ElementWiseMapper.MapOverMulti<string,string,string>(i,p,(x,y)=>RegexCore.RegexMatch(x,y,InputNormalizer.ToLong(n),InputNormalizer.ToBool(ic, true))))",
+   "generated": true
+  },
+  {
+   "excel": "REGEX.MATCHALL",
+   "method": "UDF_RX_MALL",
+   "desc": "All regex matches as array of strings",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "i"
+    },
+    {
+     "name": "pattern",
+     "desc": "A regular expression pattern",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    },
+    {
+     "name": "[ignore_case]",
+     "desc": "TRUE (default) to ignore case, FALSE for case-sensitive",
+     "type": "object",
+     "default": "null",
+     "pname": "ic"
+    }
+   ],
+   "expr": "Budgeted(()=>RegexCore.RegexMatchAll(InputNormalizer.ToString(i),InputNormalizer.ToString(p),InputNormalizer.ToBool(ic, true)))",
+   "generated": true
+  },
+  {
+   "excel": "REGEX.REPLACE",
+   "method": "UDF_RX_REPL",
+   "desc": "Replace the nth regex match. n=0/omit=all (default), n=1=first, n=-1=last",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "i"
+    },
+    {
+     "name": "pattern",
+     "desc": "A regular expression pattern",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    },
+    {
+     "name": "replacement",
+     "desc": "Replacement text for regex replace",
+     "type": "object",
+     "default": null,
+     "pname": "r"
+    },
+    {
+     "name": "[ignore_case]",
+     "desc": "TRUE (default) to ignore case, FALSE for case-sensitive",
+     "type": "object",
+     "default": "null",
+     "pname": "ic"
+    },
+    {
+     "name": "[instance_num]",
+     "desc": "Which occurrence: 1=first (default), -1=last",
+     "type": "object",
+     "default": "null",
+     "pname": "n"
+    }
+   ],
+   "expr": "Budgeted(()=>ElementWiseMapper.MapOver<string,string>(i,s=>RegexCore.RegexReplace(s,InputNormalizer.ToString(p),InputNormalizer.ToString(r),InputNormalizer.ToLong(n),InputNormalizer.ToBool(ic, true))))",
+   "generated": true
+  },
+  {
+   "excel": "REGEX.SPLIT",
+   "method": "UDF_RX_SPLIT",
+   "desc": "Split string by regex delimiter. n=0/omit=all splits (default), n>0=max n splits",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "i"
+    },
+    {
+     "name": "pattern",
+     "desc": "A regular expression pattern",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    },
+    {
+     "name": "[ignore_case]",
+     "desc": "TRUE (default) to ignore case, FALSE for case-sensitive",
+     "type": "object",
+     "default": "null",
+     "pname": "ic"
+    },
+    {
+     "name": "[instance_num]",
+     "desc": "Maximum number of splits: 0/omit=all (default), >0=max n splits",
+     "type": "object",
+     "default": "null",
+     "pname": "n"
+    }
+   ],
+   "expr": "Budgeted(()=>RegexCore.RegexSplit(InputNormalizer.ToString(i),InputNormalizer.ToString(p),InputNormalizer.ToLong(n),InputNormalizer.ToBool(ic, true)))",
+   "generated": true
+  },
+  {
+   "excel": "REGEX.GROUPS",
+   "method": "UDF_RX_GRP",
+   "desc": "Capture groups from first match. Returns 2xn: group names row0, values row1",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "i"
+    },
+    {
+     "name": "pattern",
+     "desc": "A regular expression pattern",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    },
+    {
+     "name": "[ignore_case]",
+     "desc": "TRUE (default) to ignore case, FALSE for case-sensitive",
+     "type": "object",
+     "default": "null",
+     "pname": "ic"
+    }
+   ],
+   "expr": "Budgeted(()=>RegexCore.RegexCaptureGroups(InputNormalizer.ToString(i),InputNormalizer.ToString(p),InputNormalizer.ToBool(ic, true)))",
+   "generated": true
+  },
+  {
+   "excel": "REGEX.ESCAPE",
+   "method": "UDF_RX_ESC",
+   "desc": "Escape regex special characters in a literal string",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "l"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,string>(l,RegexCore.RegexEscape)",
+   "generated": true
+  },
+  {
+   "excel": "REGEX.ISMATCH",
+   "method": "UDF_RX_ISMATCH",
+   "desc": "Case-insensitive regex match test (alias for REGEX.TEST with ic=true)",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "i"
+    },
+    {
+     "name": "pattern",
+     "desc": "A regular expression pattern",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    }
+   ],
+   "expr": "Budgeted(()=>ElementWiseMapper.MapOverMulti<string,string,bool>(i,p,(x,y)=>RegexCore.RegexTest(x,y,true)))",
+   "generated": true
+  }
+ ]
+}

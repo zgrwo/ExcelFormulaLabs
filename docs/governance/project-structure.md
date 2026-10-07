@@ -149,6 +149,7 @@ ExcelFormulaLabs/
 │   │   ├── DoeAnalysisCore.cs / DoeAnalysisUdf.cs # DOE.*（效应/ANOVA/Pareto 分析）
 │   │   ├── LinalgAsyncUdf.cs       #     异步线性代数入口
 │   │   ├── RegressionAsyncUdf.cs   #     异步回归入口
+│   │   ├── StatsUdf.g.cs / LinalgUdf.g.cs / RegressionUdf.g.cs / SolveUdf.g.cs / PhyChemUdf.g.cs / DoeUdf.g.cs / DoeAnalysisUdf.g.cs  # 由 udf-metadata/*.json 生成（ADR-0011，勿手改）
 │   │   ├── Analytics-AddIn-net48.dna.tpl
 │   │   └── Analytics-AddIn-net8.dna.tpl
 │   │
@@ -157,6 +158,7 @@ ExcelFormulaLabs/
 │   │   ├── packages.lock.json      #     依赖锁定（CI 强制 locked mode）
 │   │   ├── AddIn.cs                #     AutoOpen/AutoClose
 │   │   ├── NativeDllStore.cs        #     原生 DLL 内容寻址提取（SHA-256 + 原子替换）
+│   │   ├── StringUdf.g.cs / DateTimeUdf.g.cs / RegexUdf.g.cs / ArrayUdf.g.cs / DictSetUdf.g.cs / JsonXmlUdf.g.cs / PivotUdf.g.cs / SqlUdf.g.cs / FileSystemUdf.g.cs / RangeExportUdf.g.cs  # 由 udf-metadata/*.json 生成（ADR-0011，勿手改）
 │   │   ├── StringCore.cs / StringUdf.cs       # STR.*
 │   │   ├── DateTimeCore.cs / DateTimeUdf.cs   # DT.*
 │   │   ├── RegexCore.cs / RegexUdf.cs         # REGEX.*
@@ -180,6 +182,15 @@ ExcelFormulaLabs/
 │       ├── {Name}Udf.cs.template   #   含 MapOver 分发 + [ExcelFunction]
 │       ├── {Name}Core.Tests.cs.template  # 含边界/NaN/空值测试
 │       └── {Name}CrossVal.py.template    # 含 cross_check() 调用
+│
+├── tools/                          # 代码生成/维护工具
+│   └── udfgen.py                   #   UDF 元数据化与源生成（extract/generate/migrate/verify，ADR-0011）
+│
+├── udf-metadata/                   # UDF 元数据**单一真源**（每 Udf 文件一份 JSON，ADR-0011）
+│   ├── StatsUdf.json / LinalgUdf.json / RegressionUdf.json / SolveUdf.json / PhyChemUdf.json / DoeUdf.json / DoeAnalysisUdf.json
+│   ├── LinalgAsyncUdf.json / RegressionAsyncUdf.json
+│   ├── StringUdf.json / DateTimeUdf.json / RegexUdf.json / ArrayUdf.json / DictSetUdf.json / JsonXmlUdf.json
+│   └── PivotUdf.json / SqlUdf.json / FileSystemUdf.json / RangeExportUdf.json
 │
 ├── tests/                          # 测试
 │   ├── Directory.Build.props       #   测试工程依赖锁定（packages.lock.json + CI locked mode）

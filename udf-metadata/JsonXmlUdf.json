@@ -1,0 +1,162 @@
+{
+ "sourceFile": "src/DataToolkit/JsonXmlUdf.cs",
+ "generatedFile": "src/DataToolkit/JsonXmlUdf.g.cs",
+ "namespace": "ExcelFormulaLabs.DataToolkit",
+ "className": "JsonXmlUdf",
+ "category": "JSON & XML",
+ "usings": [
+  "ExcelDna.Integration",
+  "ExcelFormulaLabs.Foundation"
+ ],
+ "functions": [
+  {
+   "excel": "JSON.PARSE",
+   "method": "UDF_JSON_PARSE",
+   "desc": "Parse a JSON string into a nested table/array structure",
+   "args": [
+    {
+     "name": "json_text",
+     "desc": "A JSON string to parse or query",
+     "type": "object",
+     "default": null,
+     "pname": "j"
+    }
+   ],
+   "expr": "JsonXmlCore.JsonParse(InputNormalizer.ToString(j))",
+   "generated": true
+  },
+  {
+   "excel": "JSON.QUERY",
+   "method": "UDF_JSON_QUERY",
+   "desc": "Query JSON with dot-notation path (e.g. 'store.book[0].title')",
+   "args": [
+    {
+     "name": "json_text",
+     "desc": "A JSON string to parse or query",
+     "type": "object",
+     "default": null,
+     "pname": "j"
+    },
+    {
+     "name": "json_path",
+     "desc": "A dot-path query, e.g. store.book[0].title",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    }
+   ],
+   "expr": "JsonXmlCore.JsonQuery(InputNormalizer.ToString(j),InputNormalizer.ToString(p))",
+   "generated": true
+  },
+  {
+   "excel": "JSON.VALIDATE",
+   "method": "UDF_JSON_VALIDATE",
+   "desc": "Returns TRUE if string is valid JSON",
+   "args": [
+    {
+     "name": "json_text",
+     "desc": "A JSON string to parse or query",
+     "type": "object",
+     "default": null,
+     "pname": "j"
+    }
+   ],
+   "expr": "JsonXmlCore.JsonValidate(InputNormalizer.ToString(j))",
+   "generated": true
+  },
+  {
+   "excel": "JSON.PRETTIFY",
+   "method": "UDF_JSON_PRETTIFY",
+   "desc": "Pretty-print JSON string with indentation",
+   "args": [
+    {
+     "name": "json_text",
+     "desc": "A JSON string to parse or query",
+     "type": "object",
+     "default": null,
+     "pname": "j"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,string>(j,JsonXmlCore.JsonPrettify)",
+   "generated": true
+  },
+  {
+   "excel": "JSON.TOTABLE",
+   "method": "UDF_JSON_TOTABLE",
+   "desc": "Convert JSON array of objects to a 2D Excel table with headers",
+   "args": [
+    {
+     "name": "json_text",
+     "desc": "A JSON string to parse or query",
+     "type": "object",
+     "default": null,
+     "pname": "j"
+    }
+   ],
+   "expr": "(object?)JsonXmlCore.JsonToTable(InputNormalizer.ToString(j))??ExcelDna.Integration.ExcelEmpty.Value",
+   "generated": true
+  },
+  {
+   "excel": "XML.XPATH",
+   "method": "UDF_XML_XPATH",
+   "desc": "Evaluate XPath expression on XML string, returns matching element values",
+   "args": [
+    {
+     "name": "xml_text",
+     "desc": "An XML string to parse or query",
+     "type": "object",
+     "default": null,
+     "pname": "x"
+    },
+    {
+     "name": "xpath_text",
+     "desc": "An XPath expression to select XML elements",
+     "type": "object",
+     "default": null,
+     "pname": "xp"
+    }
+   ],
+   "expr": "JsonXmlCore.XmlXPath(InputNormalizer.ToString(x),InputNormalizer.ToString(xp))",
+   "generated": true
+  },
+  {
+   "excel": "XML.VALIDATE",
+   "method": "UDF_XML_VALIDATE",
+   "desc": "Returns TRUE if string is well-formed XML",
+   "args": [
+    {
+     "name": "xml_text",
+     "desc": "An XML string to parse or query",
+     "type": "object",
+     "default": null,
+     "pname": "x"
+    }
+   ],
+   "expr": "JsonXmlCore.XmlValidate(InputNormalizer.ToString(x))",
+   "generated": true
+  },
+  {
+   "excel": "XML.TOTABLE",
+   "method": "UDF_XML_TOTABLE",
+   "desc": "Convert XML to a 2D Excel table using row-path XPath expression",
+   "args": [
+    {
+     "name": "xml_text",
+     "desc": "An XML string to parse or query",
+     "type": "object",
+     "default": null,
+     "pname": "x"
+    },
+    {
+     "name": "row_xpath",
+     "desc": "XPath that selects each row element to extract",
+     "type": "object",
+     "default": null,
+     "pname": "rp"
+    }
+   ],
+   "expr": "(object?)JsonXmlCore.XmlToTable(InputNormalizer.ToString(x),InputNormalizer.ToString(rp))??ExcelDna.Integration.ExcelEmpty.Value",
+   "generated": true
+  }
+ ]
+}

@@ -1,0 +1,228 @@
+{
+ "sourceFile": "src/DataToolkit/RangeExportUdf.cs",
+ "generatedFile": "src/DataToolkit/RangeExportUdf.g.cs",
+ "namespace": "ExcelFormulaLabs.DataToolkit",
+ "className": "RangeExportUdf",
+ "category": "Range Export",
+ "usings": [
+  "ExcelDna.Integration",
+  "ExcelFormulaLabs.Foundation",
+  "System.Linq"
+ ],
+ "functions": [
+  {
+   "excel": "RANGE.TOHTML",
+   "method": "UDF_RANGE_HTML",
+   "desc": "Export range to HTML table",
+   "args": [
+    {
+     "name": "source_range",
+     "desc": "The input range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    },
+    {
+     "name": "[has_headers]",
+     "desc": "TRUE if the first row contains column headers",
+     "type": "object",
+     "default": "null",
+     "pname": "h"
+    },
+    {
+     "name": "[css_class]",
+     "desc": "CSS class name for the HTML table element",
+     "type": "object",
+     "default": "null",
+     "pname": "c"
+    }
+   ],
+   "expr": "RangeExportCore.RangeToHtml(D(d),InputNormalizer.ToBool(h, true),InputNormalizer.ToString(c))",
+   "generated": true
+  },
+  {
+   "excel": "RANGE.TOJSON",
+   "method": "UDF_RANGE_JSON",
+   "desc": "Export range to JSON string",
+   "args": [
+    {
+     "name": "source_range",
+     "desc": "The input range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    },
+    {
+     "name": "[has_headers]",
+     "desc": "TRUE if the first row contains column headers",
+     "type": "object",
+     "default": "null",
+     "pname": "h"
+    },
+    {
+     "name": "[pretty_print]",
+     "desc": "TRUE for indented, human-readable output",
+     "type": "object",
+     "default": "null",
+     "pname": "p"
+    }
+   ],
+   "expr": "RangeExportCore.RangeToJson(D(d),InputNormalizer.ToBool(h, true),InputNormalizer.ToBool(p))",
+   "generated": true
+  },
+  {
+   "excel": "RANGE.TOMD",
+   "method": "UDF_RANGE_MD",
+   "desc": "Export range to Markdown table",
+   "args": [
+    {
+     "name": "source_range",
+     "desc": "The input range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    },
+    {
+     "name": "[has_headers]",
+     "desc": "TRUE if the first row contains column headers",
+     "type": "object",
+     "default": "null",
+     "pname": "h"
+    }
+   ],
+   "expr": "RangeExportCore.RangeToMarkdown(D(d),InputNormalizer.ToBool(h, true))",
+   "generated": true
+  },
+  {
+   "excel": "RANGE.TOCSV",
+   "method": "UDF_RANGE_CSV",
+   "desc": "Export range to CSV with custom delimiter. All rows are exported (4th param kept for signature compatibility, no effect)",
+   "args": [
+    {
+     "name": "source_range",
+     "desc": "The input range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    },
+    {
+     "name": "[delimiter]",
+     "desc": "The delimiter character or string; comma when omitted",
+     "type": "object",
+     "default": "null",
+     "pname": "dl"
+    },
+    {
+     "name": "[quote_fields]",
+     "desc": "TRUE to quote all fields; FALSE for minimal quoting",
+     "type": "object",
+     "default": "null",
+     "pname": "q"
+    },
+    {
+     "name": "[has_headers]",
+     "desc": "Deprecated: no effect on CSV output (all rows are exported)",
+     "type": "object",
+     "default": "null",
+     "pname": "hh"
+    }
+   ],
+   "expr": "RangeExportCore.RangeToCsv(D(d),InputNormalizer.ToString(dl) is string s && s.Length>0?s:\",\",InputNormalizer.ToBool(q, true),InputNormalizer.ToBool(hh, true))",
+   "generated": true
+  },
+  {
+   "excel": "RANGE.TOCSVTAB",
+   "method": "UDF_RANGE_TSV",
+   "desc": "Export range to tab-separated values (TSV)",
+   "args": [
+    {
+     "name": "source_range",
+     "desc": "The input range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "RangeExportCore.RangeToCsv(D(d),\"\\t\",false)",
+   "generated": true
+  },
+  {
+   "excel": "RANGE.TOCSVSEMI",
+   "method": "UDF_RANGE_SCSV",
+   "desc": "Export range to semicolon-separated CSV",
+   "args": [
+    {
+     "name": "source_range",
+     "desc": "The input range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "RangeExportCore.RangeToCsv(D(d),\";\",true)",
+   "generated": true
+  },
+  {
+   "excel": "RANGE.TRANSPOSE",
+   "method": "UDF_RANGE_TRANS",
+   "desc": "Transpose rows and columns",
+   "args": [
+    {
+     "name": "source_range",
+     "desc": "The input range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "RangeExportCore.Transpose(D(d))",
+   "generated": true
+  },
+  {
+   "excel": "RANGE.SELCOLS",
+   "method": "UDF_RANGE_SELC",
+   "desc": "Select specified columns from a range",
+   "args": [
+    {
+     "name": "source_range",
+     "desc": "The input range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    },
+    {
+     "name": "column_indices",
+     "desc": "Array of 0-based column indices to select",
+     "type": "object",
+     "default": null,
+     "pname": "c"
+    }
+   ],
+   "expr": "RangeExportCore.SelectColumns(D(d),InputNormalizer.NormalizeTo1D(c).Select(x=>InputNormalizer.ToInt32(x)).ToArray())",
+   "generated": true
+  },
+  {
+   "excel": "RANGE.SELROWS",
+   "method": "UDF_RANGE_SELR",
+   "desc": "Select specified rows from a range",
+   "args": [
+    {
+     "name": "source_range",
+     "desc": "The input range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    },
+    {
+     "name": "row_indices",
+     "desc": "Array of 0-based row indices to select",
+     "type": "object",
+     "default": null,
+     "pname": "r"
+    }
+   ],
+   "expr": "RangeExportCore.SelectRows(D(d),InputNormalizer.NormalizeTo1D(r).Select(x=>InputNormalizer.ToInt32(x)).ToArray())",
+   "generated": true
+  }
+ ]
+}

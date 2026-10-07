@@ -1,0 +1,165 @@
+{
+ "sourceFile": "src/Analytics/LinalgAsyncUdf.cs",
+ "generatedFile": "src/Analytics/LinalgAsyncUdf.g.cs",
+ "namespace": "ExcelFormulaLabs.Analytics",
+ "className": "LinalgAsyncUdf",
+ "category": "Linear Algebra",
+ "usings": [
+  "ExcelDna.Integration",
+  "ExcelFormulaLabs.Foundation",
+  "System"
+ ],
+ "functions": [
+  {
+   "excel": "LINALG.SVD_U_ASYNC",
+   "method": "UDF_LINALG_SVD_U_ASYNC",
+   "desc": "SVD left singular vectors (U matrix), computed asynchronously.",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "generated": false,
+   "handReason": "statement-body"
+  },
+  {
+   "excel": "LINALG.SVD_S_ASYNC",
+   "method": "UDF_LINALG_SVD_S_ASYNC",
+   "desc": "SVD singular values (S vector), computed asynchronously.",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "generated": false,
+   "handReason": "statement-body"
+  },
+  {
+   "excel": "LINALG.SVD_VT_ASYNC",
+   "method": "UDF_LINALG_SVD_VT_ASYNC",
+   "desc": "SVD right singular vectors transposed (Vt), computed asynchronously.",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "generated": false,
+   "handReason": "statement-body"
+  },
+  {
+   "excel": "LINALG.QR_Q_ASYNC",
+   "method": "UDF_LINALG_QR_Q_ASYNC",
+   "desc": "QR decomposition orthogonal matrix Q, computed asynchronously.",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "generated": false,
+   "handReason": "statement-body"
+  },
+  {
+   "excel": "LINALG.QR_R_ASYNC",
+   "method": "UDF_LINALG_QR_R_ASYNC",
+   "desc": "QR decomposition upper-triangular matrix R, computed asynchronously.",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "generated": false,
+   "handReason": "statement-body"
+  },
+  {
+   "excel": "LINALG.EIGEN_ASYNC",
+   "method": "UDF_LINALG_EIGEN_ASYNC",
+   "desc": "Eigenvalues (symmetric matrix), computed asynchronously.",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "generated": false,
+   "handReason": "statement-body"
+  },
+  {
+   "excel": "LINALG.SOLVE_ASYNC",
+   "method": "UDF_LINALG_SOLVE_ASYNC",
+   "desc": "Solve Ax=b, computed asynchronously. Use for large systems.",
+   "args": [
+    {
+     "name": "array1",
+     "desc": "Coefficient matrix A",
+     "type": "object",
+     "default": null,
+     "pname": "A"
+    },
+    {
+     "name": "array2",
+     "desc": "Right-hand side vector b",
+     "type": "object",
+     "default": null,
+     "pname": "b"
+    }
+   ],
+   "generated": false,
+   "handReason": "statement-body"
+  },
+  {
+   "excel": "LINALG.CHOLESKY_ASYNC",
+   "method": "UDF_LINALG_CHOLESKY_ASYNC",
+   "desc": "Cholesky decomposition, computed asynchronously. Use for large matrices.",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "generated": false,
+   "handReason": "statement-body"
+  },
+  {
+   "excel": "LINALG.PINV_ASYNC",
+   "method": "UDF_LINALG_PINV_ASYNC",
+   "desc": "Moore-Penrose pseudo-inverse, computed asynchronously. Use for large matrices.",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "generated": false,
+   "handReason": "statement-body"
+  }
+ ]
+}

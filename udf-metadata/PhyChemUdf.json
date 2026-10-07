@@ -1,0 +1,381 @@
+{
+ "sourceFile": "src/Analytics/PhyChemUdf.cs",
+ "generatedFile": "src/Analytics/PhyChemUdf.g.cs",
+ "namespace": "ExcelFormulaLabs.Analytics",
+ "className": "PhyChemUdf",
+ "category": "Physical Chemistry",
+ "usings": [
+  "ExcelDna.Integration",
+  "ExcelFormulaLabs.Foundation"
+ ],
+ "functions": [
+  {
+   "excel": "PHYCHEM.MOLWT",
+   "method": "UDF_PC_MOLWT",
+   "desc": "Molecular weight from chemical formula (e.g. 'H2SO4')",
+   "args": [
+    {
+     "name": "formula_text",
+     "desc": "A chemical formula, e.g. H2SO4 or Fe4[Fe(CN)6]3",
+     "type": "object",
+     "default": null,
+     "pname": "f"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,double>(f,PhyChemCore.MolecularWeight)",
+   "generated": true
+  },
+  {
+   "excel": "PHYCHEM.TEMP",
+   "method": "UDF_PC_TEMP",
+   "desc": "Convert temperature between units: C, F, K",
+   "args": [
+    {
+     "name": "number",
+     "desc": "A numeric value or array of numbers",
+     "type": "object",
+     "default": null,
+     "pname": "v"
+    },
+    {
+     "name": "from_unit",
+     "desc": "Source temperature unit: C, F, or K",
+     "type": "object",
+     "default": null,
+     "pname": "from"
+    },
+    {
+     "name": "to_unit",
+     "desc": "Target temperature unit: C, F, or K",
+     "type": "object",
+     "default": null,
+     "pname": "to"
+    }
+   ],
+   "expr": "{var f=S(from);var t=S(to);return ElementWiseMapper.MapOver<double,double>(v,d=>PhyChemCore.ConvertTemperature(d,f,t));}",
+   "generated": true
+  },
+  {
+   "excel": "PHYCHEM.PRESS",
+   "method": "UDF_PC_PRESS",
+   "desc": "Convert pressure between units: ATM, PSI, PA, KPA, BAR, MMHG, TORR",
+   "args": [
+    {
+     "name": "number",
+     "desc": "A numeric value or array of numbers",
+     "type": "object",
+     "default": null,
+     "pname": "v"
+    },
+    {
+     "name": "from_unit",
+     "desc": "Source pressure unit, e.g. ATM, PSI, KPA",
+     "type": "object",
+     "default": null,
+     "pname": "from"
+    },
+    {
+     "name": "to_unit",
+     "desc": "Target pressure unit, e.g. PA, BAR, MMHG",
+     "type": "object",
+     "default": null,
+     "pname": "to"
+    }
+   ],
+   "expr": "{var f=S(from);var t=S(to);return ElementWiseMapper.MapOver<double,double>(v,d=>PhyChemCore.ConvertPressure(d,f,t));}",
+   "generated": true
+  },
+  {
+   "excel": "PHYCHEM.VOL",
+   "method": "UDF_PC_VOL",
+   "desc": "Convert volume between units: L, ML, M3, GAL, QT, FT3",
+   "args": [
+    {
+     "name": "number",
+     "desc": "A numeric value or array of numbers",
+     "type": "object",
+     "default": null,
+     "pname": "v"
+    },
+    {
+     "name": "from_unit",
+     "desc": "Source volume unit, e.g. L, GAL, M3",
+     "type": "object",
+     "default": null,
+     "pname": "from"
+    },
+    {
+     "name": "to_unit",
+     "desc": "Target volume unit, e.g. ML, QT, FT3",
+     "type": "object",
+     "default": null,
+     "pname": "to"
+    }
+   ],
+   "expr": "{var f=S(from);var t=S(to);return ElementWiseMapper.MapOver<double,double>(v,d=>PhyChemCore.ConvertVolume(d,f,t));}",
+   "generated": true
+  },
+  {
+   "excel": "PHYCHEM.MASS",
+   "method": "UDF_PC_MASS",
+   "desc": "Convert mass between units: KG, G, MG, LB, OZ, TON",
+   "args": [
+    {
+     "name": "number",
+     "desc": "A numeric value or array of numbers",
+     "type": "object",
+     "default": null,
+     "pname": "v"
+    },
+    {
+     "name": "from_unit",
+     "desc": "Source mass unit, e.g. KG, LB, OZ",
+     "type": "object",
+     "default": null,
+     "pname": "from"
+    },
+    {
+     "name": "to_unit",
+     "desc": "Target mass unit, e.g. G, MG, TON",
+     "type": "object",
+     "default": null,
+     "pname": "to"
+    }
+   ],
+   "expr": "{var f=S(from);var t=S(to);return ElementWiseMapper.MapOver<double,double>(v,d=>PhyChemCore.ConvertMass(d,f,t));}",
+   "generated": true
+  },
+  {
+   "excel": "PHYCHEM.C_TO_F",
+   "method": "UDF_PC_CTOF",
+   "desc": "Celsius to Fahrenheit",
+   "args": [
+    {
+     "name": "celsius",
+     "desc": "Temperature in degrees Celsius",
+     "type": "object",
+     "default": null,
+     "pname": "v"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,double>(v,d=>PhyChemCore.ConvertTemperature(d,\"C\",\"F\"))",
+   "generated": true
+  },
+  {
+   "excel": "PHYCHEM.F_TO_C",
+   "method": "UDF_PC_FTOC",
+   "desc": "Fahrenheit to Celsius",
+   "args": [
+    {
+     "name": "fahrenheit",
+     "desc": "Temperature in degrees Fahrenheit",
+     "type": "object",
+     "default": null,
+     "pname": "v"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,double>(v,d=>PhyChemCore.ConvertTemperature(d,\"F\",\"C\"))",
+   "generated": true
+  },
+  {
+   "excel": "PHYCHEM.KG_TO_LB",
+   "method": "UDF_PC_KG2LB",
+   "desc": "Kilograms to pounds",
+   "args": [
+    {
+     "name": "kg",
+     "desc": "Mass in kilograms",
+     "type": "object",
+     "default": null,
+     "pname": "v"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,double>(v,d=>PhyChemCore.ConvertMass(d,\"KG\",\"LB\"))",
+   "generated": true
+  },
+  {
+   "excel": "PHYCHEM.LB_TO_KG",
+   "method": "UDF_PC_LB2KG",
+   "desc": "Pounds to kilograms",
+   "args": [
+    {
+     "name": "lb",
+     "desc": "Mass in pounds",
+     "type": "object",
+     "default": null,
+     "pname": "v"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,double>(v,d=>PhyChemCore.ConvertMass(d,\"LB\",\"KG\"))",
+   "generated": true
+  },
+  {
+   "excel": "PHYCHEM.L_TO_GAL",
+   "method": "UDF_PC_L2GAL",
+   "desc": "Liters to US gallons",
+   "args": [
+    {
+     "name": "liters",
+     "desc": "Volume in liters",
+     "type": "object",
+     "default": null,
+     "pname": "v"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,double>(v,d=>PhyChemCore.ConvertVolume(d,\"L\",\"GAL\"))",
+   "generated": true
+  },
+  {
+   "excel": "PHYCHEM.GAL_TO_L",
+   "method": "UDF_PC_GAL2L",
+   "desc": "US gallons to liters",
+   "args": [
+    {
+     "name": "gallons",
+     "desc": "Volume in US gallons",
+     "type": "object",
+     "default": null,
+     "pname": "v"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,double>(v,d=>PhyChemCore.ConvertVolume(d,\"GAL\",\"L\"))",
+   "generated": true
+  },
+  {
+   "excel": "PHYCHEM.ATM_TO_PSI",
+   "method": "UDF_PC_ATM2PSI",
+   "desc": "Atmospheres to PSI",
+   "args": [
+    {
+     "name": "atm",
+     "desc": "Pressure in atmospheres",
+     "type": "object",
+     "default": null,
+     "pname": "v"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,double>(v,d=>PhyChemCore.ConvertPressure(d,\"ATM\",\"PSI\"))",
+   "generated": true
+  },
+  {
+   "excel": "PHYCHEM.PSI_TO_ATM",
+   "method": "UDF_PC_PSI2ATM",
+   "desc": "PSI to atmospheres",
+   "args": [
+    {
+     "name": "psi",
+     "desc": "Pressure in pounds per square inch",
+     "type": "object",
+     "default": null,
+     "pname": "v"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,double>(v,d=>PhyChemCore.ConvertPressure(d,\"PSI\",\"ATM\"))",
+   "generated": true
+  },
+  {
+   "excel": "PHYCHEM.IDEALGAS",
+   "method": "UDF_PC_GAS",
+   "desc": "Ideal gas law: PV = nRT. Solve for any unknown (pass * for variable to solve)",
+   "args": [
+    {
+     "name": "pressure",
+     "desc": "Pressure (P) in the ideal gas law PV=nRT",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    },
+    {
+     "name": "volume",
+     "desc": "Volume (V) in ideal gas law or gas volume to convert",
+     "type": "object",
+     "default": null,
+     "pname": "v"
+    },
+    {
+     "name": "moles",
+     "desc": "Number of moles (n) in the ideal gas law PV=nRT",
+     "type": "object",
+     "default": null,
+     "pname": "n"
+    },
+    {
+     "name": "temperature",
+     "desc": "Temperature (T) in Kelvin for ideal gas law",
+     "type": "object",
+     "default": null,
+     "pname": "t"
+    }
+   ],
+   "expr": "{if(InputNormalizer.IsExcelErrorValue(p))return p;if(InputNormalizer.IsExcelErrorValue(v))return v;if(InputNormalizer.IsExcelErrorValue(n))return n;if(InputNormalizer.IsExcelErrorValue(t))return t;return PhyChemCore.IdealGasLaw(V(p),V(v),V(n),V(t));}",
+   "generated": true
+  },
+  {
+   "excel": "PHYCHEM.GASSTP",
+   "method": "UDF_PC_STP",
+   "desc": "Convert gas volume to standard temperature and pressure (STP)",
+   "args": [
+    {
+     "name": "volume",
+     "desc": "Volume (V) in ideal gas law or gas volume to convert",
+     "type": "object",
+     "default": null,
+     "pname": "vol"
+    },
+    {
+     "name": "temperature",
+     "desc": "Temperature in Celsius by default; use t_unit=\\\"K\\\" for Kelvin",
+     "type": "object",
+     "default": null,
+     "pname": "temp"
+    },
+    {
+     "name": "pressure",
+     "desc": "Pressure in atm by default; use p_unit=\\\"PSI\\\",\\\"KPA\\\", etc.",
+     "type": "object",
+     "default": null,
+     "pname": "press"
+    },
+    {
+     "name": "[t_unit]",
+     "desc": "Temperature unit: C (default), K, F",
+     "type": "object",
+     "default": "null",
+     "pname": "tUnit"
+    },
+    {
+     "name": "[p_unit]",
+     "desc": "Pressure unit: atm (default), PSI, KPA, PA, BAR, MMHG, TORR",
+     "type": "object",
+     "default": "null",
+     "pname": "pUnit"
+    }
+   ],
+   "expr": "{if(InputNormalizer.IsExcelErrorValue(vol))return vol;if(InputNormalizer.IsExcelErrorValue(temp))return temp;if(InputNormalizer.IsExcelErrorValue(press))return press;return PhyChemCore.GasToSTP(InputNormalizer.ToDouble(vol),InputNormalizer.ToDouble(temp),InputNormalizer.ToDouble(press),InputNormalizer.IsOmitted(tUnit)?\"C\":InputNormalizer.ToString(tUnit),InputNormalizer.IsOmitted(pUnit)?\"atm\":InputNormalizer.ToString(pUnit));}",
+   "generated": true
+  },
+  {
+   "excel": "PHYCHEM.DENSITY",
+   "method": "UDF_PC_DEN",
+   "desc": "Compute density: mass / volume",
+   "args": [
+    {
+     "name": "mass",
+     "desc": "Mass value for density calculation",
+     "type": "object",
+     "default": null,
+     "pname": "mass"
+    },
+    {
+     "name": "volume",
+     "desc": "Volume value for density calculation",
+     "type": "object",
+     "default": null,
+     "pname": "vol"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOverMulti<double,double,double>(mass,vol,PhyChemCore.Density)",
+   "generated": true
+  }
+ ]
+}

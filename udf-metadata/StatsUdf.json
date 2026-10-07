@@ -1,0 +1,607 @@
+{
+ "sourceFile": "src/Analytics/StatsUdf.cs",
+ "generatedFile": "src/Analytics/StatsUdf.g.cs",
+ "namespace": "ExcelFormulaLabs.Analytics",
+ "className": "StatsUdf",
+ "category": "Statistics",
+ "usings": [
+  "ExcelDna.Integration",
+  "ExcelFormulaLabs.Foundation",
+  "System"
+ ],
+ "functions": [
+  {
+   "excel": "STATS.MEAN",
+   "method": "UDF_STAT_MEAN",
+   "desc": "Arithmetic mean of a numeric array",
+   "args": [
+    {
+     "name": "number1",
+     "desc": "A range or array of numeric values",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "(object)StatsCore.Mean(V(d))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.GEOMEAN",
+   "method": "UDF_STAT_GEO",
+   "desc": "Geometric mean of a positive numeric array",
+   "args": [
+    {
+     "name": "number1",
+     "desc": "A range or array of numeric values",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "(object)StatsCore.GeometricMean(V(d))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.HARMEAN",
+   "method": "UDF_STAT_HAR",
+   "desc": "Harmonic mean of a positive numeric array",
+   "args": [
+    {
+     "name": "number1",
+     "desc": "A range or array of numeric values",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "(object)StatsCore.HarmonicMean(V(d))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.MEDIAN",
+   "method": "UDF_STAT_MED",
+   "desc": "Median of a numeric array",
+   "args": [
+    {
+     "name": "number1",
+     "desc": "A range or array of numeric values",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "(object)StatsCore.Median(V(d))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.VARP",
+   "method": "UDF_STAT_VP",
+   "desc": "Population variance (divides by n)",
+   "args": [
+    {
+     "name": "number1",
+     "desc": "A range or array of numeric values",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "(object)StatsCore.VarianceP(V(d))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.VAR",
+   "method": "UDF_STAT_VAR",
+   "desc": "Sample variance (divides by n-1)",
+   "args": [
+    {
+     "name": "number1",
+     "desc": "A range or array of numeric values",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "(object)StatsCore.Variance(V(d))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.STDEVP",
+   "method": "UDF_STAT_STDP",
+   "desc": "Population standard deviation (divides by n)",
+   "args": [
+    {
+     "name": "number1",
+     "desc": "A range or array of numeric values",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "(object)StatsCore.StdevP(V(d))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.STDEV",
+   "method": "UDF_STAT_STD",
+   "desc": "Sample standard deviation (divides by n-1)",
+   "args": [
+    {
+     "name": "number1",
+     "desc": "A range or array of numeric values",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "(object)StatsCore.Stdev(V(d))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.SKEW",
+   "method": "UDF_STAT_SKEW",
+   "desc": "Sample skewness of a numeric array",
+   "args": [
+    {
+     "name": "number1",
+     "desc": "A range or array of numeric values",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "(object)StatsCore.Skewness(V(d))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.KURT",
+   "method": "UDF_STAT_KURT",
+   "desc": "Sample excess kurtosis of a numeric array",
+   "args": [
+    {
+     "name": "number1",
+     "desc": "A range or array of numeric values",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "(object)StatsCore.Kurtosis(V(d))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.MIN",
+   "method": "UDF_STAT_MIN",
+   "desc": "Minimum value in a numeric array",
+   "args": [
+    {
+     "name": "number1",
+     "desc": "A range or array of numeric values",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "(object)StatsCore.Min(V(d))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.MAX",
+   "method": "UDF_STAT_MAX",
+   "desc": "Maximum value in a numeric array",
+   "args": [
+    {
+     "name": "number1",
+     "desc": "A range or array of numeric values",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "(object)StatsCore.Max(V(d))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.RANGE",
+   "method": "UDF_STAT_RNG",
+   "desc": "Range (max - min) of a numeric array",
+   "args": [
+    {
+     "name": "number1",
+     "desc": "A range or array of numeric values",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "(object)StatsCore.Range(V(d))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.SUM",
+   "method": "UDF_STAT_SUM",
+   "desc": "Sum of a numeric array",
+   "args": [
+    {
+     "name": "number1",
+     "desc": "A range or array of numeric values",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "(object)StatsCore.Sum(V(d))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.PRODUCT",
+   "method": "UDF_STAT_PROD",
+   "desc": "Product of a numeric array",
+   "args": [
+    {
+     "name": "number1",
+     "desc": "A range or array of numeric values",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "(object)StatsCore.Product(V(d))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.PERCENTILE",
+   "method": "UDF_STAT_PCT",
+   "desc": "Percentile at p (0-100) using R7 quantile definition",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    },
+    {
+     "name": "k",
+     "desc": "Percentile value between 0 and 100",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    }
+   ],
+   "expr": "(object)StatsCore.Percentile(V(d),InputNormalizer.ToDouble(p))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.IQR",
+   "method": "UDF_STAT_IQR",
+   "desc": "Inter-quartile range (Q3 - Q1) using R7 quantile",
+   "args": [
+    {
+     "name": "number1",
+     "desc": "A range or array of numeric values",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "(object)StatsCore.IQR(V(d))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.SUMMARY",
+   "method": "UDF_STAT_SUMM",
+   "desc": "Descriptive stats: n, mean, stdev, min, q1, median, q3, max, iqr.",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "StatsCore.Summary(V(d))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.COVARP",
+   "method": "UDF_STAT_CVP",
+   "desc": "Population covariance of two arrays (divides by n)",
+   "args": [
+    {
+     "name": "array1",
+     "desc": "First range or array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    },
+    {
+     "name": "array2",
+     "desc": "Second range or array",
+     "type": "object",
+     "default": null,
+     "pname": "b"
+    }
+   ],
+   "expr": "(object)StatsCore.CovarianceP(V(a),V(b))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.COVAR",
+   "method": "UDF_STAT_CV",
+   "desc": "Sample covariance of two arrays (divides by n-1)",
+   "args": [
+    {
+     "name": "array1",
+     "desc": "First range or array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    },
+    {
+     "name": "array2",
+     "desc": "Second range or array",
+     "type": "object",
+     "default": null,
+     "pname": "b"
+    }
+   ],
+   "expr": "(object)StatsCore.Covariance(V(a),V(b))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.PEARSON",
+   "method": "UDF_STAT_PEAR",
+   "desc": "Pearson correlation coefficient (r). Range -1 to 1",
+   "args": [
+    {
+     "name": "array1",
+     "desc": "First range or array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    },
+    {
+     "name": "array2",
+     "desc": "Second range or array",
+     "type": "object",
+     "default": null,
+     "pname": "b"
+    }
+   ],
+   "expr": "(object)StatsCore.Pearson(V(a),V(b))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.SPEARMAN",
+   "method": "UDF_STAT_SPR",
+   "desc": "Spearman rank correlation coefficient. Range -1 to 1",
+   "args": [
+    {
+     "name": "array1",
+     "desc": "First range or array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    },
+    {
+     "name": "array2",
+     "desc": "Second range or array",
+     "type": "object",
+     "default": null,
+     "pname": "b"
+    }
+   ],
+   "expr": "(object)StatsCore.Spearman(V(a),V(b))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.CORRMATRIX",
+   "method": "UDF_STAT_CMX",
+   "desc": "Pearson correlation matrix for all column pairs (1.0 on diagonal).",
+   "args": [
+    {
+     "name": "data",
+     "desc": "A 2D range where each column is a variable",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "(object)StatsCore.CorrelationMatrix(M(d))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.TTEST1",
+   "method": "UDF_STAT_T1",
+   "desc": "One-sample two-tailed t-test p-value vs mu0.",
+   "args": [
+    {
+     "name": "array",
+     "desc": "A range or 2D array",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    },
+    {
+     "name": "x",
+     "desc": "Hypothesized population mean for one-sample t-test",
+     "type": "object",
+     "default": null,
+     "pname": "mu"
+    }
+   ],
+   "expr": "(object)StatsCore.TTestOneSample(V(d),InputNormalizer.ToDouble(mu))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.TTEST2",
+   "method": "UDF_STAT_T2",
+   "desc": "Welch two-sample two-tailed t-test p-value (unequal variance).",
+   "args": [
+    {
+     "name": "array1",
+     "desc": "First range or array",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    },
+    {
+     "name": "array2",
+     "desc": "Second range or array",
+     "type": "object",
+     "default": null,
+     "pname": "b"
+    }
+   ],
+   "expr": "(object)StatsCore.TTestTwoSample(V(a),V(b))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.ZSCORE",
+   "method": "UDF_STAT_ZS",
+   "desc": "Standardize to z-scores: (x - mean) / stdev",
+   "args": [
+    {
+     "name": "number1",
+     "desc": "A range or array of numeric values",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "StatsCore.ZScore(V(d))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.COUNT",
+   "method": "UDF_STAT_CNT",
+   "desc": "Count of numeric elements in an array",
+   "args": [
+    {
+     "name": "number",
+     "desc": "A numeric value or array of numbers",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "StatsCore.CountNumeric(d)",
+   "generated": true
+  },
+  {
+   "excel": "STATS.MODE",
+   "method": "UDF_STAT_MODE",
+   "desc": "Most frequent value. Returns NaN if all unique (matches Excel MODE.SNGL)",
+   "args": [
+    {
+     "name": "number",
+     "desc": "A numeric value or array of numbers",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "(object)StatsCore.Mode(V(d))",
+   "generated": true
+  },
+  {
+   "excel": "STATS.ABS",
+   "method": "UDF_STAT_ABS",
+   "desc": "Element-wise absolute value",
+   "args": [
+    {
+     "name": "number",
+     "desc": "A numeric value or array of numbers",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,double>(d,Math.Abs)",
+   "generated": true
+  },
+  {
+   "excel": "STATS.SQRT",
+   "method": "UDF_STAT_SQRT",
+   "desc": "Element-wise square root",
+   "args": [
+    {
+     "name": "number",
+     "desc": "A numeric value or array of numbers",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,double>(d,StatsCore.SqrtSafe)",
+   "generated": true
+  },
+  {
+   "excel": "STATS.LN",
+   "method": "UDF_STAT_LN",
+   "desc": "Element-wise natural logarithm",
+   "args": [
+    {
+     "name": "number",
+     "desc": "A numeric value or array of numbers",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,double>(d,StatsCore.LogSafe)",
+   "generated": true
+  },
+  {
+   "excel": "STATS.LOG10",
+   "method": "UDF_STAT_LOG10",
+   "desc": "Element-wise base-10 logarithm",
+   "args": [
+    {
+     "name": "number",
+     "desc": "A numeric value or array of numbers",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,double>(d,StatsCore.Log10Safe)",
+   "generated": true
+  },
+  {
+   "excel": "STATS.EXP",
+   "method": "UDF_STAT_EXP",
+   "desc": "Element-wise exponential (e^x)",
+   "args": [
+    {
+     "name": "number",
+     "desc": "A numeric value or array of numbers",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,double>(d,StatsCore.ExpSafe)",
+   "generated": true
+  },
+  {
+   "excel": "STATS.SIGN",
+   "method": "UDF_STAT_SGN",
+   "desc": "Element-wise sign: -1, 0, or 1",
+   "args": [
+    {
+     "name": "number",
+     "desc": "A numeric value or array of numbers",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,long>(d,StatsCore.Sign)",
+   "generated": true
+  }
+ ]
+}

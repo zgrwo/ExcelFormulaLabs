@@ -1,0 +1,767 @@
+{
+ "sourceFile": "src/DataToolkit/StringUdf.cs",
+ "generatedFile": "src/DataToolkit/StringUdf.g.cs",
+ "namespace": "ExcelFormulaLabs.DataToolkit",
+ "className": "StringUdf",
+ "category": "String",
+ "usings": [
+  "ExcelDna.Integration",
+  "ExcelFormulaLabs.Foundation",
+  "System.Linq"
+ ],
+ "functions": [
+  {
+   "excel": "STR.REVERSE",
+   "method": "UDF_STR_REV",
+   "desc": "Reverse a string character-wise",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "t"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,string>(t,StringCore.ReverseString)",
+   "generated": true
+  },
+  {
+   "excel": "STR.NORMWS",
+   "method": "UDF_STR_NWS",
+   "desc": "Normalize whitespace: trim and collapse multiple spaces to single",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "t"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,string>(t,StringCore.NormalizeWhitespace)",
+   "generated": true
+  },
+  {
+   "excel": "STR.TITLE",
+   "method": "UDF_STR_TITLE",
+   "desc": "Convert string to title case (capitalize first letter of each word)",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "t"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,string>(t,StringCore.ToTitleCase)",
+   "generated": true
+  },
+  {
+   "excel": "STR.REMOVE",
+   "method": "UDF_STR_REM",
+   "desc": "Remove all occurrences of specified characters from string",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "t"
+    },
+    {
+     "name": "old_text",
+     "desc": "Characters to remove from the text",
+     "type": "object",
+     "default": null,
+     "pname": "ch"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,string>(t,s=>StringCore.RemoveChars(s,InputNormalizer.ToString(ch)))",
+   "generated": true
+  },
+  {
+   "excel": "STR.KEEP",
+   "method": "UDF_STR_KEEP",
+   "desc": "Keep only specified characters, remove all others",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "t"
+    },
+    {
+     "name": "keep_chars",
+     "desc": "Characters to retain; all others are removed",
+     "type": "object",
+     "default": null,
+     "pname": "ch"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,string>(t,s=>StringCore.KeepChars(s,InputNormalizer.ToString(ch)))",
+   "generated": true
+  },
+  {
+   "excel": "STR.PADLEFT",
+   "method": "UDF_STR_PADL",
+   "desc": "Pad string on left to given length with pad character",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "t"
+    },
+    {
+     "name": "num_chars",
+     "desc": "Number of characters to generate, pad, or extract",
+     "type": "object",
+     "default": null,
+     "pname": "len"
+    },
+    {
+     "name": "[pad_text]",
+     "desc": "The padding character(s) to fill with",
+     "type": "object",
+     "default": "null!",
+     "pname": "pad"
+    }
+   ],
+   "expr": "{string ps=InputNormalizer.ToString(pad);char pc=ps.Length>0?ps[0]:' ';return ElementWiseMapper.MapOver<string,string>(t,s=>StringCore.PadLeft(s,InputNormalizer.ToInt32(len),pc));}",
+   "generated": true
+  },
+  {
+   "excel": "STR.PADRIGHT",
+   "method": "UDF_STR_PADR",
+   "desc": "Pad string on right to given length with pad character",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "t"
+    },
+    {
+     "name": "num_chars",
+     "desc": "Number of characters to generate, pad, or extract",
+     "type": "object",
+     "default": null,
+     "pname": "len"
+    },
+    {
+     "name": "[pad_text]",
+     "desc": "The padding character(s) to fill with",
+     "type": "object",
+     "default": "null!",
+     "pname": "pad"
+    }
+   ],
+   "expr": "{string ps=InputNormalizer.ToString(pad);char pc=ps.Length>0?ps[0]:' ';return ElementWiseMapper.MapOver<string,string>(t,s=>StringCore.PadRight(s,InputNormalizer.ToInt32(len),pc));}",
+   "generated": true
+  },
+  {
+   "excel": "STR.TRUNCATE",
+   "method": "UDF_STR_TRUNC",
+   "desc": "Truncate string to given length, appending suffix if truncated",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "t"
+    },
+    {
+     "name": "num_chars",
+     "desc": "Number of characters to generate, pad, or extract",
+     "type": "object",
+     "default": null,
+     "pname": "len"
+    },
+    {
+     "name": "[suffix]",
+     "desc": "Suffix to append when the text is truncated",
+     "type": "object",
+     "default": "null!",
+     "pname": "sfx"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,string>(t,s=>StringCore.Truncate(s,InputNormalizer.ToInt32(len),InputNormalizer.IsOmitted(sfx)?\"...\":InputNormalizer.ToString(sfx)))",
+   "generated": true
+  },
+  {
+   "excel": "STR.COUNTSUB",
+   "method": "UDF_STR_CNT",
+   "desc": "Count occurrences of substring (case-sensitive option)",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "t"
+    },
+    {
+     "name": "substring",
+     "desc": "Substring to search for and count",
+     "type": "object",
+     "default": null,
+     "pname": "s"
+    },
+    {
+     "name": "[match_case]",
+     "desc": "TRUE for case-sensitive match, FALSE for case-insensitive",
+     "type": "object",
+     "default": "null!",
+     "pname": "cs"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOverMulti<string,string,long>(t,s,(a,b)=>StringCore.CountSubstring(a,b,InputNormalizer.ToBool(cs,true)))",
+   "generated": true
+  },
+  {
+   "excel": "STR.STARTSWITH",
+   "method": "UDF_STR_SW",
+   "desc": "Returns TRUE if string starts with prefix (case-sensitive option)",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "t"
+    },
+    {
+     "name": "prefix",
+     "desc": "Text to test at the start",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    },
+    {
+     "name": "[match_case]",
+     "desc": "TRUE for case-sensitive match, FALSE for case-insensitive",
+     "type": "object",
+     "default": "null!",
+     "pname": "cs"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOverMulti<string,string,bool>(t,p,(a,b)=>StringCore.StartsWithStr(a,b,InputNormalizer.ToBool(cs,true)))",
+   "generated": true
+  },
+  {
+   "excel": "STR.ENDSWITH",
+   "method": "UDF_STR_EW",
+   "desc": "Returns TRUE if string ends with suffix (case-sensitive option)",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "t"
+    },
+    {
+     "name": "suffix",
+     "desc": "Text that the string should end with",
+     "type": "object",
+     "default": null,
+     "pname": "s"
+    },
+    {
+     "name": "[match_case]",
+     "desc": "TRUE for case-sensitive match, FALSE for case-insensitive",
+     "type": "object",
+     "default": "null!",
+     "pname": "cs"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOverMulti<string,string,bool>(t,s,(a,b)=>StringCore.EndsWithStr(a,b,InputNormalizer.ToBool(cs,true)))",
+   "generated": true
+  },
+  {
+   "excel": "STR.LEFTOF",
+   "method": "UDF_STR_LOF",
+   "desc": "Extract substring left of the nth occurrence of delimiter",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "t"
+    },
+    {
+     "name": "delimiter",
+     "desc": "The delimiter character or string",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    },
+    {
+     "name": "[instance_num]",
+     "desc": "Which occurrence: 1=first (default), -1=last",
+     "type": "object",
+     "default": "null!",
+     "pname": "n"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,string>(t,s=>StringCore.LeftOf(s,InputNormalizer.ToString(d),InputNormalizer.ToLong(n)))",
+   "generated": true
+  },
+  {
+   "excel": "STR.RIGHTOF",
+   "method": "UDF_STR_ROF",
+   "desc": "Extract substring right of the nth occurrence of delimiter",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "t"
+    },
+    {
+     "name": "delimiter",
+     "desc": "The delimiter character or string",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    },
+    {
+     "name": "[instance_num]",
+     "desc": "Which occurrence: 1=first (default), -1=last",
+     "type": "object",
+     "default": "null!",
+     "pname": "n"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,string>(t,s=>StringCore.RightOf(s,InputNormalizer.ToString(d),InputNormalizer.ToLong(n)))",
+   "generated": true
+  },
+  {
+   "excel": "STR.EXTRACT",
+   "method": "UDF_STR_EXT",
+   "desc": "Extract substring between left and right delimiters (nth occurrence)",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "t"
+    },
+    {
+     "name": "start_delimiter",
+     "desc": "The left delimiter character(s)",
+     "type": "object",
+     "default": null,
+     "pname": "l"
+    },
+    {
+     "name": "end_delimiter",
+     "desc": "The right delimiter character(s)",
+     "type": "object",
+     "default": null,
+     "pname": "r"
+    },
+    {
+     "name": "[instance_num]",
+     "desc": "Which occurrence: 1=first (default), -1=last",
+     "type": "object",
+     "default": "null",
+     "pname": "n"
+    },
+    {
+     "name": "[include_delimiters]",
+     "desc": "TRUE to include the delimiters in the result",
+     "type": "object",
+     "default": "null!",
+     "pname": "inc"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,string>(t,s=>StringCore.ExtractBetween(s,InputNormalizer.ToString(l),InputNormalizer.ToString(r),InputNormalizer.ToLong(n),InputNormalizer.ToBool(inc)))",
+   "generated": true
+  },
+  {
+   "excel": "STR.NTHWORD",
+   "method": "UDF_STR_NTHW",
+   "desc": "Extract the nth word from a string (space-delimited)",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "t"
+    },
+    {
+     "name": "[instance_num]",
+     "desc": "Which occurrence: 1=first (default), -1=last",
+     "type": "object",
+     "default": "null!",
+     "pname": "n"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,string>(t,s=>StringCore.NthWord(s,InputNormalizer.ToLong(n)))",
+   "generated": true
+  },
+  {
+   "excel": "STR.COMMONPFX",
+   "method": "UDF_STR_CPFX",
+   "desc": "Longest common prefix of two strings (case-sensitive option)",
+   "args": [
+    {
+     "name": "text1",
+     "desc": "First text string to compare",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    },
+    {
+     "name": "text2",
+     "desc": "Second text string to compare",
+     "type": "object",
+     "default": null,
+     "pname": "b"
+    },
+    {
+     "name": "[match_case]",
+     "desc": "TRUE for case-sensitive match, FALSE for case-insensitive",
+     "type": "object",
+     "default": "null!",
+     "pname": "cs"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOverMulti<string,string,string>(a,b,(x,y)=>StringCore.CommonPrefix(x,y,InputNormalizer.ToBool(cs,true)))",
+   "generated": true
+  },
+  {
+   "excel": "STR.TEXTJOIN",
+   "method": "UDF_STR_JOIN",
+   "desc": "Join array of values with delimiter, optionally skipping empties (like Excel TEXTJOIN)",
+   "args": [
+    {
+     "name": "delimiter",
+     "desc": "The delimiter character or string",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    },
+    {
+     "name": "ignore_empty",
+     "desc": "TRUE to skip empty cells when joining",
+     "type": "object",
+     "default": null,
+     "pname": "skip"
+    },
+    {
+     "name": "text_array",
+     "desc": "Array of text values to join together",
+     "type": "object",
+     "default": null,
+     "pname": "vals"
+    }
+   ],
+   "expr": "{var a=InputNormalizer.NormalizeTo1D(vals).Select(x=>InputNormalizer.ToString(x)).ToArray();return StringCore.TextJoin(InputNormalizer.ToString(d),InputNormalizer.ToBool(skip),a);}",
+   "generated": true
+  },
+  {
+   "excel": "STR.LEVENSHTEIN",
+   "method": "UDF_STR_LEV",
+   "desc": "Levenshtein edit distance between two strings",
+   "args": [
+    {
+     "name": "text1",
+     "desc": "First text string to compare",
+     "type": "object",
+     "default": null,
+     "pname": "a"
+    },
+    {
+     "name": "text2",
+     "desc": "Second text string to compare",
+     "type": "object",
+     "default": null,
+     "pname": "b"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOverMulti<string,string,long>(a,b,(x,y)=>StringCore.LevenshteinDistance(x,y))",
+   "generated": true
+  },
+  {
+   "excel": "STR.SOUNDEX",
+   "method": "UDF_STR_SDX",
+   "desc": "Soundex phonetic code of a string (4-character code)",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "t"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,string>(t,StringCore.Soundex)",
+   "generated": true
+  },
+  {
+   "excel": "STR.URLENCODE",
+   "method": "UDF_STR_UENC",
+   "desc": "URL-encode a string",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "t"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,string>(t,StringCore.UrlEncode)",
+   "generated": true
+  },
+  {
+   "excel": "STR.URLDECODE",
+   "method": "UDF_STR_UDEC",
+   "desc": "URL-decode a string",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "t"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,string>(t,StringCore.UrlDecode)",
+   "generated": true
+  },
+  {
+   "excel": "STR.HTMLENCODE",
+   "method": "UDF_STR_HENC",
+   "desc": "HTML-encode a string",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "t"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,string>(t,StringCore.HtmlEncode)",
+   "generated": true
+  },
+  {
+   "excel": "STR.HTMLDECODE",
+   "method": "UDF_STR_HDEC",
+   "desc": "HTML-decode a string",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "t"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,string>(t,StringCore.HtmlDecode)",
+   "generated": true
+  },
+  {
+   "excel": "STR.BASE64ENC",
+   "method": "UDF_STR_B64ENC",
+   "desc": "Base64-encode a string",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "t"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,string>(t,StringCore.Base64Encode)",
+   "generated": true
+  },
+  {
+   "excel": "STR.BASE64DEC",
+   "method": "UDF_STR_B64DEC",
+   "desc": "Base64-decode a string",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "t"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,string>(t,StringCore.Base64Decode)",
+   "generated": true
+  },
+  {
+   "excel": "STR.UUID",
+   "method": "UDF_STR_UUID",
+   "desc": "Generate a random UUID/GUID string",
+   "args": [],
+   "expr": "(object)StringCore.UUID()",
+   "generated": true
+  },
+  {
+   "excel": "STR.RNDSTR",
+   "method": "UDF_STR_RND",
+   "desc": "Generate random string of given length from character set",
+   "args": [
+    {
+     "name": "num_chars",
+     "desc": "Number of characters to generate, pad, or extract",
+     "type": "object",
+     "default": null,
+     "pname": "len"
+    },
+    {
+     "name": "[character_set]",
+     "desc": "Characters to randomly pick from; default is A-Z, a-z, 0-9",
+     "type": "object",
+     "default": "null!",
+     "pname": "cs"
+    }
+   ],
+   "expr": "(object)StringCore.RandomString(InputNormalizer.ToLong(len),InputNormalizer.ToString(cs))",
+   "generated": true
+  },
+  {
+   "excel": "STR.RNDALPHA",
+   "method": "UDF_STR_RNDA",
+   "desc": "Generate random alphabetic string (A-Z, a-z)",
+   "args": [
+    {
+     "name": "num_chars",
+     "desc": "Number of characters to generate, pad, or extract",
+     "type": "object",
+     "default": null,
+     "pname": "len"
+    }
+   ],
+   "expr": "(object)StringCore.RandomString(InputNormalizer.ToLong(len),\"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\")",
+   "generated": true
+  },
+  {
+   "excel": "STR.RNDNUM",
+   "method": "UDF_STR_RNDN",
+   "desc": "Generate random numeric string (0-9 digits)",
+   "args": [
+    {
+     "name": "num_chars",
+     "desc": "Number of characters to generate, pad, or extract",
+     "type": "object",
+     "default": null,
+     "pname": "len"
+    }
+   ],
+   "expr": "(object)StringCore.RandomString(InputNormalizer.ToLong(len),\"0123456789\")",
+   "generated": true
+  },
+  {
+   "excel": "STR.ISNULLEMPTY",
+   "method": "UDF_STR_ISNE",
+   "desc": "Returns TRUE if string is null or empty",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "t"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,bool>(BlankAsEmpty(t),s=>StringCore.IsNullOrEmptyStr(s))",
+   "generated": true
+  },
+  {
+   "excel": "STR.ISNULLWS",
+   "method": "UDF_STR_ISNW",
+   "desc": "Returns TRUE if string is null, empty, or whitespace only",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "t"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,bool>(BlankAsEmpty(t),s=>StringCore.IsNullOrWhitespaceStr(s))",
+   "generated": true
+  },
+  {
+   "excel": "STR.COALESCE",
+   "method": "UDF_STR_COAL",
+   "desc": "Return primary value if not null/empty, otherwise fallback value",
+   "args": [
+    {
+     "name": "value1",
+     "desc": "Primary value; returned if not null or empty",
+     "type": "object",
+     "default": null,
+     "pname": "p"
+    },
+    {
+     "name": "value2",
+     "desc": "Fallback value if the primary is null or empty",
+     "type": "object",
+     "default": null,
+     "pname": "fb"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOverMulti<string,string,string>(BlankAsEmpty(p),BlankAsEmpty(fb),(a,b)=>StringCore.Coalesce(a,b))",
+   "generated": true
+  },
+  {
+   "excel": "STR.FORMAT",
+   "method": "UDF_STR_FMT",
+   "desc": "Format a value using .NET format string (e.g. '0.00', 'yyyy-MM-dd')",
+   "args": [
+    {
+     "name": "value",
+     "desc": "The value to fill or format",
+     "type": "object",
+     "default": null,
+     "pname": "v"
+    },
+    {
+     "name": "format_text",
+     "desc": "A .NET format string, e.g. 0.00 or yyyy-MM-dd",
+     "type": "object",
+     "default": null,
+     "pname": "fmt"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOverMulti<object,string,string>(v,fmt,(a,b)=>StringCore.FormatValue(a,b))",
+   "generated": true
+  },
+  {
+   "excel": "STR.STRIPHTML",
+   "method": "UDF_STR_SHTML",
+   "desc": "Strip HTML tags from a string, leaving only text content",
+   "args": [
+    {
+     "name": "text",
+     "desc": "The text string to process",
+     "type": "object",
+     "default": null,
+     "pname": "t"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<string,string>(t,StringCore.StripHtml)",
+   "generated": true
+  }
+ ]
+}

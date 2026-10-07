@@ -1,0 +1,491 @@
+{
+ "sourceFile": "src/DataToolkit/DateTimeUdf.cs",
+ "generatedFile": "src/DataToolkit/DateTimeUdf.g.cs",
+ "namespace": "ExcelFormulaLabs.DataToolkit",
+ "className": "DateTimeUdf",
+ "category": "Date & Time",
+ "usings": [
+  "ExcelDna.Integration",
+  "ExcelFormulaLabs.Foundation",
+  "System"
+ ],
+ "functions": [
+  {
+   "excel": "DT.ISOWEEK",
+   "method": "UDF_DT_ISOW",
+   "desc": "ISO 8601 week number (1-53) from an Excel date",
+   "args": [
+    {
+     "name": "serial_number",
+     "desc": "An Excel date serial number",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,long>(d,x=>DateTimeCore.IsoWeekNum(D(x)))",
+   "generated": true
+  },
+  {
+   "excel": "DT.WEEKDAY",
+   "method": "UDF_DT_WKD",
+   "desc": "Day of week as number (Sunday=1, Saturday=7, matches VBA Weekday)",
+   "args": [
+    {
+     "name": "serial_number",
+     "desc": "An Excel date serial number",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,long>(d,x=>DateTimeCore.Weekday(D(x)))",
+   "generated": true
+  },
+  {
+   "excel": "DT.WEEKDAYISO",
+   "method": "UDF_DT_WKDISO",
+   "desc": "Day of week as ISO number (Monday=1, Sunday=7)",
+   "args": [
+    {
+     "name": "serial_number",
+     "desc": "An Excel date serial number",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,long>(d,x=>DateTimeCore.WeekdayISO(D(x)))",
+   "generated": true
+  },
+  {
+   "excel": "DT.WEEKDAYNAME",
+   "method": "UDF_DT_WKDNAM",
+   "desc": "English weekday name (e.g. 'Monday') from an Excel date",
+   "args": [
+    {
+     "name": "serial_number",
+     "desc": "An Excel date serial number",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,string>(d,x=>DateTimeCore.WeekdayName(D(x)))",
+   "generated": true
+  },
+  {
+   "excel": "DT.SOW",
+   "method": "UDF_DT_SOW",
+   "desc": "Start of week date. sd = start day (0=Sun, 1=Mon, ...; default 1=Mon)",
+   "args": [
+    {
+     "name": "serial_number",
+     "desc": "An Excel date serial number",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    },
+    {
+     "name": "[start_day]",
+     "desc": "Day the week starts: 0=Sunday, 1=Monday (default)",
+     "type": "object",
+     "default": "null",
+     "pname": "sd"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,double>(d,x=>DateTimeCore.StartOfWeek(D(x),SD(sd)).ToOADate())",
+   "generated": true
+  },
+  {
+   "excel": "DT.EOW",
+   "method": "UDF_DT_EOW",
+   "desc": "End of week date. sd = start day (0=Sun, 1=Mon, ...; default 1=Mon)",
+   "args": [
+    {
+     "name": "serial_number",
+     "desc": "An Excel date serial number",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    },
+    {
+     "name": "[start_day]",
+     "desc": "Day the week starts: 0=Sunday, 1=Monday (default)",
+     "type": "object",
+     "default": "null",
+     "pname": "sd"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,double>(d,x=>DateTimeCore.EndOfWeek(D(x),SD(sd)).ToOADate())",
+   "generated": true
+  },
+  {
+   "excel": "DT.SOM",
+   "method": "UDF_DT_SOM",
+   "desc": "Start of month date (1st day of month)",
+   "args": [
+    {
+     "name": "serial_number",
+     "desc": "An Excel date serial number",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,double>(d,x=>DateTimeCore.StartOfMonth(D(x)).ToOADate())",
+   "generated": true
+  },
+  {
+   "excel": "DT.EOM",
+   "method": "UDF_DT_EOM",
+   "desc": "End of month date (last day of month)",
+   "args": [
+    {
+     "name": "serial_number",
+     "desc": "An Excel date serial number",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,double>(d,x=>DateTimeCore.EndOfMonth(D(x)).ToOADate())",
+   "generated": true
+  },
+  {
+   "excel": "DT.WOM",
+   "method": "UDF_DT_WOM",
+   "desc": "Week-of-month ordinal (1-6). sd = start day (0=Sun, ...; default 1=Mon)",
+   "args": [
+    {
+     "name": "serial_number",
+     "desc": "An Excel date serial number",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    },
+    {
+     "name": "[start_day]",
+     "desc": "Day the week starts: 0=Sunday, 1=Monday (default)",
+     "type": "object",
+     "default": "null",
+     "pname": "sd"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,long>(d,x=>DateTimeCore.WeekOfMonth(D(x),SD(sd)))",
+   "generated": true
+  },
+  {
+   "excel": "DT.DIM",
+   "method": "UDF_DT_DIM",
+   "desc": "Days in month for given year and month",
+   "args": [
+    {
+     "name": "year",
+     "desc": "A year number, e.g. 2024",
+     "type": "object",
+     "default": null,
+     "pname": "y"
+    },
+    {
+     "name": "month",
+     "desc": "A month number between 1 and 12",
+     "type": "object",
+     "default": null,
+     "pname": "m"
+    }
+   ],
+   "expr": "(long)DateTimeCore.DaysInMonth(InputNormalizer.ToLong(y),InputNormalizer.ToLong(m))",
+   "generated": true
+  },
+  {
+   "excel": "DT.AGEYEARS",
+   "method": "UDF_DT_AGEY",
+   "desc": "Age in whole years from birth date to reference date (default: today)",
+   "args": [
+    {
+     "name": "start_date",
+     "desc": "Start date as Excel serial number",
+     "type": "object",
+     "default": null,
+     "pname": "b"
+    },
+    {
+     "name": "[end_date]",
+     "desc": "End date as Excel serial number; default is today",
+     "type": "object",
+     "default": "null",
+     "pname": "r"
+    }
+   ],
+   "expr": "(long)DateTimeCore.AgeYears(D(b),OptD(r))",
+   "generated": true
+  },
+  {
+   "excel": "DT.AGEMONTHS",
+   "method": "UDF_DT_AGEM",
+   "desc": "Age in whole months from birth date to reference date (default: today)",
+   "args": [
+    {
+     "name": "start_date",
+     "desc": "Start date as Excel serial number",
+     "type": "object",
+     "default": null,
+     "pname": "b"
+    },
+    {
+     "name": "[end_date]",
+     "desc": "End date as Excel serial number; default is today",
+     "type": "object",
+     "default": "null",
+     "pname": "r"
+    }
+   ],
+   "expr": "(long)DateTimeCore.AgeMonths(D(b),OptD(r))",
+   "generated": true
+  },
+  {
+   "excel": "DT.AGEDAYS",
+   "method": "UDF_DT_AGED",
+   "desc": "Age in days from birth date to reference date (default: today)",
+   "args": [
+    {
+     "name": "start_date",
+     "desc": "Start date as Excel serial number",
+     "type": "object",
+     "default": null,
+     "pname": "b"
+    },
+    {
+     "name": "[end_date]",
+     "desc": "End date as Excel serial number; default is today",
+     "type": "object",
+     "default": "null",
+     "pname": "r"
+    }
+   ],
+   "expr": "(long)DateTimeCore.AgeDays(D(b),OptD(r))",
+   "generated": true
+  },
+  {
+   "excel": "DT.ISWE",
+   "method": "UDF_DT_ISWE",
+   "desc": "Returns TRUE if date is Saturday or Sunday",
+   "args": [
+    {
+     "name": "serial_number",
+     "desc": "An Excel date serial number",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,bool>(d,x=>DateTimeCore.IsWeekend(D(x)))",
+   "generated": true
+  },
+  {
+   "excel": "DT.ADDWKD",
+   "method": "UDF_DT_AWKD",
+   "desc": "Add n workdays to a start date (Mon-Fri, skips weekends)",
+   "args": [
+    {
+     "name": "start_date",
+     "desc": "Start date as Excel serial number",
+     "type": "object",
+     "default": null,
+     "pname": "s"
+    },
+    {
+     "name": "workdays",
+     "desc": "Number of workdays to add; negative to subtract",
+     "type": "object",
+     "default": null,
+     "pname": "ds"
+    }
+   ],
+   "expr": "DateTimeCore.AddWorkdays(D(s),InputNormalizer.ToLong(ds)).ToOADate()",
+   "generated": true
+  },
+  {
+   "excel": "DT.WKDBTWN",
+   "method": "UDF_DT_WKDB",
+   "desc": "Count workdays (Mon-Fri) between two dates, exclusive of start",
+   "args": [
+    {
+     "name": "start_date",
+     "desc": "Start date as Excel serial number",
+     "type": "object",
+     "default": null,
+     "pname": "s"
+    },
+    {
+     "name": "end_date",
+     "desc": "End date as Excel serial number (required)",
+     "type": "object",
+     "default": null,
+     "pname": "e"
+    }
+   ],
+   "expr": "(long)DateTimeCore.WorkdaysBetween(D(s),D(e))",
+   "generated": true
+  },
+  {
+   "excel": "DT.NEXTWKD",
+   "method": "UDF_DT_NWKD",
+   "desc": "Next workday on or after given date (skips weekends)",
+   "args": [
+    {
+     "name": "serial_number",
+     "desc": "An Excel date serial number",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,double>(d,x=>DateTimeCore.NextWorkday(D(x)).ToOADate())",
+   "generated": true
+  },
+  {
+   "excel": "DT.EASTER",
+   "method": "UDF_DT_EASTER",
+   "desc": "Easter Sunday date for given year (Gregorian computus)",
+   "args": [
+    {
+     "name": "year",
+     "desc": "A year number, e.g. 2024",
+     "type": "object",
+     "default": null,
+     "pname": "y"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<long,double>(y,EasterOADate)",
+   "generated": true
+  },
+  {
+   "excel": "DT.QUARTER",
+   "method": "UDF_DT_Q",
+   "desc": "Calendar quarter number (1-4) from date",
+   "args": [
+    {
+     "name": "serial_number",
+     "desc": "An Excel date serial number",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,long>(d,x=>DateTimeCore.Quarter(D(x)))",
+   "generated": true
+  },
+  {
+   "excel": "DT.SEMESTER",
+   "method": "UDF_DT_SEM",
+   "desc": "Semester number (1 or 2) from date",
+   "args": [
+    {
+     "name": "serial_number",
+     "desc": "An Excel date serial number",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,long>(d,x=>DateTimeCore.Semester(D(x)))",
+   "generated": true
+  },
+  {
+   "excel": "DT.DOY",
+   "method": "UDF_DT_DOY",
+   "desc": "Day of year (1-366) from date",
+   "args": [
+    {
+     "name": "serial_number",
+     "desc": "An Excel date serial number",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,long>(d,x=>DateTimeCore.DayOfYear(D(x)))",
+   "generated": true
+  },
+  {
+   "excel": "DT.ISLEAP",
+   "method": "UDF_DT_ILEAP",
+   "desc": "Returns TRUE if year is a leap year",
+   "args": [
+    {
+     "name": "year",
+     "desc": "A year number, e.g. 2024",
+     "type": "object",
+     "default": null,
+     "pname": "y"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<long,bool>(y,yr=>DateTimeCore.IsLeapYear(yr))",
+   "generated": true
+  },
+  {
+   "excel": "DT.UNIXTS",
+   "method": "UDF_DT_UXTS",
+   "desc": "Convert Excel date to Unix timestamp (seconds since 1970-01-01)",
+   "args": [
+    {
+     "name": "serial_number",
+     "desc": "An Excel date serial number",
+     "type": "object",
+     "default": null,
+     "pname": "d"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,double>(d,x=>DateTimeCore.UnixTimestamp(D(x)))",
+   "generated": true
+  },
+  {
+   "excel": "DT.FROMUNIX",
+   "method": "UDF_DT_FUXTS",
+   "desc": "Convert Unix timestamp (seconds) to Excel date serial",
+   "args": [
+    {
+     "name": "unix_timestamp",
+     "desc": "Unix timestamp in seconds since 1970-01-01",
+     "type": "object",
+     "default": null,
+     "pname": "ts"
+    }
+   ],
+   "expr": "ElementWiseMapper.MapOver<double,double>(ts,x=>DateTimeCore.FromUnixTimestamp(x).ToOADate())",
+   "generated": true
+  },
+  {
+   "excel": "DT.DATEDIFF",
+   "method": "UDF_DT_DDIFF",
+   "desc": "Date difference in units: 'd'=days, 'm'=months, 'y'=years, 'w'=weeks",
+   "args": [
+    {
+     "name": "date_unit",
+     "desc": "Unit for date difference: d for days, m for months, y for years, w for weeks",
+     "type": "object",
+     "default": null,
+     "pname": "u"
+    },
+    {
+     "name": "start_date",
+     "desc": "Start date as Excel serial number",
+     "type": "object",
+     "default": null,
+     "pname": "d1"
+    },
+    {
+     "name": "end_date",
+     "desc": "End date as Excel serial number (required)",
+     "type": "object",
+     "default": null,
+     "pname": "d2"
+    }
+   ],
+   "expr": "(long)DateTimeCore.DateDiff(InputNormalizer.ToString(u),D(d1),D(d2))",
+   "generated": true
+  }
+ ]
+}
