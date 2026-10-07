@@ -40,6 +40,10 @@ python scripts/verify-manual.py
 
 ### 6 步验证（提交前必须通过，与 `scripts/verify-all.ps1` 同序）
 
+> 覆盖率门禁（行 + 分支）不在默认 6 步内：它会把三个测试工程带插桩再跑一遍（本机 2~4 分钟），
+> 而 CI 有独立 coverage job 覆盖。需要"本地 = CI 同口径"时加 `-WithCoverage`：
+> `powershell -File scripts/verify-all.ps1 -WithCoverage`（或单独 `scripts/coverage.ps1`）。
+
 ```powershell
 # ① 文档一致性（20 个编号项；运行时断言数见脚本输出）
 powershell -File scripts/verify-docs.ps1

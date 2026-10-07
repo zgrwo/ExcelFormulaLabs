@@ -159,5 +159,60 @@ namespace ExcelFormulaLabs.Analytics.Tests
             LinalgAsyncUdf.UDF_LINALG_SVD_U_ASYNC(new double[,] { { 1 } })
                 .Should().Be(ExcelFormulaLabs.Foundation.ExcelError.Value);
         }
+
+        // -- 4. 直接调用全部 12 个 async 包装体 --
+        // 上面第 2 组是**反射式契约测试**（只查属性/参数名，不执行方法体）；本组补上
+        // "真的调用一遍"：每个包装体的参数准备（M/V/prep）与 WrapError 边界都被执行，
+        // 从此 12 个 *_ASYNC 入口不再只有 SVD_U_ASYNC 有直接调用测试。
+
+        /// <summary>
+        /// 每个 async 包装体的直接调用夹具。输入用**可通过转换**的形状，
+        /// 使路径走到 ExcelAsyncUtil.Run（无宿主 → InvalidOperationException → #VALUE!）。
+        /// </summary>
+        public static IEnumerable<object?[]> AsyncUdfDirectCalls()
+        {
+            double[,] spd = { { 4, 1 }, { 1, 3 } };              // 对称正定：EIGEN/CHOLESKY 需要
+            double[,] rect = { { 1, 2 }, { 3, 4 }, { 5, 7 } };
+            double[,] square = { { 2, 1 }, { 1, 3 } };
+            double[] rhs = { 1, 2 };
+            double[] y = { 1, 2, 3 };
+            double[,] x = { { 1 }, { 2 }, { 3 } };
+            double[] w = { 1, 1, 1 };
+
+            yield return new object?[] { "LINALG.SVD_U_ASYNC", (Func<object>)(() => LinalgAsyncUdf.UDF_LINALG_SVD_U_ASYNC(rect)) };
+            yield return new object?[] { "LINALG.SVD_S_ASYNC", (Func<object>)(() => LinalgAsyncUdf.UDF_LINALG_SVD_S_ASYNC(rect)) };
+            yield return new object?[] { "LINALG.SVD_VT_ASYNC", (Func<object>)(() => LinalgAsyncUdf.UDF_LINALG_SVD_VT_ASYNC(rect)) };
+            yield return new object?[] { "LINALG.QR_Q_ASYNC", (Func<object>)(() => LinalgAsyncUdf.UDF_LINALG_QR_Q_ASYNC(rect)) };
+            yield return new object?[] { "LINALG.QR_R_ASYNC", (Func<object>)(() => LinalgAsyncUdf.UDF_LINALG_QR_R_ASYNC(rect)) };
+            yield return new object?[] { "LINALG.EIGEN_ASYNC", (Func<object>)(() => LinalgAsyncUdf.UDF_LINALG_EIGEN_ASYNC(spd)) };
+            yield return new object?[] { "LINALG.SOLVE_ASYNC", (Func<object>)(() => LinalgAsyncUdf.UDF_LINALG_SOLVE_ASYNC(square, rhs)) };
+            yield return new object?[] { "LINALG.CHOLESKY_ASYNC", (Func<object>)(() => LinalgAsyncUdf.UDF_LINALG_CHOLESKY_ASYNC(spd)) };
+            yield return new object?[] { "LINALG.PINV_ASYNC", (Func<object>)(() => LinalgAsyncUdf.UDF_LINALG_PINV_ASYNC(rect)) };
+            yield return new object?[] { "REGRESS.OLS_ASYNC", (Func<object>)(() => RegressionAsyncUdf.UDF_REGRESS_OLS_ASYNC(y, x)) };
+            yield return new object?[] { "REGRESS.WLS_ASYNC", (Func<object>)(() => RegressionAsyncUdf.UDF_REGRESS_WLS_ASYNC(y, x, w)) };
+            yield return new object?[] { "REGRESS.RIDGE_ASYNC", (Func<object>)(() => RegressionAsyncUdf.UDF_REGRESS_RIDGE_ASYNC(y, x)) };
+        }
+
+        [Theory]
+        [MemberData(nameof(AsyncUdfDirectCalls))]
+        public void Async_wrapper_degrades_to_value_error_without_excel_host(string name, Func<object> call)
+        {
+            object? result = null;
+            Action act = () => result = call();
+            act.Should().NotThrow(name + " 不得让异常穿出（同步/异步失败语义不得分叉）");
+            result.Should().Be(ExcelFormulaLabs.Foundation.ExcelError.Value,
+                name + " 无 Excel 宿主时必须降级为 #VALUE!");
+        }
+
+        [Fact]
+        public void Async_wrapper_invalid_argument_returns_value_error()
+        {
+            // 参数准备在 Run 之前（COM/类型转换必须在调用线程完成）——非数值矩阵
+            // 由 PrepM 抛错 → WrapError → #VALUE!，与"无宿主"路径同为 #VALUE!。
+            LinalgAsyncUdf.UDF_LINALG_SVD_S_ASYNC(new object[,] { { "not-a-number" } })
+                .Should().Be(ExcelFormulaLabs.Foundation.ExcelError.Value);
+            RegressionAsyncUdf.UDF_REGRESS_OLS_ASYNC(new object[] { "x" }, new object[,] { { 1 } })
+                .Should().Be(ExcelFormulaLabs.Foundation.ExcelError.Value);
+        }
     }
 }

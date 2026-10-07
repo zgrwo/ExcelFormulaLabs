@@ -1,11 +1,16 @@
-﻿# verify-all.ps1 - One-command local verification (6-step gate)
-# Usage: .\scripts\verify-all.ps1 [-Configuration Release] [-SkipCrossVal]
+# verify-all.ps1 - One-command local verification (6-step gate)
+# Usage: .\scripts\verify-all.ps1 [-Configuration Release] [-SkipCrossVal] [-WithCoverage]
 # Runs all verification steps required before a PR or release.
+#
+# -WithCoverage：追加第 7 步覆盖率门禁（行 + 分支）。默认不跑——它会把三个测试工程
+# 再带插桩跑一遍（本机约 2~4 分钟），而 CI 有独立 coverage job 覆盖它。
+# 需要"本地全量 = CI 同口径"时显式加上。
 
 param(
     [string]$Configuration = "Debug",
     [switch]$SkipCrossVal,
-    [switch]$SkipManual
+    [switch]$SkipManual,
+    [switch]$WithCoverage
 )
 
 $ErrorActionPreference = "Stop"
@@ -94,6 +99,16 @@ Step "5/6 Pre-commit Checks" {
 # （2026-09-23 实测连续 3 次 Win32Exception 5，-m:1 通过）——串行构建消除竞态。
 Step "6/6 Release Build" -Retries 2 -Block {
     dotnet build "$root\ExcelFormulaLabs.sln" -c Release -m:1 --nologo -v q
+}
+
+# Step 7（可选）: Coverage gate（行 + 分支，阈值单一定义在 coverage.ps1）
+if ($WithCoverage) {
+    Step "7/7 Coverage Gate (line + branch)" {
+        powershell -NoProfile -File "$root\scripts\coverage.ps1"
+    }
+} else {
+    Write-Host ""
+    Write-Host "=== [SKIP] Coverage Gate（加 -WithCoverage 启用；CI 有独立 coverage job）==="
 }
 
 # Summary

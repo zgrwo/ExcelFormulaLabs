@@ -429,17 +429,11 @@ jobs:
       - name: Restore
         run: dotnet restore
 
-      # 阈值爬坡（2026-09-23 Phase 3 实测 net8.0 CI 口径：Foundation 96.02% /
-      # Analytics 90.2% / DataToolkit 90.18%）。旧阈值 75/50/42 与实际脱节 9~47 个点，
-      # 长期形同虚设；新阈值保留 ≥4 个点余量，防抖动误伤。本地复现用 scripts/coverage.ps1。
-      - name: Coverage (Foundation)
-        run: dotnet test tests/Foundation.Tests -f net8.0 --no-restore -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:CoverletOutput=coverage/foundation -p:Threshold=92 -p:ThresholdType=line -p:ThresholdStat=total -p:Include="[Foundation]*"
-
-      - name: Coverage (Analytics)
-        run: dotnet test tests/Analytics.Tests -f net8.0-windows --no-restore -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:CoverletOutput=coverage/analytics -p:Threshold=86 -p:ThresholdType=line -p:ThresholdStat=total -p:Include="[Analytics]*"
-
-      - name: Coverage (DataToolkit)
-        run: dotnet test tests/DataToolkit.Tests -f net8.0-windows --no-restore -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:CoverletOutput=coverage/datatoolkit -p:Threshold=86 -p:ThresholdType=line -p:ThresholdStat=total -p:Include="[DataToolkit]*"
+      # 覆盖率门禁：阈值的**单一实现**是 scripts/coverage.ps1（行 + 分支），此处只调用它。
+      # 此前 ci.yml 与本脚本各硬编码一份 92/86/86 需人工同步，且只卡行覆盖率
+      #（2026-10-07 实测 Analytics 行 92.68% 而分支仅 80.80%）。
+      - name: Coverage gate (line + branch)
+        run: ./scripts/coverage.ps1 -NoRestore
 
       - name: Upload coverage artifacts
         if: always()

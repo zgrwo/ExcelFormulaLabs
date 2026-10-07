@@ -181,12 +181,12 @@ ExcelFormulaLabs/
 | :--- | :--- |
 | 日常构建 | `dotnet restore && dotnet build && dotnet test` |
 | 分发构建 | `dotnet build -c Release` |
-| 全量测试（6 步，同 verify-all.ps1） | ① verify-docs ② Build ③ dotnet test ④ CrossVal（verify-manual.py）⑤ Pre-commit Checks ⑥ Release build |
+| 全量测试（6 步，同 verify-all.ps1；`-WithCoverage` 追加第 7 步覆盖率门禁） | ① verify-docs ② Build ③ dotnet test ④ CrossVal（verify-manual.py）⑤ Pre-commit Checks ⑥ Release build |
 | 文档一致性（20 个编号项；运行时 27 条断言，以脚本输出为准） | `powershell -File scripts/verify-docs.ps1` |
 | 提交前红线（6 项） | `powershell -File scripts/pre-commit-check.ps1` |
 | 测试质量（零断言/恒真断言 FAIL，存在性断言预算 0） | `powershell -File scripts/check-test-quality.ps1` |
 | UDF 生成物一致性（元数据 ↔ `src/**/*.g.cs`；ADR-0011） | `powershell -File scripts/verify-udfgen.ps1` |
-| CI 同口径覆盖率门禁（92/86/86） | `powershell -File scripts/coverage.ps1` |
+| CI 同口径覆盖率门禁（**行 + 分支**：line 92/86/86、branch 84/76/82；阈值单一定义在脚本内，ci.yml 只调用它） | `powershell -File scripts/coverage.ps1`（或 `verify-all.ps1 -WithCoverage`） |
 | 静态分析（AnalysisMode=Recommended，0 警告门禁） | 随 `dotnet build` 强制（src/，net8 目标；抑制清单见 `.editorconfig`） |
 | 治理脚本自测 | `powershell -File tests/scripts/run-tests.ps1` |
 | 本地 Qoder 技能镜像 | `powershell -File scripts/sync-qoder-skills.ps1`（可选，本地工具用，不入库） |

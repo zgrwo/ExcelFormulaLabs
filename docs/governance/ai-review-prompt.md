@@ -95,7 +95,7 @@ Foundation (共享工具)                    ← InputNormalizer / ElementWiseMa
 
 - **交叉验证铁律**：数值类 UDF 必须 `cross_check()` 且**非自校验**；Python 是**独立实现**，不共享 C# 代码路径；特殊值必须带标签（`{"__nan__":true}` / `{"__inf__":±1}`）且 Python 侧必须消费；manifest 的 `tolerance` 字段必须参与比较判定（曾为死数据）。
 - **通道分离**：`check()`（Python 参考实现自测）与 `cross_check()`（真正调 C#）**分开统计、分开汇报**，禁止合并成单一"覆盖率"声称。
-- 覆盖率门禁（CI coverage job，`ThresholdType=line`、`ThresholdStat=total`）：Foundation ≥ 92%（仅 net8.0）、Analytics ≥ 86% / DataToolkit ≥ 86%（仅 net8.0-windows）。本地同口径用 `scripts/coverage.ps1`（失败即 FAIL，报告新鲜度自校验）。
+- 覆盖率门禁（`ThresholdType=line,branch`、`ThresholdStat=total`；**阈值的单一实现在 `scripts/coverage.ps1`**，ci.yml 的 coverage job 只调用它）：内层为行覆盖，外层为分支覆盖——Foundation ≥ 92 / 84（仅 net8.0）、Analytics ≥ 86 / 76、DataToolkit ≥ 86 / 82（仅 net8.0-windows）。实测基线（2026-10-07）：95.80/86.56、92.68/80.80、90.21/86.04。本地同口径 `powershell -File scripts/coverage.ps1`（或 `verify-all.ps1 -WithCoverage`；失败即 FAIL，报告新鲜度自校验）。
 
 ### 3.6 治理红线与历史陷阱速查
 

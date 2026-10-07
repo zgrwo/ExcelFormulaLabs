@@ -41,6 +41,24 @@
 
 <!-- release-please 在下一次 Release PR 中把本版本区间内容归位到新版本条目 -->
 
+### Changed（2026-10-07 覆盖率门禁扩到分支 + async UDF 入口补测试）
+
+- **覆盖率门禁从"只卡行"扩到"行 + 分支"**。实测基线（net8.0 + Include 过滤）：
+  Foundation 行 95.80% / 分支 86.56%、Analytics 92.68% / **80.80%**、DataToolkit 90.21% / 86.04%
+  ——Analytics 的分支比宣传的 86 低 5 个点，只卡行会让"补测试刷行数"与真实分支质量脱钩。
+  新阈值留 ≥4 点余量：**行 92/86/86、分支 84/76/82**。
+- **阈值收敛为单一实现**：`scripts/coverage.ps1` 成为唯一出处（`ci.yml` 的 coverage job
+  改为只调用它）。此前 `ci.yml` 与脚本各硬编码一份 92/86/86 需人工同步，现消除。
+  多阈值经 MSBuild 需转义为 `%2C`（`-p:Threshold=92%2C84`），已实测验证 branch 确实强制
+  （branch 阈值 99 时构建报 "The total branch coverage is below the specified 99"）。
+- **`verify-all.ps1` 新增 `-WithCoverage`**：追加第 7 步覆盖率门禁。默认不跑——它会把三个
+  测试工程带插桩重跑（本机 2~4 分钟），而 CI 有独立 coverage job；需要"本地 = CI 同口径"时显式启用。
+- **11 个 `*_ASYNC` UDF 入口补直接调用测试**（此前仅 `LINALG.SVD_U_ASYNC` 有）：
+  新增 `[Theory]`（12 行 MemberData，逐一双调用全部 async 包装体）+ 非数值入参的
+  参数准备路径 FACT。至此 12 个 async 入口的"参数准备 + WrapError 边界"都被真实执行，
+  而不再只靠反射式契约测试（后者只查属性/参数名，不执行方法体）。
+  Analytics 行覆盖率随之由 90.2% 升到 **92.68%**。
+
 ### Changed（2026-10-07 元数据化重构的流程债收尾）
 
 - **脚手架改为生成元数据**（`scripts/scaffold-udf.ps1`）：原先产出**手写** `[ExcelFunction]`

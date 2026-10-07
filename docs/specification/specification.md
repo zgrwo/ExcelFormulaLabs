@@ -83,7 +83,7 @@ Foundation (共享工具)                    ← InputNormalizer, ElementWiseMap
 
 ### 4.1 测试体系
 
-- 2,886 个 [Fact] 与 18 个 [Theory]（xUnit + FluentAssertions；2026-10-07 实测回填：Foundation 434 + Analytics 923 + DataToolkit 1,529；含安全回归子集与审查缺陷复现回归、[Theory] 哨兵参数化用例。verify-docs 检查 20 强制这些声明 == tests/**/*.cs 实测计数）
+- 2,887 个 [Fact] 与 19 个 [Theory]（xUnit + FluentAssertions；2026-10-07 实测回填：Foundation 434 + Analytics 924 + DataToolkit 1,529；含安全回归子集与审查缺陷复现回归、[Theory] 哨兵参数化用例。verify-docs 检查 20 强制这些声明 == tests/**/*.cs 实测计数）
 - Python 交叉验证（scipy/numpy 独立计算，容差 1e-10）
 - 手册示例验证（verify-manual.py 全 UDF 覆盖）
 - XLL 加载/卸载自动化测试
