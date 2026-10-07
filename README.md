@@ -242,6 +242,33 @@ dotnet test
 
 产物：`src/*/bin/Release/{net8.0-windows|net48}/publish/`
 
+### 新增或修改一个 UDF
+
+**UDF 声明不手写**——函数名、描述、参数、分类与调用表达式都是 `udf-metadata/*.json` 的单一真源，
+由生成器产出 `src/**/<X>Udf.g.cs`（**生成物，勿手改**）与 API 参考的表格（见 [ADR-0011](docs/adr/0011-udf-metadata-and-codegen.md)）：
+
+```bash
+python tools/udfgen.py generate        # 改元数据后重新生成 UDF 声明
+python tools/udfgen.py generate-api    # 重新生成 api-reference 的表格
+python tools/udfgen.py verify          # 校验生成物与元数据一致（CI 门禁同款）
+python tools/udfgen.py verify-api      # 校验 api-reference 与元数据一致
+```
+
+脚手架一键起步：`.\scripts\scaffold-udf.ps1 -Module DataToolkit -Name Foo -Prefix FOO`
+（生成 Core + 元数据 + 测试，并自动跑一次生成）。完整流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
+### 验证
+
+```bash
+powershell -File scripts/verify-all.ps1              # 6 步：文档/构建/测试/交叉验证/红线/Release
+powershell -File scripts/verify-all.ps1 -WithCoverage # 追加覆盖率门禁（行 + 分支）
+.\scripts\test-xll.ps1                               # 真机加载 .xll 冒烟（需本机装 Excel）
+```
+
+> `test-xll.ps1` 会结束本机所有 Excel 进程，请先保存工作。
+> 退出码：`0` 通过、`1` 断言失败、`2` 环境不可用（无 Excel / 无 Release 产物）——
+> `2` **不是成功**，CI 里应据此筛 runner，而不是 `continue-on-error`。
+
 ---
 
 ## 文档索引

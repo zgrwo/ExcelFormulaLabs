@@ -1,4 +1,4 @@
-# scaffold-udf.ps1 — UDF 模块脚手架（ADR-0011 流程）
+﻿# scaffold-udf.ps1 — UDF 模块脚手架（ADR-0011 流程）
 #
 # 用法：.\scripts\scaffold-udf.ps1 -Module Analytics -Name Weather -Prefix WEATHER
 #

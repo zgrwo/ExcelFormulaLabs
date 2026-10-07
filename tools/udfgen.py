@@ -29,6 +29,17 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 META_DIR = REPO / "udf-metadata"
 
+# CI（GitHub Actions 的 Windows runner）上 Python 的 stdout 编码是 **cp1252**，直接 print 中文会抛
+# UnicodeEncodeError——于是"校验通过"变成崩溃退出码 1，门禁把 PASS 读成 FAIL
+# （实测 2026-10-07：本机 ACP 是 UTF-8，从不复现，是典型的 works-on-my-machine）。
+# 这里显式把 stdout/stderr 切到 UTF-8；reconfigure 不可用时退回 errors='replace' 语义，
+# 确保即使编码不支持也只是字符降级、绝不让"打印成功消息"本身成为失败路径。
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError, OSError):
+        pass
+
 # 模块 → Excel 插入函数对话框分类（ADR-0011 决策 6）
 CATEGORY_BY_FILE = {
     "StatsUdf.cs": "Statistics",

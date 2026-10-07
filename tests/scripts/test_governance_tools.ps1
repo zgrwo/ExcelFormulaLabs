@@ -1,4 +1,4 @@
-# ============================================================================
+﻿# ============================================================================
 # test_governance_tools.ps1 — 治理工具脚本回归守卫
 # 场景：覆盖 5 个脚本面：scaffold-udf 标识符校验 / run-affected 未映射告警 /
 #       commit-msg bash 计数与 locale 固定 / patch-xll 缺失 exit 1 /
@@ -242,6 +242,26 @@ if ($gitDirty -eq "") {
     Write-Host "  [SKIP] src/ 不干净，跳过真实仓库干跑（避免误写）" -ForegroundColor DarkYellow
     $script:skipCount = [int]$script:skipCount + 1
 }
+
+Write-Host ""
+Write-Host "=== [6] 编码不变量：含非 ASCII 的 .ps1 必须有 UTF-8 BOM ===" -ForegroundColor Cyan
+
+# 为什么需要这条：Windows PowerShell 5.1 在**非 UTF-8 ACP** 的机器（如 GitHub Actions 的英文
+# runner，ACP=cp1252）上会把无 BOM 的 .ps1 按 ANSI 解码——文件里的中文变乱码，轻则输出错乱、
+# 重则解析失败退出 1。本仓已踩过两次：一次是"8 个 PS1 脚本补 UTF-8 BOM"；一次是 2026-10-07
+# scripts/verify-pack.ps1（原本无 BOM、内容以英文为主）被加入中文注释后，Benchmarks 与 CI 的
+# Release 构建双双因 verify-pack 退出 1 而失败。另注：编辑工具会**静默剥掉 BOM**，必须由门禁兜住。
+$ps1Files = git -C $repo ls-files '*.ps1'
+$noBomWithCjk = @()
+foreach ($rel in $ps1Files) {
+    $full = Join-Path $repo $rel
+    if (-not (Test-Path $full)) { continue }
+    $bytes = [System.IO.File]::ReadAllBytes($full)
+    $hasBom = ($bytes.Length -ge 3 -and $bytes[0] -eq 239 -and $bytes[1] -eq 187 -and $bytes[2] -eq 191)
+    if ($hasBom) { continue }
+    if ([System.Text.Encoding]::UTF8.GetString($bytes) -match '[^\x00-\x7F]') { $noBomWithCjk += $rel }
+}
+Assert-Scenario "every .ps1 with non-ASCII has a UTF-8 BOM" ($noBomWithCjk.Count -eq 0) "缺 BOM: $($noBomWithCjk -join ', ')"
 
 # ── 汇总 ──
 Write-Host ""
