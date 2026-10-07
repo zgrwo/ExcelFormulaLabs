@@ -487,6 +487,43 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             r.GetLength(0).Should().Be(3);
         }
 
+        // ── 红线 4（hasHeaders 契约）行为守卫：首行是"列名"还是"数据" ──
+        // 输入为 3 行纯数据（无表头）；两个用例只差 hasHeaders，期望结果必须不同：
+        // true  → 首行被当作表头丢弃（East/Q1=10 从透视中消失）
+        // false → 首行作为数据参与透视（East/Q1=10 出现，且透视列顺序随之改变）
+        [Fact] public void Pivot_hasHeaders_true_drops_row0_as_header()
+        {
+            var d = new object[,]
+            {
+                { "East", "Q1", 10.0 },
+                { "East", "Q2", 20.0 },
+                { "West", "Q1", 5.0 },
+            };
+            var r = PivotCore.Pivot(d, 0, 1, 2, "SUM", hasHeaders: true);
+            r.GetLength(0).Should().Be(3);                     // 标题行 + 2 个唯一 key
+            r.GetLength(1).Should().Be(3);                     // 行标签列 + 2 个唯一 pivot
+            r[0, 0].Should().Be("Key \\ Pivot");
+            r[0, 1].Should().Be("Q2"); r[0, 2].Should().Be("Q1");
+            r[1, 0].Should().Be("East"); r[1, 1].Should().Be(20.0); r[1, 2].Should().BeNull();
+            r[2, 0].Should().Be("West"); r[2, 1].Should().BeNull(); r[2, 2].Should().Be(5.0);
+        }
+
+        [Fact] public void Pivot_hasHeaders_false_keeps_row0_as_data()
+        {
+            var d = new object[,]
+            {
+                { "East", "Q1", 10.0 },
+                { "East", "Q2", 20.0 },
+                { "West", "Q1", 5.0 },
+            };
+            var r = PivotCore.Pivot(d, 0, 1, 2, "SUM", hasHeaders: false);
+            r.GetLength(0).Should().Be(3);
+            r.GetLength(1).Should().Be(3);
+            r[0, 1].Should().Be("Q1"); r[0, 2].Should().Be("Q2");   // Q1 来自被当作数据的首行
+            r[1, 0].Should().Be("East"); r[1, 1].Should().Be(10.0); r[1, 2].Should().Be(20.0);
+            r[2, 0].Should().Be("West"); r[2, 1].Should().Be(5.0); r[2, 2].Should().BeNull();
+        }
+
         [Fact] public void GroupBy_no_headers()
         {
             var d = new object[,] { { "A", 100 }, { "A", 200 }, { "B", 300 } };

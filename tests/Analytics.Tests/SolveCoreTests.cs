@@ -79,6 +79,37 @@ namespace ExcelFormulaLabs.Analytics.Tests
             s.RequestRows.Should().Equal(1);
         }
 
+        // ── 红线 4（hasHeaders 契约）行为守卫 ──────────────────────────────
+        // SOLVE 的表头**就是**列角色声明（Incoming*/Variable*/Output*），
+        // 因此 hasHeaders 的语义是"首行是列名" vs "拒绝解释"：
+        // false 时必须显式拒绝，而不是把角色列当数据后静默产出一个错误模型。
+        [Fact]
+        public void ParseSchema_hasHeaders_true_reads_row0_as_column_roles()
+        {
+            object[,] data = {
+                {"IncomingA","VariableU1","OutputY1"},
+                {1.0, 2.0, 9.5},
+            };
+            var s = SolveCore.ParseSchema(data, hasHeaders: true);
+            s.Headers.Should().Equal("IncomingA", "VariableU1", "OutputY1");
+            s.Incoming.Should().Equal(0);
+            s.Variable.Should().Equal(1);
+            s.Output.Should().Equal(2);
+            s.HistoryRows.Should().Equal(0);   // 表内第 2 行（索引 0）才是第一条历史数据
+            s.RequestRows.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void ParseSchema_hasHeaders_false_is_rejected_instead_of_misread()
+        {
+            object[,] data = {
+                {"IncomingA","VariableU1","OutputY1"},
+                {1.0, 2.0, 9.5},
+            };
+            Action act = () => SolveCore.ParseSchema(data, hasHeaders: false);
+            act.Should().Throw<ArgumentException>().WithMessage("*requires a header row*");
+        }
+
         [Fact]
         public void ParseSchema_ChinesePrefixes()
         {

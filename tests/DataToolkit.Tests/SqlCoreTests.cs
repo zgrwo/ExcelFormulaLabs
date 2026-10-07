@@ -550,6 +550,40 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             r[2, 1].Should().Be(25.0);
         }
 
+        // ── 红线 4（hasHeaders 契约）行为守卫 ──────────────────────────────
+        // 同一份带表头的区域，hasHeaders 决定首行是"列名"还是"数据行"。
+        // 两个用例只差一个参数：COUNT(*) 必须分别是 2 与 3。
+        [Fact]
+        public void HasHeaders_true_excludes_row0_from_table_data()
+        {
+            var data = new object[,] { { "Name", "Qty" }, { "Alice", 1.0 }, { "Bob", 2.0 } };
+            var count = SqlCore.SqlQuery(data, "SELECT COUNT(*) FROM data", null, hasHeaders: true);
+            count![1, 0].Should().Be(2L);          // 首行是表头 → 只有 2 条记录
+            var r = SqlCore.SqlQuery(data, "SELECT Name, Qty FROM data ORDER BY Name", null, hasHeaders: true);
+            r!.GetLength(1).Should().Be(2);
+            r[0, 0].Should().Be("Name");           // 返回首行 = 结果集列名（取自表头）
+            r[0, 1].Should().Be("Qty");
+            r[1, 0].Should().Be("Alice"); r[1, 1].Should().Be(1.0);
+            r[2, 0].Should().Be("Bob"); r[2, 1].Should().Be(2.0);
+        }
+
+        [Fact]
+        public void HasHeaders_false_counts_row0_as_data()
+        {
+            var data = new object[,] { { "Name", "Qty" }, { "Alice", 1.0 }, { "Bob", 2.0 } };
+            var count = SqlCore.SqlQuery(data, "SELECT COUNT(*) FROM data", null, hasHeaders: false);
+            count![1, 0].Should().Be(3L);          // 首行是数据 → 3 条记录
+            var r = SqlCore.SqlQuery(data, "SELECT Col1, Col2 FROM data", null, hasHeaders: false);
+            r!.GetLength(0).Should().Be(4);        // 生成列名行 + 3 条数据行
+            r[0, 0].Should().Be("Col1"); r[0, 1].Should().Be("Col2");
+            r[1, 0].Should().Be("Name");           // 首行作为数据出现
+            r[2, 0].Should().Be("Alice");
+            r[3, 0].Should().Be("Bob");
+            // 表头文本不再是列名 → 按表头引用必须报错，而不是静默解析成别的东西
+            Action act = () => SqlCore.SqlQuery(data, "SELECT Name FROM data", null, hasHeaders: false);
+            act.Should().Throw<System.Data.Common.DbException>();
+        }
+
     [Fact] public void Recursive_cte_blocked()
     {
         // 无限递归 CTE 原可通过全部过滤（无 RECURSIVE 关键字拦截）→ 输出无界 → OOM。

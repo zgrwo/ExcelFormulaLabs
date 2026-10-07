@@ -181,6 +181,31 @@ public class CollectNumericColumnsTests
         cols.Should().Equal(0, 2);
     }
 
+    // ── 红线 4（hasHeaders 契约）行为守卫 ──────────────────────────────
+    // 同一份数据在 hasHeaders=true/false 下必须对首行给出**不同**解释：
+    // true → 首行是列名（跳过，列名取自首行）；false → 首行是数据（参与列类型判定，
+    // 列名退化为 Col1/Col2）。两条用例只差一个参数，期望值各自硬编码。
+    [Fact]
+    public void HasHeaders_true_reads_row0_as_column_names()
+    {
+        var data = new object[,] { { "Label", "Value" }, { 1, 10 }, { 2, 20 } };
+        var cols = ArrayOperations.CollectNumericColumns(data, 3, 2, out var names, hasHeaders: true);
+        cols.Should().Equal(0, 1);            // 两列的数据行（第 1~2 行）全数值
+        names.Should().Equal("Label", "Value");
+    }
+
+    [Fact]
+    public void HasHeaders_false_reads_row0_as_data()
+    {
+        // 同一份数据：首行 "Label"/"Value" 是文本且计入列类型判定 →
+        // 不再有"全数值列"，列名也不再来自首行。若此处返回与 true 相同的结果，
+        // 即 hasHeaders 参数被静默忽略（缺陷）。
+        var data = new object[,] { { "Label", "Value" }, { 1, 10 }, { 2, 20 } };
+        var cols = ArrayOperations.CollectNumericColumns(data, 3, 2, out var names, hasHeaders: false);
+        cols.Should().BeEmpty();
+        names.Should().Equal("Col1", "Col2");
+    }
+
     // 维度参数越界须抛契约异常，而非裸 IndexOutOfRangeException。
     [Fact]
     public void Out_of_range_dimensions_throw()

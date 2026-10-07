@@ -283,6 +283,31 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             lines[1].Should().Contain("---");
         }
 
+        // ── 红线 4（hasHeaders 契约）行为守卫：首行是"列名"还是"数据" ──
+        // 同一份 BasicData（首行 Name/Age）在两个取值下产出**逐行可辨**的不同 Markdown。
+        [Fact]
+        public void ToMarkdown_hasHeaders_true_uses_row0_as_column_names()
+        {
+            var md = RangeExportCore.RangeToMarkdown(BasicData, hasHeaders: true);
+            var lines = md.Replace("\r\n", "\n").Split('\n');
+            lines[0].Should().Be("Name | Age");     // 表头行 = 列名
+            lines[1].Should().Be("--- | ---");
+            lines[2].Should().Be("Alice | 30");     // 数据从第 2 行（索引 1）开始
+            lines[3].Should().Be("Bob | 25");
+        }
+
+        [Fact]
+        public void ToMarkdown_hasHeaders_false_emits_row0_as_data()
+        {
+            var md = RangeExportCore.RangeToMarkdown(BasicData, hasHeaders: false);
+            var lines = md.Replace("\r\n", "\n").Split('\n');
+            lines[0].Should().Be("Col1 | Col2");    // 无表头 → 生成列名
+            lines[1].Should().Be("--- | ---");
+            lines[2].Should().Be("Name | Age");     // 首行成为第一条数据
+            lines[3].Should().Be("Alice | 30");
+            lines[4].Should().Be("Bob | 25");
+        }
+
         // ─────────────────────────────────────────────────────────────
         // RangeToCsv
         // ─────────────────────────────────────────────────────────────
