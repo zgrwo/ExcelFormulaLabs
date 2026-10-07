@@ -1889,6 +1889,71 @@ if _claim_cross is not None and _claim_cross != (len(_cross_covered), UDF_TOTAL)
     FAIL += 1
     print(f"  FAIL README cross-validated UDF claim {_claim_cross} != actual "
           f"({len(_cross_covered)}, {UDF_TOTAL})")
+
+# ── README 全量词门禁（P1-1）──
+# 背景：README.md:8 曾写"逐项交叉验证"、README.en.md:10 曾写 "every numerical result"，
+# 而上面的对账只锚定「质量保证」节的**数字**——首屏的**定性措辞**当时无任何执行点，
+# 于是"把限定语删掉、恢复成全量宣称"可以全绿通过（P1-1）。此处把定性措辞也纳入对账。
+#
+# 判据：命中「全量断言」措辞时，**同一段落**内必须出现显式限定语，否则 FAIL。
+#   * 全量断言 = 把"数值结果 ↔ 交叉验证"整体化、不留余量的措辞（词表见下）；
+#   * 限定语 = `216/240`、`240 个…中 216 个`、`216 of the 240`、`90.0%` / `100%`；
+#   * 窗口取**段落**（空行分隔块）而非整份文件：README 允许在分段范围内做全量声称
+#     （"Stats/Regression 与 numpy/scipy 逐项对照"是模块级真话，不是全库全量宣称）；
+#   * 质量保证节那句"真正与 C# 实现对照的 UDF 为 216 个"不匹配任何全量断言措辞，
+#     故不会被本检查误报（该句由上方 _claim_cross 精确对账）。
+_README_OVERCLAIMS = (
+    (r'数值结果[^。\n]{0,60}?(?:交叉验证|逐项对照|逐条对照)',
+     'zh「数值结果…交叉验证/逐项对照」'),
+    (r'(?:全部|所有|每个)[^。\n]{0,10}?数值[^。\n]{0,20}?(?:交叉验证|对照|一致)',
+     'zh「全部/所有/每个 + 数值…对照」'),
+    (r'逐项交叉验证', 'zh「逐项交叉验证」'),
+    (r'numerical results?[^.\n]{0,80}?(?:cross-validated|item-by-item|cross-checked)',
+     'en「numerical results … cross-validated」'),
+    (r'\bevery numerical result\b', 'en「every numerical result」'),
+    (r'\bitem-by-item (?:cross-?)?validat', 'en「item-by-item validation」'),
+)
+_README_QUALIFIERS = (
+    r'\d+\s*/\s*\d+',                        # 216/240
+    r'\d+\s*个[^。\n]{0,30}?中\s*\d+\s*个',    # 240 个同步 UDF 中 216 个
+    r'\d+\s+of\s+(?:the\s+)?\d+',            # 216 of the 240
+    r'\d+(?:\.\d+)?\s*%',                    # 90.0% / 100%
+)
+
+
+def _readme_paragraphs(text):
+    """按空行切块 → [(起始行号, 段落文本)]。"""
+    out, buf, start = [], [], 1
+    for no, ln in enumerate(text.split("\n"), 1):
+        if ln.strip():
+            if not buf:
+                start = no
+            buf.append(ln)
+        elif buf:
+            out.append((start, "\n".join(buf)))
+            buf = []
+    if buf:
+        out.append((start, "\n".join(buf)))
+    return out
+
+
+for _rf in ("README.md", "README.en.md"):
+    try:
+        _rt = (Path(__file__).resolve().parent.parent / _rf).read_text(encoding="utf-8")
+    except OSError as _re:
+        FAIL += 1
+        print(f"  FAIL README overclaim scan: cannot read {_rf} ({_re})")
+        continue
+    for _ln, _para in _readme_paragraphs(_rt):
+        for _rx, _label in _README_OVERCLAIMS:
+            _m = re.search(_rx, _para)
+            if not _m:
+                continue
+            if any(re.search(_q, _para) for _q in _README_QUALIFIERS):
+                continue
+            FAIL += 1
+            print(f"  FAIL {_rf}:{_ln} 全量声明未限定（{_label}）："
+                  f"命中 {_m.group(0)[:70]!r} —— 同段内必须给出实测口径（如 `216/240`）")
 print(f"{'='*60}")
 if FAIL>0 or SKIP>0:
     print(f"\n  FAILURES DETECTED (failures={FAIL}, skipped={SKIP}). Review discrepancies above.")

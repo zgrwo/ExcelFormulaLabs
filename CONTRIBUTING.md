@@ -46,10 +46,15 @@ python scripts/verify-manual.py
 >
 > 第 ⑤ 步除红线检查外**还跑治理脚本自测**（`tests/scripts/run-tests.ps1`）——改了任何
 > `scripts/*.ps1` 都必须过它，否则"改了治理脚本、其自测已挂"会一路绿灯到 CI 才暴露。
+>
+> 第 ① 步含 `verify-udfgen.ps1`、第 ⑤ 步含 `check-test-quality.ps1`：二者都由 CI 的
+> redline job 强制，此前**不在**本地 6 步内（P3-8：全仓引用追踪确认不可传递到达）——
+> 贡献者按本表跑完可 6/6 绿而 CI 红。现已并入，步数仍是 6。
 
 ```powershell
-# ① 文档一致性（20 个编号项；运行时断言数见脚本输出）
+# ① 文档一致性（20 个编号项；运行时断言数见脚本输出）+ UDF 生成物 ↔ 元数据
 powershell -File scripts/verify-docs.ps1
+powershell -File scripts/verify-udfgen.ps1
 
 # ② 构建（双 TFM）
 dotnet build
@@ -60,15 +65,17 @@ dotnet test --verbosity normal
 # ④ 交叉验证（verify-manual.py 内部运行 CrossValRunner.exe 做 C# 对照）
 python scripts/verify-manual.py
 
-# ⑤ 提交前红线（6 项）
+# ⑤ 提交前红线（6 项）+ 测试质量（零断言/恒真断言/存在性断言预算）
 powershell -File scripts/pre-commit-check.ps1
+powershell -File scripts/check-test-quality.ps1
 
 # ⑥ Release 构建
 dotnet build -c Release
 ```
 
-> 另有治理脚本自测：`powershell -File tests/scripts/run-tests.ps1`。使用 Qoder 本地工具时，修改
-> `skills/` 后运行 `powershell -File scripts/sync-qoder-skills.ps1` 同步本地 .qoder 镜像（不入库）。
+> 另有治理脚本自测：`powershell -File tests/scripts/run-tests.ps1`（第 ⑤ 步已含）。使用 Qoder
+> 本地工具时，修改 `skills/` 后运行 `powershell -File scripts/sync-qoder-skills.ps1` 同步本地
+> .qoder 镜像（不入库）。
 
 ## 编码规范
 

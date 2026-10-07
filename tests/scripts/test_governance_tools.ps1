@@ -244,23 +244,51 @@ if ($gitDirty -eq "") {
 }
 
 Write-Host ""
-Write-Host "=== [6] 编码不变量：含非 ASCII 的 .ps1 必须有 UTF-8 BOM ===" -ForegroundColor Cyan
+Write-Host "=== [6] 编码不变量：.ps1 内容必须是合法 UTF-8（含非 ASCII 的还须带 BOM）===" -ForegroundColor Cyan
 
 # 为什么需要这条：Windows PowerShell 5.1 在**非 UTF-8 ACP** 的机器（如 GitHub Actions 的英文
 # runner，ACP=cp1252）上会把无 BOM 的 .ps1 按 ANSI 解码——文件里的中文变乱码，轻则输出错乱、
 # 重则解析失败退出 1。本仓已踩过两次：一次是"8 个 PS1 脚本补 UTF-8 BOM"；一次是 2026-10-07
 # scripts/verify-pack.ps1（原本无 BOM、内容以英文为主）被加入中文注释后，Benchmarks 与 CI 的
 # Release 构建双双因 verify-pack 退出 1 而失败。另注：编辑工具会**静默剥掉 BOM**，必须由门禁兜住。
-$ps1Files = git -C $repo ls-files '*.ps1'
+#
+# P3-5 补洞（review-2026-10-08 两处漏检均已实测复现）：
+#   ① 旧实现 `if ($hasBom) { continue }` 在**读内容之前**早退——BOM 只声明"我是 UTF-8"，
+#      并不保证字节真是 UTF-8。BOM + GBK 内容的文件整类放行（实测 [PASS]，Pass: 20 Fail: 0，exit 0），
+#      而 PS 5.1 解析它同样乱码/失败，正是本检查要拦的形态。
+#   ② 旧实现只扫 `git ls-files '*.ps1'`（已跟踪）——未跟踪的新脚本不在扫描域。实测对照：
+#      同一份无 BOM 中文 .ps1 未跟踪时全绿，`git add -N` 后立刻 FAIL，证明洞在"跟踪状态"。
+# 现口径：扫描域 = 已跟踪 ∪ 未跟踪（--others --exclude-standard，尊重 .gitignore）；
+#        每个文件的**内容**都必须能被严格 UTF-8 解码（throwOnInvalidBytes），与有无 BOM 无关；
+#        含非 ASCII 的还必须带 BOM（无 BOM 时 PS 5.1 按 ACP 解码，与内容是否合法 UTF-8 无关）。
+$tracked = @(git -C $repo ls-files '*.ps1')
+$untracked = @(git -C $repo ls-files --others --exclude-standard '*.ps1')
+$ps1Files = @($tracked + $untracked | Sort-Object -Unique)
+# 扫描域非空守卫：git 不可用/paths 拼错时枚举得 0 个文件，本检查会静默空转成 PASS。
+Assert-Scenario "ps1 scan domain non-empty (tracked + untracked)" `
+    ($ps1Files.Count -gt 0) "scanned=$($ps1Files.Count) tracked=$($tracked.Count) untracked=$($untracked.Count)"
+
+$strictUtf8 = New-Object System.Text.UTF8Encoding($false, $true)
 $noBomWithCjk = @()
+$invalidUtf8 = @()
 foreach ($rel in $ps1Files) {
     $full = Join-Path $repo $rel
     if (-not (Test-Path $full)) { continue }
     $bytes = [System.IO.File]::ReadAllBytes($full)
     $hasBom = ($bytes.Length -ge 3 -and $bytes[0] -eq 239 -and $bytes[1] -eq 187 -and $bytes[2] -eq 191)
-    if ($hasBom) { continue }
-    if ([System.Text.Encoding]::UTF8.GetString($bytes) -match '[^\x00-\x7F]') { $noBomWithCjk += $rel }
+    $offset = if ($hasBom) { 3 } else { 0 }
+    $text = $null
+    try {
+        $text = $strictUtf8.GetString($bytes, $offset, $bytes.Length - $offset)
+    } catch {
+        # DecoderFallbackException：字节序列不是合法 UTF-8（BOM + GBK 内容即此形态）
+        $invalidUtf8 += $rel
+        continue
+    }
+    if (-not $hasBom -and $text -match '[^\x00-\x7F]') { $noBomWithCjk += $rel }
 }
+Assert-Scenario "every .ps1 (tracked + untracked) decodes as strict UTF-8" `
+    ($invalidUtf8.Count -eq 0) "非法 UTF-8: $($invalidUtf8 -join ', ')"
 Assert-Scenario "every .ps1 with non-ASCII has a UTF-8 BOM" ($noBomWithCjk.Count -eq 0) "缺 BOM: $($noBomWithCjk -join ', ')"
 
 # ── 汇总 ──

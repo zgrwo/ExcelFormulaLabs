@@ -3,7 +3,10 @@
 # 检查三件事：
 #   ① src/**/<X>Udf.g.cs 与 udf-metadata/<X>Udf.json 重新生成的结果一致
 #      （既防手改生成物，也防"改了元数据忘记重生成"）；
-#   ② 保留手写的 UDF（语句体，如 *Async）在源码中存在且函数名与元数据一致；
+#   ② 保留手写的 UDF（语句体，如 *Async）在源码中存在，且**属性级**与元数据一致：
+#      Description / Category / [ExcelArgument] Name 序列（支持属性跨行写法）；
+#      注意 0 生成函数的元数据文件（LinalgAsyncUdf/RegressionAsyncUdf）同样受检——
+#      旧实现 `if not code: continue` 会把这两个文件整文件跳过（P2-1）；
 #   ③ docs/specification/api-reference.md 的表体与元数据一致（udfgen.py verify-api）。
 #
 # 用法：powershell -File scripts/verify-udfgen.ps1

@@ -276,7 +276,7 @@ python tools/udfgen.py verify-api      # 校验 api-reference 与元数据一致
 ### 验证
 
 ```bash
-powershell -File scripts/verify-all.ps1              # 6 步：文档/构建/测试/交叉验证/红线/Release
+powershell -File scripts/verify-all.ps1              # 6 步：文档+UDF元数据/构建/测试/交叉验证/红线+自测+测试质量/Release
 powershell -File scripts/verify-all.ps1 -WithCoverage # 追加覆盖率门禁（行 + 分支）
 .\scripts\test-xll.ps1                               # 真机加载 .xll 冒烟（需本机装 Excel）
 ```

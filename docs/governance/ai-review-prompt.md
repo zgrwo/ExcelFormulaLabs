@@ -83,13 +83,20 @@ Foundation (共享工具)                    ← InputNormalizer / ElementWiseMa
 
 ```
 ① verify-docs（scripts/verify-docs.ps1，文档一致性 20 个编号项）
+   + verify-udfgen.ps1（UDF 生成物 ↔ udf-metadata、api-reference 表体 ↔ 元数据；ADR-0011）
 ② dotnet build（双 TFM）
 ③ dotnet test（全 TFM：net8.0 / net8.0-windows / net48，xUnit + FluentAssertions）
 ④ CrossVal：verify-manual.py 一站式——定位 CrossValRunner.exe（bin/Debug|Release/net8.0-windows），
    Dispatcher 读 tests/CrossValRunner/test_manifest.json 调 Core → 结果 JSON → Python 独立实现核对
 ⑤ pre-commit-check.ps1（红线 6 项：裸 catch / 自校验 / IntelliSense / Core 隔离 / NaN-Inf / hasHeaders）
+   + tests/scripts/run-tests.ps1（治理脚本自测）+ check-test-quality.ps1（测试质量：零断言/恒真断言/
+     存在性断言预算，对真实 tests/**/*.cs 度量，非夹具）
 ⑥ `dotnet build -c Release`（双 TFM 打包验证）
 ```
+
+> 步数口径为 6（与 AGENTS.md / CONTRIBUTING.md / build/README.md / project-structure.md 一致）；
+> ① 与 ⑤ 各自串联多个门禁脚本。P3-8 之前 ① 只跑 verify-docs、⑤ 只跑 pre-commit + 治理自测，
+> 而 CI redline job 强制的 verify-udfgen / check-test-quality **不可传递到达**——本地 6/6 绿而 CI 红。
 
 > CI `cross-val` job = build CrossValRunner + `dotnet test --filter CrossVal`（Analytics.Tests 的 `CrossVal_*` 普通单测，非 Python↔C# 对照）+ verify-manual.py 三段；本地 ④ 已把 CrossVal 执行一并包含。
 

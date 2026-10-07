@@ -52,8 +52,15 @@ Write-Host " Config: $Configuration"
 Write-Host "============================================"
 
 # Step 1: verify-docs（文档一致性 20 个编号项；运行时断言数见脚本输出）
-Step "1/6 verify-docs" {
+#         + verify-udfgen（UDF 生成物 ↔ 元数据 + api-reference 表体 ↔ 元数据，ADR-0011）
+# P3-8：verify-udfgen 原先只在 CI redline job 强制、本地全量不含它——贡献者按 AGENTS.md
+# 跑"6 步全量验证"可以 6/6 全绿而 CI 变红（全仓引用追踪确认其不可传递到达）。
+# 并入第 ① 步：同为"源码文本 ↔ 单一真源"的静态一致性门禁，不需要构建产物，故与
+# verify-docs 同组；步数仍为 6。
+Step "1/6 verify-docs + verify-udfgen" {
     powershell -NoProfile -File "$root\scripts\verify-docs.ps1"
+    if ($LASTEXITCODE -ne 0) { throw "verify-docs FAILED" }
+    powershell -NoProfile -File "$root\scripts\verify-udfgen.ps1"
 }
 
 # Step 2: Build
@@ -94,9 +101,15 @@ if (-not $SkipCrossVal) {
 #         于是"改了某个治理脚本 → 该脚本的自测挂了"能一路绿灯到 CI 才暴露
 #         （2026-10-07 实测：重写 scaffold-udf.ps1 后 test_governance_tools.ps1 失败，
 #          而当时 verify-docs / pre-commit / 单测全绿）。并入本步，6 步口径不变。
-Step "5/6 Pre-commit Checks + Governance Self-tests" {
+#         + check-test-quality（零断言/恒真断言/存在性断言预算）——P3-8：与 verify-udfgen
+#         同样只在 CI redline job 强制。注意第 ⑤ 步的 run-tests.ps1 里
+#         test_check_test_quality.ps1 是对**临时夹具**跑，不能替代对真实测试套件的度量，
+#         故此处对真实仓库 tests/**/*.cs 显式再跑一次。步数仍为 6。
+Step "5/6 Pre-commit Checks + Governance Self-tests + Test Quality" {
     powershell -NoProfile -File "$root\scripts\pre-commit-check.ps1"
     if ($LASTEXITCODE -ne 0) { throw "pre-commit-check FAILED" }
+    powershell -NoProfile -File "$root\scripts\check-test-quality.ps1"
+    if ($LASTEXITCODE -ne 0) { throw "check-test-quality FAILED" }
     powershell -NoProfile -File "$root\tests\scripts\run-tests.ps1"
 }
 

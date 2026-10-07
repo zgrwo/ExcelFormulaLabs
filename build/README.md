@@ -6,7 +6,7 @@
 ## 当前状态
 
 - 构建流程（restore / build / test / pack / xll 收集）全部在 `.github/workflows/ci.yml` 与 `release.yml` 中定义
-- 本地一键验证：`scripts/verify-all.ps1`（6 步门：verify-docs → 构建 → 测试 → CrossVal → 红线 → Release 构建；R5-P3-33，2026-09-06 同步）
+- 本地一键验证：`scripts/verify-all.ps1`（6 步门：verify-docs + verify-udfgen → 构建 → 测试 → CrossVal → 红线 + 治理脚本自测 + 测试质量 → Release 构建；R5-P3-33，2026-09-06 同步；P3-8 补入后两步的门禁，步数仍为 6）
 - 已知环境噪声（R7-3/R7-4，2026-09-13 发行前审查）：ExcelDnaPack 在 Windows 上偶发
   `Win32Exception (110) EndUpdateResource`（Defender 实时扫描刚写出的 `.xll` 造成瞬时锁），
   重试即可通过——`verify-all.ps1` 的构建步骤（2/6、6/6）已内置 1 次自动重试，CI 的 Release

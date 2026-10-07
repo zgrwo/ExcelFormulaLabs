@@ -86,9 +86,13 @@ DECL = re.compile(
 
 FN_ATTR = re.compile(r'Name\s*=\s*"(?P<name>(?:[^"\\]|\\.)*)"')
 DESC_ATTR = re.compile(r'Description\s*=\s*"(?P<desc>(?:[^"\\]|\\.)*)"', re.S)
+CAT_ATTR = re.compile(r'Category\s*=\s*"(?P<cat>(?:[^"\\]|\\.)*)"', re.S)
 ARG_ATTR = re.compile(
     r'\[ExcelArgument\(Name\s*=\s*"(?P<name>[^"]*)"\s*,\s*'
     r'Description\s*=\s*"(?P<desc>(?:[^"\\]|\\.)*)"\)\]\s*(?P<decl>.+)$', re.S)
+# 参数名序列抽取（P2-1 手写 UDF 属性校验用）：逐个 `[ExcelArgument(Name = "...")]` 按出现顺序收集。
+# `\s*` 覆盖跨行形态（RegressionAsyncUdf.cs 的参数就是逐行折行的）。
+ARG_NAME_RE = re.compile(r'\[ExcelArgument\(\s*Name\s*=\s*"(?P<name>(?:[^"\\]|\\.)*)"', re.S)
 NS_RE = re.compile(r'^namespace\s+([\w.]+)', re.M)
 CLASS_RE = re.compile(r'public static (?:partial )?class (\w+)')
 
@@ -450,34 +454,115 @@ def cmd_migrate(args):
     return 0
 
 
+# ─────────────────── 手写 UDF 的属性级校验（P2-1） ───────────────────
+#
+# 旧实现的"手写 UDF 属性校验"名不副实（review-2026-10-08 实证）：
+#   ① `if not code: continue` 在**文件级**早退——0 个可生成函数的元数据文件
+#      （LinalgAsyncUdf.json / RegressionAsyncUdf.json，共 12 个语句体 UDF）整文件跳过；
+#   ② 其余文件只检查 `f'"{excel}"' in src`——函数名子串**存在**即通过。
+# 对抗验证：篡改 LinalgAsyncUdf.cs 的 Description、把参数 `object d` 改名 `dRENAMED`，
+# `udfgen.py verify` 仍 PASS exit 0，而 scripts/verify-udfgen.ps1 头注与 AGENTS.md 都
+# 声称做了"手写 UDF 属性校验"。此处把声称兑现为属性级比对。
+#
+# 解析要点：
+#   * 属性可能**跨行**（RegressionAsyncUdf.cs 的 `[ExcelFunction(Name = ...,\n Description = ...)]`
+#     就是折行写法），故按行匹配必然漏——用 iter_declarations 取完整声明块（括号配对、
+#     字符串字面量感知），再在 `[ExcelFunction(...)]` 属性块内取值；
+#   * Name/Description 必须只在 **[ExcelFunction]** 属性块内找：块外还有
+#     `[ExcelArgument(Name = ..., Description = ...)]`，混在一起会取错值；
+#   * 比较口径为 one_line（折叠空白）且**不**反转义：元数据 desc 与源码属性同源同形
+#     （extract 未反转义，JSON 里存的也是 `\\"`），故两边直接可比；
+#   * 可选参数的 `args[].name` 带方括号（如 `[lambda]`），源码里同样带方括号——**原样比**。
+
+def _attr_block(decl_text: str) -> str:
+    """从声明原文取出 `[ExcelFunction(...)]` 属性块；失败返回 None。"""
+    if not decl_text.startswith("[ExcelFunction"):
+        return None
+    i = decl_text.find("(")
+    if i < 0:
+        return None
+    j = _match_bracket(decl_text, i)
+    if j < 0 or j + 1 >= len(decl_text) or decl_text[j + 1] != "]":
+        return None
+    return decl_text[:j + 2]
+
+
+def _q(v):
+    """报错用值展示：None → `<缺失>`，其余加引号。"""
+    return "<缺失>" if v is None else f'"{v}"'
+
+
+def check_hand_written(meta: dict, src: str, bad: list) -> None:
+    """手写 UDF（generated=false）↔ 元数据的**属性级**比对，差异逐条追加到 bad。"""
+    srcname = meta["sourceFile"]
+    decls = {}
+    for it in iter_declarations(src):
+        attr = _attr_block(it["text"])
+        if attr is None:
+            continue
+        m = FN_ATTR.search(attr)
+        if m:
+            decls.setdefault(m.group("name"), (attr, it["text"]))
+
+    for f in meta["functions"]:
+        if f.get("generated"):
+            continue
+        name = f["excel"]
+        hit = decls.get(name)
+        if hit is None:
+            bad.append(f'{srcname}: 手写 UDF "{name}" 在源码中找不到'
+                       f'（元数据有、源码无 [ExcelFunction(Name = "{name}")] 声明）')
+            continue
+        attr, full = hit
+        # Description ← 元数据 desc
+        dm = DESC_ATTR.search(attr)
+        got_desc = one_line(dm.group("desc")) if dm else None
+        if got_desc != one_line(f.get("desc", "")):
+            bad.append(f'{srcname}: {name} 字段 Description 不一致：'
+                       f'元数据 {_q(one_line(f.get("desc", "")))} / 源码 {_q(got_desc)}')
+        # Category ← 元数据 category
+        cm = CAT_ATTR.search(attr)
+        got_cat = one_line(cm.group("cat")) if cm else None
+        if got_cat != one_line(meta["category"]):
+            bad.append(f'{srcname}: {name} 字段 Category 不一致：'
+                       f'元数据 {_q(one_line(meta["category"]))} / 源码 {_q(got_cat)}')
+        # [ExcelArgument] Name 序列 ← 元数据 args[].name（原样比，含可选参数的方括号）
+        if f.get("args") is not None:
+            want = [a["name"] for a in f["args"]]
+            got = ARG_NAME_RE.findall(full)
+            if got != want:
+                bad.append(f'{srcname}: {name} 字段 ExcelArgument Name 序列不一致：'
+                           f'元数据 ({", ".join(want)}) / 源码 ({", ".join(got)})')
+
+
 def cmd_verify(args):
-    """重生成到临时目录 → 与入库文件比对；并校验手写 UDF 属性与元数据一致。"""
+    """重生成到临时目录 → 与入库文件比对；并校验手写 UDF 的属性与元数据一致。"""
     bad = []
     with tempfile.TemporaryDirectory() as td:
         for meta_file in sorted(META_DIR.glob("*.json")):
             meta = json.loads(meta_file.read_text(encoding="utf-8"))
             code = render_module(meta)
-            on_disk_path = REPO / meta["generatedFile"]
-            if not code:
+            # 注意：`code` 为空（该元数据文件 0 个可生成函数）**只**跳过生成物比对，
+            # 不再整文件 continue——LinalgAsyncUdf/RegressionAsyncUdf 的全部函数都是手写
+            # 语句体，旧实现因这一行让它们完全不受检（P2-1）。
+            if code:
+                on_disk_path = REPO / meta["generatedFile"]
+                if not on_disk_path.exists():
+                    bad.append(f"{meta['generatedFile']}: 缺失（请运行 udfgen.py generate）")
+                elif nows(code) != nows(on_disk_path.read_text(encoding="utf-8")):
+                    bad.append(f"{meta['generatedFile']}: 与元数据不一致（被手改或元数据已改未重生成）")
+            # 手写 UDF：属性级比对（Description / Category / ExcelArgument Name 序列）
+            src_path = REPO / meta["sourceFile"]
+            if not src_path.exists():
+                bad.append(f"{meta['sourceFile']}: 源码文件缺失")
                 continue
-            if not on_disk_path.exists():
-                bad.append(f"{meta['generatedFile']}: 缺失（请运行 udfgen.py generate）")
-                continue
-            if nows(code) != nows(on_disk_path.read_text(encoding="utf-8")):
-                bad.append(f"{meta['generatedFile']}: 与元数据不一致（被手改或元数据已改未重生成）")
-            # 手写 UDF：源文件里必须存在同名函数且属性一致
-            src = (REPO / meta["sourceFile"]).read_text(encoding="utf-8")
-            for f in meta["functions"]:
-                if f.get("generated"):
-                    continue
-                if f'"{f["excel"]}"' not in src:
-                    bad.append(f'{meta["sourceFile"]}: 手写 UDF "{f["excel"]}" 在源码中找不到')
+            check_hand_written(meta, src_path.read_text(encoding="utf-8"), bad)
     if bad:
         print("FAIL: UDF 生成物与元数据不一致：")
         for b in bad:
             print("  - " + b)
         return 1
-    print("PASS: 生成物与元数据一致（含手写 UDF 属性校验）")
+    print("PASS: 生成物与元数据一致（含手写 UDF 属性级校验：Description / Category / 参数名序列）")
     return 0
 
 

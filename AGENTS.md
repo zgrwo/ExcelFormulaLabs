@@ -187,7 +187,7 @@ ExcelFormulaLabs/
 | :--- | :--- |
 | 日常构建 | `dotnet restore && dotnet build && dotnet test` |
 | 分发构建 | `dotnet build -c Release` |
-| 全量测试（6 步，同 verify-all.ps1；`-WithCoverage` 追加第 7 步覆盖率门禁） | ① verify-docs ② Build ③ dotnet test ④ CrossVal（verify-manual.py）⑤ Pre-commit Checks + 治理脚本自测 ⑥ Release build |
+| 全量测试（6 步，同 verify-all.ps1；`-WithCoverage` 追加第 7 步覆盖率门禁。①⑤ 两步各含两个/三个门禁，见 verify-all.ps1 输出） | ① verify-docs + verify-udfgen ② Build ③ dotnet test ④ CrossVal（verify-manual.py）⑤ Pre-commit Checks + 治理脚本自测 + 测试质量门禁 ⑥ Release build |
 | 文档一致性（20 个编号项；运行时 27 条断言，以脚本输出为准） | `powershell -File scripts/verify-docs.ps1` |
 | 提交前红线（6 项） | `powershell -File scripts/pre-commit-check.ps1` |
 | 测试质量（零断言/恒真断言 FAIL，存在性断言预算 0） | `powershell -File scripts/check-test-quality.ps1` |

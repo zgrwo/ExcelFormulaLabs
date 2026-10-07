@@ -83,7 +83,7 @@ ExcelFormulaLabs/
 │   ├── verify-docs.ps1             #   文档一致性验证（20 项检查，唯一实现）
 │   ├── verify-docs.sh              #   verify-docs.ps1 的 POSIX 包装器
 │   ├── verify-manual.py            #   全 UDF 手册示例验证（Python↔C#）
-│   ├── verify-all.ps1              #   一键 6 步验证门（verify-docs/Build/test/CrossVal/pre-commit/Release build）
+│   ├── verify-all.ps1              #   一键 6 步验证门（verify-docs+verify-udfgen/Build/test/CrossVal/pre-commit+治理自测+测试质量/Release build）
 │   ├── verify-pack.ps1             #   打包验证
 │   ├── coverage.ps1                #   覆盖率门禁（net8.0，行 92/86/86 + 分支 84/76/82；**阈值的单一实现**，ci.yml 只调用它）
 │   ├── install.ps1                 #   一键安装/卸载（SHA-256 校验 + 解锁 + HKCU 注册）
