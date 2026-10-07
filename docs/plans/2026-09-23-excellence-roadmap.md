@@ -178,7 +178,8 @@
       DOE 项数/单元数守卫与三阶交互、字符串 2D 空白归一化等
 - [x] 实测（CI 口径 net8.0）：Foundation 84.26% → **96.02%**、Analytics 89.06% → **90.2%**、
       DataToolkit 89.45% → **90.18%**
-- [x] 门禁阈值 80/85/85 → **92/86/86**（≥4 点余量），ci.yml / coverage.ps1 / AGENTS /
+- [x] 门禁阈值 80/85/85 → **92/86/86**（当时声称"≥4 点余量"；2026-10-07 复核证伪——最小余量
+      2.56 点，见 `scripts/coverage.ps1` 头注），ci.yml / coverage.ps1 / AGENTS /
       project-structure 同步
 - [x] spec `[Fact]` 计数 2,805 → 2,866（Phase 3.5 时点；当前 2,871，见 specification.md）
 

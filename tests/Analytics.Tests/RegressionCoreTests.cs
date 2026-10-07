@@ -280,6 +280,42 @@ namespace ExcelFormulaLabs.Analytics.Tests
             means[1].Should().BeApproximately(3.5e200, 1e186);
         }
 
+        // 有限极小值输入（次正规量纲）：预归一 `invC = 1/max|x|` 自身溢出 +Inf（1e-310 的倒数为
+        // +Inf），缩放域内全是 ±Inf/NaN → 平方和非有限 → 抛错。行为本身正确（显式拒绝而非
+        // 返回错值），但旧文案只说"输入过大"，对**最小**量纲是误导（P3-3）。
+        // 本测试硬编码该行为与文案：既钉住"仍抛 ArgumentException"，也钉住新文案同时给出两个方向。
+        [Fact] public void AnovaOneWay_subnormal_scale_throws_scale_neutral_message()
+        {
+            // 自证前提：1e-310 是次正规数，且其倒数溢出（这是夹具成立的根据，非实现回读）
+            (Math.Abs(1e-310) < 2.2250738585072014e-308).Should().BeTrue("1e-310 必须是次正规数");
+            double.IsInfinity(1.0 / 1e-310).Should().BeTrue("1/1e-310 必须溢出为 +Inf");
+
+            var act = () => RegressionCore.AnovaOneWay(new[]
+            {
+                new[] { 1e-310, 2e-310, 3e-310 },
+                new[] { 5e-310, 6e-310, 7e-310 },
+            });
+            act.Should().Throw<ArgumentException>()
+                .WithMessage("*ANOVA failed: sums of squares are non-finite*")
+                .WithMessage("*too large in magnitude*")   // 过大方向仍如实提及
+                .WithMessage("*subnormal*");               // 过小/次正规方向必须提及（旧文案缺失）
+        }
+
+        // 同一夹具放大到正规区（1e-300）即不再触发预归一溢出：F 对公共尺度不变，
+        // 期望值手算：组均值 2/6、总均值 4（n=6）→ ssB=24、ssW=4、df 1/4 → F=msB/msW=24。
+        [Fact] public void AnovaOneWay_normal_small_scale_keeps_f_scale_invariant()
+        {
+            var small = RegressionCore.AnovaOneWay(new[]
+            {
+                new[] { 1e-300, 2e-300, 3e-300 },
+                new[] { 5e-300, 6e-300, 7e-300 },
+            });
+            ((double)small["f_stat"]).Should().BeApproximately(24.0, 1e-9);
+
+            var unit = RegressionCore.AnovaOneWay(new[] { new[] { 1.0, 2, 3 }, new[] { 5.0, 6, 7 } });
+            ((double)unit["f_stat"]).Should().BeApproximately(24.0, 1e-9);
+        }
+
         // =====================================================================
         // CROSS-VALIDATION: WLS & RIDGE (Python statsmodels/sklearn reference)
         //

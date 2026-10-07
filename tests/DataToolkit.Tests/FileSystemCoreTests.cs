@@ -351,6 +351,35 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             finally { FileSystemCore.ResetForTesting(); }
         }
 
+        /// <summary>
+        /// P3-1：AddIn 的"是否需要提示沙箱未启用"必须与 <see cref="FileSystemCore.ValidatePath"/>
+        /// 的设防判定同口径。空串 root 在 ValidatePath 里 = 未设防（不拦截），
+        /// 提示通道就不能判成"已启用"而提前返回（否则用户既看不到提示也不受保护）。
+        /// </summary>
+        [Fact]
+        public void Sandbox_empty_string_root_counts_as_disabled_for_visibility()
+        {
+            FileSystemCore.ResetForTesting();
+            try
+            {
+                AddIn.ShouldReportSandboxStatus().Should().BeTrue();   // 出厂 null = 未启用
+                FileSystemCore.Initialize(new SandboxConfig(""));
+                AddIn.ShouldReportSandboxStatus().Should().BeTrue();   // 空串同 null（旧实现判 False）
+                // 与执行判定一致：空串不设防（既有 Sandbox_empty_string_root 语义，不得破坏）
+                var act = () => FileSystemCore.ValidatePath(@"C:\Windows\System32\kernel32.dll");
+                act.Should().NotThrow();
+            }
+            finally { FileSystemCore.ResetForTesting(); }
+
+            FileSystemCore.ResetForTesting();
+            try
+            {
+                FileSystemCore.Initialize(new SandboxConfig(FileSystemCore.GetTempPath()));
+                AddIn.ShouldReportSandboxStatus().Should().BeFalse();  // 真设防 → 无需提示
+            }
+            finally { FileSystemCore.ResetForTesting(); }
+        }
+
         [Fact] public void ValidatePath_normalized_same()
         {
             var tmp = FileSystemCore.GetTempPath();
@@ -530,6 +559,105 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
             notice.Should().Contain("immutable per process");   // 无运行时开关
             notice.Should().Contain("SECURITY.md");
             SandboxStatus.BuildStatusBarText().Should().Contain("沙箱未启用");
+        }
+    }
+
+    /// <summary>
+    /// SandboxStatus 的文件 I/O 契约（P2-2）：此前只有两个字符串构建器有测试，
+    /// <c>TryAppend</c> / <c>RotateIfTooLarge</c> 零命中——DataToolkit 行覆盖率余量被压到 1.5 点。
+    /// 一律走**临时目录 + 路径注入**（<c>TryAppend(msg, logPath)</c>），
+    /// 不向 %LOCALAPPDATA% 的真实日志写测试噪声；用后清理（<see cref="Dispose"/>）。
+    /// </summary>
+    public class SandboxStatusIoTests : IDisposable
+    {
+        // 与实现常量 MaxLogBytes 一致的边界值（硬编码，不从实现回读）。
+        private const int LogLimitBytes = 1_000_000;
+
+        private readonly string _dir = Path.Combine(
+            Path.GetTempPath(), "efl_sandboxstatus_" + Guid.NewGuid().ToString("N"));
+
+        private string LogFile => Path.Combine(_dir, "sandbox-status.log");
+
+        public void Dispose()
+        {
+            SandboxStatus.ResetUnavailableForTesting();
+            try { if (Directory.Exists(_dir)) Directory.Delete(_dir, true); }
+            catch (IOException) { /* 临时目录清理失败不掩盖测试结论 */ }
+        }
+
+        [Fact]
+        public void TryAppend_creates_directory_and_writes_timestamped_line()
+        {
+            Directory.Exists(_dir).Should().BeFalse();           // 目录由 TryAppend 自建
+            SandboxStatus.TryAppend("[FileSystemCore] first", LogFile).Should().BeTrue();
+            File.Exists(LogFile).Should().BeTrue();
+            var lines = File.ReadAllLines(LogFile);
+            lines.Should().HaveCount(1);
+            // 期望：yyyy-MM-dd HH:mm:ss + 空格 + 原文（格式硬编码，非回读实现产物）
+            System.Text.RegularExpressions.Regex.IsMatch(
+                lines[0], @"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[FileSystemCore\] first$")
+                .Should().BeTrue($"实际行：{lines[0]}");
+        }
+
+        [Fact]
+        public void TryAppend_appends_second_line_without_truncating()
+        {
+            SandboxStatus.TryAppend("first", LogFile).Should().BeTrue();
+            SandboxStatus.TryAppend("second", LogFile).Should().BeTrue();
+            var lines = File.ReadAllLines(LogFile);
+            lines.Should().HaveCount(2);
+            lines[0].Should().EndWith(" first");
+            lines[1].Should().EndWith(" second");
+        }
+
+        [Fact]
+        public void TryAppend_below_size_limit_does_not_rotate()
+        {
+            Directory.CreateDirectory(_dir);
+            File.WriteAllBytes(LogFile, new byte[LogLimitBytes]);   // 恰好等于上限 → 不轮转
+            SandboxStatus.TryAppend("kept", LogFile).Should().BeTrue();
+            File.Exists(LogFile + ".1").Should().BeFalse();
+            new FileInfo(LogFile).Length.Should().BeGreaterThan(LogLimitBytes);   // 追加而非截断
+        }
+
+        [Fact]
+        public void TryAppend_above_size_limit_rotates_to_dot1()
+        {
+            Directory.CreateDirectory(_dir);
+            File.WriteAllBytes(LogFile, new byte[LogLimitBytes + 1]);   // 超过上限 → 轮转
+            SandboxStatus.TryAppend("after-rotation", LogFile).Should().BeTrue();
+            File.Exists(LogFile + ".1").Should().BeTrue();
+            new FileInfo(LogFile + ".1").Length.Should().Be(LogLimitBytes + 1);   // 旧内容整代保留
+            var lines = File.ReadAllLines(LogFile);
+            lines.Should().HaveCount(1);                                          // 新文件只含本行
+            lines[0].Should().EndWith(" after-rotation");
+        }
+
+        [Fact]
+        public void TryAppend_existing_archive_is_replaced_on_rotation()
+        {
+            Directory.CreateDirectory(_dir);
+            File.WriteAllBytes(LogFile, new byte[LogLimitBytes + 1]);
+            File.WriteAllText(LogFile + ".1", "stale-archive");
+            SandboxStatus.TryAppend("fresh", LogFile).Should().BeTrue();
+            new FileInfo(LogFile + ".1").Length.Should().Be(LogLimitBytes + 1);   // 旧 .1 被替换
+            File.ReadAllText(LogFile + ".1").Should().NotContain("stale-archive");
+        }
+
+        [Fact]
+        public void TryAppend_write_failure_is_silent_and_marks_log_unavailable()
+        {
+            // 契约（不得削弱）：日志写入失败一律静默（不抛），仅返回 false 并降级标注。
+            Directory.CreateDirectory(_dir);
+            string asDirectory = Path.Combine(_dir, "not-a-file");
+            Directory.CreateDirectory(asDirectory);   // 追加到目录路径 → UnauthorizedAccessException
+            SandboxStatus.ResetUnavailableForTesting();
+            SandboxStatus.LogUnavailable.Should().BeFalse();
+            var act = () => SandboxStatus.TryAppend("boom", asDirectory);
+            act.Should().NotThrow();
+            SandboxStatus.TryAppend("boom", asDirectory).Should().BeFalse();
+            SandboxStatus.LogUnavailable.Should().BeTrue();
+            Directory.Exists(asDirectory).Should().BeTrue();   // 未产生文件系统副作用
         }
     }
 }

@@ -9,11 +9,17 @@
     每个模块同时卡**行覆盖率**与**分支覆盖率**——只卡行会让"补测试刷行数"与真实
     分支质量脱钩（2026-10-07 实测：Analytics 行 92.68% 而分支仅 80.80%）。
 
-    阈值 = 实测值留 ≥4 个点余量（防抖动误伤）。实测基线（2026-10-07，
-    net8.0 + Include 过滤 + 本轮 async 测试补齐后）：
-        Foundation   line 95.80%  branch 86.56%
-        Analytics    line 92.68%  branch 80.80%
-        DataToolkit  line 90.21%  branch 86.04%
+    阈值按实测值留余量以吸收抖动，但**余量不是固定承诺**——它随实测漂移，
+    引用时以本脚本输出为准（2026-10-07 复测，net8.0 + Include 过滤 + SandboxStatus
+    文件 I/O 测试补齐后）：
+        模块          line    阈值  余量      branch  阈值  余量
+        Foundation    95.80   92    3.80      86.56   84    2.56
+        Analytics     92.79   86    6.79      81.02   76    5.02
+        DataToolkit   89.34   86    3.34      85.41   82    3.41
+    **当前最小余量 2.56 点（Foundation branch）**。此前的注释写"≥4 个点余量"且基线记为
+    DataToolkit 90.21/86.04，两项均与实测不符（P2-2：同一脚本实测 DataToolkit 行 87.50/分支
+    84.85，行余量仅 1.5 点；6 项指标里 4 项 < 4 点）。补 SandboxStatus 的 TryAppend/
+    RotateIfTooLarge 临时目录测试后 DataToolkit 回升到 89.34/85.41。阈值本身未调整。
 
     为何需要本脚本：tests/*/coverage-local/ 下的历史报告**未加 Include 过滤**，
     Foundation 类在 Analytics 报告里显示 ~0%，数字误导（Analytics 53.5% vs 实际 90.2%）。

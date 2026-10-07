@@ -89,6 +89,35 @@ if (Get-Command python -ErrorAction SilentlyContinue) {
     Write-Host "  [SKIP] python 不可用，跳过 scaffold 端到端生成场景"
 }
 
+# 1h：P3-6——工具**存在**但生成失败（坏 JSON）必须非零退出。
+#     旧实现只打印 [WARN] 后 exit 0：CI/调用方把"模板已落盘但没有 .g.cs"的半成品当成功。
+#     与 1f 的"缺工具（[SKIP]，exit 0）"语义不同——后者是环境不适用，前者是流程失败。
+if (Get-Command python -ErrorAction SilentlyContinue) {
+    $jsonTpl = Join-Path $fixtureRepo "templates\NewModule\{Name}Udf.json.template"
+    # 保留 {Name} 占位符但破坏 JSON 结构 → udfgen.py json.loads 抛错（真实失败路径，非桩）
+    [System.IO.File]::WriteAllText($jsonTpl,
+        "{ `"name`": `"{Name}Udf`", BROKEN",
+        (New-Object System.Text.UTF8Encoding($false)))
+    # 负向用例的 stderr（udfgen 的 Python traceback）在 EAP=Stop 下会升级为终止异常——局部降级
+    #（与下方 3b/3c、[4] 的负向场景同法）。
+    $ErrorActionPreference = "Continue"
+    $out3 = & $hostCmd -NoProfile -ExecutionPolicy Bypass -File $scaffoldScript `
+        -Module Analytics -Name Broken -Prefix BROKEN 2>&1
+    $exit3 = $LASTEXITCODE
+    $ErrorActionPreference = "Stop"
+    $outStr3 = $out3 | Out-String
+    $tplOnDisk = (Test-Path (Join-Path $fixtureRepo "src\Analytics\BrokenCore.cs")) -and
+                 (Test-Path (Join-Path $fixtureRepo "udf-metadata\BrokenUdf.json"))
+    $gcsAbsent = -not (Test-Path (Join-Path $fixtureRepo "src\Analytics\BrokenUdf.g.cs"))
+    Assert-Scenario "scaffold fails (exit != 0) when udfgen generation fails" `
+        (($exit3 -ne 0) -and $tplOnDisk -and $gcsAbsent -and ($outStr3 -match '\[FAIL\] UDF 声明生成失败')) `
+        "exit=$exit3 templates=$tplOnDisk noGcs=$gcsAbsent"
+    # 恢复正常 JSON 模板：后续场景/重复运行不得受污染
+    Copy-Item (Join-Path $repo "templates\NewModule\{Name}Udf.json.template") $jsonTpl -Force
+} else {
+    Write-Host "  [SKIP] python 不可用，跳过 scaffold 生成失败退出码场景"
+}
+
 Write-Host ""
 Write-Host "=== [2] run-affected-tests.ps1 未映射告警（N-G）===" -ForegroundColor Cyan
 

@@ -483,6 +483,7 @@ result = Application.Run("REGEX.MATCH", "Order #12345 placed on 2024-06-15", "\d
 | **REGRESS** | 权重含负数/NaN/Inf | `#VALUE!` |
 | **REGRESS** | 岭回归 lambda=NaN/Inf | `#VALUE!` |
 | **REGRESS** | ANOVA 少于 2 组 | `#VALUE!` |
+| **SOLVE** | 所有起点的目标函数都不可评估（每个预测沿整条轨迹非有限，或平方误差溢出——如目标量级远超输出尺度） | `#VALUE!` |
 | **PHYCHEM** | 分子式含未知元素 | `#NUM!` |
 | **PHYCHEM** | 未知换算单位 | `#NUM!` |
 | **PHYCHEM** | 理想气体方程待求量 ≠ 1 个 | `#NUM!` |

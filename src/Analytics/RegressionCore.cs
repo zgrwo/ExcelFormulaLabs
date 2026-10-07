@@ -497,9 +497,16 @@ namespace ExcelFormulaLabs.Analytics
                     $"ANOVA requires at least 2 observations per group (df_within={dfW}).");
 
             // 有限极大值平方后仍可溢出（输入已拒绝 NaN/Inf 仍需守卫）；缩放域下不应到达。
+            // P3-3：非有限和中**不必然**来自"输入过大"——c 为次正规量纲（|x| ≲ 5.6e-309）时
+            // `1.0/c` 自身溢出 +Inf，缩放域内全是 ±Inf/NaN，和同样非有限（实测 c=1e-310）。
+            // 旧文案只断言"too large in magnitude"，对**最小**量纲输入说"过大"是误导；
+            // 此处文案须同时覆盖两个方向（数值逻辑不变，仍为显式拒绝而非返回错值）。
             if (double.IsNaN(ssB) || double.IsInfinity(ssB) || double.IsNaN(ssW) || double.IsInfinity(ssW))
                 throw new ArgumentException(
-                    "ANOVA failed: sums of squares are non-finite. Input values are too large in magnitude.");
+                    "ANOVA failed: sums of squares are non-finite. The input scale is outside the range " +
+                    "representable by the internal 1/max|x| pre-scaling — values are either too large in " +
+                    "magnitude, or subnormal (|x| ≲ 5.6e-309, where that reciprocal overflows). " +
+                    "Rescale the data to a moderate range and retry.");
 
             // Guard against degenerate data where all observations are identical
             // (within-group variance = 0 → F = 0/0 = NaN with no diagnostic message).

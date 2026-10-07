@@ -61,13 +61,22 @@ namespace ExcelFormulaLabs.DataToolkit
             return "ExcelFormulaLabs: FS.* 文件系统沙箱未启用（出厂默认），路径不受限制 — " + where;
         }
 
+        /// <summary>重置"日志不可用"标记，使测试之间不互相污染。FOR UNIT TESTS ONLY.</summary>
+        internal static void ResetUnavailableForTesting() => Volatile.Write(ref _logUnavailable, 0);
+
         /// <summary>
         /// 以追加方式写入一条带时间戳的状态记录。返回 <c>false</c> 表示"未写入"，
         /// 但**不抛异常**（调用方可据此在状态栏如实降级说明）。
         /// </summary>
-        internal static bool TryAppend(string message)
+        /// <param name="message">写入内容（调用方已带 <see cref="Tag"/> 前缀）。</param>
+        /// <param name="logPath">
+        /// 落盘路径注入点：<c>null</c>（生产唯一用法）走 <see cref="LogPath"/> 的
+        /// %LOCALAPPDATA% 派生路径；单元测试传入临时目录，避免把测试噪声写进真实日志。
+        /// <b>注入只改变落盘位置，不改变任何失败语义</b>——写失败仍静默返回 <c>false</c>。
+        /// </param>
+        internal static bool TryAppend(string message, string? logPath = null)
         {
-            string? path = LogPath;
+            string? path = logPath ?? LogPath;
             if (path == null)
             {
                 Volatile.Write(ref _logUnavailable, 1);

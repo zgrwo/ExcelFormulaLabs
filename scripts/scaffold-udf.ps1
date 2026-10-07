@@ -107,23 +107,43 @@ Expand-Template (Join-Path $tplDir '{Name}Core.Tests.cs.template') `
 
 # 生成 UDF 声明（.g.cs）——属性/签名来自刚写出的元数据。
 # tools/udfgen.py 不存在时**只告警不失败**：模板落盘是本脚本的核心职责，生成是便利步骤
-# （治理自测的临时夹具只复制 scripts/ 与 templates/，不含 tools/）。
+# （治理自测的临时夹具只复制 scripts/ 与 templates/，不含 tools/；tests/scripts/
+#  test_governance_tools.ps1 [1f] 钉死该语义）。
+# P3-6：但**工具存在而生成失败**（坏 JSON / 生成器报错）必须非零退出——旧实现只打印
+# `[WARN]`，脚本 exit 0，CI 与调用方会把"缺 .g.cs"的半成品当成功（实测 udfgen exit 3
+# 时脚本仍 exit 0）。两者语义不同：缺工具 = 本环境不适用（可接受），生成失败 = 流程失败。
 $udfgen = Join-Path (Join-Path $root "tools") "udfgen.py"
+$genFailed = $false
+$genExit = 0
 if (Test-Path $udfgen) {
     Write-Host ""
     Write-Host "-> python tools/udfgen.py generate --only $Name`Udf"
     Push-Location $root
     try {
+        # 局部 Continue：生成失败的 stderr 在 PS 5.1 的 EAP=Stop 下会升级为终止异常，
+        # 使退出码判定变成"异常路径"而非显式判定（本脚本其余部分仍用 Stop）。
+        $prevEap = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
         & python $udfgen generate --only "$Name`Udf"
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "[WARN] 生成失败——请检查 $metaPath 的 JSON 结构后重跑 generate" -ForegroundColor Yellow
-        }
+        $genExit = $LASTEXITCODE
+        $ErrorActionPreference = $prevEap
+        if ($genExit -ne 0) { $genFailed = $true }
     } finally {
         Pop-Location
     }
 } else {
     Write-Host ""
     Write-Host "[SKIP] 未找到 tools/udfgen.py，跳过 UDF 声明生成（元数据已写出：$metaPath）" -ForegroundColor Yellow
+}
+
+if ($genFailed) {
+    Write-Host ""
+    Write-Host "[FAIL] UDF 声明生成失败（udfgen.py exit $genExit）：元数据/模板已落盘，但 src/$Module/$Name`Udf.g.cs 未生成。" -ForegroundColor Red
+    Write-Host "       1) 修正元数据 JSON：udf-metadata/$Name`Udf.json" -ForegroundColor Red
+    Write-Host "       2) 重跑：python tools/udfgen.py generate --only $Name`Udf" -ForegroundColor Red
+    Write-Host "       3) 确认生成物：src/$Module/$Name`Udf.g.cs" -ForegroundColor Red
+    Write-Host "       （脚手架以非零退出码结束，避免半成品被当作成功）" -ForegroundColor Red
+    exit 1
 }
 
 Write-Host ""

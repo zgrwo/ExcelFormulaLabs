@@ -653,7 +653,9 @@ namespace ExcelFormulaLabs.Analytics
 
         // 中位数复用 StatsCore.Median（P1-2，库内口径收敛）：本类旧实现用 0.5*(lo+hi)，
         // ±1e308 级输入下中间求和溢出为 +Inf → proximity=Inf → 所有起点目标值 Inf →
-        // 抛 "Optimization failed to evaluate any start point"（与真实原因无关的误导信息）。
+        // 抛"起点不可评估"类错误（与真实原因无关的误导信息）。该情形自 P3-2 起走
+        // SolveInverseFull 里**可达**的 anyFiniteObjective 守卫（旧文案
+        // "Optimization failed to evaluate any start point" 是死代码，已随 P3-2 移除）。
         // StatsCore.Median 已有 QuantileSafe 凸组合回退（lo*0.5 + hi*0.5，不溢出）。
         private static double Median(double[] values) => StatsCore.Median(values);
 
@@ -1244,6 +1246,10 @@ namespace ExcelFormulaLabs.Analytics
 
                 // 字典序选点所需的两个分量：objective 每次求值刷新它们（P1-5）。
                 double lastTarget = 0, lastProximity = 0;
+                // 是否有**任一**起点把目标函数完整求值到底（分量真正被赋值）。objective 在预测
+                // NaN/Inf（下方 return +∞）或 fTarget 溢出时早退、不写 lastTarget/lastProximity，
+                // 故"是否曾成功评估"无法从这两个变量反推——必须单独计数（P3-2）。
+                bool anyFiniteObjective = false;
                 Func<double[], double> objective = u =>
                 {
                     for (int c = 0; c < v; c++) feature[variableCols[c]] = u[c];
@@ -1269,6 +1275,7 @@ namespace ExcelFormulaLabs.Analytics
                     // 字典序（P1-5，见下）。
                     lastTarget = fTarget;
                     lastProximity = proximity;
+                    anyFiniteObjective = true;
                     return TargetPriority * fTarget + ProximityWeight * proximity;
                 };
 
@@ -1304,8 +1311,20 @@ namespace ExcelFormulaLabs.Analytics
                         bestU = found;
                     }
                 }
-                if (bestU == null)
-                    throw new ArgumentException("Optimization failed to evaluate any start point.");
+                // P3-2：旧守卫 `if (bestU == null) throw "...failed to evaluate any start point."` 是
+                // **死代码**——首轮 `bestU == null` 必成立（MinStarts=1 + 上方 maxStarts 校验 ⇒
+                // 循环至少执行一次），任何"全部起点都失败"的场景都走不到它：真实行为是
+                // 陈旧值 (0,0) 把首轮垃圾点选进 bestU，随后（a）预测非有限 → 报 "non-finite
+                // prediction"（误导：坏的是起点轨迹，不是"模型不可用"），或（b）只发生
+                // fTarget 溢出 → 返回一个**从未被评分过**的推荐值。
+                // 现判据用 anyFiniteObjective（可达）：一次完整求值都没有 = 无起点可评估；
+                // 该情形下 bestU 里的点是任意解，任何推荐/σ 都是编造，故明确报错而非编造结果。
+                // 第二项 `bestU == null` 逻辑上不可达，保留为可空性保证（编译器流分析）。
+                if (!anyFiniteObjective || bestU == null)
+                    throw new ArgumentException(
+                        "Optimization failed: no start point could be evaluated — every prediction along " +
+                        "every start trajectory was non-finite (NaN/Infinity), or the squared objective " +
+                        "overflowed. Check the target magnitude against the output scale, and the model/bounds.");
 
                 for (int c = 0; c < v; c++) feature[variableCols[c]] = bestU[c];
                 double maxDeviation = 0;

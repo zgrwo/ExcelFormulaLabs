@@ -125,6 +125,19 @@ namespace ExcelFormulaLabs.DataToolkit
         }
 
         /// <summary>
+        /// 是否需要提示"沙箱未启用"。判定口径与 <see cref="FileSystemCore.ValidatePath"/> 一致：
+        /// <c>SandboxRoot</c> 为 <c>null</c> **或空串**都算未设防。
+        /// </summary>
+        /// <remarks>
+        /// 旧实现此处用 <c>SandboxRoot != null</c>，而 <see cref="FileSystemCore.ValidatePath"/> 用
+        /// <c>string.IsNullOrEmpty</c>：<c>Initialize(new SandboxConfig(""))</c> 时一个判"已启用"
+        /// （早退，两个提示通道都不触发）、一个判"未设防"（不拦截）——用户既看不到提示也不受保护。
+        /// 出厂默认（<c>null</c>）行为不变。
+        /// </remarks>
+        internal static bool ShouldReportSandboxStatus() =>
+            string.IsNullOrEmpty(FileSystemCore.SandboxRoot);
+
+        /// <summary>
         /// 沙箱未启用时，把该状态推送到两个**非阻塞**通道：
         /// ① <c>%LOCALAPPDATA%\ExcelFormulaLabs\logs\sandbox-status.log</c>——追加、有真实消费者、
         ///    可事后审计（权威记录）；
@@ -133,7 +146,7 @@ namespace ExcelFormulaLabs.DataToolkit
         /// </summary>
         private static void ReportSandboxStatus()
         {
-            if (FileSystemCore.SandboxRoot != null) return; // 已启用 → 无需提示
+            if (!ShouldReportSandboxStatus()) return; // 已启用 → 无需提示
 
             string notice = SandboxStatus.BuildDisabledNotice();
             System.Diagnostics.Trace.WriteLine(notice); // 保留调试器/ETW 通道（不再作为唯一通道）

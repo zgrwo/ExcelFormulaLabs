@@ -43,7 +43,7 @@ This project is a C# Excel-DNA add-in library running inside Microsoft Excel. Se
 
 **The `FS.*` file-system sandbox is shipped disabled, and the default build provides no path
 confinement.** `FileSystemCore.SandboxRoot` is `null` until `FileSystemCore.Initialize(...)` is called;
-while it is `null`, `ValidatePath` performs no sandbox check at all and `FS.*` can read, write, delete,
+while it is `null` (or empty), `ValidatePath` performs no sandbox check at all and `FS.*` can read, write, delete,
 copy and enumerate any path the Excel process can reach. This is a deliberate product decision
 (ease of use for local workbooks) — **not** a protection claim. Concretely, with the default build:
 
@@ -71,11 +71,14 @@ no environment variable and no registry setting.
 ### How the default is made visible
 
 Because a silently-absent control is indistinguishable from a working one, the add-in reports the
-sandbox state on every load through two **non-blocking** channels (no modal dialog is ever shown):
+sandbox state **when the sandbox is disabled** (`SandboxRoot` is `null` or empty) on every load
+through two **non-blocking** channels (no modal dialog is ever shown). When the sandbox is enabled
+the add-in stays silent — there is nothing to disclose:
 
 1. **Append-only log** — `%LOCALAPPDATA%\ExcelFormulaLabs\logs\sandbox-status.log` (one line per
-   load, `yyyy-MM-dd HH:mm:ss` timestamp, rotated to `.1` at 1 MB). Written by
-   `src/DataToolkit/SandboxStatus.cs`; a write failure is swallowed and never surfaces to Excel.
+   load while the sandbox is disabled, `yyyy-MM-dd HH:mm:ss` timestamp, rotated to `.1` at 1 MB).
+   Written by `src/DataToolkit/SandboxStatus.cs`; a write failure is swallowed and never surfaces
+   to Excel.
 2. **Excel status bar** — a one-time note on load (e.g. *"FS.* 文件系统沙箱未启用（出厂默认），
    路径不受限制 — 详见 <log path>"*). It does not block, requires no acknowledgement, and
    disappears with normal Excel status-bar use.

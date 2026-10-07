@@ -377,6 +377,27 @@ namespace ExcelFormulaLabs.Analytics.Tests
             a.Cast<double>().Should().Equal(b.Cast<double>());
         }
 
+        // P3-2：全部起点都不可评估（每个预测沿整条轨迹都非有限 / 平方误差溢出）时，
+        // 旧路径要么报 "non-finite prediction"（把"起点轨迹全坏"说成"模型不可用"，误导），
+        // 要么返回一个从未被评分过的推荐值。现走明确报错。
+        // 夹具构造：正常历史（YLin，σ>0、模型可拟合、采样预测有限）+ 目标 1e308 →
+        // d=(p−1e308)/σ ≈ −6.3e307 → d² 溢出 +Inf → objective 对任意 u 都早退 +∞。
+        [Fact]
+        public void SolveInverse_AllStartsNonFinite_ThrowsExplicitError()
+        {
+            var Y = YLin.Select(v => new[] { v }).ToArray();
+            var act = () => SolveCore.SolveInverse(
+                XLin, Y, new[] { 1 },
+                new[] { new[] { 10.0, double.NaN } },
+                new[] { new[] { 1e308 } },
+                new[] { new[] { 2.0, 20.0 } },
+                "linear", 42L, 3);
+
+            act.Should().Throw<ArgumentException>()
+                .WithMessage("*no start point could be evaluated*")
+                .WithMessage("*overflowed*");
+        }
+
         [Fact]
         public void SolveInverse_NoTarget_throws()
         {
