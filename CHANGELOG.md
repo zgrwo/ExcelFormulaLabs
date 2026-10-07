@@ -61,18 +61,27 @@
 - **双树同步**：`AGENTS.md` 与 `project-structure.md` 新增 `tools/`、`udf-metadata/` 与
   17 个 `.g.cs` 登记；`CONTRIBUTING.md` 增加"新增/修改一个 UDF"流程。
 
-### 真机验证发现（本次未处置，另行开单）
+### Fixed（net48 打包依赖缺失：`JSON.*`/`XML.*` 在真实 Excel 中全部失效）
 
-- **net48 版 DataToolkit 的 `JSON.*` 全部不可用**（`#VALUE!`）。隔离实验：同一公式
-  `=JSON.QUERY("{""a"":{""b"":7}}","a.b")` 在 net48 XLL 返回 `#VALUE!`、在 net8.0 XLL 返回 `7`；
-  `JSON.PARSE`/`JSON.VALIDATE` 同族同样失败。根因：net48 的 `DataToolkit-AddIn-net48.dna.tpl`
-  只登记了 `DataToolkit.dll` / `Foundation.dll` / `System.Data.SQLite.dll` / `ExcelDna.IntelliSense.dll`
-  四个程序集，**未打包 `System.Text.Json.dll` 及其依赖链**（`System.Memory`、`System.Buffers`、
-  `System.Text.Encodings.Web`、`System.Runtime.CompilerServices.Unsafe`、`Microsoft.Bcl.AsyncInterfaces`、
-  `System.Threading.Tasks.Extensions`、`System.Numerics.Vectors`）——这些 DLL 存在于输出目录却不在
-  XLL 内，运行时抛异常被 `WrapError` 兜成 `#VALUE!`。
-  **与本次元数据化无关**（未改动任何 `.csproj`/`.dna.tpl`，且 UDF 代码经 token 级往返校验与迁移前等价）；
-  单元测试在进程内运行（DLL 齐备）故一直全绿——这正是"CI 从不加载 .xll"所掩盖的缺陷类型。
+- **net48 版 DataToolkit 的 `JSON.*` 全部返回 `#VALUE!`（已修复）**。真机隔离实验：同一公式
+  `=JSON.QUERY("{""a"":{""b"":7}}","a.b")` 在修复前 net48 XLL 返回 `#VALUE!`、net8.0 XLL 返回 `7`；
+  `JSON.PARSE`/`JSON.VALIDATE`/`JSON.PRETTIFY`/`JSON.TOTABLE` 同族同样失败。
+  根因：`DataToolkit-AddIn-net48.dna.tpl` 只登记了 4 个程序集——**ExcelDnaPack 在 net48 下不会
+  自动发现 CLR 引用闭包**，未登记的 `System.Text.Json.dll` 及其传递依赖（`System.Memory`、
+  `System.Buffers`、`System.Text.Encodings.Web`、`System.Runtime.CompilerServices.Unsafe`、
+  `Microsoft.Bcl.AsyncInterfaces`、`System.Threading.Tasks.Extensions`、`System.Numerics.Vectors`）
+  只存在于输出目录、不在 XLL 内，运行时抛异常被 `WrapError` 兜成 `#VALUE!`。
+- **修复**：net48 模板补登整条依赖闭包（8 个程序集）。真机复测：JSON/XML/SQL 全族 + 其他模块
+  共 17 项断言在 net48 与 net8.0 上**各 17/17 通过**。
+- **门禁补洞**（`scripts/verify-pack.ps1` 新增第 4 项，随 Release 构建强制）：从模块程序集的
+  **传递引用闭包**推导"本应打包"的集合（不依赖模板声明，故能发现"需要却没登记"），
+  凡存在于构建输出目录者必须出现在 XLL 内，否则**构建失败**并指名待补的 `<Reference>`。
+  已做负向注入验证：移除声明 → 构建报
+  `打包依赖缺失…System.Text.Json.dll 未打包进 DataToolkit-AddIn-net48-packed.xll`。
+  该检查仅覆盖 net48——net8 走 deps.json 机制（XLL 内无 `ASSEMBLY_LZMA` 资源，名称扫描不适用）。
+- **与元数据化重构无关**：未改动任何 `.csproj`/`.dna.tpl`，且 UDF 代码经 token 级往返校验与迁移前等价。
+  单元测试在进程内运行（依赖 DLL 齐备）故一直全绿——只有真机加载 XLL 才暴露，
+  正是"CI 从不加载 .xll"所掩盖的缺陷类型。
 
 ### Fixed（2026-10-07 评审缺陷整改：P0 静默错值 + P1 数值守卫 + P2 口径收敛）
 
