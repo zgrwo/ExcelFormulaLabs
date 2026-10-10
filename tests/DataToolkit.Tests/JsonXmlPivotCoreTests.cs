@@ -579,5 +579,48 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
     {
         [Fact] public void JsonParse_fractional_number_returns_double()
             => JsonXmlCore.JsonParse("1.5").Should().Be(1.5);
+
+        // ── 2026-10-10 审查（用户手册实例逐一核对）：JSON 路径**裸整数下标** ──
+        // 手册 12-json-xml.md 的示例写作 `=JSON.QUERY(A1, "0.Name")`，而旧实现只认 `[0]`：
+        // 裸整数段既不被属性步消费（当前元素是数组、非 Object），也不满足下标步的 `段内含 [`
+        // 前置条件 → 该段被**静默跳过**，返回未前进的整个数组 → Excel 渲染 #VALUE!。
+        // 修复后裸整数段在数组上按下标前进，`[n]` 与 `n` 两种写法等价。
+        [Fact] public void JsonQuery_bare_integer_index_on_root_array()
+            => JsonXmlCore.JsonQuery("[10,20,30]", "0").Should().Be(10L);
+
+        [Fact] public void JsonQuery_bare_integer_index_then_property()
+            => JsonXmlCore.JsonQuery("[{\"Name\":\"Alice\"}]", "0.Name").Should().Be("Alice");
+
+        [Fact] public void JsonQuery_bare_integer_index_nested()
+            => JsonXmlCore.JsonQuery("{\"a\":[{\"b\":9}]}", "a.0.b").Should().Be(9L);
+
+        [Fact] public void JsonQuery_bracket_form_still_supported()
+        {
+            // 既有 `[n]` 形式不得回归（CrossVal 与真机用例均用此形式）。
+            JsonXmlCore.JsonQuery("[{\"Name\":\"Alice\"}]", "[0].Name").Should().Be("Alice");
+            JsonXmlCore.JsonQuery("{\"items\":[10,20,30]}", "items[1]").Should().Be(20L);
+        }
+
+        [Fact] public void JsonQuery_numeric_object_key_wins_over_index()
+            // 对象上仍优先按属性名解析：{"0": …} 这类数字键不受新分支影响。
+            => JsonXmlCore.JsonQuery("{\"a\":{\"0\":\"key0\"}}", "a.0").Should().Be("key0");
+
+        [Fact] public void JsonQuery_bare_index_out_of_range_returns_null()
+            => JsonXmlCore.JsonQuery("{\"a\":[1,2]}", "a.9").Should().BeNull();
+
+        // 2026-10-10 审查 C-3：XML.XPATH 此前直接 XPathSelectElements(...).ToArray()，
+        // **无结果条数上限**——同族 XmlToTable / JsonToTable 都在分配前拒绝 > 100_000 行。
+        // 复现：100_001 个同名元素被照常返回（无界膨胀）；100_000 仍须正常返回。
+        [Fact] public void XmlXPath_result_count_cap_enforced()
+        {
+            var sb = new System.Text.StringBuilder(100_001 * 8);
+            for (int i = 0; i < 100_001; i++) sb.Append("<a>1</a>");
+            JsonXmlCore.XmlXPath("<r>" + sb + "</r>", "//a")
+                .Should().BeEmpty("超过 100k 结果应被拒绝，而不是无界物化");
+
+            var sb2 = new System.Text.StringBuilder(100_000 * 8);
+            for (int i = 0; i < 100_000; i++) sb2.Append("<a>1</a>");
+            JsonXmlCore.XmlXPath("<r>" + sb2 + "</r>", "//a").Length.Should().Be(100_000);
+        }
     }
 }

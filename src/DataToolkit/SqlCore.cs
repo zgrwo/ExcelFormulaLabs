@@ -101,7 +101,8 @@ namespace ExcelFormulaLabs.DataToolkit
             // 黑名单须扫 StripSqlComments 归一化文本：SQL 注释可拆分关键字
             // （REPLACE/**/INTO、REPLACE--x\nINTO）使其不被正则匹配而实际执行 DML，绕过
             // 行数/耗时预算 → 不可捕获 OOM。所有结构检查（前缀/黑名单）统一扫
-            // StripSqlComments 归一化文本（注释替换为空格，保留字符串字面量与引号标识符）。
+            // StripSqlComments 归一化文本（注释→空格；字面量/引号标识符的内容→等长空格，
+            // 防数据值或列名中的关键字误拒合法只读查询——2026-10-10 审查 C-1）。
             if (!TryStripSqlComments(sql, out string normalized))
                 throw new ArgumentException(
                     "SQL query contains an unterminated block comment and cannot be safely validated.");
@@ -342,6 +343,17 @@ namespace ExcelFormulaLabs.DataToolkit
         /// visible to the keyword blacklist.
         /// Returns false when a block comment is unterminated — the caller must reject
         /// the statement (SQLite would also fail, but this is an explicit fail-closed path).</summary>
+        /// <summary>
+        /// 归一化供**结构检查**（SELECT-only 前缀 / 关键字黑名单）使用的文本：注释替换为空格，
+        /// 字符串字面量与引号标识符的**内容掩码为等长空格**（保留引号/括号定界符与总长度）。
+        ///
+        /// 为何掩码内容（2026-10-10 审查 C-1）：黑名单是"语句级"防线，而字面量/标识符内的文本
+        /// **不可能被 SQLite 当作可执行语句**——数据值含 delete/create 等单词曾被整条查询误拒
+        /// （`WHERE name = 'please delete this'` → #VALUE!），列名恰为关键字时同理。掩码后
+        /// 关键字只可能在真正的语句位置被匹配，同时保留原有的反绕过能力（注释拆词
+        /// REPLACE/**/INTO 仍因注释→空格而拼接可见）。
+        /// 分号检查在**原文**上进行（见 SqlQuery），不受掩码影响。
+        /// </summary>
         private static bool TryStripSqlComments(string sql, out string normalized)
         {
             var sb = new System.Text.StringBuilder(sql.Length);
@@ -349,21 +361,21 @@ namespace ExcelFormulaLabs.DataToolkit
             while (i < sql.Length)
             {
                 char ch = sql[i];
-                if (ch == '\'') // string literal — copy verbatim, support '' escape
+                if (ch == '\'') // string literal — 保留引号，内容掩码（支持 '' 转义）
                 {
                     sb.Append(ch); i++;
                     while (i < sql.Length)
                     {
                         if (sql[i] == '\'')
                         {
-                            if (i + 1 < sql.Length && sql[i + 1] == '\'') { sb.Append("''"); i += 2; continue; }
+                            if (i + 1 < sql.Length && sql[i + 1] == '\'') { sb.Append("  "); i += 2; continue; }
                             sb.Append('\''); i++; break;
                         }
-                        sb.Append(sql[i]); i++;
+                        sb.Append(' '); i++;
                     }
                     continue;
                 }
-                if (ch == '"' || ch == '`') // quoted identifier — copy verbatim, doubled quote escapes
+                if (ch == '"' || ch == '`') // quoted identifier — 保留定界符，内容掩码（双写转义）
                 {
                     char quote = ch;
                     sb.Append(ch); i++;
@@ -371,18 +383,21 @@ namespace ExcelFormulaLabs.DataToolkit
                     {
                         if (sql[i] == quote)
                         {
-                            if (i + 1 < sql.Length && sql[i + 1] == quote) { sb.Append(quote); sb.Append(quote); i += 2; continue; }
+                            if (i + 1 < sql.Length && sql[i + 1] == quote) { sb.Append("  "); i += 2; continue; }
                             sb.Append(quote); i++; break;
                         }
-                        sb.Append(sql[i]); i++;
+                        sb.Append(' '); i++;
                     }
                     continue;
                 }
-                if (ch == '[') // bracket identifier — no escape inside
+                if (ch == '[') // bracket identifier — 保留方括号，内容掩码（内部无转义）
                 {
                     int end = sql.IndexOf(']', i + 1);
                     if (end < 0) { sb.Append(sql, i, sql.Length - i); break; }
-                    sb.Append(sql, i, end - i + 1); i = end + 1;
+                    sb.Append('[');
+                    sb.Append(' ', end - i - 1);
+                    sb.Append(']');
+                    i = end + 1;
                     continue;
                 }
                 if (ch == '-' && i + 1 < sql.Length && sql[i + 1] == '-') // line comment

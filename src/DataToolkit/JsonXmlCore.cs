@@ -91,8 +91,47 @@ namespace ExcelFormulaLabs.DataToolkit
             }
         }
 
+        /// <summary>点路径求值。段形态：<c>key</c>（对象属性）、<c>key[i]</c>（属性 + 下标）、
+        /// <c>[i]</c>（纯下标）、<c>i</c>（**裸整数下标**，等价于 <c>[i]</c>）。
+        /// 裸整数段在数组上按下标前进——用户手册的 <c>"0.Name"</c> 示例依赖此形态；
+        /// 裸**非整数**段在数组上保持既有"不前进"语义（不抛错、不改变元素）。
+        /// 对象上优先按属性名解析，故 <c>{"0":…}</c> 这类数字键不受影响。</summary>
         private static object? Q(JsonElement e,string p)
-        { foreach(var s in p.Split('.')){int b=s.IndexOf('[');string k=b>=0?s.Substring(0,b):s; if(!string.IsNullOrEmpty(k)&&e.ValueKind==JsonValueKind.Object){ if(TryGetPropertyLast(e,k,out JsonElement c))e=c;else return null; } if(b>=0&&e.ValueKind==JsonValueKind.Array){ int idxLen=s.Length-b-2; if(idxLen>=0&&int.TryParse(s.Substring(b+1,idxLen),out int ix)&&ix>=0&&ix<e.GetArrayLength())e=e[ix];else return null; } } return Elm(e); }
+        {
+            foreach (var s in p.Split('.'))
+            {
+                int b = s.IndexOf('[');
+                string k = b >= 0 ? s.Substring(0, b) : s;
+                bool advanced = false;
+                if (!string.IsNullOrEmpty(k) && e.ValueKind == JsonValueKind.Object)
+                {
+                    if (TryGetPropertyLast(e, k, out JsonElement c)) { e = c; advanced = true; }
+                    else return null;
+                }
+                if (b >= 0 && e.ValueKind == JsonValueKind.Array)
+                {
+                    int idxLen = s.Length - b - 2;
+                    if (idxLen >= 0 && int.TryParse(s.Substring(b + 1, idxLen), out int ix) && ix >= 0 && ix < e.GetArrayLength()) e = e[ix];
+                    else return null;
+                }
+                // 裸整数下标（`0.Name`）：本段未被当作属性名消费，且当前元素是数组。
+                else if (!advanced && b < 0 && e.ValueKind == JsonValueKind.Array && IsBareArrayIndex(k, out int bi))
+                {
+                    if (bi < 0 || bi >= e.GetArrayLength()) return null;
+                    e = e[bi];
+                }
+            }
+            return Elm(e);
+        }
+
+        /// <summary>纯 ASCII 十进制数字段（可含前导零）。空段、符号、溢出均返回 false。</summary>
+        private static bool IsBareArrayIndex(string s, out int index)
+        {
+            index = -1;
+            if (s.Length == 0) return false;
+            foreach (char ch in s) { if (ch < '0' || ch > '9') return false; }
+            return int.TryParse(s, out index);
+        }
 
         // ── XML ────────────────────────────────────────────────────────────
 
@@ -136,8 +175,34 @@ namespace ExcelFormulaLabs.DataToolkit
             return XDocument.Load(reader);
         }
 
+        /// <summary>结果条数上限：与 XmlToTable / JsonToTable 的 100_000 行上限同口径，
+        /// 且在**物化数组之前**判定（2026-10-10 审查 C-3——此前无上限，直调方可用一条
+        /// `//x` 让 XPath 结果无界膨胀；Excel 单元格输入天然有界，直调/Dispatcher 路径无界）。</summary>
+        private const int MaxXPathResults = 100_000;
+
         internal static string[] XmlXPath(string xml, string xpath)
-        { try{var d=ParseXmlSafe(xml);return d.XPathSelectElements(xpath).Select(e=>e.Value).ToArray();}catch(Exception ex) when(ExceptionFilters.IsCatchable(ex)){System.Diagnostics.Debug.WriteLine($"[XmlXPath] Failed: {ex.Message}");return Array.Empty<string>();} }
+        {
+            try
+            {
+                var d = ParseXmlSafe(xml);
+                var list = new List<string>();
+                foreach (var e in d.XPathSelectElements(xpath))
+                {
+                    if (list.Count >= MaxXPathResults)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[XmlXPath] result count exceeds {MaxXPathResults}; rejected.");
+                        return Array.Empty<string>();
+                    }
+                    list.Add(e.Value);
+                }
+                return list.ToArray();
+            }
+            catch (Exception ex) when (ExceptionFilters.IsCatchable(ex))
+            {
+                System.Diagnostics.Debug.WriteLine($"[XmlXPath] Failed: {ex.Message}");
+                return Array.Empty<string>();
+            }
+        }
 
         internal static object[,]? XmlToTable(string xml, string? rowPath=null)
             // 缺元素单元格写 null =「空单元格」哨兵，null! 豁免可空性分析。

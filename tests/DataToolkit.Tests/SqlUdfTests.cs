@@ -126,11 +126,22 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         public void Query_comment_split_dml_rejected(string sql) =>
             SqlUdf.UDF_SQL_QUERY(Data, sql).Should().Be(ExcelError.Value);
 
-        [Fact] public void Query_literal_containing_keyword_rejected()
+        [Fact] public void Query_literal_containing_keyword_is_allowed()
         {
-            // Known trade-off (documented in api-reference): whole-word keywords
-            // inside string literals are rejected too — frozen to prevent accidental loosening.
-            SqlUdf.UDF_SQL_QUERY(Data, "SELECT * FROM data WHERE Name = 'do not delete'").Should().Be(ExcelError.Value);
+            // 2026-10-10 审查 C-1 修正：旧实现把字符串字面量原样交给关键字黑名单，故
+            // `WHERE Name = 'do not delete'` 被整条拒绝——该行为曾是**有意冻结的取舍**
+            // （旧测试名 Query_literal_containing_keyword_rejected），但它是纯误拒、无安全收益：
+            // 字面量内的文本不可能被 SQLite 当作可执行语句。现归一化器把字面量/引号标识符的
+            // **内容掩码为等长空格**，关键字只在语句位置生效（见 SqlCoreTests 的成对用例：
+            // 语句位置的 DML 与注释拆分形态仍全部拒绝）。api-reference / user-manual 已同步。
+            // ① 含关键字字面量的查询不再被拒（Data 中无匹配行 → 仅返回表头，而非 #VALUE!）
+            var r = (object[,])SqlUdf.UDF_SQL_QUERY(Data, "SELECT * FROM data WHERE Name = 'do not delete'");
+            r.GetLength(0).Should().Be(1);   // 仅表头：查询被执行（若被拒则是 ExcelError.Value）
+            r.GetLength(1).Should().Be(2);
+            // ② 掩码只作用于黑名单扫描——真正执行的仍是**原文**，字面量逐字保留
+            var r2 = (object[,])SqlUdf.UDF_SQL_QUERY(Data, "SELECT 'do not delete' AS c");
+            r2.GetLength(0).Should().Be(2);
+            r2[1, 0].Should().Be("do not delete");
         }
 
         [Fact] public void Query_has_headers_false_generates_columns()

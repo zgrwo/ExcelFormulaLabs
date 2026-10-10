@@ -626,5 +626,56 @@ namespace ExcelFormulaLabs.DataToolkit.Tests
         act.Should().Throw<ArgumentException>().WithMessage("*budget*");
         sw.ElapsedMilliseconds.Should().BeLessThan(3000);
     }
+
+    // ── 2026-10-10 Max level 审查修复回归守卫（C-1 字面量误扫）──
+
+    [Fact]
+    public void String_literal_containing_forbidden_word_is_allowed()
+    {
+        // C-1：关键字黑名单是**语句级**防线，但旧归一化器把字符串字面量内容原样保留，
+        // 于是数据值里出现 delete/create 等单词就整条查询被拒（fail-closed 误拒）。
+        // 现值归一化器把字面量内容掩码为等长空格——语句位置的关键字仍被拦截（见
+        // Comment_split_forbidden_keywords_are_rejected / DML 用例），字面量内的单词不再误伤。
+        var data = new object[,] { { "Name", "Age" }, { "please delete this", 30.0 } };
+        var r = SqlCore.SqlQuery(data, "SELECT Name FROM data WHERE Name = 'please delete this'");
+        r!.GetLength(0).Should().Be(2);
+        r[1, 0].Should().Be("please delete this");
+
+        // 字面量内 split 成注释形态的关键字同样不得误拒（掩码 + 注释剥离两条路径叠加）
+        SqlCore.SqlQuery(data, "SELECT 'drop table' AS c")![1, 0].Should().Be("drop table");
+        SqlCore.SqlQuery(data, "SELECT 'update /* not a comment */ set' AS c")![1, 0]
+            .Should().Be("update /* not a comment */ set");
+    }
+
+    [Fact]
+    public void Quoted_identifier_named_after_keyword_is_allowed()
+    {
+        // C-1 同族：列名恰为关键字时（SELECT "DELETE" FROM data）旧实现同样误拒。
+        // 引号标识符的内容不可能被 SQLite 当作可执行语句，故一并掩码。
+        var data = new object[,] { { "DELETE", "Age" }, { "Alice", 30.0 } };
+        SqlCore.SqlQuery(data, "SELECT \"DELETE\" FROM data")![1, 0].Should().Be("Alice");
+        SqlCore.SqlQuery(data, "SELECT [DELETE] FROM data")![1, 0].Should().Be("Alice");
+    }
+
+    [Fact]
+    public void Statement_level_forbidden_keywords_are_still_rejected_after_masking()
+    {
+        // 掩码不得削弱语句级防线：真正位于语句位置的关键字仍须拦截（与字面量用例成对）。
+        var data = new object[,] { { "Name", "Age" }, { "Alice", 30.0 } };
+        foreach (var sql in new[]
+        {
+            "WITH x AS (SELECT 1) DELETE FROM data",
+            "UPDATE data SET Age = 0",
+            "INSERT INTO data VALUES ('X',1)",
+            "DROP TABLE data",
+            "SELECT 1; DROP TABLE data",
+        })
+        {
+            var act = () => SqlCore.SqlQuery(data, sql);
+            act.Should().Throw<ArgumentException>($"statement-level keyword must stay blocked: {sql}");
+        }
+        // 表未被破坏
+        SqlCore.SqlQuery(data, "SELECT * FROM data")!.GetLength(0).Should().Be(2);
+    }
 }
 }
