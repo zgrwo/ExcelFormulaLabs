@@ -196,6 +196,12 @@ $DataToolkitCases = @(
     # ↓↓↓ 本会话失效面（net48 未打包 System.Text.Json → 全族 #VALUE!）的回归守卫
     (New-Case 'JSON.QUERY'          '=JSON.QUERY("{""a"":{""b"":7}}","a.b")'   7.0),
     (New-Case 'JSON.QUERY 数组索引'  '=JSON.QUERY("{""items"":[10,20,30]}","items[1]")' 20.0),
+    # 2026-10-10（用户手册实例逐一核对）：手册 12-json-xml.md 的示例用**裸整数下标**
+    # （"0.Name"），旧实现只认 "[0]" → 该段被静默跳过 → 返回整段数组 → #VALUE!。
+    # 真机回归守卫：裸整数与方括号两种写法都必须给出同样的值。
+    (New-Case 'JSON.QUERY 裸整数下标'  '=JSON.QUERY("[{""Name"":""Alice""}]","0.Name")' 'Alice'),
+    (New-Case 'JSON.QUERY 裸下标嵌套'  '=JSON.QUERY("{""a"":[{""b"":9}]}","a.0.b")' 9.0),
+    (New-Case 'JSON.QUERY 方括号等价'  '=JSON.QUERY("[{""Name"":""Alice""}]","[0].Name")' 'Alice'),
     (New-Case 'JSON.VALIDATE 合法'   '=JSON.VALIDATE("{""a"":1}")'             $true),
     (New-Case 'JSON.VALIDATE 非法'   '=JSON.VALIDATE("{a:1}")'                 $false),
     (New-Case 'JSON.TOTABLE'        '=JSON.TOTABLE("[{""a"":1},{""a"":2}]")'   @(@('a'), @(1.0), @(2.0))),
@@ -207,6 +213,9 @@ $DataToolkitCases = @(
     (New-Case 'SQL.QUERY 聚合'      '=SQL.QUERY($R$1:$S$4,"SELECT SUM(score) AS total FROM data",TRUE)' @(@('total'), @(60.0))),
     # 错误路径：只读契约（DDL 被拒）→ #VALUE!
     (New-Case 'SQL.QUERY 只读契约'   '=SQL.QUERY($R$1:$S$4,"DROP TABLE data")'  '#VALUE!'),
+    # 2026-10-10 审查 C-1 回归守卫：字面量内含关键字不得误拒（旧实现整条 → #VALUE!）。
+    # R1:S4 中无 'do not delete' → 仅返回表头行。
+    (New-Case 'SQL.QUERY 字面量含关键字' '=SQL.QUERY($R$1:$S$4,"SELECT name FROM data WHERE name = ''do not delete''",TRUE)' @(@('name'))),
     (New-Case 'ARR.SORTNUM'         '=ARR.SORTNUM({3,1,2})'                    @(@(1.0, 2.0, 3.0))),
     (New-Case 'ARR.INDEXOF'         '=ARR.INDEXOF({5,6,7},6)'                  1.0),
     (New-Case 'ARR.INDEXOF 未找到'   '=ARR.INDEXOF({1,2},9)'                   (-1.0)),

@@ -1,7 +1,7 @@
 ﻿# verify-docs.ps1 - 文档一致性验证（唯一实现；verify-docs.sh 为包装器）
 # ============================================================================
 # 用法：.\scripts\verify-docs.ps1 [-RepoRoot <path>]
-# 20 个编号项（每个编号项含多条断言，运行时逐条输出：基线 27 条 = 26 PASS + 1 SKIP；
+# 20 个编号项（每个编号项含多条断言，运行时逐条输出：基线 28 条 = 27 PASS + 1 SKIP；
 # R08 review 2026-09-05：检查 19 于 2026-08-31 加入后头注计数漏更 → 2026-09-15 起采用
 # 「编号项 + 运行时断言数」双口径，引用者请以脚本尾部 Pass/Fail/Skip 输出为准）：
 #   1.  UDF 数量：api-reference.md 为准，与源码 [ExcelFunction] 一致
@@ -66,6 +66,36 @@ function Check-Skip {
     param([string]$Label, [string]$Reason)
     Write-Host "  [SKIP] $Label ($Reason)"
     $script:skip++
+}
+
+# ── 计数扫描辅助（2026-10-10 审查 G-2/G-3）────────────────────────────────────
+# Get-CountScanText：计数扫描前剥离 markdown 格式标记并把全角数字转半角。不归一化时，
+# 数字与量词/UDF 之间插入标记（**240** 个 UDF、`240` 个 UDF、_240_ 个 UDF …）会整体失配
+# ——实测 15 个变体中 8 个逃逸。另：.NET 的 \d 匹配 Unicode Nd（**含全角 ０-９**），
+# 旧实现直接 [int] 转换全角数字会抛 "Input string was not in a correct format" 使
+# **整个门禁中止**（docs/plans 下含示例字面量的文档即曾触发），故一并转半角。
+function Get-CountScanText {
+    param([string]$Text)
+    $s = $Text -replace '\*\*', '' -replace '`', '' -replace '_', '' -replace '~~', ''
+    # 量词的括注形态（`999（个）UDF`）折成直述形态；数字与量词之间紧跟的 `+`/`＋`（`999+ 个 UDF`）
+    # 去掉。两条都带 (?=…) 前置约束，**只在计数上下文**生效——否则 `1+2` 这类正文算式会被改写。
+    $s = $s -replace '[（(]\s*个\s*[）)](?=\s*UDF)', '个'
+    $s = $s -replace '(?<=\d)\s*[+＋](?=\s*(?:个|项)?\s*UDF)', ''
+    $chars = $s.ToCharArray()
+    for ($i = 0; $i -lt $chars.Length; $i++) {
+        $c = [int]$chars[$i]
+        if ($c -ge 0xFF10 -and $c -le 0xFF19) { $chars[$i] = [char]($c - 0xFF10 + 0x30) }
+    }
+    return -join $chars
+}
+
+# ConvertTo-CountSafe：捕获组的安全整数转换。TryParse 失败 → -1（必然 != 期望计数 →
+# 记为 mismatch 且消息里保留原文），绝不让门禁自身抛错中止。
+function ConvertTo-CountSafe {
+    param([string]$Raw)
+    $v = 0
+    if ([int]::TryParse($Raw, [ref]$v)) { return $v }
+    return -1
 }
 
 # ---------- 1. UDF 数量 ----------
@@ -154,7 +184,13 @@ $residual = Get-ChildItem -Path (Join-Path $RepoRoot "src") -Recurse -Filter "*.
 if (-not $residual) { Check "No residual .dna" "OK" }
 else {
     $rel = $residual | ForEach-Object { $_.FullName.Substring($RepoRoot.Length) -replace '\\', '/' }
-    Check "No residual .dna" "found residual: $($rel -join ', ')"
+    # 2026-10-10 审查 G-1：这些是 git-ignored 的**构建生成物**（中断的构建会留下），而每个
+    # 读到此消息的人第一反应都是"我改了源码？"。故消息里直接给出补救命令；`-notlike '*.tpl'`
+    # 保证模板不被误删。
+    Check "No residual .dna" ("found residual: $($rel -join ', ') —— 这是 git-ignored 的构建生成物" +
+        "（中断的 pack 会留下）；清除后重跑：Get-ChildItem src -Recurse -Filter *.dna -File | " +
+        "Where-Object { `$_.Name -notlike '*.tpl' } | Remove-Item -Force；若同时见体积异常的 " +
+        "*-packed.xll 请一并删除（失败的 pack 会留下截断产物）")
 }
 
 # ---------- 9. README 无硬编码数量徽章 ----------
@@ -305,7 +341,10 @@ foreach ($f in $mdFiles) {
     # 读文件失败须 SKIP 计数输出（与检查 19 同法），对齐"SKIP 不计入 pass"语义，
     # 防止文件不可读时检查 12 静默空转。
     if (-not $text) { Check-Skip "Markdown broken links" "unreadable: $($f.Name)"; continue }
-    foreach ($m in [regex]::Matches($text, '\]\(([^)]+)\)')) {
+    # 2026-10-10：`](` 出现在 ``` 围栏代码块内时不是 markdown 链接（如 PowerShell 的
+    # [char](…) 转型写法）——先剥离围栏块再扫描，避免把示例代码判为断链。
+    $linkScan = [regex]::Replace($text, '(?s)```.*?```', '')
+    foreach ($m in [regex]::Matches($linkScan, '\]\(([^)]+)\)')) {
         $target = $m.Groups[1].Value.Trim()
         if ($target -match '^(https?://|mailto:|#|ftp://|file://)') { continue }
         if ($target -match '^[A-Za-z]:[\\/]') { continue }  # Windows 绝对路径不检查
@@ -446,6 +485,7 @@ foreach ($rel in $proseFiles) {
     $text = Read-Utf8 (Join-Path $RepoRoot $rel)
     # 读文件失败须 SKIP 计数输出（同检查 19），不得静默 continue。
     if (-not $text) { Check-Skip "Prose UDF counts" "unreadable: $rel"; continue }
+    $text = Get-CountScanText $text
     $isHistorical = ($rel -eq "CHANGELOG.md")
     # 模式 1：`N UDF`（如 "236 UDF"）与中文 `N 个 UDF`——除历史文件外强制执行 == codeUdfs。
     # 正则须覆盖中文变体：`(\d+)\s+UDF` 匹配不上「236 个 UDF」（中间隔着「个」），
@@ -456,20 +496,20 @@ foreach ($rel in $proseFiles) {
     if (-not $isHistorical) {
         # 模式 1a：`N UDF` / `N 个 UDF` / `N 项 UDF`
         # R2-15：全部模式加 IgnoreCase（`240 udf` 等小写变体此前 0 命中）。
-        foreach ($m in [regex]::Matches($text, '(\d+)\s*(?:个|项)?\s*UDF', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)) {
-            if ([int]$m.Groups[1].Value -ne $codeUdfs) { $proseMismatches += "${rel}: '$($m.Value)'" }
+        foreach ($m in [regex]::Matches($text, '(?<![A-Za-z0-9_])(\d+)\s*(?:个|项)?\s*UDF', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)) {
+            if ((ConvertTo-CountSafe $m.Groups[1].Value) -ne $codeUdfs) { $proseMismatches += "${rel}: '$($m.Value)'" }
         }
         # 模式 1b：倒装形式 `UDF (数量|总数|共)?[:：=]? N`
-        foreach ($m in [regex]::Matches($text, 'UDF\s*(?:数量|总数|共)?\s*[:：=]?\s*(\d+)', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)) {
-            if ([int]$m.Groups[1].Value -ne $codeUdfs) { $proseMismatches += "${rel}: 倒装 '$($m.Value)'" }
+        foreach ($m in [regex]::Matches($text, '(?<![A-Za-z0-9_])UDF\s*(?:数量|总数|共)?\s*[:：=]?\s*(\d+)', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)) {
+            if ((ConvertTo-CountSafe $m.Groups[1].Value) -ne $codeUdfs) { $proseMismatches += "${rel}: 倒装 '$($m.Value)'" }
         }
         # 模式 1c：`N 个函数（UDF）`（全角/半角括号均收）
-        foreach ($m in [regex]::Matches($text, '(\d+)\s*个函数\s*[（(]\s*UDF\s*[）)]')) {
-            if ([int]$m.Groups[1].Value -ne $codeUdfs) { $proseMismatches += "${rel}: '$($m.Value)'" }
+        foreach ($m in [regex]::Matches($text, '(?<![A-Za-z0-9_])(\d+)\s*个函数\s*[（(]\s*UDF\s*[）)]')) {
+            if ((ConvertTo-CountSafe $m.Groups[1].Value) -ne $codeUdfs) { $proseMismatches += "${rel}: '$($m.Value)'" }
         }
         # 模式 1d：`N 个自定义函数`（R2-15 词表补全）
-        foreach ($m in [regex]::Matches($text, '(\d+)\s*个自定义函数', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)) {
-            if ([int]$m.Groups[1].Value -ne $codeUdfs) { $proseMismatches += "${rel}: '$($m.Value)'" }
+        foreach ($m in [regex]::Matches($text, '(?<![A-Za-z0-9_])(\d+)\s*个自定义函数', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)) {
+            if ((ConvertTo-CountSafe $m.Groups[1].Value) -ne $codeUdfs) { $proseMismatches += "${rel}: '$($m.Value)'" }
         }
         # CrossVal 双通道计数自洽（R2-9）：manual-only N / cross-validated M（合计 K）
         # 必须 N+M==K 且为正数；与实测值的精确对账由 verify-manual.py 的 README
@@ -478,14 +518,14 @@ foreach ($rel in $proseFiles) {
         # 检查数合法超过 UDF 总数（实测 cross=263 > 240），故移除“各 ≤ UDF 总数”断言；
         # UDF 级覆盖声明（X/Y UDF）由下方分数形式单独约束（分子 ≤ 分母 == codeUdfs）。
         foreach ($m in [regex]::Matches($text, 'manual-only\s+(\d+)\s*/\s*cross-validated\s+(\d+)\s*[（(]\s*合计\s*(\d+)')) {
-            $man = [int]$m.Groups[1].Value; $cross = [int]$m.Groups[2].Value; $tot = [int]$m.Groups[3].Value
+            $man = (ConvertTo-CountSafe $m.Groups[1].Value); $cross = (ConvertTo-CountSafe $m.Groups[2].Value); $tot = (ConvertTo-CountSafe $m.Groups[3].Value)
             if ($man + $cross -ne $tot) { $proseMismatches += "${rel}: CrossVal 计数 '$($m.Value)' ($man+$cross != $tot)" }
             if ($man -le 0 -or $cross -le 0) { $proseMismatches += "${rel}: CrossVal 计数 '$($m.Value)' 必须为正数" }
         }
         # 分数形式 `X/Y UDF`（README "224/236 个 UDF"）：分母是总数声明必须 == codeUdfs，
         # 分子是覆盖数只要求 ≤ codeUdfs（两者都验，防分子分母任一侧漂移）。
-        foreach ($m in [regex]::Matches($text, '(\d+)/(\d+)\s*(?:个)?\s*UDF', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)) {
-            $num = [int]$m.Groups[1].Value; $den = [int]$m.Groups[2].Value
+        foreach ($m in [regex]::Matches($text, '(?<![A-Za-z0-9_])(\d+)/(\d+)\s*(?:个)?\s*UDF', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)) {
+            $num = (ConvertTo-CountSafe $m.Groups[1].Value); $den = (ConvertTo-CountSafe $m.Groups[2].Value)
             if ($den -ne $codeUdfs) { $proseMismatches += "${rel}: 分母 '$($m.Value)' ($den != $codeUdfs)" }
             if ($num -gt $codeUdfs) { $proseMismatches += "${rel}: 分子 '$($m.Value)' ($num > $codeUdfs)" }
         }
@@ -493,7 +533,7 @@ foreach ($rel in $proseFiles) {
         # 此形态不在扫描域 → 真 C# 对照宣称漂移可全绿通过）。同样验分母/分子上界；
         # 与实测值的精确对账由 verify-manual.py 的 README reconciliation 承担。
         foreach ($m in [regex]::Matches($text, '(\d+)/(\d+)\s*[（(]\s*\d+(?:\.\d+)?\s*%\s*[）)]')) {
-            $num = [int]$m.Groups[1].Value; $den = [int]$m.Groups[2].Value
+            $num = (ConvertTo-CountSafe $m.Groups[1].Value); $den = (ConvertTo-CountSafe $m.Groups[2].Value)
             if ($den -ne $codeUdfs) { $proseMismatches += "${rel}: 分母 '$($m.Value)' ($den != $codeUdfs)" }
             if ($num -gt $den) { $proseMismatches += "${rel}: 分子 '$($m.Value)' ($num > $den)" }
         }
@@ -512,7 +552,7 @@ foreach ($rel in $proseFiles) {
     # （注入实测 `区间链断裂 '236→240' vs '232→236'`，K3 场景为回归守卫）。
     $ranges = @()
     foreach ($m in [regex]::Matches($text, 'UDF\s*总数\s*(\d+)\s*→\s*(\d+)')) {
-        $x = [int]$m.Groups[1].Value; $y = [int]$m.Groups[2].Value
+        $x = (ConvertTo-CountSafe $m.Groups[1].Value); $y = (ConvertTo-CountSafe $m.Groups[2].Value)
         if ($x -le 0 -or $x -ge $y) { $proseMismatches += "${rel}: '$($m.Value)'（区间须 0<X<Y）" }
         elseif ($y -gt $codeUdfs) { $proseMismatches += "${rel}: '$($m.Value)'（终点 $y > 当前 $codeUdfs）" }
         $ranges += ,@($x, $y)
@@ -556,6 +596,16 @@ foreach ($name in $apiParams.Keys) {
     if (($apiParams[$name] -join ',') -ne ($srcParams[$name] -join ',')) {
         $paramMismatches += "$name 文档=($($apiParams[$name] -join ',')) 源码=($($srcParams[$name] -join ','))"
     }
+}
+# 分母断言 + 反向对账（2026-10-10 审查 G-4）：提取正则要求参数列以 `(` 起始，文档表体稍改
+# 格式（去括号、换列序）即该行不入 $apiParams → 该 UDF **静默退出比对**——实测把 STATS.MEAN 的
+# 参数列改成 `number1` 后分母 240→239 仍 PASS。分母缩小是可见线索，但此前无人断言；故此处显式
+# 要求文档侧条目数 == 源码 UDF 数，并补反向遍历（与检查 2 形成双向对账）。
+if ($apiParams.Count -ne $codeUdfs) {
+    $paramMismatches += "文档侧参数条目 $($apiParams.Count) != 源码 UDF 数 $codeUdfs（有 UDF 未参与比对）"
+}
+foreach ($name in $srcParams.Keys) {
+    if (-not $apiParams.ContainsKey($name)) { $paramMismatches += "$name 源码有 UDF 而文档参数表无对应行" }
 }
 if ($paramMismatches.Count -eq 0) { Check "[ExcelArgument] vs api-reference params ($($apiParams.Count))" "OK" }
 else { Check "[ExcelArgument] vs api-reference params" ($paramMismatches -join ' | ') }
@@ -628,8 +678,9 @@ if ($factFiles.Count -gt 0) {
         $text = Read-Utf8 (Join-Path $RepoRoot $rel)
         # F-08：不可读文件须 SKIP 计数输出，不得静默 continue（检查可能空转）。
         if (-not $text) { Check-Skip "Fact count claims" "unreadable: $rel"; continue }
-        foreach ($m in [regex]::Matches($text, '([\d,]+)\s*个?\s*\[(Fact|Theory)\]')) {
-            $claim = [int]($m.Groups[1].Value -replace ',', '')
+        $text = Get-CountScanText $text
+        foreach ($m in [regex]::Matches($text, '(?<![A-Za-z0-9_])([\d,]+)\s*个?\s*\[(Fact|Theory)\]')) {
+            $claim = ConvertTo-CountSafe ($m.Groups[1].Value -replace ',', '')
             $kind = $m.Groups[2].Value
             $actual = if ($kind -eq 'Theory') { $codeTheories } else { $codeFacts }
             if ($claim -ne $actual) { $factMismatches += "${rel}: '$($m.Value)' ($claim != $actual)" }

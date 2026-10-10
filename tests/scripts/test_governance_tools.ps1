@@ -320,6 +320,57 @@ Assert-Scenario "every .ps1 (tracked + untracked) decodes as strict UTF-8" `
     ($invalidUtf8.Count -eq 0) "非法 UTF-8: $($invalidUtf8 -join ', ')"
 Assert-Scenario "every .ps1 with non-ASCII has a UTF-8 BOM" ($noBomWithCjk.Count -eq 0) "缺 BOM: $($noBomWithCjk -join ', ')"
 
+# ── [7] 测试宿主 culture 固定（2026-10-10 审查 E-2）──
+# 背景：3 个 xUnit 工程都有 TestCultureSetup.cs 以 [ModuleInitializer] 固定 InvariantCulture，
+# 但 Python↔C# 通道的 C# 半边（tests/CrossValRunner）没有任何固定 → tr-TR/de-DE 机器上
+# 字符串型 UDF（STR.FORMAT / DT.* 格式化 / RANGE.TOJSON）与 ResultSerializer 输出会偏离，
+# 产生"环境归因"的间歇性失败。此场景把 4 个宿主全部纳入守卫。
+Write-Host ""
+Write-Host "=== [7] 测试宿主 culture 固定（E-2）==="
+$cultureHosts = @(
+    @{ Name = 'Foundation.Tests';  Rel = 'tests/Foundation.Tests/TestCultureSetup.cs' },
+    @{ Name = 'Analytics.Tests';   Rel = 'tests/Analytics.Tests/TestCultureSetup.cs' },
+    @{ Name = 'DataToolkit.Tests'; Rel = 'tests/DataToolkit.Tests/TestCultureSetup.cs' },
+    @{ Name = 'CrossValRunner';    Rel = 'tests/CrossValRunner/Program.cs' }
+)
+$cultureBad = @()
+foreach ($h in $cultureHosts) {
+    $p = Join-Path $repo $h.Rel
+    if (-not (Test-Path $p)) { $cultureBad += "$($h.Name): 文件缺失 $($h.Rel)"; continue }
+    $txt = [System.IO.File]::ReadAllText($p, [System.Text.Encoding]::UTF8)
+    if ($txt -notmatch 'DefaultThreadCurrentCulture\s*=\s*CultureInfo\.InvariantCulture') {
+        $cultureBad += "$($h.Name): 未固定 DefaultThreadCurrentCulture"
+    }
+}
+Assert-Scenario "all 4 test hosts pin InvariantCulture" ($cultureBad.Count -eq 0) "未固定: $($cultureBad -join '; ')"
+
+# ── [8] verify-pack 必须检出**截断**产物（2026-10-10）──
+# 失败的 ExcelDnaPack 会留下部分写入的 *-packed.xll（实测 1,168,896 与 658,944 字节，
+# 正常为 3,730,432 / 1,196,544），此后每次 pack 都失败在 EndUpdateResource 且错误信息
+# 完全指不到真因。旧判据 `$minSize = 100*1024` 对 1.17 MB 的截断产物**照常放行**。
+# 用 Tfm=net8.0-windows + Module=Analytics：该组合会跳过第 2 节（SQLite 原生，仅 DataToolkit）
+# 与第 4 节（net48 依赖闭包），使本场景**只**检验第 1 节，避免其它节的 FAIL 造成假通过。
+Write-Host ""
+Write-Host "=== [8] verify-pack 截断检测 ==="
+$fxPack = Join-Path $env:TEMP ("packfx-" + [guid]::NewGuid().ToString("N"))
+New-Item -ItemType Directory -Path $fxPack -Force | Out-Null
+function New-FakePe([int]$Size) {
+    $b = New-Object byte[] $Size
+    $b[0] = 0x4D; $b[1] = 0x5A                      # MZ
+    $peOff = 0x80
+    [BitConverter]::GetBytes([int]$peOff).CopyTo($b, 0x3C)
+    $b[$peOff] = 0x50; $b[$peOff + 1] = 0x45; $b[$peOff + 2] = 0; $b[$peOff + 3] = 0   # PE\0\0
+    return $b
+}
+[System.IO.File]::WriteAllBytes((Join-Path $fxPack "Analytics-AddIn-net8.0-packed.xll"),    (New-FakePe 1657856))
+# 用**真实事故**的比值（1,168,896 / 1,657,856 = 0.705）而非极端值——极端比值（如 0.18）连旧的
+# 宽松判据 [0.6, 1.7] 都能拦住，锁不住收窄后的 [0.85, 1.18]。
+[System.IO.File]::WriteAllBytes((Join-Path $fxPack "Analytics-AddIn-net8.0-64-packed.xll"), (New-FakePe 1168896))
+$outPack = (& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repo "scripts/verify-pack.ps1") -PublishDir $fxPack -Module Analytics -Tfm net8.0-windows 2>&1 | Out-String)
+$packExit = $LASTEXITCODE
+Assert-Scenario "truncated packed xll detected (bitness size mismatch)" ($packExit -ne 0 -and $outPack -match "size mismatch") "exit=$packExit"
+Remove-Item $fxPack -Recurse -Force -ErrorAction SilentlyContinue
+
 # ── 汇总 ──
 Write-Host ""
 Write-Host "=== Pass: $passCount  Fail: $failCount  Skip: $skipCount ==="

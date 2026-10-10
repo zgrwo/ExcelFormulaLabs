@@ -233,12 +233,16 @@ def cross_check(name, python_computed, tol=None):
         else:
             FAIL += 1; print(f"  FAIL {name}: Python={python_computed}, C#={cs_val}")
         return
-    # C# 真 null（不是 NaN/Inf）：Python 侧 NaN 视为匹配（向后兼容），否则 FAIL
+    # C# 真 null（不是 NaN/Inf）而 Python 侧期望 NaN = **特殊值标签失配**（2026-10-10 审查 E-1）。
+    # 旧实现把二者视为等价（注释写作"向后兼容"），使 ResultSerializer 把 {"__nan__":true}
+    # 退回裸 null 的回归在标量 / bespoke / 矩阵三条通道**全部静默通过**——只有 check() 的
+    # ndarray 分支（_contains_null，:89）能发现。标签是跨语言契约，缺失即 FAIL。
     if cs_val is None and isinstance(python_computed, (float, np.floating)):
         if np.isnan(python_computed):
-            PASS += 1; CROSS_PASS += 1; print(f"  OK {name}: NaN (C#=null)")
+            FAIL += 1
+            print(f"  FAIL {name}: 特殊值标签失配 —— Python 期望 NaN，C# 发来裸 null（标签丢失）")
         else:
-            FAIL += 1; print(f"  FAIL {name}: Python={python_computed}, C#=null (NaN)")
+            FAIL += 1; print(f"  FAIL {name}: Python={python_computed}, C#=null")
         return
     check(name, python_computed, cs_val, tol=tol_eff, manual=False)
 
@@ -333,8 +337,10 @@ def cross_vs_csharp(name, py_value, manifest_id, tol=None, field=None, xform=Non
             FAIL += 1; print(f"  FAIL {name}: Python={py_value}, C#={cs} (特殊值标签失配)")
         return
     if cs is None and isinstance(py_value, (float, np.floating)):
+        # 同 cross_check（2026-10-10 审查 E-1）：裸 null ≡ NaN 会让标签回归在 bespoke 通道静默通过。
         if np.isnan(py_value):
-            PASS += 1; CROSS_PASS += 1; print(f"  OK {name}: NaN (C#=null)")
+            FAIL += 1
+            print(f"  FAIL {name}: 特殊值标签失配 —— Python 期望 NaN，C# 发来裸 null（标签丢失）")
         else:
             FAIL += 1; print(f"  FAIL {name}: Python={py_value}, C#=null")
         return
@@ -1040,8 +1046,22 @@ section("JSON / XML", 8)
 js='[{"Name":"Alice","Age":30,"City":"NYC"},{"Name":"Bob","Age":25,"City":"LA"},{"Name":"Carol","Age":35,"City":"SF"},{"Name":"David","Age":28,"City":"TX"},{"Name":"Eva","Age":32,"City":"FL"}]'
 dj=json.loads(js)
 check("JSON.PARSE", len(dj), 5)  # 5 objects parsed
-check("JSON.QUERY(0.Name)", dj[0]["Name"], "Alice")
-check("JSON.QUERY(1.Age)", dj[1]["Age"], 25)
+# 2026-10-10（用户手册实例逐一核对）：手册 12-json-xml.md 的 JSON.QUERY 示例用的是
+# **裸整数下标**（"0.Name"/"1.Age"/"2.City"）。旧实现只认 "[0]"：裸整数段既不被属性步
+# 消费（当前元素是数组而非 Object），也不满足下标步的"段内含 ["前置条件 → 该段被静默跳过
+# → C# 返回未前进的整段数组 → Excel #VALUE!。
+# **缺陷为何能存活**：这里原先是 `check("JSON.QUERY(0.Name)", dj[0]["Name"], "Alice")` ——
+# 期望值取自 **Python 自己的 json.loads 结果**，C# 从未被调用（纯 Python 自校验）；而同段
+# 的 cross_vs_csharp 用的是 "a.b"（对象路径、无数组下标），恰好绕开了缺陷路径。
+# 现改为真调 C#，manifest 条目使用与手册**逐字符相同**的路径字符串。
+cross_vs_csharp("JSON.QUERY(0.Name)",  dj[0]["Name"], "JSON.QUERY.MANUAL_0NAME")
+cross_vs_csharp("JSON.QUERY(1.Age)",   dj[1]["Age"],  "JSON.QUERY.MANUAL_1AGE")
+cross_vs_csharp("JSON.QUERY(2.City)",  dj[2]["City"], "JSON.QUERY.MANUAL_2CITY")
+cross_vs_csharp("JSON.QUERY([3].Name)", dj[3]["Name"], "JSON.QUERY.MANUAL_BR_3NAME")
+cross_vs_csharp("JSON.QUERY(4.Age)",   dj[4]["Age"],  "JSON.QUERY.MANUAL_4AGE")
+# 嵌套下钻与"对象数字键优先于下标"两条边界也纳入真 C# 对照
+cross_vs_csharp("JSON.QUERY(a.0.b 嵌套下标)", json.loads('{"a":[{"b":9}]}')["a"][0]["b"], "JSON.QUERY.NESTED_INDEX")
+cross_vs_csharp("JSON.QUERY(a.0 数字键优先)", json.loads('{"a":{"0":"key0"}}')["a"]["0"], "JSON.QUERY.NUMERIC_KEY")
 # 样本结构契约的实质断言（JSON 数组 of 对象、键集合精确）；
 # round-trip（json.loads(json.dumps(x))）对合法对象恒真。
 check("JSON.VALIDATE structure", isinstance(dj, list) and len(dj) == 5
@@ -1070,6 +1090,18 @@ check("XML.TOTABLE count", len(xt_rows), 5)
 # （Python 侧用 json/ElementTree 独立实现）。
 cross_vs_csharp("JSON.PARSE", json.loads("[1,2,3]"), "JSON.PARSE")
 cross_vs_csharp("JSON.VALIDATE", True, "JSON.VALIDATE")  # json.loads 不抛 → 合法
+# JSON.PRETTIFY / JSON.TOTABLE / XML.TOTABLE：手册三处示例此前**无 C# 对照通道**
+# （Dispatcher 未注册这三个方法），只有纯 Python 自校验。现补注册 + 真对照。
+# PRETTIFY 的换行约定：System.Text.Json 的 WriteIndented 在 Windows 上发 CRLF，而
+# Python json.dumps 发 LF；CrossValRunner 是 net8.0-windows（只在 Windows 运行），
+# 故期望值显式按 CRLF 构造——若换行约定变化本断言应显式失败，而不是被静默放过。
+_pretty_expected = json.dumps({"a": 1, "b": 2}, indent=2).replace("\n", "\r\n")
+cross_vs_csharp("JSON.PRETTIFY", _pretty_expected, "JSON.PRETTIFY")
+cross_vs_csharp("JSON.TOTABLE", [list(dj[0].keys())] + [[d[h] for h in dj[0].keys()] for d in dj], "JSON.TOTABLE")
+_xe = ET.fromstring(xs)
+_xt = [["name", "dept", "salary"]] + [[e.find("name").text, e.find("dept").text, e.find("salary").text]
+                                      for e in _xe.findall("employee")]
+cross_vs_csharp("XML.TOTABLE", _xt, "XML.TOTABLE")
 _qv = json.loads('{"a":{"b":2}}')
 for _seg in "a.b".split("."):
     _qv = _qv[_seg]
@@ -1144,6 +1176,47 @@ check("SQL.JOIN match", _joined, ["Alice-200000", "Bob-500000"])
 # QUERY3 — 3-table format
 # 样本结构契约（表头 4 列 + 6 数据行）；len(sql_data)>0 恒真。
 check("SQL.QUERY3 structure", len(sql_data[0]) == 4 and len(sql_data) == 6, True)
+
+# 2026-10-10（用户手册实例逐一核对）：SQL.* 此前**完全没有 C# 对照通道**
+# （Dispatcher 未注册 SqlCore.*，[cross gaps] 报 SQL.QUERY / SQL.JOIN / SQL.QUERY3），
+# 手册 14-sql.md 的示例只靠上面这些纯 Python 推导。现接通真 C# 对照，并额外以 Python
+# 标准库 sqlite3 作为**独立引擎参考**（与 C# 侧 System.Data.SQLite 是不同构建，
+# 可交叉暴露任一侧的 SQL 语义偏差）。
+import sqlite3 as _sq3
+sql_c = [["City", "Region"], ["NYC", "Northeast"], ["LA", "West"], ["SF", "West"],
+         ["TX", "South"], ["FL", "South"]]
+
+def _py_sql(table, sql, extra_tables=None):
+    """用 Python 标准库 sqlite3 独立复算：返回 [表头, *数据行]（与 C# 侧同形）。"""
+    con = _sq3.connect(":memory:")
+    try:
+        con.execute("CREATE TABLE data (%s)" % ",".join('"%s"' % c for c in table[0]))
+        con.executemany("INSERT INTO data VALUES (%s)" % ",".join("?" * len(table[0])), table[1:])
+        for name, tbl in (extra_tables or {}).items():
+            con.execute("CREATE TABLE %s (%s)" % (name, ",".join('"%s"' % c for c in tbl[0])))
+            con.executemany("INSERT INTO %s VALUES (%s)" % (name, ",".join("?" * len(tbl[0]))), tbl[1:])
+        cur = con.execute(sql)
+        return [[d[0] for d in cur.description]] + [list(r) for r in cur.fetchall()]
+    finally:
+        con.close()
+
+cross_vs_csharp("SQL.QUERY 筛选(手册示例1)",
+                _py_sql(sql_data, "SELECT Name, Salary FROM data WHERE Salary > 50000 ORDER BY Salary DESC"),
+                "SQL.QUERY.MANUAL_FILTER")
+# 手册示例 2 原查询无 ORDER BY，实测 SQLite 按分组键排序输出（Engineering/HR/R&D/Sales/Support），
+# 而手册原先把行序写成源区域插入顺序 —— 已修正手册为显式 ORDER BY（GROUP BY 无 ORDER BY 时
+# 行序由引擎决定，不可作为文档承诺）。此处对照即锁定修正后的确定性结果。
+cross_vs_csharp("SQL.QUERY 分组聚合(手册示例2)",
+                _py_sql(sql_data, "SELECT Dept, AVG(Salary) AS AvgSal FROM data GROUP BY Dept ORDER BY Dept"),
+                "SQL.QUERY.MANUAL_GROUP")
+cross_vs_csharp("SQL.JOIN(手册示例)",
+                _py_sql(sql_data, "SELECT data.Name, extra.Budget FROM data JOIN extra ON data.Dept = extra.Dept",
+                        {"extra": extra}),
+                "SQL.JOIN.MANUAL")
+cross_vs_csharp("SQL.QUERY3(手册示例)",
+                _py_sql(sql_data, "SELECT data.Name, b.Dept, c.Region FROM data JOIN b ON data.Dept=b.Dept JOIN c ON data.City=c.City",
+                        {"b": extra, "c": sql_c}),
+                "SQL.QUERY3.MANUAL")
 
 # ========================================================================
 # FS (22 UDFs)
@@ -1468,8 +1541,26 @@ def cross_check_matrix(name, py_rows, tol=None):
             return
         for c in range(1, len(crow)):
             cv, pv = crow[c], prow[c-1]
-            if cv is None and (pv is None or np.isnan(pv)):
+            # 特殊值标签契约（2026-10-10 审查 E-1）：C# 发来裸 null 而 Python 期望 NaN
+            # = 标签丢失 → FAIL 并指名单元格。旧实现 `continue` 静默放过，使矩阵通道成为
+            # 标签回归的盲区（与标量 / bespoke 通道同型）。
+            if cv is None and isinstance(pv, float) and np.isnan(pv):
+                FAIL += 1
+                print(f"  FAIL {name}: 特殊值标签失配（单元格[{r}][{c}]）—— Python 期望 NaN，C# 发来裸 null")
+                return
+            if cv is None and pv is None:
                 continue
+            # 类型守卫（2026-10-10 审查 C-6）：非数值单元格（如 XML.TOTABLE 这类全字符串矩阵）
+            # 此前直接 float() 抛未捕获 ValueError → **整个验证中止且连 RESULTS 摘要都不产出**
+            # （计数器完全未动），与 cross_vs_csharp 的 R3-22「字段缺失转 FAIL 不崩溃」口径不一致。
+            if cv is not None and not isinstance(cv, (int, float, bool)):
+                FAIL += 1
+                print(f"  FAIL {name}: C# 单元格类型不可比 [{r}][{c}] = {cv!r}")
+                return
+            if pv is not None and not isinstance(pv, (int, float, bool)):
+                FAIL += 1
+                print(f"  FAIL {name}: Python 单元格类型不可比 [{r}][{c}] = {pv!r}")
+                return
             # rtol 显式取 RTOL_ULP：np.isclose 默认 rtol=1e-5 会把 manifest 声明的
             # atol 预算（如 DOE 的 1e-8）稀释 ~4 个数量级（R1-06 矩阵通道漏改）。
             if cv is None or pv is None or not np.isclose(float(cv), float(pv), atol=tol_eff,
@@ -1494,9 +1585,15 @@ mse_doe = sse_doe / df_doe
 term_rows = np.column_stack([mse_doe * t_doe[1:]**2, np.ones(len(t_doe)-1),
                              mse_doe * t_doe[1:]**2, t_doe[1:]**2, pval_doe[1:]])
 tss_doe = float(np.sum((y_doe - y_doe.mean())**2))
-error_row = np.array([[sse_doe, df_doe, mse_doe, np.nan, np.nan]])
-total_row = np.array([[tss_doe, df_doe + len(t_doe) - 1, np.nan, np.nan, np.nan]])
-cross_check_matrix("DOE.ANOVA", np.vstack([term_rows, error_row, total_row]))
+# Error / Total 行的 F、p 在 C# 侧是**真 null**（DoeAnalysisCore.cs:119-133 只填 Source/SS/df/MS，
+# 该行本就**没有** F/p —— 是"不适用"而非 NaN）——Python 侧必须同样用 None 表示"无此值"。
+# 2026-10-10 收紧标签契约（E-1）后，用 np.nan 冒充"无值"会被正确判为标签失配：C# 的 null
+# 与 double.NaN 是两种不同语义，不能互相顶替。故此处不用 np.vstack（会把 None 强转成 NaN），
+# 改为 list-of-lists 以保留 None。
+py_anova_rows = [list(r) for r in term_rows]
+py_anova_rows.append([sse_doe, df_doe, mse_doe, None, None])
+py_anova_rows.append([tss_doe, df_doe + len(t_doe) - 1, None, None, None])
+cross_check_matrix("DOE.ANOVA", py_anova_rows)
 # DOE.PARETO: 按 |effect| 降序，[Term, Effect]
 order_doe = np.argsort(-np.abs(2*beta_doe[1:]))
 cross_check_matrix("DOE.PARETO", (2*beta_doe[1:])[order_doe].reshape(-1, 1))
@@ -1784,6 +1881,15 @@ _ID2UDF = {
     "SOLVE.PredictRate": "SOLVE.PREDICT", "SOLVE.SolveInverseRate": "SOLVE.INVERSE",
     "SOLVE.PredictRatePoly": "SOLVE.PREDICT", "SOLVE.FitSharedRate": "SOLVE.INVERSE",
     "SOLVE.CrossValidateShared": "SOLVE.QUALITY",
+    # 2026-10-10（用户手册实例逐一核对）：手册 JSON.QUERY 示例的裸整数下标路径条目，
+    # 全部映射到 JSON.QUERY 这一个 UDF（多条路径形态 = 一个 UDF 的多项检查）。
+    "JSON.QUERY.MANUAL_0NAME": "JSON.QUERY", "JSON.QUERY.MANUAL_1AGE": "JSON.QUERY",
+    "JSON.QUERY.MANUAL_2CITY": "JSON.QUERY", "JSON.QUERY.MANUAL_BR_3NAME": "JSON.QUERY",
+    "JSON.QUERY.MANUAL_4AGE": "JSON.QUERY", "JSON.QUERY.NESTED_INDEX": "JSON.QUERY",
+    "JSON.QUERY.NUMERIC_KEY": "JSON.QUERY",
+    # 2026-10-10：手册 SQL 示例的真 C# 对照条目（单表两条路径形态 + JOIN + QUERY3）
+    "SQL.QUERY.MANUAL_FILTER": "SQL.QUERY", "SQL.QUERY.MANUAL_GROUP": "SQL.QUERY",
+    "SQL.JOIN.MANUAL": "SQL.JOIN", "SQL.QUERY3.MANUAL": "SQL.QUERY3",
 "PIVOT.Pivot_SUM": "PIVOT.PIVOT", "PIVOT.GroupBy_SUM": "PIVOT.GROUPBY",
     "RANGE.ToJson": "RANGE.TOJSON", "RANGE.ToCsvMinimal": "RANGE.TOCSV",
     "DOE.TaguchiL8": "DOE.PLAN",
@@ -1825,25 +1931,95 @@ for _name in CROSS_REFERENCED:
             _hit = True
     if not _hit:
         _cross_unmapped.add(_base)
-print(f"\n{'='*60}")
-print(f"  RESULTS: {PASS} passed, {FAIL} failed, {SKIP} skipped ({(PASS+FAIL)} checks)")
-# 双通道分别汇报——check() 纯 Python 自校验不混入"已验证"假象
-print(f"    └ manual-only (Python self-verify): {MANUAL_PASS}")
-print(f"    └ cross-validated (vs C#):         {CROSS_PASS}")
+
+# ── 手册示例的 Excel 公式语法校验（2026-10-10）────────────────────────────────
+# 背景：手册 12-json-xml.md 曾把 **JSON/C# 风格的反斜杠转义**写进 Excel 示例
+# （=JSON.VALIDATE("{\"a\":1}")）。Excel 公式解析器不认反斜杠转义——引号必须「双写」
+# （""）——真机实测该写法被 Excel 直接拒绝：COM 0x800A03EC「此公式有问题」，单元格里
+# 连公式都写不进去（负向对照见 logs/reports/release/review-2026-10-10-fixes-and-manual-audit.md）。
+# 该缺陷此前无任何自动检查：verify-manual 只跑 Core 层面，从不检查示例在 Excel 里能否成立。
+#
+# 判据：**字符串字面量结束后必须紧跟合法接续符**（运算符/分隔符/右括号/数组常量右花括号），
+# 否则 Excel 报「此公式有问题」(0x800A03EC)。为何不用更简单的两条规则：
+#   ① 单纯 grep `\"` → 会把 `=LEFT("abc\",2)`（以反斜杠结尾的**合法**字符串）误报；
+#   ② 单纯「引号计数/配对」也不够 → `"{\"a\":1}"` 的 4 个引号**恰好配对**（解析成
+#      字符串 `{\` + 裸词 `a` + `\` …），配对检查会放过，而 Excel 恰恰拒绝它。
+# 故必须做「字符串 token 化 + 接续符检查」，可同时精确覆盖上例与
+# `{"A","B","C"}`（数组常量）等合法写法。
+_FORMULA_CONT = set('),;+-*/^&=<>%}')
+
+
+def _excel_formula_quote_ok(f):
+    i, n = 0, len(f)
+    while i < n:
+        if f[i] != '"':
+            i += 1
+            continue
+        j = i + 1
+        while j < n:
+            if f[j] == '"':
+                if j + 1 < n and f[j + 1] == '"':
+                    j += 2          # "" 是字符串内的转义引号
+                    continue
+                break               # 字符串在此结束
+            j += 1
+        if j >= n:
+            return False            # 字符串未闭合
+        k = j + 1
+        while k < n and f[k] == ' ':
+            k += 1
+        if k < n and f[k] not in _FORMULA_CONT:
+            return False            # 字符串后紧跟非接续符 => Excel 语法错误
+        i = j + 1
+    return True
+
+_manual_root = Path(__file__).resolve().parent.parent / "docs" / "user-manual"
+_formula_bad = []
+_formula_seen = 0
+for _mf in sorted(_manual_root.rglob("*.md")):
+    _in_fence = False
+    for _ln, _line in enumerate(_mf.read_text(encoding="utf-8").split("\n"), 1):
+        _s = _line.strip()
+        if _s.startswith("```"):
+            _in_fence = not _in_fence
+            continue
+        if not _in_fence or not re.match(r'^=[A-Z][A-Z0-9_.]*\s*\(', _s):
+            continue
+        _f = re.split(r'\s*(?:→|->)\s*', _s)[0].strip()
+        if not _f.endswith(")"):
+            continue
+        _formula_seen += 1
+        if not _excel_formula_quote_ok(_f):
+            _formula_bad.append(f"{_mf.name}:{_ln} {_f}")
+check(f"MANUAL.excel-formula-quote-syntax ({_formula_seen} 条示例)", _formula_bad, [])
+
 # “UDF coverage” 是手册示例覆盖（含纯 Python 自校验）——
 # 必须同时打印真正与 C# 对照的 cross 覆盖数，防止 README/报告宣称口径虚高。
-if _cross_unmapped:
-    # 诊断（非失败）：C# 对照引用不能对应任何公开 UDF。DICT.FromKeys 等 Foundation 级
-    # 对照属预期；若新增 UDF 条目因漏映射未计入覆盖，此行会显式列出（R3-19）。
-    # R3-20（2026-09-23）：bespoke 检查的字段级引用（如 "SOLVE.QUALITY_MAE" 是已覆盖
-    # SOLVE.QUALITY 的字段对照、"PIVOT.Pivot" 是大小写变体）不算漏映射，过滤后只留真实缺口。
-    _covered_ci = [u.lower() for u in _cross_covered]
-    def _is_field_variant(n):
-        nl = n.lower()
-        return any(nl == u or nl.startswith(u + "_") or nl.startswith(u + ".") for u in _covered_ci)
-    _real_unmapped = sorted(n for n in _cross_unmapped if not _is_field_variant(n))
-    if _real_unmapped:
-        print(f"  [unmapped cross refs] {len(_real_unmapped)}: {', '.join(_real_unmapped)}")
+# R3-20（2026-09-23）：bespoke 检查的字段级引用（如 "SOLVE.QUALITY_MAE" 是已覆盖
+# SOLVE.QUALITY 的字段对照、"PIVOT.Pivot" 是大小写变体）不算漏映射，过滤后只留真实缺口。
+# 2026-10-10（审查 E-3）：该过滤与下方的白名单门禁共用，故从 print 块**前移**到此处。
+_covered_ci = [u.lower() for u in _cross_covered]
+def _is_field_variant(n):
+    nl = n.lower()
+    return any(nl == u or nl.startswith(u + "_") or nl.startswith(u + ".") for u in _covered_ci)
+_real_unmapped = sorted(n for n in _cross_unmapped if not _is_field_variant(n))
+if _real_unmapped:
+    print(f"  [unmapped cross refs] {len(_real_unmapped)}: {', '.join(_real_unmapped)}")
+
+# ── [unmapped cross refs] 白名单门禁（2026-10-10 审查 E-3）──────────────────────
+# 这些引用不映射到任何公开 UDF 属**预期**（Foundation 级对照 / 字段级合成名）。
+# 旧实现只把 _real_unmapped 打印出来、**不参与判定** → "狼来了"：真正的漏映射（新 UDF 以
+# bespoke 标签对照却未登记 _ID2UDF）会被淹没在这几条固定噪声里，使对外覆盖数字静默少算。
+# 现改为白名单登记 + 其余**硬 FAIL**（新增噪声必须显式评估，与 run-tests 的 -MaxSkips 同思路）。
+_NON_UDF_CROSS_LABELS = {
+    "DICT.FromKeys",              # Foundation 级对照，无公开 DICT.FROMKEYS UDF
+    "DOE.TAGUCHI_L8",             # 与 manifest_id DOE.TaguchiL8 拼写不一致的历史标签
+    "REGRESS.R²", "REGRESS.SSE",  # 字段级合成名（上标 ² 不可能匹配 REGRESS.RSQ）
+    "SOLVE.SHAREDCV", "SOLVE.SHAREDCV_MAE",
+    "SOLVE.SHARED_RATE_COEF_CS", "SOLVE.SHARED_RATE_INTER_CS",
+}
+_unknown_cross = sorted(n for n in _real_unmapped if n not in _NON_UDF_CROSS_LABELS)
+check("CROSS.unmapped-labels-whitelisted", _unknown_cross, [])
 print(f"  UDF coverage: {udf_count} of {UDF_TOTAL} UDFs covered (sync variants)")
 print(f"    └ of which cross-validated vs C#: {len(_cross_covered)} of {UDF_TOTAL} ({len(_cross_covered)/UDF_TOTAL*100:.1f}%)")
 # 缺口清单（VERIFY_MANUAL_SHOW_GAPS=1）：列出尚无真 C# 对照的 UDF，供扩充 manifest 用。
@@ -1954,6 +2130,13 @@ for _rf in ("README.md", "README.en.md"):
             FAIL += 1
             print(f"  FAIL {_rf}:{_ln} 全量声明未限定（{_label}）："
                   f"命中 {_m.group(0)[:70]!r} —— 同段内必须给出实测口径（如 `216/240`）")
+# 汇总块必须在**全部检查（含 coverage / 白名单 / README 对账之前的那些）执行完**之后打印，
+# 否则双通道计数会漏掉最后新增的 check，且 FAIL 会显示 0 而与随后的对账结论矛盾（2026-10-10）。
+print(f"\n{'='*60}")
+print(f"  RESULTS: {PASS} passed, {FAIL} failed, {SKIP} skipped ({(PASS+FAIL)} checks)")
+# 双通道分别汇报——check() 纯 Python 自校验不混入"已验证"假象
+print(f"    └ manual-only (Python self-verify): {MANUAL_PASS}")
+print(f"    └ cross-validated (vs C#):         {CROSS_PASS}")
 print(f"{'='*60}")
 if FAIL>0 or SKIP>0:
     print(f"\n  FAILURES DETECTED (failures={FAIL}, skipped={SKIP}). Review discrepancies above.")

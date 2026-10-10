@@ -13,25 +13,62 @@ $warnings = @()
 # TFM -> XLL filename suffix mapping
 $tfmSuffix = if ($Tfm -eq "net48") { "net48" } else { "net8.0" }
 
-# 1. Check packed XLLs exist and have reasonable size (>= 100 KB)
-$minSize = 100 * 1024
+# 1. packed XLL 存在性 + **完整性**
+#    绝对下限（旧判据 100 KB）抓不到**截断**产物：失败的 ExcelDnaPack 会留下部分写入的
+#    xll（实测 1,168,896 / 658,944 字节，正常 3,730,432 / 1,196,544），而截断产物随后会让
+#    每一次 pack 都失败在 EndUpdateResource（Win32Exception 110）且错误信息指不到真因。
+#    判据改为：① PE 头可解析（MZ + e_lfanew 处 PE\0\0）；② 同模块同 TFM 的 32/64 位两个
+#    产物体积比在 [0.85, 1.18] 内。区间由**实测**标定：8 个正常产物（2 模块 × 2 TFM × 2 配置）
+#    比值区间为 0.941–0.994；而一次真实事故里被截断的 Analytics-AddIn-net8.0-64-packed.xll
+#    （1,168,896 字节，正常约 1,668,096）比值为 0.705 —— 原先宽松的 [0.6, 1.7] **漏掉了它**。
+#    另注：PE 头检查抓不到尾部截断（MZ / PE 头在文件开头仍完整），体积比才是该场景的判据。
+$minSize = 256 * 1024
 $xllFiles = @(
     "$PublishDir\$Module-AddIn-$tfmSuffix-packed.xll",
     "$PublishDir\$Module-AddIn-$tfmSuffix-64-packed.xll"
 )
-
+$packedSizes = @{}
 foreach ($xll in $xllFiles) {
     if (-not (Test-Path $xll)) {
         $errors += "Missing packed XLL: $xll"
-    } else {
-        $size = (Get-Item $xll).Length
-        if ($size -lt $minSize) {
-            $errors += "$xll size too small: $size bytes (min $minSize)"
-        } else {
-            $kb = [math]::Round($size / 1024)
-            $name = Split-Path $xll -Leaf
-            Write-Host "  [OK] $name ($kb KB)"
-        }
+        continue
+    }
+    $size = (Get-Item $xll).Length
+    $packedSizes[$xll] = $size
+    $isPe = $false
+    try {
+        $fs = [System.IO.File]::OpenRead($xll)
+        try {
+            $br = New-Object System.IO.BinaryReader($fs)
+            if ($br.ReadUInt16() -eq 0x5A4D) {
+                $fs.Position = 0x3C
+                if ($fs.Length -ge 0x40) {
+                    $peOff = $br.ReadInt32()
+                    if ($peOff -gt 0 -and ($peOff + 4) -le $size) {
+                        $fs.Position = $peOff
+                        $isPe = ($br.ReadUInt32() -eq 0x00004550)
+                    }
+                }
+            }
+        } finally { $fs.Close() }
+    } catch { $isPe = $false }
+    if (-not $isPe) {
+        $errors += "$xll is not a valid PE image (truncated or corrupt): $size bytes"
+        continue
+    }
+    if ($size -lt $minSize) {
+        $errors += "$xll size too small: $size bytes (min $minSize)"
+        continue
+    }
+    Write-Host "  [OK] $(Split-Path $xll -Leaf) ($([math]::Round($size / 1024)) KB)"
+}
+# ② 双位数产物体积比：同源构建比值接近 1，截断会显著偏离
+if ($packedSizes.Count -eq 2) {
+    $vals = @($packedSizes.Values | Sort-Object)
+    $ratio = $vals[0] / $vals[1]
+    if ($ratio -lt 0.85 -or $ratio -gt 1.18) {
+        $detail = (($packedSizes.GetEnumerator() | Sort-Object Name | ForEach-Object { "$(Split-Path $_.Key -Leaf)=$($_.Value)" }) -join ', ')
+        $errors += "packed XLL size mismatch between bitness variants (ratio $([math]::Round($ratio, 3))) — one of them is likely truncated: $detail"
     }
 }
 

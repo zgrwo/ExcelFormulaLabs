@@ -39,6 +39,12 @@ function Copy-RepoFixture {
     $dst = Join-Path $tmpRoot ("fixture-" + $script:fixtureSeq)
     robocopy $repo $dst /E /XD bin obj .git BenchmarkDotNet.Artifacts logs better-harness __pycache__ /XF *.pyc /NFL /NDL /NJH /NJS /NP | Out-Null
     if ($LASTEXITCODE -ge 8) { throw "robocopy 失败: $LASTEXITCODE" }
+    # 2026-10-10 审查 G-1：仓库里 git-ignored 的 **.dna 生成物**必须从 fixture 清除，否则
+    # 场景 A/H3/I2/K3（要求"全部通过"）会被真实仓库的残留污染而假失败——实测一处残留即让本自测
+    # 4 个场景红、并连带把 fixture 的 Skip 计数顶到上限之上。生成物豁免的**信号**由场景 I1
+    # （显式注入 .dna 断言 FAIL）专门覆盖，不依赖偶发残留。
+    Get-ChildItem -Path $dst -Recurse -Filter "*.dna" -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -notlike "*.tpl" } | Remove-Item -Force -ErrorAction SilentlyContinue
     # 目录树契约要求 logs/ 存在（内容不入库），fixture 补建空目录
     New-Item -ItemType Directory -Path (Join-Path $dst "logs") -Force | Out-Null
     return $dst
@@ -389,6 +395,48 @@ Write-Host "[V] src 新增未声明文件应 FAIL（检查 18 反向）"
 $fixtureV = Copy-RepoFixture
 [System.IO.File]::WriteAllText((Join-Path $fixtureV "src\Foundation\UndeclaredProbe.cs"), "namespace ExcelFormulaLabs.Foundation { internal static class UndeclaredProbe { } }`n", (New-Object System.Text.UTF8Encoding($false)))
 Run-VerifyDocs $fixtureV "undeclared" $true
+
+# --- 场景 W（G-4）：api-reference 参数列去掉括号 → 必须 FAIL 并点名 ---
+# 旧实现只遍历 $apiParams.Keys（docs→src 单向），且分母无断言：把某行参数列
+# `(number1)` 改成 `number1` 后该 UDF 完全退出比对（实测分母 240→239 仍 PASS）。
+Write-Host "[W] api-reference 参数列去括号应 FAIL（检查 17 分母断言）"
+$fixtureW = Copy-RepoFixture
+$apiW = Join-Path $fixtureW "docs\specification\api-reference.md"
+$txtW = [System.IO.File]::ReadAllText($apiW, (New-Object System.Text.UTF8Encoding($false)))
+$patchedW = $txtW -replace '(?m)^(\|\s*`STATS\.MEAN`\s*\|)\s*\(number1\)', '$1 number1'
+if ($patchedW -eq $txtW) { throw "[W] 注入未生效：api-reference 的 STATS.MEAN 行未匹配" }
+[System.IO.File]::WriteAllText($apiW, $patchedW, (New-Object System.Text.UTF8Encoding($false)))
+# 断言消息必须**只在 G-4 断言触发时**才出现——首版用 "api-reference params"，该串在基线里
+# 就有（`[PASS] [ExcelArgument] vs api-reference params (240)`），导致任何原因变红都被记 PASS
+# （2026-10-10 实测：注入后 exit=1 实为其它检查红，场景却假通过）。
+Run-VerifyDocs $fixtureW "文档侧参数条目" $true
+
+# --- 场景 X（G-2/G-3）：markdown 标记 / 全角数字不得让计数检查失明 ---
+# 2026-10-10 实测：数字与量词/UDF 之间插入加粗、行内代码、斜体标记，或写成全角数字、
+# 数字带正号、量词加括号、前置“约”字、倒装加粗 —— 共 8 种写法在旧实现下**全部逃逸**
+# （旧模式要求 \d 与量词/UDF 直接相邻）。逐变体独立注入 + 断言 FAIL。
+# 字面量只放在本 .ps1 内：verify-docs 扫描的散文计数域是 *.md 与 src/**/*.cs，不含 .ps1，
+# 故这些“假计数”不会反过来污染真实仓库的检查 16。
+Write-Host "[X] 检查 16/20 计数变体（markdown 标记 / 全角数字）"
+$variants16 = @(
+    ('A', '共 **999** 个 UDF'),
+    ('B', '共 `999` 个 UDF'),
+    ('C', '共 _999_ 个 UDF'),
+    ('D', '共 999+ 个 UDF'),
+    ('E', '共 999（个）UDF'),
+    ('F', '共 ９９９ 个 UDF'),
+    ('G', '总共约 999 个 UDF'),
+    ('H', 'UDF 数量：**999**')
+)
+foreach ($v in $variants16) {
+    $fixtureX = Copy-RepoFixture
+    [System.IO.File]::AppendAllText((Join-Path $fixtureX 'AGENTS.md'), "`n$($v[1])`n", (New-Object System.Text.UTF8Encoding($false)))
+    Run-VerifyDocs $fixtureX "Prose UDF counts" $true
+}
+# 检查 20（[Fact] 计数声明）同族：加粗数字同样不得逃逸
+$fixtureY = Copy-RepoFixture
+[System.IO.File]::AppendAllText((Join-Path $fixtureY 'AGENTS.md'), "`n测试共 **99999** 个 [Fact]。`n", (New-Object System.Text.UTF8Encoding($false)))
+Run-VerifyDocs $fixtureY "Fact count claims" $true
 
 # --- 汇总 ---
 Remove-Item -Recurse -Force $tmpRoot

@@ -10,13 +10,15 @@
     分支质量脱钩（2026-10-07 实测：Analytics 行 92.68% 而分支仅 80.80%）。
 
     阈值按实测值留余量以吸收抖动，但**余量不是固定承诺**——它随实测漂移，
-    引用时以本脚本输出为准（2026-10-07 复测，net8.0 + Include 过滤 + SandboxStatus
-    文件 I/O 测试补齐、**Foundation 分支用例补齐**后）：
+    引用时以本脚本输出为准（2026-10-10 复测，net8.0 + Include 过滤；同日审查修复
+    新增守卫/回归用例后 Analytics 与 DataToolkit 均上浮）：
         模块          line    阈值  余量      branch  阈值  余量
         Foundation    96.18   92    4.18      90.25   84    6.25
-        Analytics     92.79   86    6.79      81.02   76    5.02
-        DataToolkit   89.34   86    3.34      85.41   82    3.41
-    **当前最小余量 3.34 点（DataToolkit line）**。此前的最小余量是 Foundation branch 2.56 点：
+        Analytics     92.80   86    6.80      81.19   76    5.19
+        DataToolkit   90.61   86    4.61      85.94   82    3.94
+    **当前最小余量 3.94 点（DataToolkit branch）**。（2026-10-07 复测值：
+    96.18/90.25、92.79/81.02、89.34/85.41，当时最小余量 3.34 点 = DataToolkit line。）
+    此前的最小余量是 Foundation branch 2.56 点：
     Foundation 分支只覆盖了守卫的"命中"侧（3 参 MapOverMulti 的逐格哨兵、DictOperations 的
     NaN/±Inf 键、整秒 DateTime 键、SafeKey 的 Boolean:False / 空 2D 数组、降序排序的三路分区），
     补齐后 86.56 → **90.25**。此前的注释曾写"≥4 个点余量"且基线记为 DataToolkit 90.21/86.04，
