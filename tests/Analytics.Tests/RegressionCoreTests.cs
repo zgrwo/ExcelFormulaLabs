@@ -130,13 +130,27 @@ namespace ExcelFormulaLabs.Analytics.Tests
         }
 
 
-        // numerically unstable tss (Inf-Inf=NaN under the unstable form) must throw,
-        // not silently leak NaN into r_squared.
-        [Fact] public void FitOLS_extreme_y_throws_numerically_unstable()
+        // 2026-10-10 审查 D-4 修正：旧断言要求极端量纲 y 抛 "numerically unstable"。
+        // 但回归对 y 的公共正缩放**完全等变**——{1e200,1e200,2e200} 的 TSS=6.67e399 本身虽
+        // 不可表示，归一化到单位尺度后各中间量全部有限，真解完全可表示：
+        // 独立参考（Python fractions 精确有理数解）slope=5e199、intercept=1e200/3、r²=3/4。
+        // 旧行为属"拒绝可表示的合法输入"，与 StatsCore 的 maxAbs 回退口径分裂，故改为断言结果。
+        [Fact] public void FitOLS_extreme_y_normalized_instead_of_rejected()
         {
             var extX = new double[3, 1] { { 1.0 }, { 2.0 }, { 3.0 } };
-            var extY = new double[] { 1e200, 1e200, 2e200 };  // squares overflow double
-            var act = () => RegressionCore.FitOLS(extX, extY);
+            var extY = new double[] { 1e200, 1e200, 2e200 };
+            var r = RegressionCore.FitOLS(extX, extY);
+            var beta = (double[])r["coefficients"];
+            beta[0].Should().BeApproximately(1e200 / 3.0, 1e189);
+            beta[1].Should().BeApproximately(5e199, 1e189);
+            ((double)r["r_squared"]).Should().BeApproximately(0.75, 1e-12);
+        }
+
+        // 非有限输入仍须显式拒绝——归一化路径不得吞掉 NumericGuard / tss 守卫的拒绝语义。
+        [Fact] public void FitOLS_non_finite_y_still_rejected()
+        {
+            var extX = new double[3, 1] { { 1.0 }, { 2.0 }, { 3.0 } };
+            var act = () => RegressionCore.FitOLS(extX, new[] { 1.0, double.PositiveInfinity, 2.0 });
             act.Should().Throw<ArgumentException>();
         }
         [Fact] public void FitOLS_constant_y_throws()
@@ -599,6 +613,83 @@ public class RegressionMixedScaleTests
         // numpy 参考 [0,1]（小列完美解释 y，|t| 最大）。
         var X = new double[,] { { 1e-170, 9 }, { 2e-170, 1 }, { 3e-170, 5 } };
         RegressionCore.FactorImportance(X, new[] { 1.0, 2, 3 }).Should().Equal(0, 1);
+    }
+
+    // ── 2026-10-10 Max level 审查修复回归守卫（D-3 ANOVA1 下溢镜像 / D-4 TSS 误报）──
+
+    [Fact]
+    public void AnovaOneWay_underflow_scale_caps_Ss_as_NaN_not_zero()
+    {
+        // D-3：c = max|x| < √DBL_MIN ≈ 1.5e-162 时 c² 下溢为**精确 0**，旧实现把 SS/MS
+        // 静默乘成 0，与同一报表里仍正确的 F/p 自相矛盾（F=1.2 却 SS=0）。
+        // 现与上溢侧同口径：真值不可表示 → NaN。
+        var r = RegressionCore.AnovaOneWay(new[]
+        {
+            new[] { 1e-170, 2e-170, 3e-170, 4e-170 },
+            new[] { 2e-170, 3e-170, 4e-170, 5e-170 },
+        });
+        double.IsNaN((double)r["ss_between"]).Should().BeTrue("真值 2e-340 不可表示 → NaN");
+        double.IsNaN((double)r["ss_within"]).Should().BeTrue();
+        double.IsNaN((double)r["ss_total"]).Should().BeTrue();
+        double.IsNaN((double)r["ms_between"]).Should().BeTrue();
+        // F/p 由尺度化量算出，与量纲无关，必须保持正确（与 c=1 时逐位一致）。
+        var unit = RegressionCore.AnovaOneWay(new[]
+        {
+            new[] { 1.0, 2, 3, 4 }, new[] { 2.0, 3, 4, 5 },
+        });
+        ((double)r["f_stat"]).Should().BeApproximately((double)unit["f_stat"], 1e-12);
+        ((double)r["p_value"]).Should().BeApproximately((double)unit["p_value"], 1e-12);
+        // 相邻可信量纲仍须给出有限 SS（不得因新守卫而误封顶）。
+        var mid = RegressionCore.AnovaOneWay(new[]
+        {
+            new[] { 1e-150, 2e-150, 3e-150, 4e-150 },
+            new[] { 2e-150, 3e-150, 4e-150, 5e-150 },
+        });
+        double.IsNaN((double)mid["ss_within"]).Should().BeFalse();
+        ((double)mid["ss_within"]).Should().BeGreaterThan(0.0);
+    }
+
+    [Fact]
+    public void FitOLS_tiny_response_scale_fits_instead_of_reporting_constant()
+    {
+        // D-4：y ≲ 1e-162 时 Σ(y−ȳ)² 下溢为精确 0，与"真常量响应"数值上不可区分，
+        // 旧实现误报 "total sum of squares is zero (constant response variable y)" 并拒绝拟合。
+        // 回归对 y 的公共正缩放完全等变，故按 max|y| 归一后同一份数据本可正常拟合。
+        // 真值：y = 1e-200·[1..5]、X = [1..5] → β = [0, 1e-200]、r² = 1。
+        var X = new double[,] { { 1 }, { 2 }, { 3 }, { 4 }, { 5 } };
+        var y = new[] { 1e-200, 2e-200, 3e-200, 4e-200, 5e-200 };
+        var r = RegressionCore.FitOLS(X, y);
+        var beta = (double[])r["coefficients"];
+        beta[0].Should().BeApproximately(0.0, 1e-210);
+        beta[1].Should().BeApproximately(1e-200, 1e-210);
+        ((double)r["r_squared"]).Should().BeApproximately(1.0, 1e-12);
+        // 常规量纲与中等小量纲路径不得改变（1e-100 在归一化阈值之上，仍走原路径）
+        var mid = RegressionCore.FitOLS(X, new[] { 1e-100, 2e-100, 3e-100, 4e-100, 5e-100 });
+        ((double[])mid["coefficients"])[1].Should().BeApproximately(1e-100, 1e-110);
+    }
+
+    [Fact]
+    public void FitOLS_huge_response_scale_stays_finite_coefficients()
+    {
+        // D-4 上溢侧：y ≈ 1e300 时 TSS 上溢，归一化后系数/r² 仍须正确（sse 真值不可表示 → NaN）。
+        var X = new double[,] { { 1 }, { 2 }, { 3 }, { 4 }, { 5 } };
+        var r = RegressionCore.FitOLS(X, new[] { 1e300, 2e300, 3e300, 4e300, 5e300 });
+        var beta = (double[])r["coefficients"];
+        beta[1].Should().BeApproximately(1e300, 1e290);
+        ((double)r["r_squared"]).Should().BeApproximately(1.0, 1e-12);
+    }
+
+    // 2026-10-10 审查 D-5：R.ConditionNumber() 曾落在既有 try/catch **之外**——
+    // 列量级 ≥1e160 时它内部的托管 SVD 不收敛并抛 MathNet NonConvergenceException
+    // （**不是** ArgumentException），用户只拿到裸 #VALUE!，而同族其它拒绝路径都给
+    // cond 实测值与修复建议。修复后必须统一为 ArgumentException。
+    [Fact]
+    public void FitOLS_condition_number_nonconvergence_wrapped_as_ArgumentException()
+    {
+        var X = new double[5, 1] { { 1e160 }, { 2e160 }, { 3e160 }, { 4e160 }, { 5e160 } };
+        var y = new[] { 1.0, 2, 3, 4, 5 };
+        var act = () => RegressionCore.FitOLS(X, y);
+        act.Should().Throw<ArgumentException>().WithMessage("*condition number*");
     }
 }
 }

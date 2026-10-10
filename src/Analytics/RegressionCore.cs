@@ -87,6 +87,17 @@ namespace ExcelFormulaLabs.Analytics
             if (df <= 0)
                 throw new ArgumentException(
                     $"Cannot compute standard errors: degrees of freedom is {df} (n={n}, p={p}). Need n > p.");
+            // 极端量纲响应归一（2026-10-10 审查 D-4）：回归对 y 的公共正缩放**完全等变**——
+            // β→β/c、sse→sse/c²、se→se/c、residuals/fitted→/c，而 r²/adjR²/t/p 不变。
+            // 缺陷：y ≲ 1e-162 时 Σ(y−ȳ)² 下溢为**精确 0**，与"真常量响应"数值上不可区分
+            // → 误报 "constant response variable y" 拒绝拟合（真值 β=1e-200、r²=1 完全可表示）；
+            // y ≳ 1e154 时 TSS 上溢。仅在极端量纲下归一化，常规量纲保持原路径的逐位结果
+            // （与 StatsCore 的 maxAbs 回退同策略：只在主路径失效时启用）。
+            double yScale = 0;
+            foreach (double v in vecY) { double a = Math.Abs(v); if (a > yScale) yScale = a; }
+            bool normalizeY = yScale > 0 && !double.IsInfinity(yScale)
+                              && (yScale < 1e-150 || yScale > 1e150);
+            if (normalizeY) vecY = vecY / yScale;
             // 用 Thin QR 求解而非正规方程 X'X：正规方程把设计矩阵条件数**平方**，
             // cond(X) > 1e8 时在 double 精度下静默返回错误系数（Hilbert 12×8 实测
             // ‖β−βtrue‖≈10.9 而 r²=1.000000000000，报表看似完美）。QR 是后向稳定分解，
@@ -154,7 +165,21 @@ namespace ExcelFormulaLabs.Analytics
             // 只能捕获列精确共线；Hilbert 16×14（cond=1.9e17，rank=12<14）R 对角均高于阈值
             // 但系数最大误差 8.8 而 r²=1。QR 正交变换不改变奇异值，cond>1e14 时解的有效
             // 位数不足 2 位，须显式拒绝而非静默返回错误系数。
-            double condEst = R.ConditionNumber();
+            // 条件数估计必须与 QR 求解同处一个异常包装内（2026-10-10 审查 D-5）：
+            // R.ConditionNumber() 内部走托管 SVD，列量级 ≥1e160 时不收敛并抛
+            // MathNet NonConvergenceException——它**不是** ArgumentException，会绕过下方所有
+            // 参数化拒绝路径，用户只得到裸 #VALUE!。同族 LinalgCore.ConditionNumber/Solve/Rank
+            // 均先按 MaxAbs 归一化再分解；此处**保持不归一化**（归一化会改变既有 cond 数值与
+            // 1e14 拒绝阈值），仅把异常类型对齐，使用户拿到与同族一致的诊断。
+            double condEst;
+            try { condEst = R.ConditionNumber(); }
+            catch (Exception ex) when (ExceptionFilters.IsCatchable(ex))
+            {
+                throw new ArgumentException(
+                    $"Cannot fit {op}: condition number estimation failed to converge " +
+                    "(design matrix columns are too extreme in magnitude). Standardize the columns " +
+                    "or use ridge regression (REGRESS.RIDGE).", ex);
+            }
             if (double.IsNaN(condEst) || double.IsInfinity(condEst) || condEst > 1e14)
                 throw new ArgumentException(
                     $"Cannot fit {op}: design matrix X is too ill-conditioned for a reliable solution " +
@@ -190,6 +215,16 @@ namespace ExcelFormulaLabs.Analytics
                 // ±Inf or 0/0 — normalise to NaN so no non-finite value leaks out.
                 if (double.IsNaN(tStat[j]) || double.IsInfinity(tStat[j])) tStat[j] = double.NaN;
                 pVal[j] = StatsCore.TStatPValue(Math.Abs(tStat[j]), df);
+            }
+
+            // 回缩到原始响应量纲（仅在归一化路径）：逐次乘 c 而非一次乘 c²——c² 自身可能
+            // 下溢为 0（y≈1e-200）或上溢为 Inf（y≈1e200），那会把可表示的量错算成 0/NaN。
+            if (normalizeY)
+            {
+                for (int j = 0; j < beta.Count; j++) { beta[j] *= yScale; se[j] *= yScale; }
+                for (int i = 0; i < n; i++) { residuals[i] *= yScale; fitted[i] *= yScale; }
+                sse = sse * yScale * yScale;
+                if (double.IsNaN(sse) || double.IsInfinity(sse)) sse = double.NaN;
             }
 
             return new Dictionary<string, object>
@@ -522,8 +557,12 @@ namespace ExcelFormulaLabs.Analytics
             double p = FDistPValue(f, dfB, dfW);
 
             // 还原到原始量纲：SS/MS × c²（c² 不可表示 → SS/MS 一律 NaN 封顶，F/p 仍有效）。
+            // 下溢镜像（2026-10-10 审查 D-3）：c < √DBL_MIN ≈ 1.5e-162 时 c² 下溢为**精确 0**，
+            // 此前走 else 分支把 SS/MS 静默乘成 0——与同一行的 F/p（由尺度化量算出，仍正确）
+            // 自相矛盾（F=1.2 却 SS=0）。现与上溢侧同口径封顶 NaN。
+            // 可达性：:516 的 ssW == 0 守卫已排除全零数据，故此处 c > 0，c2 == 0 必为下溢。
             double c2 = c * c;
-            if (double.IsInfinity(c2))
+            if (double.IsInfinity(c2) || c2 == 0.0)
             {
                 ssB = double.NaN; ssW = double.NaN; msB = double.NaN; msW = double.NaN;
             }

@@ -41,7 +41,19 @@ namespace ExcelFormulaLabs.Analytics
             for (int i = 0; i < d.Length; i++)
                 if (d[i] < 0) return double.NaN;
             var r = Statistics.HarmonicMean(d);
-            return double.IsInfinity(r) ? double.NaN : r;  // output cap (file convention)
+            if (double.IsInfinity(r) || double.IsNaN(r)) return double.NaN;  // output cap (file convention)
+            if (r != 0.0) return r;
+            // 次正规量纲的中间上溢（2026-10-10 审查 D-6）：|x| < 1/DBL_MAX ≈ 5.6e-309 时
+            // Σ(1/x) 上溢 +Inf → n/Inf = 0（**有限值**，逃过上面的封顶）→ 静默返回 0，
+            // 而真值完全可表示。调和均值对正缩放等变：HM(x) = c·HM(x/c)；取 c = max|x| 后
+            // |x/c| ≤ 1 ⇒ 1/(x/c) ≥ 1 不再上溢。仅在结果退化为 0 时启用，常规量纲逐位不变。
+            double c = 0;
+            foreach (double x in d) { double a = Math.Abs(x); if (a > c) c = a; }
+            if (c == 0.0) return 0.0;                      // 全零数组 → HM = 0
+            var scaled = new double[d.Length];
+            for (int i = 0; i < d.Length; i++) scaled[i] = d[i] / c;
+            double rs = Statistics.HarmonicMean(scaled) * c;
+            return double.IsNaN(rs) || double.IsInfinity(rs) ? double.NaN : rs;
         }
 
         internal static double Median(double[] d)
@@ -76,7 +88,20 @@ namespace ExcelFormulaLabs.Analytics
             if (double.IsNaN(m)) return double.NaN;
             double ss = 0;
             foreach (double x in d) { double dv = x - m; ss += dv * dv; }
-            return double.IsInfinity(ss) ? double.NaN : ss;
+            if (double.IsInfinity(ss)) return double.NaN;
+            // 下溢镜像（2026-10-10 审查 D-2）：非常量数据的真 SS > 0，平方下溢归零属"真值不可
+            // 表示"，与上溢侧同口径封顶 NaN——此前静默返回 0，使 VAR 在 1e-300 量级谎报"无变异"。
+            // 常量数组（含超大/超小常数数组）dv 恒 0，仍返回 0（既有回归测试锁定该语义）。
+            if (ss == 0.0 && !AllEqual(d)) return double.NaN;
+            return ss;
+        }
+
+        /// <summary>全元素相等（length &lt; 2 亦为 true）。精确相等，不引入容差——
+        /// 容差判据会与"数据同尺度"红线冲突（见 AGENTS.md 历史经验 P1-5）。</summary>
+        private static bool AllEqual(double[] d)
+        {
+            for (int i = 1; i < d.Length; i++) if (d[i] != d[0]) return false;
+            return true;
         }
 
         // R7 安全分位数回退。MathNet R7 插值 x_lo + f*(x_hi−x_lo) 在跨符号 1e308 级数据上
@@ -105,10 +130,44 @@ namespace ExcelFormulaLabs.Analytics
         }
 
         internal static double StdevP(double[] d) =>
-            d.Length < 1 ? double.NaN : Math.Sqrt(VarianceP(d));
+            d.Length < 1 ? double.NaN : StdevViaScaled(d, 0);
 
         internal static double Stdev(double[] d) =>
-            d.Length < 2 ? double.NaN : Math.Sqrt(Variance(d));
+            d.Length < 2 ? double.NaN : StdevViaScaled(d, 1);
+
+        /// <summary>标准差 = 主路径（原始尺度两遍中心化）非有限时，改走 maxAbs 尺度化回退。
+        /// 标准差只差一次 Sqrt：原始尺度平方会把 1e300 抬成 ±Inf、把 1e-300 压成 0，
+        /// 而 sqrt 之后两种真值都在 double 值域内（如 STDEV(1e300…5e300) 真值 1.5811e300）。
+        /// 常规量纲主路径逐位不变（与 Mean/Skewness/Kurtosis/ZScore 的回退策略一致）。</summary>
+        private static double StdevViaScaled(double[] d, int ddof)
+        {
+            double r = Math.Sqrt(CenteredSS(d) / (d.Length - ddof));
+            return double.IsNaN(r) || double.IsInfinity(r) ? ScaledStdev(d, ddof) : r;
+        }
+
+        /// <summary>按 max|x| 归一化后求标准差：sd = c·sqrt(Σ((x/c)−ms)²/(n−ddof))，c = max|x|。
+        /// 取 c 后 |x/c| ≤ 1，平方和不可能上溢；再乘回 c 使结果回到原尺度，故 1e300 与
+        /// 1e-300 量级可表示的 sd 都能取回（原始尺度平方已丢失该可表示性）。</summary>
+        private static double ScaledStdev(double[] d, int ddof)
+        {
+            double c = 0;
+            // 三路径显式守卫：NaN/±Inf 判定必须先于 `a > c` 比较——NaN 与任何值比较恒 false，
+            // 只写 `if (a > c)` 会让全 NaN 输入静默把 c 留在 0 → 返回 0（谎报零方差）。
+            foreach (double x in d)
+            {
+                double a = Math.Abs(x);
+                if (double.IsNaN(a) || double.IsInfinity(a)) return double.NaN;
+                if (a > c) c = a;
+            }
+            if (c == 0.0) return 0.0;                     // 全零数组 → sd = 0
+            double sum = 0;
+            foreach (double x in d) sum += x / c;
+            double ms = sum / d.Length;
+            double ss = 0;
+            foreach (double x in d) { double dv = x / c - ms; ss += dv * dv; }
+            double sd = c * Math.Sqrt(ss / (d.Length - ddof));
+            return double.IsNaN(sd) || double.IsInfinity(sd) ? double.NaN : sd;
+        }
 
         internal static double Skewness(double[] d)
         {
@@ -196,21 +255,36 @@ namespace ExcelFormulaLabs.Analytics
         }
         /// <summary>
         /// Product of array elements. NaN/Inf input is guarded upstream by <see cref="AnalyticsHelpers.PrepV"/>.
-        /// Infinity result is capped to NaN.
-        /// 按 |x| 升序相乘避免中间溢出：朴素左折叠顺序依赖——Product(1e300,1e300,1e-300) →
-        /// 1e300×1e300=1e600 溢出 → Inf → NaN（真值 1e300 可表示），先消掉小量可避免。
-        /// 极端下溢场景（如 1e-320²）仍可能，属 double 极限，接受。
+        /// 不可表示的乘积（上溢 ±Inf / 下溢为 0）一律封顶 NaN——与 <c>CapNaN</c> 及 <see cref="Sum"/> 同口径。
+        /// 乘法顺序：按 |x| 升序后**由两端交替乘入**（最小配最大），使运行积始终贴近几何均值，
+        /// 同时规避中间下溢与中间上溢。历史缺陷（2026-10-10 审查 D-1）：仅排序后顺序相乘会把两个
+        /// 最小量级因子排成相邻，Product(1e300,1e-300,1e-300) 的中间积 1e-600 下溢为 0 并被后续
+        /// 因子吸收 → 静默返回 0，而真值 1e-300 完全可表示；同一排序对上溢侧
+        /// Product(1e300,1e300,1e-300)=1e300 却是有效的（两端交替对两侧同时成立）。
         /// </summary>
         internal static double Product(double[] d)
         {
             if (d.Length == 0) return 1.0;
-            double r = 1.0;
-            foreach (double x in d.OrderBy(v => Math.Abs(v)))
+            // 真零因子 → 精确 0（与符号、与其余因子无关）；同时统计负号数。
+            int negatives = 0;
+            foreach (double x in d)
             {
-                r *= x;
-                if (double.IsInfinity(r)) return double.NaN;
+                if (x == 0.0) return 0.0;
+                if (x < 0.0) negatives++;
             }
-            return r;
+            var mags = d.Select(Math.Abs).OrderBy(v => v).ToArray();
+            double r = mags[0];
+            int lo = 1, hi = mags.Length - 1;
+            bool takeHigh = true;
+            while (lo <= hi)
+            {
+                if (takeHigh) { r *= mags[hi]; hi--; }
+                else { r *= mags[lo]; lo++; }
+                takeHigh = !takeHigh;
+                // 无零因子（已提前返回），故 r == 0 只可能来自下溢 → 真值不可表示。
+                if (double.IsInfinity(r) || r == 0.0) return double.NaN;
+            }
+            return negatives % 2 == 0 ? r : -r;
         }
 
         /// <summary>Sign of a numeric value. NaN → 0 (explicit guard; Math.Sign would throw for NaN).
@@ -279,9 +353,10 @@ namespace ExcelFormulaLabs.Analytics
             double q1 = QuantileCapped(d, 0.25, qd);
             double q3 = QuantileCapped(d, 0.75, qd);
             double iqr = q3 - q1;
-            // mean 列须走 StatsCore.Mean（maxAbs 缩放）：直调 Statistics.Mean 会绕过封顶
-            // → {-1e308,1e308} 的 mean 列泄漏 +Inf。
-            return new[] { (double)d.Length, Mean(d), Math.Sqrt(Variance(d)),
+            // mean / sd 列须走 StatsCore.Mean / StatsCore.Stdev（均带 maxAbs 尺度化回退）：
+            // 直调 Statistics.Mean 会绕过封顶 → {-1e308,1e308} 的 mean 列泄漏 +Inf；
+            // 直调 Math.Sqrt(Variance(d)) 会让 sd 列在 1e300 / 1e-300 量级静默 NaN（2026-10-10 D-2）。
+            return new[] { (double)d.Length, Mean(d), Stdev(d),
                 Statistics.Minimum(d), q1, Median(d), q3,
                 Statistics.Maximum(d), double.IsInfinity(iqr) ? double.NaN : iqr };
         }

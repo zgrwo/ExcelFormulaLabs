@@ -830,8 +830,62 @@ namespace ExcelFormulaLabs.Analytics.Tests
         // R22b：VAR({1e200,-1e200}) = 2e400 溢出，真值不可表示 → NaN 封顶（对齐 Sum/Range）。
         double.IsNaN(StatsCore.Variance(new[] { 1e200, -1e200 })).Should().BeTrue();
         double.IsNaN(StatsCore.VarianceP(new[] { 1e200, -1e200 })).Should().BeTrue();
-        double.IsNaN(StatsCore.Stdev(new[] { 1e200, -1e200 })).Should().BeTrue();
-        double.IsNaN(StatsCore.StdevP(new[] { 1e200, -1e200 })).Should().BeTrue();
+        // 2026-10-10 审查 D-2 修正：**标准差与方差的表示性不同**——sd = √var 只差一次开方，
+        // {1e200,-1e200} 的 sd(ddof=1) = √2·1e200 = 1.4142135623730951e200 完全可表示
+        // （sd(ddof=0) = 1e200）。旧断言把 Stdev/StdevP 与 Variance 一并判为 NaN，等于把
+        // "中间平方溢出"当成"结果不可表示"，与同文件 8 处 maxAbs 回退的口径分裂。
+        // 独立参考（Python decimal 60 位）：sd(ddof=1)=1.414213562373095048801688…e200。
+        StatsCore.Stdev(new[] { 1e200, -1e200 }).Should().BeApproximately(1.4142135623730951e200, 1e190);
+        StatsCore.StdevP(new[] { 1e200, -1e200 }).Should().BeApproximately(1e200, 1e190);
+    }
+
+    // ── 2026-10-10 Max level 审查修复回归守卫（D-1 / D-2 / D-3 / D-4）──
+    [Fact] public void Product_mixed_extreme_scale_keeps_representable_result()
+    {
+        // D-1：旧实现按 |x| **升序顺序相乘**，把两个最小量级因子排成相邻——中间积
+        // 1e-300×1e-300=1e-600 下溢为 0 并被后续因子吸收，静默返回 0；真值 1e-300 可表示。
+        // 现由两端交替乘入（最小配最大），运行积始终贴近几何均值。
+        StatsCore.Product(new[] { 1e300, 1e-300, 1e-300 }).Should().BeApproximately(1e-300, 1e-315);
+        StatsCore.Product(new[] { 1e300, 1e-300, 1e-300, 1e300 }).Should().BeApproximately(1.0, 1e-15);
+        // 上溢侧（既有修复）不得回归
+        StatsCore.Product(new[] { 1e300, 1e300, 1e-300 }).Should().BeApproximately(1e300, 1e285);
+        // 真不可表示 → 与上溢侧同口径 NaN（旧实现静默返回 0）
+        double.IsNaN(StatsCore.Product(new[] { 1e-200, 1e-200, 1e-200 })).Should().BeTrue();
+        // 真零因子仍是精确 0；符号与常规量纲不变
+        StatsCore.Product(new[] { 0.0, 1e300 }).Should().Be(0.0);
+        StatsCore.Product(new[] { -2.0, 3.0 }).Should().Be(-6.0);
+        StatsCore.Product(new[] { 2.0, 3.0, 4.0 }).Should().BeApproximately(24.0, 1e-10);
+    }
+
+    [Fact] public void Stdev_recovers_representable_value_at_extreme_scale()
+    {
+        // D-2：真 sd 可表示却被"原始尺度平方"丢失。
+        // 独立参考（Python decimal 60 位）：√2.5 = 1.581138830084189665999…e300 / e-300。
+        StatsCore.Stdev(new[] { 1e300, 2e300, 3e300, 4e300, 5e300 })
+            .Should().BeApproximately(1.5811388300841897e300, 1e290);
+        StatsCore.StdevP(new[] { 1e300, 2e300, 3e300, 4e300, 5e300 })
+            .Should().BeApproximately(1.4142135623730951e300, 1e290);
+        StatsCore.Stdev(new[] { 1e-300, 2e-300, 3e-300, 4e-300, 5e-300 })
+            .Should().BeApproximately(1.5811388300841897e-300, 1e-310);
+        // SUMMARY 的 sd 列（第 3 列）同源修复
+        StatsCore.Summary(new[] { 1e300, 2e300, 3e300, 4e300, 5e300 })[2]
+            .Should().BeApproximately(1.5811388300841897e300, 1e290);
+        // 常规量纲逐位不变 + 既有语义（常量数组零方差、单元素）不得回归
+        StatsCore.Stdev(new[] { 1.0, 2, 3, 4, 5 }).Should().BeApproximately(1.5811388300841898, 1e-15);
+        StatsCore.Stdev(new[] { 1.5e308, 1.5e308 }).Should().Be(0.0);
+        StatsCore.VarianceP(new[] { 1.5e308, 1.5e308 }).Should().Be(0.0);
+        double.IsNaN(StatsCore.Stdev(new[] { 5.0 })).Should().BeTrue();
+    }
+
+    [Fact] public void Variance_underflow_mirror_is_NaN_not_zero()
+    {
+        // D-2 镜像：非常量数据的真方差 2.5e-600 不可表示 → NaN（与上溢侧同口径）；
+        // 旧实现平方下溢归零后静默返回 0，谎报"无变异"。
+        double.IsNaN(StatsCore.Variance(new[] { 1e-300, 2e-300, 3e-300, 4e-300, 5e-300 })).Should().BeTrue();
+        double.IsNaN(StatsCore.VarianceP(new[] { 1e-300, 2e-300, 3e-300, 4e-300, 5e-300 })).Should().BeTrue();
+        // 常量数组（含极端量纲）真方差恒 0，不得误报 NaN
+        StatsCore.Variance(new[] { 1e-300, 1e-300, 1e-300 }).Should().Be(0.0);
+        StatsCore.VarianceP(new[] { 1e300, 1e300 }).Should().Be(0.0);
     }
 
     [Fact] public void Mean_huge_values_stay_finite()
@@ -847,6 +901,21 @@ namespace ExcelFormulaLabs.Analytics.Tests
         // R22b：COVAR 两遍平方和溢出 → NaN 封顶。
         double.IsNaN(StatsCore.Covariance(new[] { 1e200, -1e200 }, new[] { 1e200, -1e200 })).Should().BeTrue();
         double.IsNaN(StatsCore.CovarianceP(new[] { 1e200, -1e200 }, new[] { 1e200, -1e200 })).Should().BeTrue();
+    }
+
+    [Fact] public void HarmonicMean_subnormal_scale_recovers_value()
+    {
+        // 2026-10-10 审查 D-6：HM = n / Σ(1/x)；|x| < 1/DBL_MAX ≈ 5.6e-309 时 1/x 上溢 +Inf
+        // → n/Inf = 0（**有限值**，逃过 :44 的 IsInfinity 输出封顶）→ 静默返回 0，
+        // 而真值 1e-310 / 1e-320 完全可表示。同族 GeometricMean 走对数域天然免疫（对照用例）。
+        StatsCore.HarmonicMean(new[] { 1e-310, 1e-310 }).Should().BeApproximately(1e-310, 1e-320);
+        StatsCore.HarmonicMean(new[] { 1e-320, 1e-320 }).Should().BeApproximately(1e-320, 1e-330);
+        // 常规量纲逐位不变 + 既有语义不得回归
+        StatsCore.HarmonicMean(new[] { 1e-300, 2e-300 }).Should().BeApproximately(1.3333333333333335e-300, 1e-310);
+        StatsCore.HarmonicMean(new[] { 1.0, 2.0, 4.0 }).Should().BeApproximately(12.0 / 7.0, 1e-12);
+        StatsCore.HarmonicMean(new[] { 0.0, 0.0 }).Should().Be(0.0);
+        double.IsNaN(StatsCore.HarmonicMean(new[] { 1.0, -2.0 })).Should().BeTrue("负输入无定义");
+        StatsCore.GeometricMean(new[] { 1e-320, 1e-320 }).Should().BeApproximately(1e-320, 1e-330);
     }
 }
 }
