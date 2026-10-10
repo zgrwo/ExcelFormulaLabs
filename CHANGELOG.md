@@ -6,6 +6,15 @@
 
 > 版本一致性：每个 `v*` git tag 必须在本文档有对应条目（`verify-docs.ps1` 强制检查，见规则 [documentation.md](docs/governance/documentation.md)）。
 
+## [2.5.2](https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.5.1...v2.5.2) (2026-10-10)
+
+
+### 修复
+
+* **analytics:** 修正退化输入下的静默错误与未包装异常 ([6cfb03a](https://github.com/zgrwo/ExcelFormulaLabs/commit/6cfb03afd83fd6e45960e0368bc3be8cace152cd))
+* **datatoolkit:** 支持 JSON 裸下标路径、修正 SQL 注释剥离与 XPath 结果上限 ([e1b8c59](https://github.com/zgrwo/ExcelFormulaLabs/commit/e1b8c59f601fff462124678c748ffc389baf79b9))
+* **scripts:** 补齐门禁盲区并修正校验脚本自身缺陷 ([1d2de59](https://github.com/zgrwo/ExcelFormulaLabs/commit/1d2de59cd8876994e19c1e70d3b8aa48864c5aad))
+
 ## [2.5.1](https://github.com/zgrwo/ExcelFormulaLabs/compare/v2.5.0...v2.5.1) (2026-10-07)
 
 

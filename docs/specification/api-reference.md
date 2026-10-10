@@ -1,6 +1,6 @@
 # API 参考
 
-> 版本：v2.5.1 <!-- x-release-please-version -->
+> 版本：v2.5.2 <!-- x-release-please-version -->
 > 全部 UDF 函数的完整签名。使用指南见 [README.md](../../README.md)，每函数详细示例见 [用户手册](../user-manual/user-manual.md)。
 >
 > **各章节内的表格是生成物**（ADR-0011）：由 `udf-metadata/*.json` 渲染，块首尾带
