@@ -23,7 +23,7 @@
 **语法**：`=SQL.QUERY(source_range, sql_query, [has_headers])`
 
 默认 `has_headers=TRUE`：首行为列名；传 `FALSE` 时首行按数据处理，列名自动生成 `Col1..ColN`。
-仅允许只读查询（SELECT/WITH，允许前导空白与注释）；INSERT/UPDATE/DELETE/DDL/PRAGMA/ATTACH 等关键字在整条语句中被拒绝（字符串字面量含整词也会被拒，安全取舍）。
+仅允许只读查询（SELECT/WITH，允许前导空白与注释）；INSERT/UPDATE/DELETE/DDL/PRAGMA/ATTACH 等关键字在**语句位置**被拒绝（注释拆分的写法同样拦截）。字符串字面量与引号标识符的内容不参与关键字匹配，故**数据值或列名中含这些整词不会误拒**（如 `WHERE Note='do not delete'` 正常执行）。
 源区域中的错误单元格（如 `#DIV/0!`）按空值处理；列类型按全表扫描推断，混合类型列按文本处理。
 
 **示例 1** — 条件筛选：
@@ -39,16 +39,18 @@
 
 **示例 2** — 分组聚合：
 ```
-=SQL.QUERY(A1:D5, "SELECT Dept, AVG(Salary) AS AvgSal FROM data GROUP BY Dept")
+=SQL.QUERY(A1:D5, "SELECT Dept, AVG(Salary) AS AvgSal FROM data GROUP BY Dept ORDER BY Dept")
 ```
 
 | Dept | AvgSal |
 |------|--------|
-| Sales | 50000 |
-| R&D | 75000 |
-| Support | 45000 |
 | Engineering | 90000 |
 | HR | 60000 |
+| R&D | 75000 |
+| Sales | 50000 |
+| Support | 45000 |
+
+> ⚠️ `GROUP BY` 而**不写 `ORDER BY`** 时，结果行序由引擎决定（SQLite 实际按分组键排序输出），不是源区域的插入顺序；需要固定行序请显式 `ORDER BY`（如本例）。
 
 ---
 
