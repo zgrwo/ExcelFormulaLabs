@@ -336,12 +336,34 @@ public static class Dispatcher
         Register("RangeExportCore", "SelectColumns", (a, _) => RangeExportCore.SelectColumns(ToObject2D(a[0]), ToIntArray(a[1])));
         Register("RangeExportCore", "SelectRows", (a, _) => RangeExportCore.SelectRows(ToObject2D(a[0]), ToIntArray(a[1])));
         Register("RangeExportCore", "Transpose", (a, _) => RangeExportCore.Transpose(ToObject2D(a[0])));
+        // 2026-10-10（用户手册实例逐一核对）：SQL 此前**完全没有 CrossVal 通道**——Dispatcher
+        // 从未注册 SqlCore.*，故手册 14-sql.md 的 SQL.* 示例只有 Python 侧手工复算，
+        // 安全关键模块缺真 C# 对照（[cross gaps] 报 SQL.QUERY / SQL.JOIN / SQL.QUERY3）。
+        // 单表路径直通；多表 extra 字典的键名与 UDF 层一致（"extra" / "b" / "c"）。
+        Register("SqlCore", "SqlQuery", (a, k) => SqlCore.SqlQuery(
+            ToObject2D(a[0]), ToString(a[1]), null, Kwarg(k, "hasHeaders", true)));
+        Register("SqlCore", "SqlJoin", (a, k) => SqlCore.SqlQuery(
+            ToObject2D(a[0]), ToString(a[2]),
+            new Dictionary<string, object[,]> { ["extra"] = ToObject2D(a[1]) },
+            Kwarg(k, "hasHeaders", true)));
+        Register("SqlCore", "SqlQuery3", (a, k) => SqlCore.SqlQuery(
+            ToObject2D(a[0]), ToString(a[3]),
+            new Dictionary<string, object[,]> { ["b"] = ToObject2D(a[1]), ["c"] = ToObject2D(a[2]) },
+            Kwarg(k, "hasHeaders", true)));
         // 2026-09-23 覆盖率扩展（Phase 4）：JSON / XML 基础查询与校验。
         Register("JsonXmlCore", "JsonParse", (a, _) => JsonXmlCore.JsonParse(ToString(a[0])));
         Register("JsonXmlCore", "JsonValidate", (a, _) => JsonXmlCore.JsonValidate(ToString(a[0])));
         Register("JsonXmlCore", "JsonQuery", (a, _) => JsonXmlCore.JsonQuery(ToString(a[0]), ToString(a[1])));
         Register("JsonXmlCore", "XmlValidate", (a, _) => JsonXmlCore.XmlValidate(ToString(a[0])));
         Register("JsonXmlCore", "XmlXPath", (a, _) => JsonXmlCore.XmlXPath(ToString(a[0]), ToString(a[1])));
+        // 2026-10-10（用户手册实例逐一核对）：补齐 JSON/XML 的表格与美化入口。
+        // 手册 12-json-xml.md 的 JSON.PRETTIFY / JSON.TOTABLE / XML.TOTABLE 示例此前
+        // **没有任何 C# 对照通道**（Dispatcher 未注册），只由 verify-manual.py 的纯 Python
+        // 自校验"验证"——属 E-6 覆盖缺口（Python 全绿而 C# 侧从未被调用）。
+        Register("JsonXmlCore", "JsonPrettify", (a, _) => JsonXmlCore.JsonPrettify(ToString(a[0])));
+        Register("JsonXmlCore", "JsonToTable", (a, _) => JsonXmlCore.JsonToTable(ToString(a[0])));
+        Register("JsonXmlCore", "XmlToTable", (a, _) =>
+            JsonXmlCore.XmlToTable(ToString(a[0]), a.Length > 1 ? ToString(a[1]) : null));
         // 2026-09-23 覆盖率扩展（Phase 4.5）：FS 批次——纯路径函数直通；I/O 在探针目录内以
         // 相对名操作（manifest 静态参数 + 运行时唯一根，避免绝对路径/环境耦合）。
         Register("FileSystemCore", "FsNorm", (a, _) => FileSystemCore.NormalizePath(ToString(a[0])));
