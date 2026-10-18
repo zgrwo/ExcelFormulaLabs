@@ -5,7 +5,7 @@
 # imp 模块 → DOE 交叉校验静默 SKIP；numpy 2.5 使 eigvals 返回 complex128 → LINALG.EIGEN 断言失败。
 # 升级 Python 前须先替换 pyDOE2 并适配断言，再移除 dependabot ignore。
 # pyDOE2 最新发布为 1.3.0（PyPI 无 1.9+，2026-08-29 CrossVal CI 曾因 >=1.9 无法满足而失败）。
-numpy>=1.26,<2.5
+numpy>=2.5.4,<2.6
 scipy>=1.11,<1.18
 scikit-learn>=1.9.0,<2
 pyDOE2>=1.3,<2  # P2-26 (review-2026-08-31): 补上界，与其他依赖一致（D2 铁律）
