@@ -20,9 +20,9 @@
       },
       "coverlet.msbuild": {
         "type": "Direct",
-        "requested": "[10.0.1, )",
-        "resolved": "10.0.1",
-        "contentHash": "kb5kBe1HioGuH+ZDKysv/oAO9cCUW2yxtrGrRBZp/dIij5f011OfC4XiNMayZ8bGfOv2+n2ocPkaJIGppAZDEg=="
+        "requested": "[10.1.1, )",
+        "resolved": "10.1.1",
+        "contentHash": "Lg2JYiBqHyVuCOO75Wqv3IW9Vr5YVmZ3/T0LYZpHzsG4I2CvHS5znRe8YvXokx3uJDv9bKjc44ypPEqDOR+hPA=="
       },
       "FluentAssertions": {
         "type": "Direct",
@@ -242,7 +242,7 @@
         "dependencies": {
           "ExcelDna.Integration": "[1.9.0, )",
           "ExcelDna.IntelliSense": "[1.9.0, )",
-          "ExcelFormulaLabs.Foundation": "[2.3.1, )",
+          "ExcelFormulaLabs.Foundation": "[2.5.2, )",
           "MathNet.Numerics": "[5.0.0, )"
         }
       },
@@ -269,9 +269,9 @@
       },
       "coverlet.msbuild": {
         "type": "Direct",
-        "requested": "[10.0.1, )",
-        "resolved": "10.0.1",
-        "contentHash": "kb5kBe1HioGuH+ZDKysv/oAO9cCUW2yxtrGrRBZp/dIij5f011OfC4XiNMayZ8bGfOv2+n2ocPkaJIGppAZDEg=="
+        "requested": "[10.1.1, )",
+        "resolved": "10.1.1",
+        "contentHash": "Lg2JYiBqHyVuCOO75Wqv3IW9Vr5YVmZ3/T0LYZpHzsG4I2CvHS5znRe8YvXokx3uJDv9bKjc44ypPEqDOR+hPA=="
       },
       "FluentAssertions": {
         "type": "Direct",
@@ -425,7 +425,7 @@
         "type": "Project",
         "dependencies": {
           "ExcelDna.Integration": "[1.9.0, )",
-          "ExcelFormulaLabs.Foundation": "[2.3.1, )",
+          "ExcelFormulaLabs.Foundation": "[2.5.2, )",
           "MathNet.Numerics": "[5.0.0, )"
         }
       },
